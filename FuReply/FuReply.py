@@ -1,7 +1,7 @@
 import discord
 from redbot.core import commands
 
-class Fu_reply(commands.Cog):
+class FuReply(commands.Cog):
     """Auto-replies to my friends' classic phrase"""
     def __init__(self, bot):
         self.bot = bot
@@ -12,5 +12,6 @@ class Fu_reply(commands.Cog):
         if message.author.bot:
             return
         if message.content.lower() == "fucking benny":
-            await message.channel.send("fucking " + format(message.author.display_name))
+            async with message.channel.typing():
+                await message.channel.send("fucking " + format(message.author.display_name))
             return

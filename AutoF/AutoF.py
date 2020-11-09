@@ -12,5 +12,6 @@ class AutoF(commands.Cog):
         if message.author.bot:
             return
         if message.content == "F":
-            await message.channel.send(':regional_indicator_f: :regional_indicator_f: :regional_indicator_f: \n:regional_indicator_f: \n:regional_indicator_f: :regional_indicator_f:\n:regional_indicator_f:\n:regional_indicator_f:')
+            async with message.channel.typing():
+                await message.channel.send(':regional_indicator_f: :regional_indicator_f: :regional_indicator_f: \n:regional_indicator_f: \n:regional_indicator_f: :regional_indicator_f:\n:regional_indicator_f:\n:regional_indicator_f:')
             return
