@@ -1,0 +1,6 @@
+{
+    "author" : ["zhaobenny"],
+    "description" : "Changes new user's nickname to their first letter, because the server is just like that.",
+    "install_msg" : "why did u install this wtf if ur not me",
+    "short" : "1 letters nicks"
+}

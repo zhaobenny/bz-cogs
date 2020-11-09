@@ -1,0 +1,6 @@
+{
+    "author" : ["zhaobenny"],
+    "description" : "Automatically sents a big F on seeing 'f'",
+    "install_msg" : "its enabled wow",
+    "short" : "big F"
+}
