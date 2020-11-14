@@ -1,7 +1,7 @@
 import discord
 from redbot.core import commands
 
-class whereReply(commands.Cog):
+class WhereReply(commands.Cog):
     """Auto-replies to my friends' classic phrase"""
     def __init__(self, bot):
         self.bot = bot

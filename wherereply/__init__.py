@@ -1,4 +1,4 @@
-from .wherereply import whereReply
+from .wherereply import WhereReply
 
 def setup(bot):
-    bot.add_cog(FuReply(bot))
+    bot.add_cog(WhereReply(bot))
