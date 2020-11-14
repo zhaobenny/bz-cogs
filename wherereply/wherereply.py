@@ -1,7 +1,7 @@
 import discord
 from redbot.core import commands
 
-class FuReply(commands.Cog):
+class whereReply(commands.Cog):
     """Auto-replies to my friends' classic phrase"""
     def __init__(self, bot):
         self.bot = bot
@@ -11,7 +11,7 @@ class FuReply(commands.Cog):
     async def on_message_without_command(self, message: discord.Message):
         if message.author.bot:
             return
-        if message.content.lower() == "fucking benny":
+        if message.content.lower() == "where benny":
             async with message.channel.typing():
-                await message.channel.send("fucking " + format(message.author.display_name))
+                await message.channel.send("idk where is benny, " + format(message.author.display_name) + ".")
             return

@@ -11,5 +11,11 @@ class OneLetterOnly(commands.Cog):
     async def on_member_join(self, member: discord.Member):
         if (member.bot):
             return
-        await member.edit(nick=member.name[0])
+        # if username => 2 words might as well use it as initals
+        words = member.name.split(1)
+        if (len(words) >= 2):
+            new_nick= words[0][1] + words[1][1]
+        else:
+            new_nick = words[0][1]
+        await member.edit(nick=new_nick)
         return
