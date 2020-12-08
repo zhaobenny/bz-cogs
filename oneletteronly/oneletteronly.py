@@ -12,10 +12,10 @@ class OneLetterOnly(commands.Cog):
         if (member.bot):
             return
         # if username => 2 words might as well use it as initals
-        words = member.name.split(1)
+        words = member.name.split()
         if (len(words) >= 2):
-            new_nick= words[0][1] + words[1][1]
+            new_nick= (words[0][0] + words[1][0]).upper()
         else:
-            new_nick = words[0][1]
+            new_nick = words[0][0].upper()
         await member.edit(nick=new_nick)
         return
