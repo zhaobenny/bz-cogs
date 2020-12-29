@@ -45,7 +45,7 @@ class SFX(commands.Cog):
         """
 
         if not ctx.author.voice or not ctx.author.voice.channel:
-            await ctx.send('You are not connected to a voice channel.')
+            await ctx.send('Not connected to a voice channel yo!')
             return
 
         cfg_tts_lang = await self.config.guild(ctx.guild).tts_lang()
@@ -150,7 +150,7 @@ class SFX(commands.Cog):
 
         cfg_sounds = await self.config.guild(ctx.guild).sounds()
         if soundname not in cfg_sounds.keys():
-            await ctx.send(f'Sound `{soundname}` does not exist. Try `{ctx.prefix}allsfx` for a list.')
+            await ctx.send(f'Sound `{soundname}` does not exist. Try `{ctx.prefix}sfxlist` for a list.')
             return
 
         filepath = os.path.join(self.sound_base, str(ctx.guild.id), cfg_sounds[soundname])
@@ -236,7 +236,7 @@ class SFX(commands.Cog):
         cfg_sounds = await self.config.guild(ctx.guild).sounds()
 
         if soundname not in cfg_sounds.keys():
-            await ctx.send(f'Sound `{soundname}` does not exist. Try `{ctx.prefix}allsfx` for a list.')
+            await ctx.send(f'Sound `{soundname}` does not exist. Try `{ctx.prefix}sfxlist` for a list.')
             return
 
         filepath = os.path.join(self.sound_base, str(ctx.guild.id), cfg_sounds[soundname])
@@ -251,7 +251,7 @@ class SFX(commands.Cog):
 
     @commands.command()
     @commands.cooldown(rate=1, per=3, type=discord.ext.commands.cooldowns.BucketType.guild)
-    async def allsfx(self, ctx):
+    async def sfxlist(self, ctx):
         """Prints all available sounds for this server."""
 
         if str(ctx.guild.id) not in os.listdir(self.sound_base):
@@ -282,7 +282,7 @@ class SFX(commands.Cog):
         cfg_sounds = await self.config.guild(ctx.guild).sounds()
 
         if soundname not in cfg_sounds.keys():
-            await ctx.send(f'Sound `{soundname}` does not exist. Try `{ctx.prefix}allsfx` for a list.')
+            await ctx.send(f'Sound `{soundname}` does not exist. Try `{ctx.prefix}sfxlist` for a list.')
             return
 
         filepath = os.path.join(self.sound_base, str(ctx.guild.id), cfg_sounds[soundname])
