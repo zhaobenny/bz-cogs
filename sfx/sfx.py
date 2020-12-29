@@ -163,6 +163,32 @@ class SFX(commands.Cog):
         await self._play_sfx(ctx.author.voice.channel, filepath)
 
     @commands.command()
+    @commands.check(notdorat)
+    @commands.cooldown(rate=1, per=2, type=discord.ext.commands.cooldowns.BucketType.guild)
+    async def randomsfx(self, ctx):
+        """
+        Plays an random existing sound in your current voice channel.
+        """
+
+        if not ctx.author.voice or not ctx.author.voice.channel:
+            await ctx.send('Ya are not connected to a voice channel.')
+            return
+
+        if str(ctx.guild.id) not in os.listdir(self.sound_base):
+            os.makedirs(os.path.join(self.sound_base, str(ctx.guild.id)))
+
+        cfg_sounds = await self.config.guild(ctx.guild).sounds()
+        random_sound = random.choice(list(cfg_sounds.items()))
+
+        filepath = os.path.join(self.sound_base, str(ctx.guild.id), random_sound)
+        if not os.path.exists(filepath):
+            await ctx.send('Looks like a random sound\'s file has gone missing!')
+            return
+
+        await self._play_sfx(ctx.author.voice.channel, filepath)
+
+
+    @commands.command()
     @checks.mod()
     async def addsfx(self, ctx, name: str, link: str=None):
         """Adds a new sound.
