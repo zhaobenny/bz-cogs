@@ -179,10 +179,9 @@ class SFX(commands.Cog):
 
         cfg_sounds = await self.config.guild(ctx.guild).sounds()
         random_sound = random.choice(list(cfg_sounds.items()))
-        # print(random_sound)
         filepath = os.path.join(self.sound_base, str(ctx.guild.id), str(random_sound[1]))
         if not os.path.exists(filepath):
-            await ctx.send('Looks like a random sound\'s file has gone missing!')
+            await ctx.send('Looks like a random sound\'s file has gone missing! Please remove ' + str(random_sound[0]) + '...')
             return
 
         await self._play_sfx(ctx.author.voice.channel, filepath)
