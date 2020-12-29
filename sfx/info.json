@@ -1,0 +1,7 @@
+{
+    "author" : ["baiumbg"],
+    "short" : "Allow users to play TTS audio. (Modified  personal version of baiumbg's SFX cog)",
+    "requirements" : ["gTTS", "red-lavalink", "pydub", "aiohttp"],
+    "tags" : ["tts", "audio"],
+    "disabled" : false
+}
