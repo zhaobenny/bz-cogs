@@ -1,0 +1,7 @@
+{
+    "author" : ["zhaobenny"],
+    "description" : "control my room light",
+    "install_msg" : "why",
+    "short" : "control light",
+    "requirements" : ["aiohttp", "asyncio"]
+}

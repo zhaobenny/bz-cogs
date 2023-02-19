@@ -1,7 +1,0 @@
-{
-    "author" : ["zhaobenny"],
-    "description" : "wip - Control Lifx bulbs using Discord bot commands",
-    "install_msg" : "ah yes, giving your discord server public access to your smart light bulbs",
-    "short" : "Lifx bulb control",
-    "requirements" : ["aiohttp", "asyncio"]
-}
