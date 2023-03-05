@@ -139,10 +139,12 @@ class AI_User(commands.Cog):
                 break
             else:
                 messages.append(
-                    {"role": "user", "content": history[i].content})
+                    {"role": "user", "content": history[i].author.name + ":  " + history[i].content})
             i += 1
 
-        messages.append({"role": "user", "content": message.content})
+        messages.append({"role": "user", "content": message.author.name + ":  " + message.content})
+
+        print(messages)
         return messages
 
     def check_safe_response(self, response):
