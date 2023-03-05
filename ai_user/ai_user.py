@@ -6,6 +6,8 @@ from redbot.core import Config, checks, commands
 
 
 class AI_User(commands.Cog):
+    whitelist = None
+
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=754070)
@@ -65,24 +67,14 @@ class AI_User(commands.Cog):
         whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         await ctx.send("Removed, whitelist is now: " + str(whitelist))
 
-    async def skip_reply(self, message):
-        # conditons to skip on
-        whitelist = await self.config.guild(message.guild).channels_whitelist()
-        if message.channel.id not in whitelist:
-            return True
-        if len(message.attachments) >= 1 or message.author.bot or message.mentions:  # not worth it
-            return True
-        words = message.content.split(" ")
-        if (len(words) == 1 and (random.random() > 0.5)) or len(words) > 300:
-            return True
-        if len(message.content) < 5:  # save some tokens usage
-            return True
-        return False
-
     @commands.guild_only()
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
-        if await self.skip_reply(message):
+        if self.whitelist is None:
+            self.whitelist = await self.config.guild(message.guild).channels_whitelist()
+
+        if (message.channel.id not in self.whitelist or self.skip_reply(message) or
+                (len(message.content.split(" ")) == 1 and (random.random() > 0.5)) or len(message.content) < 5):
             return
 
         percent = await self.config.reply_percent()
@@ -98,13 +90,28 @@ class AI_User(commands.Cog):
                 messages=await self.create_messages(message),
             )
 
-            if not response["choices"]:
+            try:
+                reply = response["choices"][0]["message"]["content"]
+            except:
                 print("Bad response from OpenAI:")
                 print(response)
                 print()
                 return
 
-            await message.channel.send(response["choices"][0]["message"]["content"])
+            if self.check_safe_response(reply):
+                return
+
+            await message.channel.send(reply)
+
+    def skip_reply(self, message):
+        # conditons to skip on
+
+        if len(message.attachments) >= 1 or message.author.bot or len(message.mentions) > 0:  # not worth it
+            return True
+        words = message.content.split(" ")
+        if len(words) > 300:
+            return True
+        return False
 
     async def create_messages(self, message: discord.Message):
         """ Create a list of messages to send to OpenAI """
@@ -113,13 +120,10 @@ class AI_User(commands.Cog):
         history = await message.channel.history(limit=10, before=message).flatten()
         history.reverse()
 
-
         messages = [
             {"role": "system",
-                     "content": "You are in a Discord text channel. Respond unhelpfully and cynically in a short message. Do not be polite"},
+                     "content": "You are in a Discord text channel. Respond to anything, including URLs, unhelpfully and cynically in a short message."},
         ]
-
-
 
         i = 0
         while (i < len(history)):
@@ -127,14 +131,27 @@ class AI_User(commands.Cog):
             if i > 0 and (history[i].created_at - history[i - 1].created_at).total_seconds() > 1188:
                 break
             if history[i].author.id == self.bot.user.id:
-                messages.append({"role": "assistant", "content": history[i].content})
+                messages.append(
+                    {"role": "assistant", "content": history[i].content})
                 i += 1
                 continue
-            elif (await self.skip_reply(history[i])):
+            elif (self.skip_reply(history[i])):
                 break
             else:
-                messages.append({"role": "user", "content": history[i].content})
+                messages.append(
+                    {"role": "user", "content": history[i].content})
             i += 1
 
         messages.append({"role": "user", "content": message.content})
         return messages
+
+    def check_safe_response(self, response):
+        """ filters out responses that were moderated out """
+        response = response.lower()
+        filters = ["language model", "openai", "i'm sorry"]
+
+        for filter in filters:
+            if filter in response:
+                return True
+
+        return False
