@@ -2,9 +2,9 @@
     "author": [
         "zhaobenny"
     ],
-    "install_msg": "just file a issue on github if stuff broken ?",
+    "install_msg": "hi there - open an issue on github if you have any problems/questions",
     "name": "bz_cogs",
-    "short": "random cogs",
-    "description": "random slapped together cogs"
+    "short": "random niche cogs",
+    "description": "random niche, non-user friendly, and duct tapped together cogs"
 }
 
