@@ -1,7 +1,7 @@
 {
     "author" : ["zhaobenny"],
-    "description" : "control my room light",
-    "install_msg" : "do not install",
+    "description" : "Control a single Lifx light",
+    "install_msg" : "Remembe to set light id and Lifx key before using",
     "short" : "control light",
     "requirements" : ["aiohttp", "asyncio"],
     "hidden" : true
