@@ -58,7 +58,8 @@ class AI_User(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def remove(self, ctx, new_value):
         """Remove a channel from the whitelist that allows the bot to reply in """
-        whitelist = (await self.config.guild(ctx.guild).channels_whitelist()).remove(new_value)
+        whitelist = (await self.config.guild(ctx.guild).channels_whitelist())
+        whitelist.remove(new_value)
         await self.config.guild(ctx.guild).channels_whitelist.set(whitelist)
         whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         await ctx.send("Removed, whitelist is now: " + str(whitelist))
