@@ -20,6 +20,11 @@ class AI_User(commands.Cog):
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
 
+    async def initalize_openai(self, message):
+        openai.api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
+        if not openai.api_key:
+            return await message.channel.send("OpenAI API key not set. Please set it with `[p]set api openai api_key,API_KEY`")
+
     @commands.group()
     async def ai_user(self, ctx):
         """AI User Settings"""
@@ -27,8 +32,8 @@ class AI_User(commands.Cog):
 
     @ai_user.command()
     @checks.is_owner()
-    async def percent(self, ctx, new_value):
-        """Set the percent chance the bot will reply to a message (defaults to 50 for 50%) """
+    async def reply_percent(self, ctx, new_value):
+        """Set the percent chance the bot will reply to a any given message (defaults to 50 for 50%) """
         try:
             new_value = float(new_value)
         except ValueError:
@@ -60,25 +65,24 @@ class AI_User(commands.Cog):
         whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         await ctx.send("Removed, whitelist is now: " + str(whitelist))
 
-    async def skip(self, message):
+    async def skip_reply(self, message):
+        # conditons to skip on
         whitelist = await self.config.guild(message.guild).channels_whitelist()
         if message.channel.id not in whitelist:
             return True
-        if len(message.attachments) >= 1 or message.author.bot or message.mentions: # not worth it
+        if len(message.attachments) >= 1 or message.author.bot or message.mentions:  # not worth it
             return True
-        if len(message.content) < 5 or len(message.content) > 888: # save some tokens usage
+        words = message.content.split(" ")
+        if (len(words) == 1 and (random.random() > 0.5)) or len(words) > 300:
+            return True
+        if len(message.content) < 5:  # save some tokens usage
             return True
         return False
-
-    async def initalize_openai(self, message):
-        openai.api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
-        if not openai.api_key:
-            return await message.channel.send("OpenAI API key not set. Please set it with `[p]set api openai api_key,API_KEY`")
 
     @commands.guild_only()
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
-        if await self.skip(message):
+        if await self.skip_reply(message):
             return
 
         percent = await self.config.reply_percent()
@@ -91,11 +95,7 @@ class AI_User(commands.Cog):
         async with message.channel.typing():
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system",
-                        "content": "You are in a Discord text channel. Respond unhelpfully and cynically in a short message"},
-                    {"role": "user", "content": message.content},
-                ]
+                messages=await self.create_messages(message),
             )
 
             if not response["choices"]:
@@ -105,3 +105,36 @@ class AI_User(commands.Cog):
                 return
 
             await message.channel.send(response["choices"][0]["message"]["content"])
+
+    async def create_messages(self, message: discord.Message):
+        """ Create a list of messages to send to OpenAI """
+
+        # get the last 10 messages before the current message
+        history = await message.channel.history(limit=10, before=message).flatten()
+        history.reverse()
+
+
+        messages = [
+            {"role": "system",
+                     "content": "You are in a Discord text channel. Respond unhelpfully and cynically in a short message. Do not be polite"},
+        ]
+
+
+
+        i = 0
+        while (i < len(history)):
+            # check if time between messages is more than 20 minutes
+            if i > 0 and (history[i].created_at - history[i - 1].created_at).total_seconds() > 1188:
+                break
+            if history[i].author.id == self.bot.user.id:
+                messages.append({"role": "assistant", "content": history[i].content})
+                i += 1
+                continue
+            elif (await self.skip_reply(history[i])):
+                break
+            else:
+                messages.append({"role": "user", "content": history[i].content})
+            i += 1
+
+        messages.append({"role": "user", "content": message.content})
+        return messages
