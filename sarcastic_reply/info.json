@@ -1,7 +1,0 @@
-{
-    "author" : ["zhaobenny"],
-    "description" : "Random sarcastic reply to a message using OpenAI",
-    "install_msg" : "Set OpenAI key using [p]set api openai api_key,INSERT_API_KEY",
-    "short" : "Will randomly reply to a message in a sarcastic manner",
-    "requirements" : ["openai"]
-}
