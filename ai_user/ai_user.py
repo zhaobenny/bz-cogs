@@ -1,22 +1,20 @@
 import random
+
 import discord
-from redbot.core import commands
-from redbot.core import Config
-from redbot.core import checks
 import openai
+from redbot.core import Config, checks, commands
 
 
 class AI_User(commands.Cog):
-
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=754070)
         default_global = {
-            "reply_percent": 0.75,
+            "reply_percent": 0.5,
         }
 
         default_guild = {
-            "channels_whitelist": [""]
+            "channels_whitelist": []
         }
 
         self.config.register_global(**default_global)
@@ -30,7 +28,7 @@ class AI_User(commands.Cog):
     @ai_user.command()
     @checks.is_owner()
     async def percent(self, ctx, new_value):
-        """Set the percent chance the bot will reply to a message (defaults to 75 for 75%) """
+        """Set the percent chance the bot will reply to a message (defaults to 50 for 50%) """
         try:
             new_value = float(new_value)
         except ValueError:
@@ -43,8 +41,6 @@ class AI_User(commands.Cog):
     async def add(self, ctx, new_value):
         """Add a channel to the whitelist to allow the bot to reply in """
         whitelist = (await self.config.guild(ctx.guild).channels_whitelist())
-        if not whitelist:
-            whitelist = []
         try:
             new_value = int(new_value)
         except ValueError:
@@ -68,11 +64,16 @@ class AI_User(commands.Cog):
         whitelist = await self.config.guild(message.guild).channels_whitelist()
         if message.channel.id not in whitelist:
             return True
-        if len(message.attachments) >= 1 or message.author.bot or message.mentions:
+        if len(message.attachments) >= 1 or message.author.bot or message.mentions: # not worth it
             return True
-        if len(message.content) < 5 or len(message.content) > 888:
+        if len(message.content) < 5 or len(message.content) > 888: # save some tokens usage
             return True
         return False
+
+    async def initalize_openai(self, message):
+        openai.api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
+        if not openai.api_key:
+            return await message.channel.send("OpenAI API key not set. Please set it with `[p]set api openai api_key,API_KEY`")
 
     @commands.guild_only()
     @commands.Cog.listener()
@@ -84,19 +85,23 @@ class AI_User(commands.Cog):
         if random.random() > percent:
             return
 
-        openai.api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
-
         if not openai.api_key:
-            return await message.channel.send("OpenAI API key not set. Please set it with `[p]set api openai api_key,API_KEY`")
+            await self.initalize_openai(message)
 
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system",
-                    "content": "You are in a Discord text channel. Respond unhelpfully and cynically in a short message"},
-                {"role": "user", "content": message.content},
-            ]
-        )
+        async with message.channel.typing():
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system",
+                        "content": "You are in a Discord text channel. Respond unhelpfully and cynically in a short message"},
+                    {"role": "user", "content": message.content},
+                ]
+            )
 
-        if response["choices"]:
+            if not response["choices"]:
+                print("Bad response from OpenAI:")
+                print(response)
+                print()
+                return
+
             await message.channel.send(response["choices"][0]["message"]["content"])
