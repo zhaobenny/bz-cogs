@@ -1,7 +1,8 @@
 {
     "author" : ["zhaobenny"],
     "description" : "control my room light",
-    "install_msg" : "why",
+    "install_msg" : "do not install",
     "short" : "control light",
-    "requirements" : ["aiohttp", "asyncio"]
+    "requirements" : ["aiohttp", "asyncio"],
+    "hidden" : true
 }

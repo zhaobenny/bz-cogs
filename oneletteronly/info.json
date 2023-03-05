@@ -1,6 +1,6 @@
 {
     "author" : ["zhaobenny"],
-    "description" : "Change new user's nickname to their first letter of their username",
+    "description" : "Change new user's nickname to initals of their username",
     "install_msg" : "",
     "short" : "Changes new user's nicknames"
 }
