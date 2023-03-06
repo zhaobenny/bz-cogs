@@ -40,10 +40,11 @@ class AI_User(commands.Cog):
 
     @ai_user.command()
     @checks.is_owner()
-    async def toggle_ocr(self, ctx, value: bool):
+    async def toggle_ocr(self, ctx):
         """ uses CPU to OCR scan images for text to reply to (defaults to False) """
+        value = not await self.config.toggle_ocr()
         await self.config.toggle_ocr.set(value)
-        return await ctx.send(f"[WARNING] Will use up CPU load if enabled, may crash \n Scanning image set to {value}")
+        return await ctx.send(f"⚠️ [WARNING] REQUIRES TESSERACT INSTALL, USES CPU LOAD, MAY CRASH BOT?\nScanning image set to {value}")
 
     @ai_user.command()
     @checks.is_owner()
