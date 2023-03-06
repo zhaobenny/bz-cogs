@@ -2,7 +2,7 @@
     "author": [
         "zhaobenny"
     ],
-    "install_msg": "hi there - open an issue on github if you have any problems/questions",
+    "install_msg": "hi there, open an issue on github if you have any problems/questions",
     "name": "bz_cogs",
     "short": "random niche cogs",
     "description": "random, niche, non-user friendly, and duct tapped together cogs"

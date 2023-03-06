@@ -1,7 +1,7 @@
 {
     "author" : ["zhaobenny"],
     "description" : "Control a single Lifx light",
-    "install_msg" : "Remembe to set light id and Lifx key before using",
-    "short" : "control light",
+    "install_msg" : "Remember to set light id and Lifx key before using, commands found in [p]light",
+    "short": "Control a single Lifx light",
     "requirements" : ["aiohttp", "asyncio"]
 }
