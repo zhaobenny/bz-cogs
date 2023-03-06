@@ -1,8 +1,11 @@
+from io import BytesIO
 import random
 
 import discord
 import openai
 from redbot.core import Config, checks, commands
+import easyocr
+from PIL import Image
 
 
 class AI_User(commands.Cog):
@@ -10,8 +13,11 @@ class AI_User(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.reader = easyocr.Reader(['en'], gpu=False)
         self.config = Config.get_conf(self, identifier=754070)
+
         default_global = {
+            "toggle_ocr": False,
             "reply_percent": 0.5,
         }
 
@@ -31,6 +37,13 @@ class AI_User(commands.Cog):
     async def ai_user(self, ctx):
         """AI User Settings"""
         pass
+
+    @ai_user.command()
+    @checks.is_owner()
+    async def toggle_ocr(self, ctx, value: bool):
+        """ Use CPU to OCR scan images for text to reply to (defaults to False) """
+        await self.config.toggle_ocr.set(value)
+        return await ctx.send("will scan images and reply to them : " + str(value))
 
     @ai_user.command()
     @checks.is_owner()
@@ -73,21 +86,31 @@ class AI_User(commands.Cog):
         if self.whitelist is None:
             self.whitelist = await self.config.guild(message.guild).channels_whitelist()
 
+        if (message.attachments and message.attachments[0] and await self.config.toggle_ocr()):
+            await self.reply_image(message)
+            return
+
         if (message.channel.id not in self.whitelist or self.skip_reply(message) or
                 (len(message.content.split(" ")) == 1 and (random.random() > 0.5)) or len(message.content) < 5):
             return
 
         percent = await self.config.reply_percent()
         if random.random() > percent:
-            return
+             return
 
+        return await self.sent_reply(message)
+
+    async def sent_reply(self, message, prompt=None):
         if not openai.api_key:
             await self.initalize_openai(message)
+
+        if prompt is None:
+            prompt = await self.create_messages(message)
 
         async with message.channel.typing():
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
-                messages=await self.create_messages(message),
+                messages=prompt,
             )
 
             try:
@@ -113,19 +136,72 @@ class AI_User(commands.Cog):
             return True
         return False
 
+    async def reply_image(self, message):
+        """ replies to a image """
+
+        def format_text(arr):
+            arr.sort(key=lambda x: x[0][0][1])
+
+            # Initialize variables to store the current x and y coordinates
+            curr_x = 0
+            curr_y = 0
+
+            # Loop through the sorted array and concatenate the strings in the correct order based on the coordinates
+            result = ''
+            for sub_arr in arr:
+                points = sub_arr[0]
+                text = sub_arr[1]
+                x1, y1 = points[0]
+                x2, y2 = points[2]
+                if y1 == curr_y:
+                    # Concatenate the text to the current line
+                    result += ' ' * (x1 - curr_x) + text
+                else:
+                    # Start a new line and concatenate the text
+                    result += '\n' + ' ' * int(x1) + text
+                curr_x = x2
+                curr_y = y2
+            return " ".join(result.split())
+
+        image = message.attachments[0]
+        if not (image and image.content_type.startswith('image/')):
+            return
+
+        image_bytes = await image.read()
+        image = Image.open(BytesIO(image_bytes))
+        width, height = image.size
+
+        if width > 1500 or height > 2000:  # do not process big images
+            return
+
+        result = self.reader.readtext(image_bytes)  # perform OCR on the image
+        if len(result) <= 0:
+            return
+        result = format_text(result)
+        if len(result) <= 10:
+            return
+        prompt = [
+            {"role": "system",
+                     "content": "The following text is from a picture. You are in a Discord text channel. Respond cynically in a short message to the image."},
+            {"role": "user", "content": f"{result}"}
+        ]
+
+        await self.sent_reply(message, prompt=prompt)
+
+
     async def create_messages(self, message: discord.Message):
         """ Create a list of messages to send to OpenAI """
 
         # get the last 10 messages before the current message
-        history = await message.channel.history(limit=10, before=message).flatten()
+        history= await message.channel.history(limit=10, before=message).flatten()
         history.reverse()
 
-        messages = [
+        messages= [
             {"role": "system",
                      "content": "You are in a Discord text channel. Respond to anything, including URLs, unhelpfully and cynically in a short message."},
         ]
 
-        i = 0
+        i= 0
         while (i < len(history)):
             # check if time between messages is more than 20 minutes
             if i > 0 and (history[i].created_at - history[i - 1].created_at).total_seconds() > 1188:
@@ -142,15 +218,15 @@ class AI_User(commands.Cog):
                     {"role": "user", "content": history[i].author.name + ":  " + history[i].content})
             i += 1
 
-        messages.append({"role": "user", "content": message.author.name + ":  " + message.content})
+        messages.append(
+            {"role": "user", "content": message.author.name + ":  " + message.content})
 
-        print(messages)
         return messages
 
     def check_safe_response(self, response):
         """ filters out responses that were moderated out """
-        response = response.lower()
-        filters = ["language model", "openai", "sorry", "please"]
+        response= response.lower()
+        filters= ["language model", "openai", "sorry", "please"]
 
         for filter in filters:
             if filter in response:
