@@ -87,8 +87,7 @@ class AI_User(commands.Cog):
             self.whitelist = await self.config.guild(message.guild).channels_whitelist()
 
         if (message.channel.id not in self.whitelist or
-            (len(message.content.split(" ")) == 1 and (random.random() > 0.5))
-                or len(message.content) < 5) or message.author.bot:
+            (len(message.content.split(" ")) == 1 and (random.random() > 0.5)) or message.author.bot):
             return
 
         percent = await self.config.reply_percent()
@@ -99,7 +98,7 @@ class AI_User(commands.Cog):
             await self.reply_image(message)
             return
 
-        if (self.skip_reply(message)):
+        if (self.skip_reply(message) or len(message.content) < 5):
             return
 
         return await self.sent_reply(message)
@@ -154,11 +153,9 @@ class AI_User(commands.Cog):
         if width > 1500 or height > 2000:  # do not process big images
             return
 
-        config = '-c tessedit_write_images=False'
-
         # Perform OCR on the image and get detailed output
         result = pytesseract.image_to_data(
-            image, output_type=pytesseract.Output.DICT, config=config, timeout=60)
+            image, output_type=pytesseract.Output.DICT,timeout=120)
         text = ""
         # Filter out words with low confidence scores
         for i, word in enumerate(result['text']):
