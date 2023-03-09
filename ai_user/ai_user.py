@@ -168,6 +168,7 @@ class AI_User(commands.Cog):
 
             for filter in filters:
                 if filter in response:
+                    print(f"[ai_user] Filtered out canned response: {response}")
                     return True
 
             return False
