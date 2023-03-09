@@ -40,6 +40,6 @@ def is_acceptable_message(message: discord.Message):
     words = message.content.split()
     if len(words) > 300:
         return False
-    if (len(words) == 1 and (random.random() > 0.5)):
-        return False
+    # if (len(words) == 1 and (random.random() > 0.5)):
+    #     return False
     return True
