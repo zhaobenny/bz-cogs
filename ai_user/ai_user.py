@@ -34,6 +34,11 @@ class AI_User(commands.Cog):
         if not openai.api_key:
             return await message.channel.send("OpenAI API key not set. Please set it with `[p]set api openai api_key,API_KEY`")
 
+    @commands.Cog.listener()
+    async def on_red_api_tokens_update(service_name, api_tokens):
+        if service_name == "openai":
+            openai.api_key = api_tokens.get("api_key")
+
     @commands.group()
     async def ai_user(self, _):
         pass
@@ -54,7 +59,7 @@ class AI_User(commands.Cog):
         value = not await self.config.scan_images()
         await self.config.scan_images.set(value)
         embed = discord.Embed(
-            title="⚠️ CPU LOAD, REQUIRES TESSERACT INSTALL ⚠️")
+            title="⚠️ CPU LOAD, REQUIRES MANUAL TESSERACT INSTALL ⚠️")
         embed.add_field(name="Scanning Images now set to", value=value)
         return await ctx.send(embed=embed)
 
