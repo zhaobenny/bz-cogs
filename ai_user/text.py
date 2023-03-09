@@ -1,8 +1,5 @@
 import random
 import re
-import time
-import json
-
 
 import discord
 
@@ -12,30 +9,30 @@ def create_text_prompt(message: discord.Message):
     pattern = re.compile(r"(https?://\S+)")
     is_URL = pattern.search(message.content)
 
-
     if (not is_URL and not is_acceptable_message(message)):
         return None
 
     prompt = None
 
     if is_URL and len(message.embeds) == 0:
-        return # embeds not loaded yet
-
+        return  # embeds not loaded yet
 
     if len(message.embeds) > 0:
         prompt = [
             {"role": "system",
-            "content": f"You are in a Discord text channel. Respond to anything, including URLs, unhelpfully and cynically in a short message."},
-            {"role": "user", "content": f"{message.content}, title is {message.embeds[0].title} and the description is {message.embeds[0].description}"}
+             "content": f"You are in a Discord text channel. Respond to anything, including URLs, unhelpfully and cynically in a short message."},
+            {"role": "user",
+                "content": f"{message.content}, title is {message.embeds[0].title} and the description is {message.embeds[0].description}"}
         ]
     elif not is_URL:
         prompt = [
             {"role": "system",
-            "content": "You are in a Discord text channel. Respond to anything, including URLs, unhelpfully and cynically in a short message."},
+             "content": "You are in a Discord text channel. Respond to anything, including URLs, unhelpfully and cynically in a short message."},
             {"role": "user", "content": message.author.name + ":  " + message.content}
         ]
 
     return prompt
+
 
 def is_acceptable_message(message: discord.Message):
     if (len(message.content) < 5):

@@ -47,14 +47,14 @@ class AI_User(commands.Cog):
         embed.add_field(name="Whitelisted Channels", value=await self.config.guild(message.guild).channels_whitelist())
         return await message.send(embed=embed)
 
-
     @ai_user.command()
     @checks.is_owner()
     async def scan_images(self, ctx):
         """ Toggle image scanning (req. cpu usage / tesseract)"""
         value = not await self.config.scan_images()
         await self.config.scan_images.set(value)
-        embed = discord.Embed(title = "⚠️ CPU LOAD, REQUIRES TESSERACT INSTALL ⚠️")
+        embed = discord.Embed(
+            title="⚠️ CPU LOAD, REQUIRES TESSERACT INSTALL ⚠️")
         embed.add_field(name="Scanning Images now set to", value=value)
         return await ctx.send(embed=embed)
 
@@ -67,7 +67,8 @@ class AI_User(commands.Cog):
         except ValueError:
             return await ctx.send("Value must be number")
         await self.config.reply_percent.set(new_value / 100)
-        embed = discord.Embed(title="The chance that bot will reply is now set to")
+        embed = discord.Embed(
+            title="The chance that bot will reply is now set to")
         embed.add_field(name="", value=new_value)
         return await ctx.send(embed=embed)
 
@@ -120,20 +121,18 @@ class AI_User(commands.Cog):
                 return
             prompt[1:1] = await (self.get_history(message))
 
-
         if prompt is None:
             return
-
 
         return await self.sent_reply(message, prompt)
 
     @commands.guild_only()
     @commands.Cog.listener()
-    async def on_message_edit(self, before : discord.Message, after : discord.Message):
+    async def on_message_edit(self, before: discord.Message, after: discord.Message):
         """ Catch embed updates """
 
         time_diff = datetime.datetime.utcnow() - after.created_at
-        if not(time_diff.total_seconds() <= 20):
+        if not (time_diff.total_seconds() <= 20):
             return
 
         if self.whitelist is None:
@@ -154,8 +153,7 @@ class AI_User(commands.Cog):
 
         return await self.sent_reply(after, prompt, direct_reply=True)
 
-
-    async def sent_reply(self, message, prompt : list[dict], direct_reply = False):
+    async def sent_reply(self, message, prompt: list[dict], direct_reply=False):
         """ Generates the reply using OpenAI and sends the result """
 
         def check_moderated_response(response):
@@ -189,7 +187,11 @@ class AI_User(commands.Cog):
             if check_moderated_response(reply):
                 return
 
-        if not direct_reply: # randomize if bot will reply directly or not
+        time_diff = datetime.datetime.utcnow() - message.created_at
+        if time_diff.total_seconds() > 8:
+            direct_reply = True
+
+        if not direct_reply:  # randomize if bot will reply directly or not
             direct_reply = (random.random() < 0.25)
 
         if direct_reply:
@@ -215,7 +217,8 @@ class AI_User(commands.Cog):
 
         i = 0
         while (i < len(history)):
-            if i > 0 and (history[i].created_at - history[i - 1].created_at).total_seconds() > 1188: # 20 minutes
+            # 20 minutes
+            if i > 0 and (history[i].created_at - history[i - 1].created_at).total_seconds() > 1188:
                 break
             if history[i].author.id == self.bot.user.id:
                 messages.append(
