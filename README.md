@@ -3,11 +3,11 @@ Cogs for a self-hosted [RedBot](https://github.com/Cog-Creators/Red-DiscordBot) 
 
 ```
 repo add bz_cogs https://github.com/zhaobenny/bz_cogs
-cog install bz_cogs ai_user
+cog install bz_cogs <cog>
 ```
 
 | Name | Description
 | --- | --- |
-ai_user | Random replies to messages/images powered by OpenAI (Tesseract install required for image scanning)
-oneletteronly | set nickname to be initals for new users
-lifx_light | controls a singular smart lifx lightblub
+ai_user | Utilize OpenAI to reply randomly to messages (or images) in a cynical tone. 
+oneletteronly | Set nicknames to be initals for new users.
+lifx_light | Controls a singular smart lifx lightblub.
