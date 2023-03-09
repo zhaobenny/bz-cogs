@@ -1,7 +1,7 @@
 {
     "author" : ["zhaobenny"],
     "description" : "Utilize OpenAI to reply randomly to messages (or images) in a cynical tone.",
-    "install_msg" : "See README.md. Set OpenAI key using [p]set api openai api_key,INSERT_API_KEY and [p]ai_user add CHANNEL_ID to whitelist channels for the bot to start replying",
+    "install_msg" : "See README or https://discord.gg/GwT2yHPqzN for support. Set OpenAI key using [p]set api openai api_key,INSERT_API_KEY and [p]ai_user add CHANNEL_ID to whitelist channels for the bot to start replying",
     "short" : "Random replies powered by OpenAI",
     "requirements" : ["openai", "pytesseract", "transformers[torch]"],
     "end_user_data_statement": "This cog does not persistently store data or metadata about users but messages will be sent to OpenAI to generate responses.",
