@@ -185,7 +185,7 @@ class AI_User(commands.Cog):
             try:
                 reply = response["choices"][0]["message"]["content"]
             except:
-                print("Bad response from OpenAI:")
+                print("[ai_user] Bad response from OpenAI:")
                 print(response)
                 print()
                 return
