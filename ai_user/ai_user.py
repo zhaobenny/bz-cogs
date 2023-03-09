@@ -1,4 +1,4 @@
-import json
+import datetime
 import random
 
 import discord
@@ -115,7 +115,6 @@ class AI_User(commands.Cog):
         if (message.attachments and message.attachments[0] and await self.config.scan_images()):
             prompt = await create_image_prompt(message)
         else:
-
             prompt = create_text_prompt(message)
             if prompt is None:
                 return
@@ -128,7 +127,35 @@ class AI_User(commands.Cog):
 
         return await self.sent_reply(message, prompt)
 
-    async def sent_reply(self, message, prompt : list[dict]):
+    @commands.guild_only()
+    @commands.Cog.listener()
+    async def on_message_edit(self, before : discord.Message, after : discord.Message):
+        """ Catch embed updates """
+
+        time_diff = datetime.datetime.utcnow() - after.created_at
+        if not(time_diff.total_seconds() <= 20):
+            return
+
+        if self.whitelist is None:
+            self.whitelist = await self.config.guild(after.guild).channels_whitelist()
+
+        if (after.channel.id not in self.whitelist) or after.author.bot:
+            return
+
+        percent = await self.config.reply_percent()
+        if random.random() > percent:
+            return
+
+        if len(before.embeds) != len(after.embeds):
+            prompt = create_text_prompt(after)
+
+        if prompt is None:
+            return
+
+        return await self.sent_reply(after, prompt, direct_reply=True)
+
+
+    async def sent_reply(self, message, prompt : list[dict], direct_reply = False):
         """ Generates the reply using OpenAI and sends the result """
 
         def check_moderated_response(response):
@@ -146,7 +173,6 @@ class AI_User(commands.Cog):
             await self.initalize_openai(message)
 
         async with message.channel.typing():
-            print(json.dumps(prompt, indent=4))
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=prompt,
@@ -163,6 +189,12 @@ class AI_User(commands.Cog):
             if check_moderated_response(reply):
                 return
 
+        if not direct_reply: # randomize if bot will reply directly or not
+            direct_reply = (random.random() < 0.25)
+
+        if direct_reply:
+            await message.reply(reply, mention_author=False)
+        else:
             await message.channel.send(reply)
 
     async def get_history(self, message: discord.Message, limit=10):
