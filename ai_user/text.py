@@ -36,9 +36,11 @@ def create_text_prompt(message: discord.Message):
 
 def is_acceptable_message(message: discord.Message):
     if (len(message.content) < 5):
+        print(f"[ai_user] Message too short, skipping: {message.content}")
         return False
     words = message.content.split()
     if len(words) > 300:
+        print(f"[ai_user] Message too long, skipping: {message.content}")
         return False
     # if (len(words) == 1 and (random.random() > 0.5)):
     #     return False

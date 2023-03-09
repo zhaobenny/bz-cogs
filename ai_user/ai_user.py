@@ -185,9 +185,7 @@ class AI_User(commands.Cog):
             try:
                 reply = response["choices"][0]["message"]["content"]
             except:
-                print("[ai_user] Bad response from OpenAI:")
-                print(response)
-                print()
+                print(f"[ai_user] Bad response from OpenAI:\n {response}")
                 return
 
             if check_moderated_response(reply):
@@ -205,7 +203,7 @@ class AI_User(commands.Cog):
         else:
             await message.channel.send(reply)
 
-    async def get_history(self, message: discord.Message, limit=10):
+    async def get_history(self, message: discord.Message):
         """ Returns a history of messages """
 
         def is_bad_message(message: discord.Message):
@@ -216,14 +214,13 @@ class AI_User(commands.Cog):
             if len(words) > 300:
                 return True
 
-        history = await message.channel.history(limit=limit, before=message).flatten()
+        history = await message.channel.history(limit=10, before=message).flatten()
         history.reverse()
 
         messages = []
 
         i = 0
         while (i < len(history)):
-            # 20 minutes
             if i > 0 and (history[i].created_at - history[i - 1].created_at).total_seconds() > 1188:
                 break
             if history[i].author.id == self.bot.user.id:
