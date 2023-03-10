@@ -166,7 +166,7 @@ class AI_User(commands.Cog):
 
             for filter in filters:
                 if filter in response:
-                    print(f"[ai_user] Filtered out canned response: {response}")
+                    print(f"[ai_user] Filtered out canned response replying to \"{message.content}\" in {message.guild.name}: \n{response}")
                     return True
 
             return False
