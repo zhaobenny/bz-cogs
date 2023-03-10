@@ -88,9 +88,8 @@ class AI_User(commands.Cog):
             return await ctx.send("Value must be a channel id")
         new_whitelist.append(new_value)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
-        self.whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         embed = discord.Embed(title="The whitelist is now")
-        embed.add_field(name="", value=self.whitelist)
+        embed.add_field(name="", value=new_whitelist)
         return await ctx.send(embed=embed)
 
     @ai_user.command()
@@ -100,18 +99,17 @@ class AI_User(commands.Cog):
         new_whitelist = (await self.config.guild(ctx.guild).channels_whitelist())
         new_whitelist.remove(int(new_value))
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
-        self.whitelist = new_whitelist
         embed = discord.Embed(title="The whitelist is now")
-        embed.add_field(name="", value=self.whitelist)
+        embed.add_field(name="", value=new_whitelist)
         return await ctx.send(embed=embed)
 
     @commands.guild_only()
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
-        if self.whitelist is None:
-            self.whitelist = await self.config.guild(message.guild).channels_whitelist()
 
-        if (message.channel.id not in self.whitelist) or message.author.bot:
+        whitelist = await self.config.guild(message.guild).channels_whitelist()
+
+        if (message.channel.id not in whitelist) or message.author.bot:
             return
         percent = await self.config.reply_percent()
         if random.random() > percent:
@@ -140,10 +138,10 @@ class AI_User(commands.Cog):
         if not (time_diff.total_seconds() <= 20):
             return
 
-        if self.whitelist is None:
-            self.whitelist = await self.config.guild(after.guild).channels_whitelist()
 
-        if (after.channel.id not in self.whitelist) or after.author.bot:
+        whitelist = await self.config.guild(after.guild).channels_whitelist()
+
+        if (after.channel.id not in whitelist) or after.author.bot:
             return
 
         percent = await self.config.reply_percent()
