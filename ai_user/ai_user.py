@@ -119,7 +119,7 @@ class AI_User(commands.Cog):
         if (message.attachments and message.attachments[0] and await self.config.scan_images()):
             prompt = await create_image_prompt(message)
         else:
-            prompt = create_text_prompt(message)
+            prompt = create_text_prompt(message, self.bot)
             if prompt is None:
                 return
             prompt[1:1] = await (self.get_history(message))

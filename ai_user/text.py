@@ -4,7 +4,7 @@ import re
 import discord
 
 
-def create_text_prompt(message: discord.Message):
+def create_text_prompt(message: discord.Message, bot : discord.Client):
     # define the regular expression pattern to match URLs
     pattern = re.compile(r"(https?://\S+)")
     is_URL = pattern.search(message.content)
@@ -27,7 +27,7 @@ def create_text_prompt(message: discord.Message):
     elif not is_URL:
         prompt = [
             {"role": "system",
-             "content": "You are in a Discord text channel. Respond to anything, including URLs, unhelpfully and cynically in a short message."},
+             "content": f"You are {bot.user.name}.  Do not include \"{bot.user.name}:\" in the response. You are in a Discord text channel. Respond to anything unhelpfully and cynically in a short message."},
             {"role": "user", "content": message.author.name + ":  " + message.content}
         ]
 
