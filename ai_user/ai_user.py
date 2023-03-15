@@ -45,11 +45,14 @@ class AI_User(commands.Cog):
 
     @ai_user.command()
     async def config(self, message):
-        """ Returns current config """
+        """Returns current config"""
+        whitelist = await self.config.guild(message.guild).channels_whitelist()
+        channels = [f"<#{channel_id}>" for channel_id in whitelist]
+
         embed = discord.Embed(title="AI User Settings")
         embed.add_field(name="Scan Images", value=await self.config.scan_images())
         embed.add_field(name="Reply Percent", value=await self.config.reply_percent() * 100)
-        embed.add_field(name="Whitelisted Channels", value=await self.config.guild(message.guild).channels_whitelist())
+        embed.add_field(name="Whitelisted Channels", value=" ".join(channels) if channels else "None")
         return await message.send(embed=embed)
 
     @ai_user.command()
@@ -79,28 +82,36 @@ class AI_User(commands.Cog):
 
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def add(self, ctx, new_value):
-        """Add a channel to the whitelist to allow the bot to reply in """
-        new_whitelist = (await self.config.guild(ctx.guild).channels_whitelist())
-        try:
-            new_value = int(new_value)
-        except ValueError:
-            return await ctx.send("Value must be a channel id")
-        new_whitelist.append(new_value)
+    async def add(self, ctx, channel_name):
+        """Add a channel to the whitelist to allow the bot to reply in"""
+        channel = discord.utils.get(ctx.guild.channels, name=channel_name)
+        if channel is None:
+            return await ctx.send("Invalid channel name")
+        new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
+        if channel.id in new_whitelist:
+            return await ctx.send("Channel already in whitelist")
+        new_whitelist.append(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         embed = discord.Embed(title="The whitelist is now")
-        embed.add_field(name="", value=new_whitelist)
+        channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
+        embed.add_field(name="", value=" ".join(channels) if channels else "None")
         return await ctx.send(embed=embed)
 
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def remove(self, ctx, new_value):
-        """Remove a channel from the whitelist """
-        new_whitelist = (await self.config.guild(ctx.guild).channels_whitelist())
-        new_whitelist.remove(int(new_value))
+    async def remove(self, ctx, channel_name):
+        """Remove a channel from the whitelist"""
+        channel = discord.utils.get(ctx.guild.channels, name=channel_name)
+        if channel is None:
+            return await ctx.send("Invalid channel name")
+        new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
+        if channel.id not in new_whitelist:
+            return await ctx.send("Channel not in whitelist")
+        new_whitelist.remove(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         embed = discord.Embed(title="The whitelist is now")
-        embed.add_field(name="", value=new_whitelist)
+        channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
+        embed.add_field(name="", value=" ".join(channels) if channels else "None")
         return await ctx.send(embed=embed)
 
     @commands.guild_only()

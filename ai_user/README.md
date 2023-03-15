@@ -1,9 +1,10 @@
 # How to use
 
-The bot will only reply in whitelisted channels. Please add a channel to whitelist using:
+The bot will only reply in whitelisted channels. Do not use mention, just the channel name to whitelist.
+Please add a channel to whitelist using:
 
 ```
-[p]ai_user add <CHANNEL_ID>
+[p]ai_user add <CHANNEL_NAME>
 ```
 
 Change the percentage of eligible messages to reply to (default 50):
