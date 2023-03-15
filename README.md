@@ -12,5 +12,4 @@ ai_user | Utilize OpenAI to reply randomly to messages (or images) in a cynical 
 oneletteronly | Set nicknames to be initals for new users.
 lifx_light | Controls a singular smart lifx lightblub.
 
-## Support/suggestions?
-[https://discord.gg/GwT2yHPqzN](https://discord.gg/GwT2yHPqzN)
+
