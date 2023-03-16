@@ -22,7 +22,7 @@ def create_text_prompt(message: discord.Message, bot: discord.Client):
     if (message.embeds):
         is_tenor = re.match(tenor_pattern, message.embeds[0].url)
 
-    if len(message.embeds) > 0 and not is_tenor:
+    if len(message.embeds) > 0 and not is_tenor and message.embeds[0].title and message.embeds[0].description:
         prompt = [
             {"role": "system",
              "content": f"You are in a Discord text channel. Respond to anything, including URLs, unhelpfully and cynically in a short message."},
