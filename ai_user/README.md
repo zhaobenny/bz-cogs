@@ -1,5 +1,6 @@
 # How to use
 
+Initial install may take a minute or two due to the dependencies.
 The bot will only reply in whitelisted channels. Do not use mention, just the channel name to whitelist.
 Please add a channel to whitelist using:
 
