@@ -232,7 +232,7 @@ class AI_User(commands.Cog):
         while (i < len(history)):
             if i > 0 and (history[i].created_at - history[i - 1].created_at).total_seconds() > 1188:
                 break
-            if history[i].author.id == self.bot.user.id:
+            if history[i].author.id == self.bot.user.id and history[i].content > 5:
                 messages.append(
                     {"role": "assistant", "content": history[i].content})
                 i += 1
