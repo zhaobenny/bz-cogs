@@ -3,7 +3,7 @@ Cogs for a self-hosted [RedBot](https://github.com/Cog-Creators/Red-DiscordBot) 
 
 ```
 repo add bz-cogs https://github.com/zhaobenny/bz-cogs
-cog install bz_cogs <cog>
+cog install bz-cogs <cog>
 ```
 
 | Name | Description
