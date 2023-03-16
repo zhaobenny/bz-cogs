@@ -23,7 +23,9 @@ class AI_User(commands.Cog):
         }
 
         default_guild = {
-            "channels_whitelist": []
+            "channels_whitelist": [],
+            "custom_text_prompt": None,
+            "custom_image_prompt": None,
         }
 
         self.config.register_global(**default_global)
@@ -50,9 +52,9 @@ class AI_User(commands.Cog):
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
 
         embed = discord.Embed(title="AI User Settings")
-        embed.add_field(name="Scan Images", value=await self.config.scan_images())
-        embed.add_field(name="Reply Percent", value=await self.config.reply_percent() * 100)
-        embed.add_field(name="Whitelisted Channels", value=" ".join(channels) if channels else "None")
+        embed.add_field(name="Scan Images", value=await self.config.scan_images(), inline=False)
+        embed.add_field(name="Reply Percent", value=f"{await self.config.reply_percent() * 100}%", inline=False)
+        embed.add_field(name="Whitelisted Channels in this Server", value=" ".join(channels) if channels else "None", inline=False)
         return await message.send(embed=embed)
 
     @ai_user.command()
@@ -114,6 +116,54 @@ class AI_User(commands.Cog):
         embed.add_field(name="", value=" ".join(channels) if channels else "None")
         return await ctx.send(embed=embed)
 
+    @ai_user.group()
+    @checks.is_owner()
+    async def prompt(self, _):
+        """Change the prompt for the current server"""
+        pass
+
+    @prompt.command()
+    @checks.is_owner()
+    async def reset(self, ctx):
+        """Reset prompts to default (cynical)"""
+        await self.config.guild(ctx.guild).custom_text_prompt.set(None)
+        await self.config.guild(ctx.guild).custom_image_prompt.set(None)
+        embed = discord.Embed(title="Prompt resetted")
+        return await ctx.send(embed=embed)
+
+    @prompt.command()
+    @checks.is_owner()
+    async def text(self, ctx, prompt):
+        """Set custom text prompt (Enclose with "")"""
+        await self.config.guild(ctx.guild).custom_text_prompt.set(prompt)
+        embed = discord.Embed(title="Text prompt set to", description=f"Custom text prompt set to: {prompt}")
+        return await ctx.send(embed=embed)
+
+    @prompt.command()
+    @checks.is_owner()
+    async def image(self, ctx, prompt):
+        """Set custom image prompt (Enclose with "")"""
+        await self.config.guild(ctx.guild).custom_image_prompt.set(prompt)
+        embed = discord.Embed(title="Iamge prompt set to", description=f"Custom image prompt set to: {prompt}")
+        return await ctx.send(embed=embed)
+
+    @prompt.command()
+    @checks.admin()
+    async def show(self, ctx):
+        """Show current custom text and image prompts"""
+        custom_text_prompt = await self.config.guild(ctx.guild).custom_text_prompt()
+        custom_image_prompt = await self.config.guild(ctx.guild).custom_image_prompt()
+        embed = discord.Embed(title="Current Server Prompts")
+        if custom_text_prompt:
+            embed.add_field(name="Custom Text Prompt", value=custom_text_prompt, inline=False)
+        else:
+            embed.add_field(name="Custom Text Prompt", value="Not set", inline=False)
+        if custom_image_prompt:
+            embed.add_field(name="Custom Image Prompt", value=custom_image_prompt, inline=False)
+        else:
+            embed.add_field(name="Custom Image Prompt", value="Not set", inline=False)
+        return await ctx.send(embed=embed)
+
     @commands.guild_only()
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
@@ -128,9 +178,9 @@ class AI_User(commands.Cog):
 
         prompt = None
         if (message.attachments and message.attachments[0] and await self.config.scan_images()):
-            prompt = await create_image_prompt(message)
+            prompt = await create_image_prompt(message, default_prompt=await self.config.guild(message.guild).custom_image_prompt())
         else:
-            prompt = create_text_prompt(message, self.bot)
+            prompt = create_text_prompt(message, self.bot, default_prompt=await self.config.guild(message.guild).custom_text_prompt())
             if prompt is None:
                 return
             prompt[1:1] = await (self.get_history(message))
@@ -160,7 +210,7 @@ class AI_User(commands.Cog):
             return
 
         if len(before.embeds) != len(after.embeds):
-            prompt = create_text_prompt(after)
+            prompt = create_text_prompt(after, default_prompt=await self.config.guild(after.guild).custom_text_prompt())
 
         if prompt is None:
             return
@@ -232,7 +282,7 @@ class AI_User(commands.Cog):
         while (i < len(history)):
             if i > 0 and (history[i].created_at - history[i - 1].created_at).total_seconds() > 1188:
                 break
-            if history[i].author.id == self.bot.user.id and history[i].content > 5:
+            if history[i].author.id == self.bot.user.id and len(history[i].content) > 5:
                 messages.append(
                     {"role": "assistant", "content": history[i].content})
                 i += 1

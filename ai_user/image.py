@@ -10,6 +10,8 @@ from PIL import Image
 from transformers import (AutoTokenizer, VisionEncoderDecoderModel,
                           ViTImageProcessor)
 
+from ai_user.constants import DEFAULT_IMAGE_PROMPT
+
 
 def to_thread(func: typing.Callable) -> typing.Coroutine:
     @functools.wraps(func)
@@ -18,7 +20,11 @@ def to_thread(func: typing.Callable) -> typing.Coroutine:
     return wrapper
 
 
-async def create_image_prompt(message: discord.Message):
+async def create_image_prompt(message: discord.Message, default_prompt: str = None):
+
+    if default_prompt is None:
+        default_prompt = DEFAULT_IMAGE_PROMPT
+
     image = message.attachments[0]
 
     if not (image.content_type.startswith('image/')):
@@ -37,7 +43,7 @@ async def create_image_prompt(message: discord.Message):
     if scanned and len(scanned.split()) > 10:
         prompt = [
             {"role": "system",
-                "content": f"The following text is from a picture sent by user \"{message.author.name}\". You are in a Discord text channel. Respond cynically in a short message to the image."},
+                "content": f"The following text is from a picture sent by user \"{message.author.name}\". You are in a Discord text channel. {default_prompt}"},
             {"role": "user", "content": f"{scanned}"}
         ]
     else:
@@ -45,7 +51,7 @@ async def create_image_prompt(message: discord.Message):
         if confidence > 0.45:
             prompt = [
                 {"role": "system",
-                    "content": f"The following is a description of a picture sent by user \"{message.author.name}\". You are in a Discord text channel. Respond cynically in a short message to the image."},
+                    "content": f"The following is a description of a picture sent by user \"{message.author.name}\". You are in a Discord text channel. {default_prompt}"},
                 {"role": "user", "content": f"{caption}"}
             ]
     return prompt

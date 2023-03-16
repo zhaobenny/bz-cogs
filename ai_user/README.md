@@ -19,6 +19,11 @@ See other settings using:
 [p]ai_user
 ```
 
+Custom prompts can be set per server using the commands in:
+```
+[p]ai_user prompt
+```
+
 ## Image scanning
 
 ```
