@@ -136,7 +136,7 @@ class AI_User(commands.Cog):
     async def text(self, ctx, prompt):
         """Set custom text prompt (Enclose with "")"""
         await self.config.guild(ctx.guild).custom_text_prompt.set(prompt)
-        embed = discord.Embed(title="Text prompt set to", description=f"Custom text prompt set to: {prompt}")
+        embed = discord.Embed(title="Text prompt set to", description=f"{prompt}")
         return await ctx.send(embed=embed)
 
     @prompt.command()
@@ -144,7 +144,7 @@ class AI_User(commands.Cog):
     async def image(self, ctx, prompt):
         """Set custom image prompt (Enclose with "")"""
         await self.config.guild(ctx.guild).custom_image_prompt.set(prompt)
-        embed = discord.Embed(title="Iamge prompt set to", description=f"Custom image prompt set to: {prompt}")
+        embed = discord.Embed(title="Image prompt set to", description=f"{prompt}")
         return await ctx.send(embed=embed)
 
     @prompt.command()
