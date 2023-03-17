@@ -209,8 +209,9 @@ class AI_User(commands.Cog):
         if random.random() > percent:
             return
 
+        prompt = None
         if len(before.embeds) != len(after.embeds):
-            prompt = create_text_prompt(after, default_prompt=await self.config.guild(after.guild).custom_text_prompt())
+            prompt = create_text_prompt(after, self.bot, default_prompt=await self.config.guild(after.guild).custom_text_prompt())
 
         if prompt is None:
             return
