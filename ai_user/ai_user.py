@@ -20,6 +20,7 @@ class AI_User(commands.Cog):
         default_global = {
             "scan_images": False,
             "reply_percent": 0.5,
+            "model": "gpt-3.5-turbo",
         }
 
         default_guild = {
@@ -54,6 +55,7 @@ class AI_User(commands.Cog):
         embed = discord.Embed(title="AI User Settings")
         embed.add_field(name="Scan Images", value=await self.config.scan_images(), inline=False)
         embed.add_field(name="Reply Percent", value=f"{await self.config.reply_percent() * 100}%", inline=False)
+        embed.add_field(name="Model", value=await self.config.model(), inline=False)
         embed.add_field(name="Whitelisted Channels in this Server", value=" ".join(channels) if channels else "None", inline=False)
         return await message.send(embed=embed)
 
@@ -79,6 +81,25 @@ class AI_User(commands.Cog):
         await self.config.reply_percent.set(new_value / 100)
         embed = discord.Embed(
             title="The chance that bot will reply is now set to")
+        embed.add_field(name="", value=new_value)
+        return await ctx.send(embed=embed)
+
+    @ai_user.command()
+    @checks.is_owner()
+    async def model(self, ctx, new_value):
+        """ Change default chat completion model (eg. gpt3.5-turbo or gpt-4)"""
+        if not openai.api_key:
+            await self.initalize_openai(ctx)
+
+        models_list = openai.Model.list()
+        gpt_models = [model.id for model in models_list['data'] if model.id.startswith('gpt')]
+
+        if new_value not in gpt_models:
+            return await ctx.send(f"Invalid model. Choose from: {', '.join(gpt_models)}")
+
+        await self.config.model.set(new_value)
+        embed = discord.Embed(
+            title="The default model is now set to")
         embed.add_field(name="", value=new_value)
         return await ctx.send(embed=embed)
 
@@ -236,9 +257,10 @@ class AI_User(commands.Cog):
         if not openai.api_key:
             await self.initalize_openai(message)
 
+        model = await self.config.model()
         async with message.channel.typing():
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+                model=model,
                 messages=prompt,
             )
 
@@ -289,10 +311,10 @@ class AI_User(commands.Cog):
                 i += 1
                 continue
             elif (is_bad_message(history[i])):
-                break
+                continue
             else:
                 messages.append(
-                    {"role": "user", "content": history[i].author.name + ":  " + history[i].content})
+                    {"role": "user", "content": f"\"{message.author.name}\": {message.content}"})
             i += 1
 
         return messages

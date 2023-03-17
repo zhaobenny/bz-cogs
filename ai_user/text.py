@@ -41,7 +41,7 @@ def create_text_prompt(message: discord.Message, bot: discord.Client, default_pr
              "content": f"You are {bot.user.name}.  Do not include \"{bot.user.name}:\" in the response. You are in a Discord text channel. {default_prompt}"},
             {"role": "user", "content": f"\"{message.author.name}\": {message.content}"}
         ]
-
+    print(prompt)
     return prompt
 
 
