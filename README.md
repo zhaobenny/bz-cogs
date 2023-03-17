@@ -2,8 +2,8 @@
 Cogs for a self-hosted [RedBot](https://github.com/Cog-Creators/Red-DiscordBot) instance running on a personal Discord server.
 
 ```
-repo add bz_cogs https://github.com/zhaobenny/bz_cogs
-cog install bz_cogs <cog>
+repo add bz-cogs https://github.com/zhaobenny/bz-cogs
+cog install bz-cogs <cog>
 ```
 
 | Name | Description
