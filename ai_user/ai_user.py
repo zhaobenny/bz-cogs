@@ -249,7 +249,7 @@ class AI_User(commands.Cog):
                 return
 
             if check_moderated_response(reply):
-                return
+                return await message.add_reaction("😶")
 
         time_diff = datetime.datetime.utcnow() - message.created_at
         if time_diff.total_seconds() > 8:
