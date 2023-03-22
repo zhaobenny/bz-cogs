@@ -1,4 +1,4 @@
-from .oneletteronly import OneLetterOnly
+from .oneletteronly import oneletteronly
 
 def setup(bot):
-    bot.add_cog(OneLetterOnly(bot))
+    bot.add_cog(oneletteronly(bot))
