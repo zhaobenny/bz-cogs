@@ -38,7 +38,7 @@ class AI_User(commands.Cog):
             return await message.channel.send("OpenAI API key not set. Please set it with `[p]set api openai api_key,API_KEY`")
 
     @commands.Cog.listener()
-    async def on_red_api_tokens_update(service_name, api_tokens):
+    async def on_red_api_tokens_update(self, service_name, api_tokens):
         if service_name == "openai":
             openai.api_key = api_tokens.get("api_key")
 
