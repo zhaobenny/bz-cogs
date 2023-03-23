@@ -13,3 +13,4 @@ oneletteronly | Set nicknames to be initals for new users.
 lifx_light | Controls a singular smart lifx lightblub.
 
 
+[bz-cogs Discord](https://discord.gg/GwT2yHPqzN)
