@@ -259,7 +259,7 @@ class AI_User(commands.Cog):
 
         model = await self.config.model()
         async with message.channel.typing():
-            response = openai.ChatCompletion.create(
+            response = await openai.ChatCompletion.create(
                 model=model,
                 messages=prompt,
             )
