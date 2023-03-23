@@ -245,7 +245,7 @@ class AI_User(commands.Cog):
         def check_moderated_response(response):
             """ filters out responses that were moderated out """
             response = response.lower()
-            filters = ["language model", "openai", "sorry", "please"]
+            filters = ["language model", "openai", "sorry"]
 
             for filter in filters:
                 if filter in response:
