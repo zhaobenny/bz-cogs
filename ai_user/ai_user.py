@@ -19,7 +19,6 @@ class AI_User(commands.Cog):
 
         default_global = {
             "scan_images": False,
-            "reply_percent": 0.5,
             "model": "gpt-3.5-turbo",
         }
 
@@ -27,6 +26,7 @@ class AI_User(commands.Cog):
             "channels_whitelist": [],
             "custom_text_prompt": None,
             "custom_image_prompt": None,
+            "reply_percent": 0.5,
         }
 
         self.config.register_global(**default_global)
@@ -54,9 +54,9 @@ class AI_User(commands.Cog):
 
         embed = discord.Embed(title="AI User Settings")
         embed.add_field(name="Scan Images", value=await self.config.scan_images(), inline=False)
-        embed.add_field(name="Reply Percent", value=f"{await self.config.reply_percent() * 100}%", inline=False)
         embed.add_field(name="Model", value=await self.config.model(), inline=False)
-        embed.add_field(name="Whitelisted Channels in this Server", value=" ".join(channels) if channels else "None", inline=False)
+        embed.add_field(name="Server Reply Percent", value=f"{await self.config.guild(message.guild).reply_percent() * 100}%", inline=False)
+        embed.add_field(name="Server Whitelisted Channels", value=" ".join(channels) if channels else "None", inline=False)
         return await message.send(embed=embed)
 
     @ai_user.command()
@@ -73,15 +73,15 @@ class AI_User(commands.Cog):
     @ai_user.command()
     @checks.is_owner()
     async def percent(self, ctx, new_value):
-        """ Chance the bot will reply to a message """
+        """Change the bot's response chance for this server"""
         try:
             new_value = float(new_value)
         except ValueError:
-            return await ctx.send("Value must be number")
-        await self.config.reply_percent.set(new_value / 100)
+            return await ctx.send("Value must be a number")
+        await self.config.guild(ctx.guild).reply_percent.set(new_value / 100)
         embed = discord.Embed(
-            title="The chance that bot will reply is now set to")
-        embed.add_field(name="", value=new_value)
+            title="The chance that the bot will reply on this server is now set to")
+        embed.add_field(name="", value=f"{new_value}%")
         return await ctx.send(embed=embed)
 
     @ai_user.command()
@@ -115,7 +115,7 @@ class AI_User(commands.Cog):
             return await ctx.send("Channel already in whitelist")
         new_whitelist.append(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
-        embed = discord.Embed(title="The whitelist is now")
+        embed = discord.Embed(title="The server whitelist is now")
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.add_field(name="", value=" ".join(channels) if channels else "None")
         return await ctx.send(embed=embed)
@@ -132,7 +132,7 @@ class AI_User(commands.Cog):
             return await ctx.send("Channel not in whitelist")
         new_whitelist.remove(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
-        embed = discord.Embed(title="The whitelist is now")
+        embed = discord.Embed(title="The server whitelist is now")
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.add_field(name="", value=" ".join(channels) if channels else "None")
         return await ctx.send(embed=embed)
