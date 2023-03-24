@@ -193,7 +193,7 @@ class AI_User(commands.Cog):
 
         if (message.channel.id not in whitelist) or message.author.bot:
             return
-        percent = await self.config.reply_percent()
+        percent = self.config.guild(message.guild).reply_percent()
         if random.random() > percent:
             return
 
@@ -226,7 +226,7 @@ class AI_User(commands.Cog):
         if (after.channel.id not in whitelist) or after.author.bot:
             return
 
-        percent = await self.config.reply_percent()
+        percent = await self.config.guild(after.guild).reply_percent()
         if random.random() > percent:
             return
 
