@@ -35,7 +35,7 @@ Image scanning, if turned on, will be very CPU intensive. Not recommended for mu
 It will require pytesseract, transformers[torch] install.
 
 ```
-[p]pip install pytesseract transformers[torch]
+[p]pipinstall pytesseract transformers[torch]
 ```
 
 And then the Pytesseract install will require **Google Tesseract be [installed](https://tesseract-ocr.github.io/tessdoc/Installation.html) on host machine itself or the phasecorex/red-discordbot:full image**.
