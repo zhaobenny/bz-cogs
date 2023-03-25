@@ -1,6 +1,5 @@
 # How to use
 
-Initial install may take a minute or two due to the dependencies.
 The bot will only reply in whitelisted channels. Do not use mention, just the channel name to whitelist.
 Please add a channel to whitelist using:
 
@@ -35,6 +34,10 @@ Image scanning, if turned on, will be very CPU intensive. Not recommended for mu
 
 It will require pytesseract, transformers[torch] install.
 
-Pytesseract install requires **Google Tesseract be installed on host machine itself or the phasecorex/red-discordbot:full image**.
+```
+[p]pip install pytesseract transformers[torch]
+```
+
+And then the Pytesseract install will require **Google Tesseract be [installed](https://tesseract-ocr.github.io/tessdoc/Installation.html) on host machine itself or the phasecorex/red-discordbot:full image**.
 
 First time use will take longer due to the need to download the pretrained models. (OCR and image captioning models)

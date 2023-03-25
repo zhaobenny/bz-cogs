@@ -1,11 +1,21 @@
 import datetime
+import importlib
 import random
 
 import discord
 import openai
 from redbot.core import Config, checks, commands
 
-from ai_user.image import create_image_prompt
+try:
+    importlib.import_module("pytesseract")
+    importlib.import_module("torch")
+    importlib.import_module("transformers")
+    from ai_user.image import create_image_prompt
+except ImportError:
+    async def create_image_prompt(*args, **kwargs):
+        print("[ai_user] Image processing dependencies not available. Please install them (see cog README.md) to use this feature.")
+        return None
+
 from ai_user.text import create_text_prompt
 
 
@@ -63,12 +73,20 @@ class AI_User(commands.Cog):
     @checks.is_owner()
     async def scan_images(self, ctx):
         """ Toggle image scanning (req. cpu usage / tesseract)"""
-        value = not await self.config.scan_images()
-        await self.config.scan_images.set(value)
-        embed = discord.Embed(
-            title="⚠️ CPU LOAD, REQUIRES MANUAL TESSERACT INSTALL ⚠️")
-        embed.add_field(name="Scanning Images now set to", value=value)
-        return await ctx.send(embed=embed)
+        try:
+            importlib.import_module("pytesseract")
+            importlib.import_module("torch")
+            importlib.import_module("transformers")
+            value = not await self.config.scan_images()
+            await self.config.scan_images.set(value)
+            embed = discord.Embed(
+                title="⚠️ CPU LOAD, REQUIRES MANUAL INSTALL OF TESSERACT ⚠️")
+            embed.add_field(name="Scanning Images now set to", value=value)
+            return await ctx.send(embed=embed)
+        except ImportError:
+            await self.config.scan_images.set(False)
+            await ctx.send("Image processing dependencies not available. Please install them (see cog README.md) to use this feature.")
+
 
     @ai_user.command()
     @checks.is_owner()
@@ -200,6 +218,8 @@ class AI_User(commands.Cog):
         prompt = None
         if (message.attachments and message.attachments[0] and await self.config.scan_images()):
             prompt = await create_image_prompt(message, default_prompt=await self.config.guild(message.guild).custom_image_prompt())
+            if prompt is None:
+                return
         else:
             prompt = create_text_prompt(message, self.bot, default_prompt=await self.config.guild(message.guild).custom_text_prompt())
             if prompt is None:
