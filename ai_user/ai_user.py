@@ -30,6 +30,7 @@ class AI_User(commands.Cog):
         default_global = {
             "scan_images": False,
             "model": "gpt-3.5-turbo",
+            "filter_responses": True,
         }
 
         default_guild = {
@@ -65,6 +66,7 @@ class AI_User(commands.Cog):
         embed = discord.Embed(title="AI User Settings")
         embed.add_field(name="Scan Images", value=await self.config.scan_images(), inline=False)
         embed.add_field(name="Model", value=await self.config.model(), inline=False)
+        embed.add_field(name="Filter Responses", value=await self.config.filter_responses(), inline=False)
         embed.add_field(name="Server Reply Percent", value=f"{await self.config.guild(message.guild).reply_percent() * 100}%", inline=False)
         embed.add_field(name="Server Whitelisted Channels", value=" ".join(channels) if channels else "None", inline=False)
         return await message.send(embed=embed)
@@ -119,6 +121,17 @@ class AI_User(commands.Cog):
         embed = discord.Embed(
             title="The default model is now set to")
         embed.add_field(name="", value=new_value)
+        return await ctx.send(embed=embed)
+
+    @ai_user.command()
+    @checks.is_owner()
+    async def filter_responses(self, ctx):
+        """ Toggle rudimentary filtering of canned responses """
+        value = not await self.config.filter_responses()
+        await self.config.filter_responses.set(value)
+        embed = discord.Embed(
+            title="Filtering canned responses now set to")
+        embed.add_field(name="", value=value)
         return await ctx.send(embed=embed)
 
     @ai_user.command()
@@ -265,7 +278,7 @@ class AI_User(commands.Cog):
         def check_moderated_response(response):
             """ filters out responses that were moderated out """
             response = response.lower()
-            filters = ["language model", "openai", "sorry"]
+            filters = ["language model", "openai", "sorry", "apologize"]
 
             for filter in filters:
                 if filter in response:
@@ -290,7 +303,7 @@ class AI_User(commands.Cog):
                 print(f"[ai_user] Bad response from OpenAI:\n {response}")
                 return
 
-            if check_moderated_response(reply):
+            if (await self.config.filter_responses()) and check_moderated_response(reply):
                 return await message.add_reaction("😶")
 
         time_diff = datetime.datetime.utcnow() - message.created_at
