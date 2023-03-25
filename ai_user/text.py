@@ -28,18 +28,21 @@ def create_text_prompt(message: discord.Message, bot: discord.Client, default_pr
     if (message.embeds):
         is_tenor = re.match(tenor_pattern, message.embeds[0].url)
 
-    if len(message.embeds) > 0 and not is_tenor and message.embeds[0].title and message.embeds[0].description:
+    if is_tenor:
+        return None  # skip tenor gifs
+
+    if len(message.embeds) > 0 and message.embeds[0].title and message.embeds[0].description:
         prompt = [
             {"role": "system",
              "content": f"You are in a Discord text channel. {default_prompt}"},
             {"role": "user",
                 "content": f"{message.content}, title is {message.embeds[0].title} and the description is {message.embeds[0].description}"}
         ]
-    elif not is_URL or is_tenor:
+    elif not is_URL:
         prompt = [
             {"role": "system",
              "content": f"You are {bot.user.name}.  Do not include \"{bot.user.name}:\" in the response. You are in a Discord text channel. {default_prompt}"},
-            {"role": "user", "content": f"\"{message.author.name}\": {message.content}"}
+            {"role": "user", "content": f"\"{message.author.name}\" sent the message: {message.content}"}
         ]
     return prompt
 

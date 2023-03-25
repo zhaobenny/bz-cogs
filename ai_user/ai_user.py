@@ -347,7 +347,7 @@ class AI_User(commands.Cog):
                 continue
             else:
                 messages.append(
-                    {"role": "user", "content": f"\"{message.author.name}\": {message.content}"})
+                    {"role": "user", "content": f"\"{message.author.name}\" sent the message: {message.content}"})
             i += 1
 
         return messages
