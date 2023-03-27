@@ -1,5 +1,6 @@
 import datetime
 import importlib
+import json
 import random
 
 import discord
@@ -10,21 +11,22 @@ try:
     importlib.import_module("pytesseract")
     importlib.import_module("torch")
     importlib.import_module("transformers")
-    from ai_user.image import create_image_prompt
+    from ai_user.prompts.image_prompt import ImagePrompt
 except ImportError:
-    async def create_image_prompt(*args, **kwargs):
-        print("[ai_user] Image processing dependencies not available. Please install them (see cog README.md) to use this feature.")
-        return None
+    from ai_user.prompts.dummy_image_prompt import ImagePrompt
+    print("[AI_User] Detected no image processing dependencies installed")
 
-from ai_user.text import create_text_prompt
+
+from ai_user.prompts.text_prompt import TextPrompt
 
 
 class AI_User(commands.Cog):
     whitelist = None
 
     def __init__(self, bot):
-        self.bot = bot
 
+        self.bot = bot
+        self.bot_user = bot.user
         self.config = Config.get_conf(self, identifier=754070)
 
         default_global = {
@@ -224,20 +226,19 @@ class AI_User(commands.Cog):
 
         if (message.channel.id not in whitelist) or message.author.bot:
             return
+
         percent = await self.config.guild(message.guild).reply_percent()
         if random.random() > percent:
             return
 
-        prompt = None
-        if (message.attachments and message.attachments[0] and await self.config.scan_images()):
-            prompt = await create_image_prompt(message, default_prompt=await self.config.guild(message.guild).custom_image_prompt())
-            if prompt is None:
-                return
+        if (message.attachments and await self.config.scan_images()):
+            default_bot_prompt = await self.config.guild(message.guild).custom_image_prompt()
+            image = ImagePrompt(self.bot_user, message, bot_prompt=default_bot_prompt)
+            prompt = await image.get_prompt()
         else:
-            prompt = create_text_prompt(message, self.bot, default_prompt=await self.config.guild(message.guild).custom_text_prompt())
-            if prompt is None:
-                return
-            prompt[1:1] = await (self.get_history(message))
+            default_bot_prompt = await self.config.guild(message.guild).custom_text_prompt()
+            text = TextPrompt(self.bot_user, message, bot_prompt=default_bot_prompt)
+            prompt = await text.get_prompt()
 
         if prompt is None:
             return
@@ -265,7 +266,9 @@ class AI_User(commands.Cog):
 
         prompt = None
         if len(before.embeds) != len(after.embeds):
-            prompt = create_text_prompt(after, self.bot, default_prompt=await self.config.guild(after.guild).custom_text_prompt())
+            default_bot_prompt = self.config.guild(after.guild).custom_text_prompt()
+            text = TextPrompt(self.bot_user, after, bot_prompt=default_bot_prompt)
+            prompt = await text.get_prompt()
 
         if prompt is None:
             return
@@ -274,7 +277,7 @@ class AI_User(commands.Cog):
 
     async def sent_reply(self, message, prompt: list[dict], direct_reply=False):
         """ Generates the reply using OpenAI and sends the result """
-
+        
         def check_moderated_response(response):
             """ filters out responses that were moderated out """
             response = response.lower()
@@ -318,36 +321,3 @@ class AI_User(commands.Cog):
         else:
             await message.channel.send(reply)
 
-    async def get_history(self, message: discord.Message):
-        """ Returns a history of messages """
-
-        def is_bad_message(message: discord.Message):
-            """ Returns True when message has attachments or long msg """
-            if (len(message.attachments) > 1):
-                return True
-            words = message.content.split(" ")
-            if len(words) > 300:
-                return True
-
-        history = await message.channel.history(limit=10, before=message).flatten()
-        history.reverse()
-
-        messages = []
-
-        i = 0
-        while (i < len(history)):
-            if i > 0 and (history[i].created_at - history[i - 1].created_at).total_seconds() > 1188:
-                break
-            if history[i].author.id == self.bot.user.id:
-                messages.append(
-                    {"role": "assistant", "content": history[i].content})
-                i += 1
-                continue
-            elif (is_bad_message(history[i])):
-                continue
-            else:
-                messages.append(
-                    {"role": "user", "content": f"\"{message.author.name}\" sent the message: {message.content}"})
-            i += 1
-
-        return messages
