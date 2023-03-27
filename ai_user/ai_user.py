@@ -1,13 +1,16 @@
 import datetime
 import importlib
 import json
+import logging
 import random
+import re
 
 import discord
 import openai
 from redbot.core import Config, checks, commands
 
-import logging
+from ai_user.prompts.embed_prompt import EmbedPrompt
+from ai_user.prompts.text_prompt import TextPrompt
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 logger.setLevel(logging.INFO)
@@ -21,9 +24,6 @@ try:
 except ImportError:
     from ai_user.prompts.dummy_image_prompt import ImagePrompt
     logger.warning("Detected no image processing dependencies installed")
-
-
-from ai_user.prompts.text_prompt import TextPrompt
 
 
 class AI_User(commands.Cog):
@@ -245,13 +245,21 @@ class AI_User(commands.Cog):
         if random.random() > percent:
             return
 
+        url_pattern = re.compile(r"(https?://\S+)")
+        contains_url = url_pattern.search(message.content)
+        prompt = None
+
         if (message.attachments and await self.config.scan_images()):
             default_bot_prompt = await self.config.guild(message.guild).custom_image_prompt()
             image = ImagePrompt(self.bot.user, message, bot_prompt=default_bot_prompt)
             prompt = await image.get_prompt()
-        else:
+        elif not contains_url:
             default_bot_prompt = await self.config.guild(message.guild).custom_text_prompt()
             text = TextPrompt(self.bot.user, message, bot_prompt=default_bot_prompt)
+            prompt = await text.get_prompt()
+        elif contains_url:
+            default_bot_prompt = await self.config.guild(message.guild).custom_text_prompt()
+            text = EmbedPrompt(self.bot.user, message, bot_prompt=default_bot_prompt)
             prompt = await text.get_prompt()
 
         if prompt is None:
@@ -281,8 +289,8 @@ class AI_User(commands.Cog):
 
         prompt = None
         if len(before.embeds) != len(after.embeds):
-            default_bot_prompt = self.config.guild(after.guild).custom_text_prompt()
-            text = TextPrompt(self.bot.user, after, bot_prompt=default_bot_prompt)
+            default_bot_prompt = await self.config.guild(after.guild).custom_text_prompt()
+            text = EmbedPrompt(self.bot.user, after, bot_prompt=default_bot_prompt)
             prompt = await text.get_prompt()
 
         if prompt is None:
