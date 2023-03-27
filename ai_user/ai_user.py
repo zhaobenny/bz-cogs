@@ -21,9 +21,9 @@ try:
     importlib.import_module("torch")
     importlib.import_module("transformers")
     from ai_user.prompts.image_prompt import ImagePrompt
-except ImportError:
+except:
     from ai_user.prompts.dummy_image_prompt import ImagePrompt
-    logger.warning("Detected no image processing dependencies installed")
+    logger.warning("No image processing dependencies installed / supported.")
 
 
 class AI_User(commands.Cog):
