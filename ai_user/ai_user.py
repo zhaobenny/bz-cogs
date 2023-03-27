@@ -82,7 +82,8 @@ class AI_User(commands.Cog):
         embed.add_field(name="Model", value=await self.config.model(), inline=False)
         embed.add_field(name="Filter Responses", value=await self.config.filter_responses(), inline=False)
         embed.add_field(name="Server Reply Percent", value=f"{await self.config.guild(message.guild).reply_percent() * 100}%", inline=False)
-        embed.add_field(name="Server Whitelisted Channels", value=" ".join(channels) if channels else "None", inline=False)
+        embed.add_field(name="Server Whitelisted Channels", value=" ".join(
+            channels) if channels else "None", inline=False)
         return await message.send(embed=embed)
 
     @ai_user.command()
@@ -102,7 +103,6 @@ class AI_User(commands.Cog):
         except ImportError:
             await self.config.scan_images.set(False)
             await ctx.send("Image processing dependencies not available. Please install them (see cog README.md) to use this feature.")
-
 
     @ai_user.command()
     @checks.is_owner()
@@ -126,7 +126,8 @@ class AI_User(commands.Cog):
             await self.initalize_openai(ctx)
 
         models_list = openai.Model.list()
-        gpt_models = [model.id for model in models_list['data'] if model.id.startswith('gpt')]
+        gpt_models = [model.id for model in models_list['data']
+                      if model.id.startswith('gpt')]
 
         if new_value not in gpt_models:
             return await ctx.send(f"Invalid model. Choose from: {', '.join(gpt_models)}")
@@ -162,7 +163,8 @@ class AI_User(commands.Cog):
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         embed = discord.Embed(title="The server whitelist is now")
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
-        embed.add_field(name="", value=" ".join(channels) if channels else "None")
+        embed.add_field(name="", value=" ".join(
+            channels) if channels else "None")
         return await ctx.send(embed=embed)
 
     @ai_user.command()
@@ -179,7 +181,8 @@ class AI_User(commands.Cog):
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         embed = discord.Embed(title="The server whitelist is now")
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
-        embed.add_field(name="", value=" ".join(channels) if channels else "None")
+        embed.add_field(name="", value=" ".join(
+            channels) if channels else "None")
         return await ctx.send(embed=embed)
 
     @ai_user.group()
@@ -202,7 +205,8 @@ class AI_User(commands.Cog):
     async def text(self, ctx, prompt):
         """Set custom text prompt (Enclose with "")"""
         await self.config.guild(ctx.guild).custom_text_prompt.set(prompt)
-        embed = discord.Embed(title="Text prompt set to", description=f"{prompt}")
+        embed = discord.Embed(title="Text prompt set to",
+                              description=f"{prompt}")
         return await ctx.send(embed=embed)
 
     @prompt.command()
@@ -210,7 +214,8 @@ class AI_User(commands.Cog):
     async def image(self, ctx, prompt):
         """Set custom image prompt (Enclose with "")"""
         await self.config.guild(ctx.guild).custom_image_prompt.set(prompt)
-        embed = discord.Embed(title="Image prompt set to", description=f"{prompt}")
+        embed = discord.Embed(title="Image prompt set to",
+                              description=f"{prompt}")
         return await ctx.send(embed=embed)
 
     @prompt.command()
@@ -221,13 +226,17 @@ class AI_User(commands.Cog):
         custom_image_prompt = await self.config.guild(ctx.guild).custom_image_prompt()
         embed = discord.Embed(title="Current Server Prompts")
         if custom_text_prompt:
-            embed.add_field(name="Custom Text Prompt", value=custom_text_prompt, inline=False)
+            embed.add_field(name="Custom Text Prompt",
+                            value=custom_text_prompt, inline=False)
         else:
-            embed.add_field(name="Custom Text Prompt", value="Not set", inline=False)
+            embed.add_field(name="Custom Text Prompt",
+                            value="Not set", inline=False)
         if custom_image_prompt:
-            embed.add_field(name="Custom Image Prompt", value=custom_image_prompt, inline=False)
+            embed.add_field(name="Custom Image Prompt",
+                            value=custom_image_prompt, inline=False)
         else:
-            embed.add_field(name="Custom Image Prompt", value="Not set", inline=False)
+            embed.add_field(name="Custom Image Prompt",
+                            value="Not set", inline=False)
         return await ctx.send(embed=embed)
 
     @commands.guild_only()
@@ -251,15 +260,18 @@ class AI_User(commands.Cog):
 
         if (message.attachments and await self.config.scan_images()):
             default_bot_prompt = await self.config.guild(message.guild).custom_image_prompt()
-            image = ImagePrompt(self.bot.user, message, bot_prompt=default_bot_prompt)
+            image = ImagePrompt(self.bot.user, message,
+                                bot_prompt=default_bot_prompt)
             prompt = await image.get_prompt()
         elif not contains_url:
             default_bot_prompt = await self.config.guild(message.guild).custom_text_prompt()
-            text = TextPrompt(self.bot.user, message, bot_prompt=default_bot_prompt)
+            text = TextPrompt(self.bot.user, message,
+                              bot_prompt=default_bot_prompt)
             prompt = await text.get_prompt()
         elif contains_url:
             default_bot_prompt = await self.config.guild(message.guild).custom_text_prompt()
-            text = EmbedPrompt(self.bot.user, message, bot_prompt=default_bot_prompt)
+            text = EmbedPrompt(self.bot.user, message,
+                               bot_prompt=default_bot_prompt)
             prompt = await text.get_prompt()
 
         if prompt is None:
@@ -290,7 +302,8 @@ class AI_User(commands.Cog):
         prompt = None
         if len(before.embeds) != len(after.embeds):
             default_bot_prompt = await self.config.guild(after.guild).custom_text_prompt()
-            text = EmbedPrompt(self.bot.user, after, bot_prompt=default_bot_prompt)
+            text = EmbedPrompt(self.bot.user, after,
+                               bot_prompt=default_bot_prompt)
             prompt = await text.get_prompt()
 
         if prompt is None:
@@ -300,7 +313,8 @@ class AI_User(commands.Cog):
 
     async def sent_reply(self, message, prompt: list[dict], direct_reply=False):
         """ Generates the reply using OpenAI and sends the result """
-        logger.debug(f"Replying to message \"{message.content}\" in {message.guild.name} with prompt: \n{json.dumps(prompt, indent=4)}")
+        logger.debug(
+            f"Replying to message \"{message.content}\" in {message.guild.name} with prompt: \n{json.dumps(prompt, indent=4)}")
 
         def check_moderated_response(response):
             """ filters out responses that were moderated out """
@@ -309,7 +323,8 @@ class AI_User(commands.Cog):
 
             for filter in filters:
                 if filter in response:
-                    logger.debug(f"Filtered out canned response replying to \"{message.content}\" in {message.guild.name}: \n{response}")
+                    logger.debug(
+                        f"Filtered out canned response replying to \"{message.content}\" in {message.guild.name}: \n{response}")
                     return True
 
             return False
@@ -344,4 +359,3 @@ class AI_User(commands.Cog):
             await message.reply(reply, mention_author=False)
         else:
             await message.channel.send(reply)
-
