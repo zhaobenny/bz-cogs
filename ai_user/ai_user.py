@@ -221,6 +221,8 @@ class AI_User(commands.Cog):
     @commands.guild_only()
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
+        if await self.bot.cog_disabled_in_guild(self, message.guild):
+            return
 
         whitelist = await self.config.guild(message.guild).channels_whitelist()
 
@@ -249,6 +251,8 @@ class AI_User(commands.Cog):
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
         """ Catch embed updates """
+        if await self.bot.cog_disabled_in_guild(self, before.guild):
+            return
 
         time_diff = datetime.datetime.utcnow() - after.created_at
         if not (time_diff.total_seconds() <= 20):
@@ -277,7 +281,7 @@ class AI_User(commands.Cog):
 
     async def sent_reply(self, message, prompt: list[dict], direct_reply=False):
         """ Generates the reply using OpenAI and sends the result """
-        
+
         def check_moderated_response(response):
             """ filters out responses that were moderated out """
             response = response.lower()

@@ -22,8 +22,6 @@ class Prompt:
         """
         return await self._create_full_prompt()
 
-
-
     async def _get_previous_history(self, limit: int = 10):
         """ Returns a history of messages before current message """
 
