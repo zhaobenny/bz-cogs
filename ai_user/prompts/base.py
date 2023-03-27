@@ -26,7 +26,7 @@ class Prompt:
         """ Returns a history of messages before current message """
 
         def is_not_valid_message(message: Message):
-            return len(message.attachments) > 1 or len(message.content.split(" ")) > 300
+            return len(message.attachments) > 1 or len(message.content.split(" ")) > 300 or len(message.content) == 0
 
         def format_message(message: Message):
             if message.author.id == self.bot.id:

@@ -65,6 +65,8 @@ class ImagePrompt(Prompt):
                         "content": caption,
                     },
                 ]
+        if prompt:
+            prompt[:0] = await (self._get_previous_history())
         return prompt
 
     @to_thread

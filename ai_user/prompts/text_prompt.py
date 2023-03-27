@@ -50,5 +50,5 @@ class TextPrompt(Prompt):
             prompt.append({"role": role, "content": content})
         prompt.append({"role": "user",
                         "content": f"[{self.message.author.name}]: {self.message.content}"})
-        prompt[1:1] = await (self._get_previous_history())
+        prompt[:0] = await (self._get_previous_history())
         return prompt

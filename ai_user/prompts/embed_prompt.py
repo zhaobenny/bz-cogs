@@ -41,4 +41,6 @@ class EmbedPrompt(Prompt):
             ]
         if len(self.message.content) > 0:
             prompt.append({"role": "user", "content": f"{self.message.content}"})
+        if prompt:
+            prompt[:0] = await (self._get_previous_history())
         return prompt
