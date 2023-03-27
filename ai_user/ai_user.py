@@ -33,6 +33,8 @@ class AI_User(commands.Cog):
 
         self.bot = bot
         self.config = Config.get_conf(self, identifier=754070)
+        self.whitelist = {}
+        self.percent = {}
 
         default_global = {
             "scan_images": False,
@@ -113,6 +115,7 @@ class AI_User(commands.Cog):
         except ValueError:
             return await ctx.send("Value must be a number")
         await self.config.guild(ctx.guild).reply_percent.set(new_value / 100)
+        self.percent[ctx.guild.id] = new_value / 100
         embed = discord.Embed(
             title="The chance that the bot will reply on this server is now set to")
         embed.add_field(name="", value=f"{new_value}%")
@@ -161,6 +164,7 @@ class AI_User(commands.Cog):
             return await ctx.send("Channel already in whitelist")
         new_whitelist.append(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
+        self.whitelist[ctx.guild.id] = new_whitelist
         embed = discord.Embed(title="The server whitelist is now")
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.add_field(name="", value=" ".join(
@@ -179,6 +183,7 @@ class AI_User(commands.Cog):
             return await ctx.send("Channel not in whitelist")
         new_whitelist.remove(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
+        self.whitelist[ctx.guild.id] = new_whitelist
         embed = discord.Embed(title="The server whitelist is now")
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.add_field(name="", value=" ".join(
@@ -239,19 +244,31 @@ class AI_User(commands.Cog):
                             value="Not set", inline=False)
         return await ctx.send(embed=embed)
 
+    async def is_common_valid_reply(self, message) -> bool:
+        """Run some common checks to see if a message is valid for the bot to reply to"""
+        if await self.bot.cog_disabled_in_guild(self, message.guild):
+            return False
+
+        if message.author.bot:
+            return False
+
+        if self.whitelist.get(message.guild.id, None) is None or self.percent.get(message.guild.id, None) is None:
+            # Cache the guild options
+            self.whitelist[message.guild.id] = await self.config.guild(message.guild).channels_whitelist()
+            self.percent[message.guild.id] = await self.config.guild(message.guild).reply_percent()
+
+        if (message.channel.id not in self.whitelist[message.guild.id]):
+            return False
+
+        return True
+
     @commands.guild_only()
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
-        if await self.bot.cog_disabled_in_guild(self, message.guild):
+        if not await self.is_common_valid_reply(message):
             return
 
-        whitelist = await self.config.guild(message.guild).channels_whitelist()
-
-        if (message.channel.id not in whitelist) or message.author.bot:
-            return
-
-        percent = await self.config.guild(message.guild).reply_percent()
-        if random.random() > percent:
+        if random.random() > self.percent[message.guild.id]:
             return
 
         url_pattern = re.compile(r"(https?://\S+)")
@@ -283,20 +300,14 @@ class AI_User(commands.Cog):
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
         """ Catch embed updates """
-        if await self.bot.cog_disabled_in_guild(self, before.guild):
+        if not await self.is_common_valid_reply(before):
             return
 
         time_diff = datetime.datetime.utcnow() - after.created_at
         if not (time_diff.total_seconds() <= 20):
             return
 
-        whitelist = await self.config.guild(after.guild).channels_whitelist()
-
-        if (after.channel.id not in whitelist) or after.author.bot:
-            return
-
-        percent = await self.config.guild(after.guild).reply_percent()
-        if random.random() > percent:
+        if random.random() > self.percent[after.guild.id]:
             return
 
         prompt = None
@@ -342,11 +353,14 @@ class AI_User(commands.Cog):
             try:
                 reply = response["choices"][0]["message"]["content"]
             except:
-                logger.error(f"Bad response from OpenAI:\n {response}")
-                return
+                return logger.error(f"Bad response from OpenAI:\n {response}")
 
-            if (await self.config.filter_responses()) and check_moderated_response(reply):
-                return await message.add_reaction("😶")
+        if (await self.config.filter_responses()) and check_moderated_response(reply):
+            return await message.add_reaction("😶")
+
+        pattern = r'^\[.*?\]:\s?'
+        # remove the [user]: from the response if it exists
+        reply = re.sub(pattern, '', reply)
 
         time_diff = datetime.datetime.utcnow() - message.created_at
         if time_diff.total_seconds() > 8:

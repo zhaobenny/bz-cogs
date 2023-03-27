@@ -1,4 +1,5 @@
 import logging
+
 from typing import Optional
 
 from discord import Message, User
@@ -37,6 +38,7 @@ class TextPrompt(Prompt):
         if not self._is_acceptable_message(self.message):
             return None
 
+        prompt = []
         history = await self._get_previous_history()
         if history:
             prompt.extend(history)
