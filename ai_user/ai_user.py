@@ -7,6 +7,12 @@ import discord
 import openai
 from redbot.core import Config, checks, commands
 
+import logging
+
+logger = logging.getLogger("red.bz_cogs.ai_user")
+logger.setLevel(logging.INFO)
+
+
 try:
     importlib.import_module("pytesseract")
     importlib.import_module("torch")
@@ -14,7 +20,7 @@ try:
     from ai_user.prompts.image_prompt import ImagePrompt
 except ImportError:
     from ai_user.prompts.dummy_image_prompt import ImagePrompt
-    print("[AI_User] Detected no image processing dependencies installed")
+    logger.info("[AI_User] Detected no image processing dependencies installed")
 
 
 from ai_user.prompts.text_prompt import TextPrompt
@@ -26,7 +32,6 @@ class AI_User(commands.Cog):
     def __init__(self, bot):
 
         self.bot = bot
-        self.bot_user = bot.user
         self.config = Config.get_conf(self, identifier=754070)
 
         default_global = {
@@ -235,11 +240,11 @@ class AI_User(commands.Cog):
 
         if (message.attachments and await self.config.scan_images()):
             default_bot_prompt = await self.config.guild(message.guild).custom_image_prompt()
-            image = ImagePrompt(self.bot_user, message, bot_prompt=default_bot_prompt)
+            image = ImagePrompt(self.bot.user, message, bot_prompt=default_bot_prompt)
             prompt = await image.get_prompt()
         else:
             default_bot_prompt = await self.config.guild(message.guild).custom_text_prompt()
-            text = TextPrompt(self.bot_user, message, bot_prompt=default_bot_prompt)
+            text = TextPrompt(self.bot.user, message, bot_prompt=default_bot_prompt)
             prompt = await text.get_prompt()
 
         if prompt is None:
@@ -271,7 +276,7 @@ class AI_User(commands.Cog):
         prompt = None
         if len(before.embeds) != len(after.embeds):
             default_bot_prompt = self.config.guild(after.guild).custom_text_prompt()
-            text = TextPrompt(self.bot_user, after, bot_prompt=default_bot_prompt)
+            text = TextPrompt(self.bot.user, after, bot_prompt=default_bot_prompt)
             prompt = await text.get_prompt()
 
         if prompt is None:
@@ -281,6 +286,7 @@ class AI_User(commands.Cog):
 
     async def sent_reply(self, message, prompt: list[dict], direct_reply=False):
         """ Generates the reply using OpenAI and sends the result """
+        logger.debug(f"Replying to message \"{message.content}\" in {message.guild.name} with prompt: \n{json.dumps(prompt, indent=4)}")
 
         def check_moderated_response(response):
             """ filters out responses that were moderated out """
@@ -289,7 +295,7 @@ class AI_User(commands.Cog):
 
             for filter in filters:
                 if filter in response:
-                    print(f"[ai_user] Filtered out canned response replying to \"{message.content}\" in {message.guild.name}: \n{response}")
+                    logger.debug(f"Filtered out canned response replying to \"{message.content}\" in {message.guild.name}: \n{response}")
                     return True
 
             return False
@@ -307,7 +313,7 @@ class AI_User(commands.Cog):
             try:
                 reply = response["choices"][0]["message"]["content"]
             except:
-                print(f"[ai_user] Bad response from OpenAI:\n {response}")
+                logger.error(f"Bad response from OpenAI:\n {response}")
                 return
 
             if (await self.config.filter_responses()) and check_moderated_response(reply):

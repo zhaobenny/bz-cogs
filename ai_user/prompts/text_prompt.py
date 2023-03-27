@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Optional
 
@@ -6,6 +7,7 @@ from discord import Message, User
 from ai_user.prompts.constants import DEFAULT_TEXT_PROMPT
 from ai_user.prompts.base import Prompt
 
+logger = logging.getLogger("red.bz_cogs.ai_user")
 
 class TextPrompt(Prompt):
     def __init__(self, bot: User, message: Message, bot_prompt: str = None):
@@ -16,17 +18,15 @@ class TextPrompt(Prompt):
 
     def _is_acceptable_message(self, message: Message) -> bool:
         if not message.content:
-            print(f"[ai_user] Skipping empty message in {message.guild.name}")
+            logger.debug(f"Skipping empty message in {message.guild.name}")
             return False
 
         if len(message.content) < 5:
-            print(
-                f"[ai_user] Skipping short message: {message.content} in {message.guild.name}")
+            logger.debug(f"Skipping short message: {message.content} in {message.guild.name}")
             return False
 
         if len(message.content.split()) > 300:
-            print(
-                f"[ai_user] Skipping long message: {message.content} in {message.guild.name}")
+            logger.debug(f"Skipping long message: {message.content} in {message.guild.name}")
             return False
 
         return True
@@ -51,14 +51,14 @@ class TextPrompt(Prompt):
         if len(self.message.embeds) > 0 and self.message.embeds[0].title and self.message.embeds[0].description:
             prompt = [
                 {"role": "system",
-                 "content": f"Do not include \"[{self.bot.name}]:\" in the response. You are in a Discord text channel. The following is a embed sent by {self.message.author.name}. {self.bot_prompt}"},
+                 "content": f"You are in a Discord text channel. The following is a embed sent by {self.message.author.name}. {self.bot_prompt}"},
                 {"role": "user",
                  "content": f"{self.message.content}, title is \"{self.message.embeds[0].title}\" and the description is \"{self.message.embeds[0].description}\""}
             ]
         elif not is_url:
             prompt = [
                 {"role": "system",
-                 "content": f"You are {self.bot.name}. Do not include \"[{self.bot.name}]:\" in the response. Do not react to the username in between the []. You are in a Discord text channel. {self.bot_prompt}"},
+                 "content": f"You are {self.bot.name}. Do not include \"[{self.bot.name}]:\" or \"[NAME]\" in the response. Do not react to the username in between the []. You are in a Discord text channel. {self.bot_prompt}"},
             ]
             if self.message.reference:
                 replied = await self.message.channel.fetch_message(self.message.reference.message_id)
@@ -71,6 +71,5 @@ class TextPrompt(Prompt):
                 prompt.append({"role": role, "content": content})
             prompt.append({"role": "user",
                            "content": f"[{self.message.author.name}]: {self.message.content}"})
-
-        prompt[1:1] = await (self._get_previous_history())
+            prompt[1:1] = await (self._get_previous_history())
         return prompt

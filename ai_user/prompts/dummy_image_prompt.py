@@ -1,6 +1,10 @@
+import logging
+
 from discord import Message, User
 
 from ai_user.prompts.base import Prompt
+
+logger = logging.getLogger("red.bz_cogs.ai_user")
 
 class ImagePrompt(Prompt):
     """ Dummy prompt for when no image dependencies are installed """
@@ -11,6 +15,6 @@ class ImagePrompt(Prompt):
         return None
 
     async def _create_full_prompt(self):
-        print("[AI_User] Attempted to reply to a image, but no image processing dependencies are installed. (See cog README.md for more info)")
+        logger.error("[AI_User] Attempted to reply to a image, but no image processing dependencies are installed. (See cog README.md for more info)")
         return None
 
