@@ -20,7 +20,7 @@ try:
     from ai_user.prompts.image_prompt import ImagePrompt
 except ImportError:
     from ai_user.prompts.dummy_image_prompt import ImagePrompt
-    logger.info("[AI_User] Detected no image processing dependencies installed")
+    logger.warning("Detected no image processing dependencies installed")
 
 
 from ai_user.prompts.text_prompt import TextPrompt
@@ -63,6 +63,13 @@ class AI_User(commands.Cog):
     @commands.group()
     async def ai_user(self, _):
         pass
+
+    @ai_user.command()
+    async def logging(self, ctx):
+        """Toggle debug logging for troubleshooting"""
+        value = not logger.isEnabledFor(logging.INFO)
+        logger.setLevel(logging.INFO if value else logging.DEBUG)
+        await ctx.send(f"Debug logging {'enabled' if value else 'disabled'}")
 
     @ai_user.command()
     async def config(self, message):
@@ -114,7 +121,7 @@ class AI_User(commands.Cog):
     @ai_user.command()
     @checks.is_owner()
     async def model(self, ctx, new_value):
-        """ Change default chat completion model (eg. gpt3.5-turbo or gpt-4)"""
+        """ Change default chat completion model """
         if not openai.api_key:
             await self.initalize_openai(ctx)
 
@@ -133,7 +140,7 @@ class AI_User(commands.Cog):
     @ai_user.command()
     @checks.is_owner()
     async def filter_responses(self, ctx):
-        """ Toggle rudimentary filtering of canned responses """
+        """ Toggle rudimentary filtering of canned replies """
         value = not await self.config.filter_responses()
         await self.config.filter_responses.set(value)
         embed = discord.Embed(
