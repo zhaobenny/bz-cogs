@@ -270,7 +270,6 @@ class AI_User(commands.Cog):
         if not (time_diff.total_seconds() <= 20):
             return
 
-
         whitelist = await self.config.guild(after.guild).channels_whitelist()
 
         if (after.channel.id not in whitelist) or after.author.bot:

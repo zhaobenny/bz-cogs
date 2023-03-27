@@ -60,7 +60,7 @@ class Prompt:
                         messages.append(formatted_replied_message)
                     else:
                         # avoid duplicates that will confuse the model
-                        messages.append({"role": "system", "content": f"The following ,essage is a reply to: [{replied_message.author.name}]: {replied_message.content}"})
+                        messages.append({"role": "system", "content": f"The following message is a reply to: [{replied_message.author.name}]: {replied_message.content}"})
 
             messages.append(format_message(message))
 
