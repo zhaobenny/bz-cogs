@@ -43,10 +43,10 @@ class TextPrompt(Prompt):
         if history:
             prompt.extend(history)
 
-        prompt = [
+        prompt.append(
             {"role": "system",
                 "content": f"You are {self.bot.name}. Do not include \"[{self.bot.name}]:\" or \"[NAME]\" in the response. Do not react to the username in between the []. You are in a Discord text channel. {self.bot_prompt}"},
-        ]
+        )
 
         if self.message.reference:
             replied = await self.message.channel.fetch_message(self.message.reference.message_id)
