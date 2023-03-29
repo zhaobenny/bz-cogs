@@ -264,7 +264,11 @@ class AI_User(commands.Cog):
         if not await self.is_common_valid_reply(message):
             return
 
-        if random.random() > self.percent[message.guild.id]:
+        if self.bot.user in message.mentions: # bypass percent check for mentions
+            pass
+        elif (message.reference and (await message.channel.fetch_message(message.reference.message_id)).author == self.bot.user): # bypass percent check for replies
+            pass
+        elif random.random() > self.percent[message.guild.id]:
             return
 
         url_pattern = re.compile(r"(https?://\S+)")
