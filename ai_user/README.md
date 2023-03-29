@@ -1,13 +1,13 @@
 # How to use 🛠️
 
 The bot will only reply in whitelisted channels. Do not use mention, just the channel name to whitelist.
-Please add a channel to whitelist using:
+Please add a channel to a server's whitelist using:
 
 ```
 [p]ai_user add <CHANNEL_NAME>
 ```
 
-Change the percentage of eligible messages to reply to (default 50):
+Change the percentage of eligible messages to reply to (defaults to 50% per server):
 
 ```
 [p]ai_user percent <PERCENT>
@@ -31,16 +31,29 @@ Custom prompts can be set per server using the commands in:
 ```
 
 Image scanning, if turned on, will be very CPU intensive. Not recommended for multiple servers/channels.
+See below for instructions on installing the necessary dependencies.
 
-It will require pytesseract, transformers[torch] install.
+
+### 1. Install Python Dependencies
+
+```
+source ~/redenv/bin/activate # or however you activate your virtual environment in your OS
+pip install -U pytesseract transformers[torch]
+```
+
+OR (less recommended) run this command in Discord
 
 ```
 [p]pipinstall pytesseract transformers[torch]
 ```
 
-And then the Pytesseract install will require **Google Tesseract be [installed](https://tesseract-ocr.github.io/tessdoc/Installation.html) on host machine itself or the phasecorex/red-discordbot:full image**.
+### 2. Install Tessaract OCR
 
-First time use will take longer due to the need to download the pretrained models. (OCR and image captioning models)
+See [here](https://tesseract-ocr.github.io/tessdoc/Installation.html) for instructions on installing TessaractOCR, or alternatively just use the phasecorex/red-discordbot:full image.
+
+
+
+First time scanning an image will take longer due to the need to download the pretrained models. (OCR and image captioning models)
 
 ### Have fun. 🎉
 ![repetition](https://user-images.githubusercontent.com/46238123/227853613-1a524915-ed46-45f7-a154-94e90daf0cd7.jpg)
