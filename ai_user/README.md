@@ -55,5 +55,7 @@ See [here](https://tesseract-ocr.github.io/tessdoc/Installation.html) for instru
 
 First time scanning an image will take longer due to the need to download the pretrained models. (OCR and image captioning models)
 
+---
+
 ### Have fun. 🎉
 ![repetition](https://user-images.githubusercontent.com/46238123/227853613-1a524915-ed46-45f7-a154-94e90daf0cd7.jpg)
