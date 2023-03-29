@@ -99,10 +99,10 @@ class AI_User(commands.Cog):
             value = not await self.config.scan_images()
             await self.config.scan_images.set(value)
             embed = discord.Embed(
-                title="⚠️ CPU LOAD, REQUIRES MANUAL INSTALL OF TESSERACT ⚠️")
+                title="⚠️ WILL CAUSE HEAVY CPU LOAD ⚠️")
             embed.add_field(name="Scanning Images now set to", value=value)
             return await ctx.send(embed=embed)
-        except ImportError:
+        except:
             await self.config.scan_images.set(False)
             await ctx.send("Image processing dependencies not available. Please install them (see cog README.md) to use this feature.")
 

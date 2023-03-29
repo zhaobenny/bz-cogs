@@ -18,5 +18,5 @@ class ImagePrompt(Prompt):
 
     async def _create_full_prompt(self):
         logger.error(
-            "Attempted to reply to a image, but no image processing dependencies are installed. (See cog README.md for more info)")
+            "Attempted to reply to a image, but no image processing dependencies were detected. (See cog README.md for more info)")
         return None
