@@ -33,7 +33,7 @@ class Prompt:
         content = f"[{message.author.name}]: {message.content}" if role == "user" else message.content
         return {"role": role, "content": content}
 
-    def _is_json_in_list(json_obj, json_list):
+    def _is_json_in_list(self, json_obj, json_list):
         return json.dumps(json_obj, sort_keys=True) in json_list
 
     async def _get_previous_history(self, limit: int = 10):

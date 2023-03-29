@@ -1,42 +1,30 @@
 
-import logging
-logger = logging.getLogger("red.bz_cogs.ai_user")
-
-logger.debug("Attempting to load Datetime...")
 import datetime
-logger.debug("Attempting to load Importlib...")
 import importlib
-logger.debug("Attempting to load JSON...")
 import json
-logger.debug("Attempting to load random...")
+import logging
 import random
-logger.debug("Attempting to load re...")
 import re
 
-logger.debug("Attempting to load discord lib...")
 import discord
-logger.debug("Attempting to load OpenAI...")
 import openai
-logger.debug("Attempting to load redbot.core...")
 from redbot.core import Config, checks, commands
 
-logger.debug("Attempting to load EmbedPrompt...")
 from ai_user.prompts.embed_prompt import EmbedPrompt
-logger.debug("Attempting to load TextPrompt...")
 from ai_user.prompts.text_prompt import TextPrompt
+
+logger = logging.getLogger("red.bz_cogs.ai_user")
+
 
 try:
     logger.debug("Attempting to load pytesseract...")
-    pytesseract = importlib.import_module("pytesseract")
-    logger.debug(f"Loading pytesseract from {pytesseract.__path__}")
+    importlib.import_module("pytesseract")
     logger.debug("Attempting to load torch...")
     importlib.import_module("torch")
     logger.debug("Attempting to load transformers...")
     importlib.import_module("transformers")
-    logger.debug("Attempting to load ImagePrompt...")
     from ai_user.prompts.image_prompt import ImagePrompt
 except:
-    logger.debug("Attempting to load dummy_image_prompt...")
     from ai_user.prompts.dummy_image_prompt import ImagePrompt
     logger.warning("No image processing dependencies installed / supported.")
 
@@ -45,10 +33,8 @@ class AI_User(commands.Cog):
     whitelist = None
 
     def __init__(self, bot):
-        logger.debug("Attempting to init cog...")
 
         self.bot = bot
-        logger.debug("Attempting to get config...")
         self.config = Config.get_conf(self, identifier=754070)
         self.whitelist = {}
         self.percent = {}
@@ -65,12 +51,9 @@ class AI_User(commands.Cog):
             "custom_image_prompt": None,
             "reply_percent": 0.5,
         }
-        logger.debug("Attempting to register config...")
 
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
-        logger.debug("Cog init...")
-
 
     async def initalize_openai(self, message):
         openai.api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
