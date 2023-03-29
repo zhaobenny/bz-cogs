@@ -27,7 +27,8 @@ from ai_user.prompts.text_prompt import TextPrompt
 
 try:
     logger.debug("Attempting to load pytesseract...")
-    importlib.import_module("pytesseract")
+    pytesseract = importlib.import_module("pytesseract")
+    logger.debug(f"Loading pytesseract from {pytesseract.__path__}")
     logger.debug("Attempting to load torch...")
     importlib.import_module("torch")
     logger.debug("Attempting to load transformers...")
