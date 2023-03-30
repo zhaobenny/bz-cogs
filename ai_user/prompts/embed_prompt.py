@@ -27,23 +27,22 @@ class EmbedPrompt(Prompt):
 
         is_tenor_gif = re.match(tenor_pattern, self.message.embeds[0].url)
 
-        if is_tenor_gif:  # not handling embeded gifs for now
+        if is_tenor_gif:
             logger.debug(
                 f"Skipping tenor gif: {self.message.embeds[0].url} in {self.message.guild.name}")
             return None
 
-        prompt = None
+        prompt = []
+        prompt.extend(await (self._get_previous_history()))
+        prompt.extend([
+            {"role": "system",
+             "content": f"You are in a Discord text channel. A embed has been sent by {self.message.author.name}. {self.bot_prompt}"},
+            {"role": "system",
+             "content": f"The embed title is \"{self.message.embeds[0].title}\" and the description is \"{self.message.embeds[0].description}\""},
+        ])
 
-        if len(self.message.embeds) > 0 and self.message.embeds[0].title and self.message.embeds[0].description:
-            prompt = [
-                {"role": "system",
-                 "content": f"You are in a Discord text channel. A embed has been sent by {self.message.author.name}. {self.bot_prompt}"},
-                {"role": "system",
-                    "content": f"The embed title is \"{self.message.embeds[0].title}\" and the description is \"{self.message.embeds[0].description}\""},
-            ]
         if len(self.message.content) > 0:
             prompt.append(
                 {"role": "user", "content": f"{self.message.content}"})
-        if prompt:
-            prompt[:0] = await (self._get_previous_history())
+
         return prompt

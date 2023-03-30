@@ -1,11 +1,10 @@
 import logging
-
 from typing import Optional
 
 from discord import Message, User
 
-from ai_user.prompts.constants import DEFAULT_TEXT_PROMPT
 from ai_user.prompts.base import Prompt
+from ai_user.prompts.constants import DEFAULT_TEXT_PROMPT
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -39,13 +38,11 @@ class TextPrompt(Prompt):
             return None
 
         prompt = []
-        history = await self._get_previous_history()
-        if history:
-            prompt.extend(history)
+        prompt.extend(await self._get_previous_history())
 
         prompt.append(
             {"role": "system",
-                "content": f"You are {self.bot.name}. Do not include \"[{self.bot.name}]:\" or \"[NAME]\" in the response. Do not react to the username in between the []. You are in a Discord text channel. {self.bot_prompt}"},
+                "content": f"You are {self.bot.name}. Do not include '{self.bot.name}' in the response. Do not react to the username before the ':'. You are in a Discord text channel. {self.bot_prompt}"},
         )
 
         if self.message.reference:
@@ -53,7 +50,6 @@ class TextPrompt(Prompt):
             formattted_replied = self._format_message(replied)
             prompt.append(formattted_replied)
 
-        prompt.append({"role": "user",
-                       "content": f"[{self.message.author.name}]: {self.message.content}"})
+        prompt.append(self._format_message(self.message))
 
         return prompt

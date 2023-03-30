@@ -1,7 +1,7 @@
 import asyncio
 import functools
 from io import BytesIO
-from typing import Optional, Callable, Coroutine
+from typing import Callable, Coroutine, Optional
 
 import pytesseract
 import torch
@@ -10,8 +10,8 @@ from PIL import Image
 from transformers import (AutoTokenizer, VisionEncoderDecoderModel,
                           ViTImageProcessor)
 
-from ai_user.prompts.constants import DEFAULT_IMAGE_PROMPT
 from ai_user.prompts.base import Prompt
+from ai_user.prompts.constants import DEFAULT_IMAGE_PROMPT
 
 
 def to_thread(func: Callable) -> Coroutine:
@@ -43,33 +43,36 @@ class ImagePrompt(Prompt):
             return None
 
         prompt = None
-        scanned_text = await self._extract_text_from_image(image)
+        scanned_text = await ImagePrompt._extract_text_from_image(image)
         if scanned_text and len(scanned_text.split()) > 10:
             prompt = [
                 {"role": "system", "content": f"The following text is from a picture sent by user \"{self.message.author.name}\". You are in a Discord text channel. {self.bot_prompt}"},
                 {"role": "user", "content": scanned_text},
             ]
         else:
-            confidence, caption = await self._create_prompt_from_image(image)
+            confidence, caption = await ImagePrompt._create_prompt_from_image(image)
             if confidence > 0.45:
                 prompt = [
                     {"role": "system", "content": f"The following is a description of a picture sent by user \"{self.message.author.name}\". You are in a Discord text channel. {self.bot_prompt}"},
                     {"role": "user", "content": caption},
                 ]
-        if prompt:
-            prompt[:0] = await self._get_previous_history()
+        if not prompt:
+            return None
+        prompt[:0] = await self._get_previous_history()
         return prompt
 
+    @staticmethod
     @to_thread
-    def _extract_text_from_image(self, image: Image.Image):
+    def _extract_text_from_image(image: Image.Image):
         data = pytesseract.image_to_data(
             image, output_type=pytesseract.Output.DICT, timeout=30)
         text = " ".join(word for i, word in enumerate(data["text"])
                         if int(data["conf"][i]) >= 60)
         return text.strip()
 
+    @staticmethod
     @to_thread
-    def _create_prompt_from_image(self, image: Image.Image):
+    def _create_prompt_from_image(image: Image.Image):
         # based off https://huggingface.co/nlpconnect/vit-gpt2-image-captioning/discussions/6
 
         MODEL_NAME = "nlpconnect/vit-gpt2-image-captioning"

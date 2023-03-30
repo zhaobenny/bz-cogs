@@ -30,14 +30,12 @@ except:
 
 
 class AI_User(commands.Cog):
-    whitelist = None
 
     def __init__(self, bot):
 
         self.bot = bot
         self.config = Config.get_conf(self, identifier=754070)
-        self.whitelist = {}
-        self.percent = {}
+        self.cached_options = {}
 
         default_global = {
             "scan_images": False,
@@ -71,7 +69,7 @@ class AI_User(commands.Cog):
 
     @ai_user.command()
     async def config(self, message):
-        """Returns current config"""
+        """ Returns current config"""
         whitelist = await self.config.guild(message.guild).channels_whitelist()
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
 
@@ -120,7 +118,7 @@ class AI_User(commands.Cog):
     @ai_user.command()
     @checks.is_owner()
     async def model(self, ctx, new_value):
-        """ Change default chat completion model """
+        """ Changes global chat completion model """
         if not openai.api_key:
             await self.initalize_openai(ctx)
 
@@ -140,7 +138,7 @@ class AI_User(commands.Cog):
     @ai_user.command()
     @checks.is_owner()
     async def filter_responses(self, ctx):
-        """ Toggle rudimentary filtering of canned replies """
+        """ Toggles rudimentary filtering of canned replies """
         value = not await self.config.filter_responses()
         await self.config.filter_responses.set(value)
         embed = discord.Embed(
@@ -160,7 +158,7 @@ class AI_User(commands.Cog):
             return await ctx.send("Channel already in whitelist")
         new_whitelist.append(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
-        self.whitelist[ctx.guild.id] = new_whitelist
+        await self.cache_guild_options(ctx)
         embed = discord.Embed(title="The server whitelist is now")
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.add_field(name="", value=" ".join(
@@ -179,7 +177,7 @@ class AI_User(commands.Cog):
             return await ctx.send("Channel not in whitelist")
         new_whitelist.remove(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
-        self.whitelist[ctx.guild.id] = new_whitelist
+        await self.cache_guild_options(ctx)
         embed = discord.Embed(title="The server whitelist is now")
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.add_field(name="", value=" ".join(
@@ -240,23 +238,11 @@ class AI_User(commands.Cog):
                             value="Not set", inline=False)
         return await ctx.send(embed=embed)
 
-    async def is_common_valid_reply(self, message) -> bool:
-        """Run some common checks to see if a message is valid for the bot to reply to"""
-        if await self.bot.cog_disabled_in_guild(self, message.guild):
-            return False
-
-        if message.author.bot:
-            return False
-
-        if self.whitelist.get(message.guild.id, None) is None or self.percent.get(message.guild.id, None) is None:
-            # Cache the guild options
-            self.whitelist[message.guild.id] = await self.config.guild(message.guild).channels_whitelist()
-            self.percent[message.guild.id] = await self.config.guild(message.guild).reply_percent()
-
-        if (message.channel.id not in self.whitelist[message.guild.id]):
-            return False
-
-        return True
+    async def cache_guild_options(self, message):
+        self.cached_options[message.guild.id] = {
+            "channels_whitelist": await self.config.guild(message.guild).channels_whitelist(),
+            "reply_percent": await self.config.guild(message.guild).reply_percent(),
+        }
 
     @commands.guild_only()
     @commands.Cog.listener()
@@ -264,11 +250,9 @@ class AI_User(commands.Cog):
         if not await self.is_common_valid_reply(message):
             return
 
-        if self.bot.user in message.mentions: # bypass percent check for mentions
+        if (await self.is_bot_mentioned_or_replied(message)):
             pass
-        elif (message.reference and (await message.channel.fetch_message(message.reference.message_id)).author == self.bot.user): # bypass percent check for replies
-            pass
-        elif random.random() > self.percent[message.guild.id]:
+        elif random.random() > self.cached_options[message.guild.id].get("reply_percent"):
             return
 
         url_pattern = re.compile(r"(https?://\S+)")
@@ -304,10 +288,10 @@ class AI_User(commands.Cog):
             return
 
         time_diff = datetime.datetime.utcnow() - after.created_at
-        if not (time_diff.total_seconds() <= 20):
+        if not (time_diff.total_seconds() <= 10):
             return
 
-        if random.random() > self.percent[after.guild.id]:
+        if random.random() > self.cached_options[before.guild.id].get("reply_percent"):
             return
 
         prompt = None
@@ -332,11 +316,10 @@ class AI_User(commands.Cog):
             response = response.lower()
             filters = ["language model", "openai", "sorry", "apologize"]
 
-            for filter in filters:
-                if filter in response:
-                    logger.debug(
-                        f"Filtered out canned response replying to \"{message.content}\" in {message.guild.name}: \n{response}")
-                    return True
+            if any(filter in response for filter in filters):
+                logger.debug(
+                    f"Filtered out canned response replying to \"{message.content}\" in {message.guild.name}: \n{response}")
+                return True
 
             return False
 
@@ -358,9 +341,10 @@ class AI_User(commands.Cog):
         if (await self.config.filter_responses()) and check_moderated_response(reply):
             return await message.add_reaction("😶")
 
-        pattern = r'^\[.*?\]:\s?'
-        # remove the [user]: from the response if it exists
-        reply = re.sub(pattern, '', reply)
+        bot_name = self.bot.user.name
+        pattern = r'^{}: '
+        # remove the botname: from the response if it exists
+        reply = re.sub(pattern.format(bot_name), '', reply)
 
         time_diff = datetime.datetime.utcnow() - message.created_at
         if time_diff.total_seconds() > 8:
@@ -373,3 +357,26 @@ class AI_User(commands.Cog):
             await message.reply(reply, mention_author=False)
         else:
             await message.channel.send(reply)
+
+    async def is_common_valid_reply(self, message) -> bool:
+        """ Run some common checks to see if a message is valid for the bot to reply to"""
+        if await self.bot.cog_disabled_in_guild(self, message.guild):
+            return False
+
+        if message.author.bot:
+            return False
+
+        if not self.cached_options.get(message.guild.id):
+            await self.cache_guild_options(message)
+
+        if (message.channel.id not in self.cached_options[message.guild.id].get("channels_whitelist")):
+            return False
+
+        return True
+
+    async def is_bot_mentioned_or_replied(self, message) -> bool:
+        if self.bot.user in message.mentions:
+            return True
+        elif (message.reference and (await message.channel.fetch_message(message.reference.message_id)).author == self.bot.user):
+            return True
+        return False
