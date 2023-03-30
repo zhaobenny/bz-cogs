@@ -53,11 +53,6 @@ class AI_User(commands.Cog):
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
 
-    async def initalize_openai(self, message):
-        openai.api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
-        if not openai.api_key:
-            return await message.channel.send("OpenAI API key not set. Please set it with `[p]set api openai api_key,API_KEY`")
-
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, api_tokens):
         if service_name == "openai":
@@ -109,7 +104,7 @@ class AI_User(commands.Cog):
         except ValueError:
             return await ctx.send("Value must be a number")
         await self.config.guild(ctx.guild).reply_percent.set(new_value / 100)
-        self.percent[ctx.guild.id] = new_value / 100
+        await self.cache_guild_options(ctx)
         embed = discord.Embed(
             title="The chance that the bot will reply on this server is now set to")
         embed.add_field(name="", value=f"{new_value}%")
@@ -238,12 +233,6 @@ class AI_User(commands.Cog):
                             value="Not set", inline=False)
         return await ctx.send(embed=embed)
 
-    async def cache_guild_options(self, message):
-        self.cached_options[message.guild.id] = {
-            "channels_whitelist": await self.config.guild(message.guild).channels_whitelist(),
-            "reply_percent": await self.config.guild(message.guild).reply_percent(),
-        }
-
     @commands.guild_only()
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
@@ -325,6 +314,8 @@ class AI_User(commands.Cog):
 
         if not openai.api_key:
             await self.initalize_openai(message)
+        if not openai.api_key:
+            return
 
         model = await self.config.model()
         async with message.channel.typing():
@@ -374,9 +365,21 @@ class AI_User(commands.Cog):
 
         return True
 
+    async def cache_guild_options(self, message):
+        self.cached_options[message.guild.id] = {
+            "channels_whitelist": await self.config.guild(message.guild).channels_whitelist(),
+            "reply_percent": await self.config.guild(message.guild).reply_percent(),
+        }
+
     async def is_bot_mentioned_or_replied(self, message) -> bool:
         if self.bot.user in message.mentions:
             return True
         elif (message.reference and (await message.channel.fetch_message(message.reference.message_id)).author == self.bot.user):
             return True
         return False
+
+    async def initalize_openai(self, message):
+        openai.api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
+        if not openai.api_key:
+            return await message.channel.send("OpenAI API key not set. Please set it with `[p]set api openai api_key,API_KEY`")
+
