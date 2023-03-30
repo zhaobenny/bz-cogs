@@ -69,7 +69,7 @@ class AI_User(commands.Cog):
 
     @ai_user.command()
     async def config(self, message):
-        """ Returns current config"""
+        """ Returns current config """
         whitelist = await self.config.guild(message.guild).channels_whitelist()
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
 
@@ -85,7 +85,7 @@ class AI_User(commands.Cog):
     @ai_user.command()
     @checks.is_owner()
     async def scan_images(self, ctx):
-        """ Toggle image scanning (req. cpu usage / tesseract)"""
+        """ Toggle image scanning (req. cpu usage / tesseract) """
         try:
             importlib.import_module("pytesseract")
             importlib.import_module("torch")
@@ -103,7 +103,7 @@ class AI_User(commands.Cog):
     @ai_user.command()
     @checks.is_owner()
     async def percent(self, ctx, new_value):
-        """Change the bot's response chance for this server"""
+        """Change the bot's response chance for this server """
         try:
             new_value = float(new_value)
         except ValueError:
@@ -149,7 +149,7 @@ class AI_User(commands.Cog):
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def add(self, ctx, channel_name):
-        """Add a channel to the whitelist to allow the bot to reply in"""
+        """ Add a channel to the whitelist to allow the bot to reply in"""
         channel = discord.utils.get(ctx.guild.channels, name=channel_name)
         if channel is None:
             return await ctx.send("Invalid channel name")
@@ -168,7 +168,7 @@ class AI_User(commands.Cog):
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def remove(self, ctx, channel_name):
-        """Remove a channel from the whitelist"""
+        """ Remove a channel from the whitelist"""
         channel = discord.utils.get(ctx.guild.channels, name=channel_name)
         if channel is None:
             return await ctx.send("Invalid channel name")
@@ -187,13 +187,13 @@ class AI_User(commands.Cog):
     @ai_user.group()
     @checks.is_owner()
     async def prompt(self, _):
-        """Change the prompt for the current server"""
+        """ Change the prompt for the current server"""
         pass
 
     @prompt.command()
     @checks.is_owner()
     async def reset(self, ctx):
-        """Reset prompts to default (cynical)"""
+        """ Reset prompts to default (cynical)"""
         await self.config.guild(ctx.guild).custom_text_prompt.set(None)
         await self.config.guild(ctx.guild).custom_image_prompt.set(None)
         embed = discord.Embed(title="Prompt resetted")
@@ -202,7 +202,7 @@ class AI_User(commands.Cog):
     @prompt.command()
     @checks.is_owner()
     async def text(self, ctx, prompt):
-        """Set custom text prompt (Enclose with "")"""
+        """ Set custom text prompt (Enclose with "") """
         await self.config.guild(ctx.guild).custom_text_prompt.set(prompt)
         embed = discord.Embed(title="Text prompt set to",
                               description=f"{prompt}")
@@ -211,7 +211,7 @@ class AI_User(commands.Cog):
     @prompt.command()
     @checks.is_owner()
     async def image(self, ctx, prompt):
-        """Set custom image prompt (Enclose with "")"""
+        """ Set custom image prompt (Enclose with "") """
         await self.config.guild(ctx.guild).custom_image_prompt.set(prompt)
         embed = discord.Embed(title="Image prompt set to",
                               description=f"{prompt}")
@@ -220,7 +220,7 @@ class AI_User(commands.Cog):
     @prompt.command()
     @checks.admin()
     async def show(self, ctx):
-        """Show current custom text and image prompts"""
+        """ Show current custom text and image prompts """
         custom_text_prompt = await self.config.guild(ctx.guild).custom_text_prompt()
         custom_image_prompt = await self.config.guild(ctx.guild).custom_image_prompt()
         embed = discord.Embed(title="Current Server Prompts")
@@ -359,7 +359,7 @@ class AI_User(commands.Cog):
             await message.channel.send(reply)
 
     async def is_common_valid_reply(self, message) -> bool:
-        """ Run some common checks to see if a message is valid for the bot to reply to"""
+        """ Run some common checks to see if a message is valid for the bot to reply to """
         if await self.bot.cog_disabled_in_guild(self, message.guild):
             return False
 

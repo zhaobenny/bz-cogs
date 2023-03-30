@@ -24,6 +24,12 @@ Custom prompts can be set per server using the commands in:
 [p]ai_user prompt
 ```
 
+This option (enabled by default) filters out responses that contains any words in "language model", "openai", "sorry", "apologize".
+Most responses with these words are pretty generic and bias the model away from the prompt.
+```
+[p]ai_user filter_responses
+```
+
 ## Image scanning 🖼️
 
 ```
@@ -31,7 +37,7 @@ Custom prompts can be set per server using the commands in:
 ```
 
 Image scanning, if turned on, will be very CPU intensive. Not recommended for multiple servers/channels.
-See below for instructions on installing the necessary dependencies.
+See below for instructions on installing the necessary dependencies. (ARM not supported)
 
 
 ### 1. Install Python Dependencies
