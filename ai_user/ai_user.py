@@ -333,8 +333,8 @@ class AI_User(commands.Cog):
             return await message.add_reaction("😶")
 
         bot_name = self.bot.user.name
-        pattern = r'^{}: '
-        # remove the botname: from the response if it exists
+        pattern = r'^{} said:'
+        # remove the botname said: from the response if it exists
         reply = re.sub(pattern.format(bot_name), '', reply)
 
         time_diff = datetime.datetime.utcnow() - message.created_at
