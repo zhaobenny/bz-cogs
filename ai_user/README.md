@@ -24,7 +24,7 @@ Custom prompts can be set per server using the commands in:
 [p]ai_user prompt
 ```
 
-This option (enabled by default) filters out responses that contains any words in "language model", "openai", "sorry", "apologize".
+This option (enabled by default) filters out responses that contains any of the following words: "language model", "openai", "sorry", "apologize"
 Most responses with these words are pretty generic and bias the model away from the prompt.
 ```
 [p]ai_user filter_responses
