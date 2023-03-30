@@ -53,12 +53,12 @@ class Prompt:
         else:
             # avoid duplicates that will confuse the model
             history.append(
-                {"role": "system", "content": f"The following message is a reply to: [{replied_message.author.name}]: {replied_message.content}"})
+                {"role": "system", "content": f"The following message is a reply to: {replied_message.author.name} said {replied_message.content}"})
 
     def _format_message(self, message: Message) -> Dict[str, str]:
         """ Formats a message into a JSON format for OpenAI """
         role = "user" if message.author != self.bot else "assistant"
-        content = f"{message.author.name}: {message.content}" if role == "user" else message.content
+        content = f"{message.author.name} said: {message.content}" if role == "user" else message.content
         return {"role": role, "content": content}
 
     @staticmethod
