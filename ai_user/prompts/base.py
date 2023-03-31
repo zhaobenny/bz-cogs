@@ -37,7 +37,7 @@ class Prompt:
             if Prompt.is_not_valid_message(message):
                 continue
             if message.reference:
-                await self._handle_historical_reply(messages, message)
+                await self._handle_historical_reply(history, message)
 
             history.append(self._format_message(message))
 
