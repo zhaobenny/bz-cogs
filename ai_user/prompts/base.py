@@ -58,7 +58,7 @@ class Prompt:
     def _format_message(self, message: Message) -> Dict[str, str]:
         """ Formats a message into a JSON format for OpenAI """
         role = "user" if message.author != self.bot else "assistant"
-        content = f"{message.author.name} said: {message.content}" if role == "user" else message.content
+        content = f"User \"{message.author.name}\" said: {message.content}" if role == "user" else message.content
         return {"role": role, "content": content}
 
     @staticmethod
