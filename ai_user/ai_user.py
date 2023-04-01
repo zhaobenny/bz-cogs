@@ -295,7 +295,7 @@ class AI_User(commands.Cog):
 
         return await self.sent_reply(after, prompt, direct_reply=True)
 
-    async def sent_reply(self, message, prompt: list[dict], direct_reply=False):
+    async def sent_reply(self, message, prompt, direct_reply=False):
         """ Generates the reply using OpenAI and sends the result """
         logger.debug(
             f"Replying to message \"{message.content}\" in {message.guild.name} with prompt: \n{json.dumps(prompt, indent=4)}")
