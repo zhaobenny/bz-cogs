@@ -4,7 +4,6 @@ from typing import Optional
 from discord import Message, User
 
 from ai_user.prompts.base import Prompt
-from ai_user.prompts.constants import DEFAULT_TEXT_PROMPT
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -12,9 +11,6 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 class TextPrompt(Prompt):
     def __init__(self, bot: User, message: Message, bot_prompt: str = None):
         super().__init__(bot, message, bot_prompt)
-
-    def _get_default_bot_prompt(self) -> str:
-        return DEFAULT_TEXT_PROMPT
 
     def _is_acceptable_message(self, message: Message) -> bool:
         if not message.content:

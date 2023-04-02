@@ -46,7 +46,6 @@ class AI_User(commands.Cog):
         default_guild = {
             "channels_whitelist": [],
             "custom_text_prompt": None,
-            "custom_image_prompt": None,
             "reply_percent": 0.5,
         }
 
@@ -190,25 +189,15 @@ class AI_User(commands.Cog):
     async def reset(self, ctx):
         """ Reset prompts to default (cynical)"""
         await self.config.guild(ctx.guild).custom_text_prompt.set(None)
-        await self.config.guild(ctx.guild).custom_image_prompt.set(None)
         embed = discord.Embed(title="Prompt resetted")
         return await ctx.send(embed=embed)
 
     @prompt.command()
     @checks.is_owner()
-    async def text(self, ctx, prompt):
+    async def custom(self, ctx, prompt):
         """ Set custom text prompt (Enclose with "") """
         await self.config.guild(ctx.guild).custom_text_prompt.set(prompt)
         embed = discord.Embed(title="Text prompt set to",
-                              description=f"{prompt}")
-        return await ctx.send(embed=embed)
-
-    @prompt.command()
-    @checks.is_owner()
-    async def image(self, ctx, prompt):
-        """ Set custom image prompt (Enclose with "") """
-        await self.config.guild(ctx.guild).custom_image_prompt.set(prompt)
-        embed = discord.Embed(title="Image prompt set to",
                               description=f"{prompt}")
         return await ctx.send(embed=embed)
 
@@ -217,19 +206,12 @@ class AI_User(commands.Cog):
     async def show(self, ctx):
         """ Show current custom text and image prompts """
         custom_text_prompt = await self.config.guild(ctx.guild).custom_text_prompt()
-        custom_image_prompt = await self.config.guild(ctx.guild).custom_image_prompt()
         embed = discord.Embed(title="Current Server Prompts")
         if custom_text_prompt:
             embed.add_field(name="Custom Text Prompt",
                             value=custom_text_prompt, inline=False)
         else:
             embed.add_field(name="Custom Text Prompt",
-                            value="Not set", inline=False)
-        if custom_image_prompt:
-            embed.add_field(name="Custom Image Prompt",
-                            value=custom_image_prompt, inline=False)
-        else:
-            embed.add_field(name="Custom Image Prompt",
                             value="Not set", inline=False)
         return await ctx.send(embed=embed)
 
@@ -249,7 +231,7 @@ class AI_User(commands.Cog):
         prompt = None
 
         if (message.attachments and await self.config.scan_images()):
-            default_bot_prompt = await self.config.guild(message.guild).custom_image_prompt()
+            default_bot_prompt = await self.config.guild(message.guild).custom_text_prompt()
             image = ImagePrompt(self.bot.user, message,
                                 bot_prompt=default_bot_prompt)
             prompt = await image.get_prompt()

@@ -11,7 +11,6 @@ from transformers import (AutoTokenizer, VisionEncoderDecoderModel,
                           ViTImageProcessor)
 
 from ai_user.prompts.base import Prompt
-from ai_user.prompts.constants import DEFAULT_IMAGE_PROMPT
 
 
 def to_thread(func: Callable) -> Coroutine:
@@ -25,9 +24,6 @@ def to_thread(func: Callable) -> Coroutine:
 class ImagePrompt(Prompt):
     def init(self, bot: User, message: Message, bot_prompt: str = None):
         super().init(bot, message, bot_prompt)
-
-    def _get_default_bot_prompt(self) -> str:
-        return DEFAULT_IMAGE_PROMPT
 
     async def _create_full_prompt(self) -> Optional[str]:
         image = self.message.attachments[0] if self.message.attachments else None

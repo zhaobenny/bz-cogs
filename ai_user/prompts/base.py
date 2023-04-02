@@ -2,17 +2,14 @@ import json
 from typing import Dict, Optional
 
 from discord import Message, User
+from ai_user.prompts.constants import DEFAULT_PROMPT
 
 
 class Prompt:
     def __init__(self, bot: User, message: Message, bot_prompt: str = None):
         self.bot = bot
         self.message = message
-        self.bot_prompt = bot_prompt or self._get_default_bot_prompt()
-
-    def _get_default_bot_prompt(self) -> str:
-        raise NotImplementedError(
-            "_get_default_bot_prompt() must be implemented in subclasses")
+        self.bot_prompt = bot_prompt or DEFAULT_PROMPT
 
     async def _create_full_prompt(self) -> Optional[str]:
         raise NotImplementedError(
