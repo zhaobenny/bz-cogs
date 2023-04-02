@@ -319,15 +319,14 @@ class AI_User(commands.Cog):
 
         model = await self.config.model()
         async with message.channel.typing():
-            response = await openai.ChatCompletion.acreate(
-                model=model,
-                messages=prompt,
-            )
-
             try:
+                response = await openai.ChatCompletion.acreate(
+                    model=model,
+                    messages=prompt,
+                )
                 reply = response["choices"][0]["message"]["content"]
             except:
-                return logger.error(f"Bad response from OpenAI:\n {response}")
+                return logger.error(f"Failed API request to OpenAI", exc_info=True)
 
         if (await self.config.filter_responses()) and check_moderated_response(reply):
             return await message.add_reaction("😶")
