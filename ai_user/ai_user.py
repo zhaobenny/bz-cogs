@@ -4,14 +4,15 @@ import importlib
 import json
 import logging
 import random
-import re
 
 import discord
 import openai
 from redbot.core import Config, checks, commands
 from ai_user.prompts.prompt_factory import create_prompt_instance
+from ai_user.response.response import generate_response
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
+
 
 class AI_User(commands.Cog):
 
@@ -240,60 +241,28 @@ class AI_User(commands.Cog):
         if prompt is None:
             return
 
-        return await self.sent_reply(after, prompt, direct_reply=True)
+        return await self.sent_reply(after, prompt)
 
     async def sent_reply(self, message, prompt, direct_reply=False):
         """ Generates the reply using OpenAI and sends the result """
         logger.debug(
             f"Replying to message \"{message.content}\" in {message.guild.name} with prompt: \n{json.dumps(prompt, indent=4)}")
-
-        def check_moderated_response(response):
-            """ filters out responses that were moderated out """
-            response = response.lower()
-            filters = ["language model", "openai", "sorry", "apologize"]
-
-            if any(filter in response for filter in filters):
-                logger.debug(
-                    f"Filtered out canned response replying to \"{message.content}\" in {message.guild.name}: \n{response}")
-                return True
-
-            return False
-
+        return
         if not openai.api_key:
             await self.initalize_openai(message)
         if not openai.api_key:
             return
 
-        model = await self.config.model()
-        async with message.channel.typing():
-            try:
-                response = await openai.ChatCompletion.acreate(
-                    model=model,
-                    messages=prompt,
-                )
-                reply = response["choices"][0]["message"]["content"]
-            except:
-                return logger.error(f"Failed API request to OpenAI", exc_info=True)
+        direct_reply, response = await generate_response(
+            message, self.config, prompt, self.bot.user.name)
 
-        if (await self.config.filter_responses()) and check_moderated_response(reply):
+        if response == "😶":
             return await message.add_reaction("😶")
 
-        bot_name = self.bot.user.name
-        pattern = r'^User {} said:'
-        # remove the User botname said: from the response if it exists
-        reply = re.sub(pattern.format(bot_name), '', reply)
-
-        time_diff = datetime.datetime.utcnow() - message.created_at
-        if time_diff.total_seconds() > 8:
-            direct_reply = True
-
-        if not direct_reply:  # randomize if bot will reply directly or not
-            direct_reply = (random.random() < 0.25)
-
         if direct_reply:
-            await message.reply(reply, mention_author=False)
+            await message.reply(response, mention_author=False)
         else:
-            await message.channel.send(reply)
+            await message.channel.send(response)
 
     async def is_common_valid_reply(self, message) -> bool:
         """ Run some common checks to see if a message is valid for the bot to reply to """
@@ -328,4 +297,3 @@ class AI_User(commands.Cog):
         openai.api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
         if not openai.api_key:
             return await message.channel.send("OpenAI API key not set. Please set it with `[p]set api openai api_key,API_KEY`")
-
