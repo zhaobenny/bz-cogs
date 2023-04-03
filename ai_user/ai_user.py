@@ -8,6 +8,9 @@ import random
 import discord
 import openai
 from redbot.core import Config, checks, commands
+from redbot.core.utils.chat_formatting import box
+
+from ai_user.prompts.constants import DEFAULT_PROMPT
 from ai_user.prompts.prompt_factory import create_prompt_instance
 from ai_user.response.response import generate_response
 
@@ -182,23 +185,21 @@ class AI_User(commands.Cog):
     async def custom(self, ctx, prompt):
         """ Set custom text prompt (Enclose with "") """
         await self.config.guild(ctx.guild).custom_text_prompt.set(prompt)
-        embed = discord.Embed(title="Text prompt set to",
-                              description=f"{prompt}")
-        return await ctx.send(embed=embed)
+        res = "The prompt for this server is now changed to:\n"
+        res += box(f"{prompt}")
+        return await ctx.send(res)
 
     @prompt.command()
     @checks.admin()
     async def show(self, ctx):
         """ Show current custom text and image prompts """
         custom_text_prompt = await self.config.guild(ctx.guild).custom_text_prompt()
-        embed = discord.Embed(title="Current Server Prompts")
+        res = "The prompt for this server is:\n"
         if custom_text_prompt:
-            embed.add_field(name="Custom Text Prompt",
-                            value=custom_text_prompt, inline=False)
+            res += box(f"{custom_text_prompt}")
         else:
-            embed.add_field(name="Custom Text Prompt",
-                            value="Not set", inline=False)
-        return await ctx.send(embed=embed)
+            res += box(f"{DEFAULT_PROMPT}")
+        return await ctx.send(res)
 
     @commands.guild_only()
     @commands.Cog.listener()
