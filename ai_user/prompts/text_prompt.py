@@ -9,8 +9,8 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 class TextPrompt(Prompt):
-    def __init__(self, bot: User, message: Message, bot_prompt: str = None):
-        super().__init__(bot, message, bot_prompt)
+    def __init__(self, bot: User, message: Message, config, bot_prompt: str = None):
+        super().__init__(bot, message, config, bot_prompt)
 
     def _is_acceptable_message(self, message: Message) -> bool:
         if not message.content:
@@ -29,7 +29,7 @@ class TextPrompt(Prompt):
 
         return True
 
-    async def _create_full_prompt(self) -> Optional[str]:
+    async def _create_prompt(self, bot_prompt) -> Optional[str]:
         if not self._is_acceptable_message(self.message):
             return None
 
@@ -38,7 +38,7 @@ class TextPrompt(Prompt):
 
         prompt.append(
             {"role": "system",
-                "content": f"You are {self.bot.name}. Do not include 'User \"{self.bot.name}\" said' in the response. Do not react to username before 'said:'. You are in a Discord text channel. {self.bot_prompt}"},
+                "content": f"You are {self.bot.name}. Do not include 'User \"{self.bot.name}\" said' in the response. Do not react to username before 'said:'. You are in a Discord text channel. {bot_prompt}"},
         )
 
         if self.message.reference:

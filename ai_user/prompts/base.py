@@ -2,16 +2,17 @@ import json
 from typing import Dict, Optional
 
 from discord import Message, User
+
 from ai_user.prompts.constants import DEFAULT_PROMPT
 
 
 class Prompt:
-    def __init__(self, bot: User, message: Message, bot_prompt: str = None):
+    def __init__(self, bot: User, message: Message, config, bot_prompt: str = None):
+        self.config = config
         self.bot = bot
         self.message = message
-        self.bot_prompt = bot_prompt or DEFAULT_PROMPT
 
-    async def _create_full_prompt(self) -> Optional[str]:
+    async def _create_prompt(self, bot_prompt : str) -> Optional[str]:
         raise NotImplementedError(
             "_create_full_prompt() must be implemented in subclasses")
 
@@ -19,7 +20,8 @@ class Prompt:
         """
             Returns a list of messages to be used as the prompt for the OpenAI API
         """
-        return await self._create_full_prompt()
+        bot_prompt = await self.config.guild(self.message.guild).custom_text_prompt() or DEFAULT_PROMPT
+        return await self._create_prompt(bot_prompt)
 
     async def _get_previous_history(self, limit: int = 10):
         """ Returns a history of messages before current message """

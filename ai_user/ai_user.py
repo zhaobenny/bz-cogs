@@ -9,25 +9,9 @@ import re
 import discord
 import openai
 from redbot.core import Config, checks, commands
-
-from ai_user.prompts.embed_prompt import EmbedPrompt
-from ai_user.prompts.text_prompt import TextPrompt
+from ai_user.prompts.prompt_factory import create_prompt_instance
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
-
-
-try:
-    logger.debug("Attempting to load pytesseract...")
-    importlib.import_module("pytesseract")
-    logger.debug("Attempting to load torch...")
-    importlib.import_module("torch")
-    logger.debug("Attempting to load transformers...")
-    importlib.import_module("transformers")
-    from ai_user.prompts.image_prompt import ImagePrompt
-except:
-    from ai_user.prompts.dummy_image_prompt import ImagePrompt
-    logger.warning("No image processing dependencies installed / supported.")
-
 
 class AI_User(commands.Cog):
 
@@ -226,25 +210,8 @@ class AI_User(commands.Cog):
         elif random.random() > self.cached_options[message.guild.id].get("reply_percent"):
             return
 
-        url_pattern = re.compile(r"(https?://\S+)")
-        contains_url = url_pattern.search(message.content)
-        prompt = None
-
-        if (message.attachments and await self.config.scan_images()):
-            default_bot_prompt = await self.config.guild(message.guild).custom_text_prompt()
-            image = ImagePrompt(self.bot.user, message,
-                                bot_prompt=default_bot_prompt)
-            prompt = await image.get_prompt()
-        elif not contains_url:
-            default_bot_prompt = await self.config.guild(message.guild).custom_text_prompt()
-            text = TextPrompt(self.bot.user, message,
-                              bot_prompt=default_bot_prompt)
-            prompt = await text.get_prompt()
-        elif contains_url:
-            default_bot_prompt = await self.config.guild(message.guild).custom_text_prompt()
-            text = EmbedPrompt(self.bot.user, message,
-                               bot_prompt=default_bot_prompt)
-            prompt = await text.get_prompt()
+        prompt_instance = await create_prompt_instance(self.bot.user, message, self.config)
+        prompt = await prompt_instance.get_prompt()
 
         if prompt is None:
             return
@@ -267,10 +234,8 @@ class AI_User(commands.Cog):
 
         prompt = None
         if len(before.embeds) != len(after.embeds):
-            default_bot_prompt = await self.config.guild(after.guild).custom_text_prompt()
-            text = EmbedPrompt(self.bot.user, after,
-                               bot_prompt=default_bot_prompt)
-            prompt = await text.get_prompt()
+            prompt_instance = await create_prompt_instance(self.bot.user, before, self.config)
+            prompt = await prompt_instance.get_prompt()
 
         if prompt is None:
             return
