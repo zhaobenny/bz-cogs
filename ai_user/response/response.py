@@ -5,7 +5,7 @@ from ai_user.response.processing import remove_template_from_response
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
-async def generate_response(message, config, prompt, bot_name):
+async def generate_response(message, config, prompt):
     model = await config.model()
     async with message.channel.typing():
         try:
@@ -20,8 +20,9 @@ async def generate_response(message, config, prompt, bot_name):
     if (await config.filter_responses()) and is_moderated_response(response, message):
         return (False, "😶")
 
+    bot_name = message.guild.me.name
     response = remove_template_from_response(response, bot_name)
 
-    direct_reply = is_reply(message)
+    direct_reply = await is_reply(message)
 
     return (direct_reply, response)

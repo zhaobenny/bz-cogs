@@ -211,7 +211,7 @@ class AI_User(commands.Cog):
         elif random.random() > self.cached_options[message.guild.id].get("reply_percent"):
             return
 
-        prompt_instance = await create_prompt_instance(self.bot.user, message, self.config)
+        prompt_instance = await create_prompt_instance(message, self.config)
         prompt = await prompt_instance.get_prompt()
 
         if prompt is None:
@@ -247,14 +247,13 @@ class AI_User(commands.Cog):
         """ Generates the reply using OpenAI and sends the result """
         logger.debug(
             f"Replying to message \"{message.content}\" in {message.guild.name} with prompt: \n{json.dumps(prompt, indent=4)}")
-        return
         if not openai.api_key:
             await self.initalize_openai(message)
         if not openai.api_key:
             return
 
         direct_reply, response = await generate_response(
-            message, self.config, prompt, self.bot.user.name)
+            message, self.config, prompt)
 
         if response == "😶":
             return await message.add_reaction("😶")

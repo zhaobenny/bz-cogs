@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from discord import Message, User
+from discord import Message
 
 from ai_user.prompts.base import Prompt
 
@@ -9,8 +9,8 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 class TextPrompt(Prompt):
-    def __init__(self, bot: User, message: Message, config, bot_prompt: str = None):
-        super().__init__(bot, message, config, bot_prompt)
+    def __init__(self, message: Message, config):
+        super().__init__(message, config)
 
     def _is_acceptable_message(self, message: Message) -> bool:
         if not message.content:

@@ -10,8 +10,8 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 class EmbedPrompt(Prompt):
-    def __init__(self, bot: User, message: Message, config, bot_prompt: str = None):
-        super().__init__(bot, message, config, bot_prompt)
+    def __init__(self, message: Message, config):
+        super().__init__(message, config)
 
     async def _create_prompt(self, bot_prompt) -> Optional[str]:
         if len(self.message.embeds) == 0 or not self.message.embeds[0].title or not self.message.embeds[0].description:

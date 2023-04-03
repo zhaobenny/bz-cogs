@@ -21,13 +21,13 @@ except:
     logger.warning("No image processing dependencies installed / supported.")
 
 
-async def create_prompt_instance(bot_user, message, config):
+async def create_prompt_instance(message, config):
     url_pattern = re.compile(r"(https?://\S+)")
     contains_url = url_pattern.search(message.content)
     if message.attachments and await config.scan_images():
-        return ImagePrompt(bot_user, message, config)
+        return ImagePrompt(message, config)
     elif contains_url:
-        return EmbedPrompt(bot_user, message, config)
+        return EmbedPrompt(message, config)
     else:
-        return TextPrompt(bot_user, message, config)
+        return TextPrompt(message, config)
 

@@ -1,15 +1,15 @@
 import json
 from typing import Dict, Optional
 
-from discord import Message, User
+from discord import Message
 
 from ai_user.prompts.constants import DEFAULT_PROMPT
 
 
 class Prompt:
-    def __init__(self, bot: User, message: Message, config, bot_prompt: str = None):
+    def __init__(self, message: Message, config):
         self.config = config
-        self.bot = bot
+        self.bot = message.guild.me
         self.message = message
 
     async def _create_prompt(self, bot_prompt : str) -> Optional[str]:

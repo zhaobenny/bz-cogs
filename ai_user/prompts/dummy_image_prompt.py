@@ -10,8 +10,8 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 class ImagePrompt(Prompt):
     """ Dummy prompt for when no image dependencies are installed """
 
-    def init(self, bot: User, message: Message, config, bot_prompt: str = None):
-        super().init(bot, message, config, bot_prompt)
+    def init(self, message: Message, config):
+        super().init(message, config)
 
     async def _create_prompt(self, bot_prompt):
         logger.error(

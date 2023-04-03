@@ -24,7 +24,6 @@ async def is_reply(message):
              return True
         try:
             last_message = await message.channel.history(limit=1).flatten()
-            print(last_message[0].author == message.guild.me)
             if last_message[0].author == message.guild.me:
                 return True
         except:

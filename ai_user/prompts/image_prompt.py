@@ -5,7 +5,7 @@ from typing import Callable, Coroutine, Optional
 
 import pytesseract
 import torch
-from discord import Message, User
+from discord import Message
 from PIL import Image
 from transformers import (AutoTokenizer, VisionEncoderDecoderModel,
                           ViTImageProcessor)
@@ -22,8 +22,8 @@ def to_thread(func: Callable) -> Coroutine:
 
 
 class ImagePrompt(Prompt):
-    def init(self, bot: User, message: Message, config, bot_prompt: str = None):
-        super().init(bot, message, config, bot_prompt)
+    def init(self, message: Message, config):
+        super().init(message, config)
 
     async def _create_prompt(self, bot_prompt) -> Optional[str]:
         image = self.message.attachments[0] if self.message.attachments else None
