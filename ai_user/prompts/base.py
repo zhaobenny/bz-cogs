@@ -58,7 +58,10 @@ class Prompt:
         return history
 
     async def _handle_historical_reply(self, history, message):
-        replied_message = await message.channel.fetch_message(message.reference.message_id)
+        try:
+            replied_message = await message.channel.fetch_message(message.reference.message_id)
+        except:
+            return
         if Prompt.is_not_valid_message(replied_message):
             return
         if len(history) > 0 and history[-1].get("id", -1) == replied_message.id:
