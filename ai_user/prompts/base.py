@@ -31,9 +31,16 @@ class Prompt:
 
         history = []
         for i, message in enumerate(messages):
-            if i > 0 and abs((messages[i - 1].created_at - message.created_at).total_seconds()) > 1188:
+            time_diff = 0
+            if i > 0:
+                time_diff = (message.created_at - messages[i-1].created_at).total_seconds()
+            else:
+                time_diff = (message.created_at - self.message.created_at).total_seconds()
+
+            if abs(time_diff) > 3600:
                 break
             if Prompt.is_not_valid_message(message):
+                history.append({"role": "system", "content": "A message containing an attachment/image or was too long was skipped from this history"})
                 continue
             if message.reference:
                 await self._handle_historical_reply(history, message)
@@ -62,7 +69,7 @@ class Prompt:
 
     @staticmethod
     def is_not_valid_message(message: Message) -> bool:
-        return len(message.attachments) > 1 or len(message.content.split(" ")) > 300
+        return len(message.attachments) >= 1 or len(message.content.split(" ")) > 300
 
     @staticmethod
     def is_json_in_list(json_obj, json_list):
