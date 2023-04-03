@@ -10,7 +10,7 @@ import openai
 from redbot.core import Config, checks, commands
 from redbot.core.utils.chat_formatting import box
 
-from ai_user.prompts.constants import DEFAULT_PROMPT
+from ai_user.prompts.constants import DEFAULT_PROMPT, PRESETS
 from ai_user.prompts.prompt_factory import create_prompt_instance
 from ai_user.response.response import generate_response
 
@@ -199,6 +199,21 @@ class AI_User(commands.Cog):
             res += box(f"{custom_text_prompt}")
         else:
             res += box(f"{DEFAULT_PROMPT}")
+        return await ctx.send(res)
+
+    @prompt.command()
+    @checks.admin()
+    async def preset(self, ctx, preset):
+        """ List presets using 'list', or set a preset """
+        if preset == 'list':
+            embed = discord.Embed(title="Presets", description="Use `[p]prompt preset <preset>` to set a preset")
+            embed.add_field(name="Available presets", value="\n".join(PRESETS.keys()), inline=False)
+            return await ctx.send(embed=embed)
+        if preset not in PRESETS:
+            return await ctx.send("Invalid preset. Use `list` to see available presets")
+        await self.config.guild(ctx.guild).custom_text_prompt.set(PRESETS[preset])
+        res = "The prompt for this server is now changed to:\n"
+        res += box(f"{PRESETS[preset]}")
         return await ctx.send(res)
 
     @commands.guild_only()
