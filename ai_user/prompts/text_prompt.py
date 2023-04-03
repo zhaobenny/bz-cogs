@@ -42,9 +42,13 @@ class TextPrompt(Prompt):
         )
 
         if self.message.reference and not Prompt.is_id_in_messages(self.message.reference.message_id, prompt):
-            replied = await self.message.channel.fetch_message(self.message.reference.message_id)
-            formattted_replied = self._format_message(replied)
-            prompt.append(formattted_replied)
+            try:
+                replied = await self.message.channel.fetch_message(self.message.reference.message_id)
+                formattted_replied = self._format_message(replied)
+                prompt.append(formattted_replied)
+            except:
+                pass
+
 
         prompt.append(self._format_message(self.message))
 
