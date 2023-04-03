@@ -1,6 +1,6 @@
 import logging
 
-from discord import Message, User
+from discord import Message
 
 from ai_user.prompts.base import Prompt
 
