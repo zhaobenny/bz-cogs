@@ -22,6 +22,8 @@ class Prompt:
         """
         bot_prompt = await self.config.guild(self.message.guild).custom_text_prompt() or DEFAULT_PROMPT
         full_prompt = await self._create_prompt(bot_prompt)
+        if full_prompt is None:
+            return None
         Prompt.remove_id_field_in_prompt(full_prompt)
         return full_prompt
 
