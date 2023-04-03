@@ -251,7 +251,7 @@ class AI_User(commands.Cog):
 
         prompt = None
         if len(before.embeds) != len(after.embeds):
-            prompt_instance = await create_prompt_instance(self.bot.user, before, self.config)
+            prompt_instance = await create_prompt_instance(after, self.config)
             prompt = await prompt_instance.get_prompt()
 
         if prompt is None:
