@@ -16,11 +16,17 @@ def is_moderated_response(response, message):
 
     return False
 
-def is_reply(message):
+async def is_reply(message):
         time_diff = datetime.datetime.utcnow() - message.created_at
         if time_diff.total_seconds() > 8:
             return True
         if (random.random() < 0.25):
-            return True
-
+             return True
+        try:
+            last_message = await message.channel.history(limit=1).flatten()
+            print(last_message[0].author == message.guild.me)
+            if last_message[0].author == message.guild.me:
+                return True
+        except:
+            pass
         return False
