@@ -274,10 +274,11 @@ class AI_User(commands.Cog):
         if response == "😶":
             return await message.add_reaction("😶")
 
-        if direct_reply:
-            await message.reply(response, mention_author=False)
-        else:
-            await message.channel.send(response)
+        async with message.channel.typing():
+            if direct_reply:
+                return await message.reply(response, mention_author=False)
+            else:
+                return await message.channel.send(response)
 
     async def is_common_valid_reply(self, message) -> bool:
         """ Run some common checks to see if a message is valid for the bot to reply to """

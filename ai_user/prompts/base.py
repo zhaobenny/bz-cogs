@@ -1,4 +1,3 @@
-import json
 from typing import Dict, Optional
 
 from discord import Message
@@ -26,7 +25,6 @@ class Prompt:
             return None
         Prompt.remove_id_field_in_prompt(full_prompt)
         return full_prompt
-
 
     async def _get_previous_history(self, limit: int = 10):
         """ Returns a history of messages before current message """
@@ -82,7 +80,8 @@ class Prompt:
     def _format_message(self, message: Message) -> Dict[str, str]:
         """ Formats a message into a JSON format for OpenAI """
         role = "user" if message.author != self.bot else "assistant"
-        content = f'User "{message.author.name}" said: {message.content}' if role == "user" else message.content
+        message_content = Prompt._mention_to_text(message)
+        content = f'User "{message.author.name}" said: {message_content}' if role == "user" else message_content
         return {"id": message.id, "role": role, "content": content}
 
     @staticmethod
@@ -104,3 +103,24 @@ class Prompt:
             if "id" not in message:
                 continue
             del message["id"]
+
+
+    @staticmethod
+    def _mention_to_text(message: Message) -> str:
+        """
+        Converts mentions to text
+        """
+        content = message.content
+        mentions = message.mentions + message.role_mentions + message.channel_mentions
+
+        if not mentions:
+            return content
+
+        for mentioned in mentions:
+            mention = mentioned.mention.replace("!", "")
+            if mentioned in message.channel_mentions:
+                content = content.replace(mention, f'#{mentioned.name}')
+            else:
+                content = content.replace(mention, f'@{mentioned.name}')
+
+        return content

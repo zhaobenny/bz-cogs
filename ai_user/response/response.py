@@ -27,7 +27,6 @@ async def generate_response(message, config, prompt):
 
     bot_name = message.guild.me.name
     response = remove_template_from_response(response, bot_name)
-
     direct_reply = await is_reply(message)
 
     return (direct_reply, response)
