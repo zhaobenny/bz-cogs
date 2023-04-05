@@ -43,8 +43,11 @@ class Prompt:
                 time_diff = (messages[0].created_at -
                              self.message.created_at).total_seconds()
 
-            if abs(time_diff) > 3600:
-                messages = messages[i:]
+            if abs(time_diff) > 7200:
+                if i == 0:
+                    messages = []
+                else:
+                    messages = messages[i:]
                 break
 
         history = []
