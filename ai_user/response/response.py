@@ -5,17 +5,22 @@ from ai_user.response.processing import remove_template_from_response
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
+async def generate_openai_response(model, prompt):
+    try:
+        response = await openai.ChatCompletion.acreate(
+            model=model,
+            messages=prompt,
+        )
+        response = response["choices"][0]["message"]["content"]
+    except:
+        return logger.error(f"Failed API request to OpenAI", exc_info=True)
+    return response
+
+
 async def generate_response(message, config, prompt):
     model = await config.model()
-    async with message.channel.typing():
-        try:
-            response = await openai.ChatCompletion.acreate(
-                model=model,
-                messages=prompt,
-            )
-            response = response["choices"][0]["message"]["content"]
-        except:
-            return logger.error(f"Failed API request to OpenAI", exc_info=True)
+
+    response = await generate_openai_response(model, prompt)
 
     if (await config.filter_responses()) and is_moderated_response(response, message):
         return (False, "😶")
