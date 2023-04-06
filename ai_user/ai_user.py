@@ -130,11 +130,10 @@ class AI_User(commands.Cog):
 
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def add(self, ctx, channel_name):
+    async def add(self, ctx, channel: discord.TextChannel):
         """ Add a channel to the whitelist to allow the bot to reply in"""
-        channel = discord.utils.get(ctx.guild.channels, name=channel_name)
         if channel is None:
-            return await ctx.send("Invalid channel name")
+            return await ctx.send("Invalid channel mention, use #channel")
         new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         if channel.id in new_whitelist:
             return await ctx.send("Channel already in whitelist")
@@ -149,11 +148,10 @@ class AI_User(commands.Cog):
 
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def remove(self, ctx, channel_name):
+    async def remove(self, ctx, channel: discord.TextChannel):
         """ Remove a channel from the whitelist"""
-        channel = discord.utils.get(ctx.guild.channels, name=channel_name)
         if channel is None:
-            return await ctx.send("Invalid channel name")
+            return await ctx.send("Invalid channel mention, use #channel")
         new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         if channel.id not in new_whitelist:
             return await ctx.send("Channel not in whitelist")
