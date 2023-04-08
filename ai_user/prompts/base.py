@@ -19,11 +19,14 @@ class Prompt:
         """
             Returns a list of messages to be used as the prompt for the OpenAI API
         """
-        bot_prompt = await self.config.guild(self.message.guild).custom_text_prompt() or DEFAULT_PROMPT
+
+        bot_prompt = await self.config.member(self.message.author).custom_text_prompt()
+        if bot_prompt is None:
+            bot_prompt = await self.config.guild(self.message.guild).custom_text_prompt() or DEFAULT_PROMPT
         full_prompt = await self._create_prompt(bot_prompt)
         if full_prompt is None:
             return None
-        Prompt.remove_id_field_in_prompt(full_prompt)
+        self.remove_id_field_in_prompt(full_prompt)
         return full_prompt
 
     async def _get_previous_history(self, limit: int = 10):
@@ -50,7 +53,7 @@ class Prompt:
 
         history = []
         for i, message in enumerate(messages):
-            if Prompt.is_not_valid_message(message):
+            if self.is_not_valid_message(message):
                 history.append(
                     {"role": "system", "content": "A message containing an attachment/image or was too long was skipped from this history"})
                 continue
@@ -65,12 +68,12 @@ class Prompt:
             replied_message = await message.channel.fetch_message(message.reference.message_id)
         except:
             return
-        if Prompt.is_not_valid_message(replied_message):
+        if self.is_not_valid_message(replied_message):
             return
         if len(history) > 0 and history[-1].get("id", -1) == replied_message.id:
             return
         formatted_replied_message = self._format_message(replied_message)
-        if not Prompt.is_id_in_messages(replied_message.id, history):
+        if not self.is_id_in_messages(replied_message.id, history):
             history.append(formatted_replied_message)
         else:
             # avoid duplicates that will confuse the model

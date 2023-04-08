@@ -7,7 +7,7 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 def is_moderated_response(response, message):
     """ filters out responses that were moderated out """
     response = response.lower()
-    filters = ["language model", "openai", "sorry", "apologize"]
+    filters = ["language model", "openai", "sorry"]
 
     if any(filter in response for filter in filters):
         logger.debug(

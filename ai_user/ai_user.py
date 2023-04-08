@@ -8,6 +8,7 @@ import random
 import discord
 import openai
 from redbot.core import Config, checks, commands
+from redbot.core.utils.menus import DEFAULT_CONTROLS, menu
 from redbot.core.utils.chat_formatting import box
 
 from ai_user.prompts.constants import DEFAULT_PROMPT, PRESETS
@@ -37,6 +38,11 @@ class AI_User(commands.Cog):
             "reply_percent": 0.5,
         }
 
+        default_member = {
+            "custom_text_prompt": None,
+        }
+
+        self.config.register_member(**default_member)
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
 
@@ -167,37 +173,52 @@ class AI_User(commands.Cog):
     @ai_user.group()
     @checks.is_owner()
     async def prompt(self, _):
-        """ Change the prompt for the current server"""
+        """ Change the prompt settings for the current server"""
         pass
 
     @prompt.command()
     @checks.is_owner()
     async def reset(self, ctx):
-        """ Reset prompts to default (cynical)"""
+        """ Reset ALL prompts (inc. user) to default (cynical)"""
         await self.config.guild(ctx.guild).custom_text_prompt.set(None)
-        embed = discord.Embed(title="Prompt resetted")
+        for member in ctx.guild.members:
+            await self.config.member(member).custom_text_prompt.set(None)
+        embed = discord.Embed(title="All prompts resetted")
         return await ctx.send(embed=embed)
 
-    @prompt.command()
-    @checks.is_owner()
-    async def custom(self, ctx, prompt):
-        """ Set custom text prompt (Enclose with "") """
-        await self.config.guild(ctx.guild).custom_text_prompt.set(prompt)
-        res = "The prompt for this server is now changed to:\n"
-        res += box(f"{prompt}")
-        return await ctx.send(res)
+    @prompt.group()
+    async def show(self, _):
+        """ Show prompts """
+        pass
 
-    @prompt.command()
+    @show.command()
     @checks.admin()
-    async def show(self, ctx):
-        """ Show current custom text and image prompts """
+    async def server(self, ctx):
+        """ Show current server prompt"""
         custom_text_prompt = await self.config.guild(ctx.guild).custom_text_prompt()
         res = "The prompt for this server is:\n"
         if custom_text_prompt:
-            res += box(f"{custom_text_prompt}")
+            res += box(f"{self._truncate_prompt(custom_text_prompt)}")
         else:
             res += box(f"{DEFAULT_PROMPT}")
         return await ctx.send(res)
+
+    @show.command()
+    @checks.admin()
+    async def users(self, ctx):
+        """ Show all users with custom prompts """
+        pages = []
+        for member in ctx.guild.members:
+            custom_text_prompt = await self.config.member(member).custom_text_prompt()
+            if custom_text_prompt:
+                page = f"The prompt for user {member.name} is:"
+                page += box(f"\n{self._truncate_prompt(custom_text_prompt)}")
+                pages.append(page)
+        if not pages:
+            return await ctx.send("No users with custom prompts")
+        if len(pages) == 1:
+            return await ctx.send(pages[0])
+        return await menu(ctx, pages, DEFAULT_CONTROLS)
 
     @prompt.command()
     @checks.admin()
@@ -213,6 +234,40 @@ class AI_User(commands.Cog):
         res = "The prompt for this server is now changed to:\n"
         res += box(f"{PRESETS[preset]}")
         return await ctx.send(res)
+
+    @prompt.group()
+    @checks.is_owner()
+    async def custom(self, _):
+        """ Customize the prompt sent to OpenAI """
+        pass
+
+    @custom.command()
+    @checks.is_owner()
+    async def guild(self, ctx, prompt : str = ""):
+        """ Set custom prompt for current guild (Enclose with "") """
+        if prompt == "":
+            await self.config.guild(ctx.guild).custom_text_prompt.set(None)
+            return await ctx.send(f"The prompt for this server is now reset to the default prompt")
+        await self.config.guild(ctx.guild).custom_text_prompt.set(prompt)
+        res = "The prompt for this server is now changed to:\n"
+        res += box(f"{self._truncate_prompt(prompt)}")
+        return await ctx.send(res)
+
+    @custom.command()
+    @checks.is_owner()
+    async def user(self, ctx, member: discord.Member, prompt : str = ""):
+        """ Set custom prompt per user in current guild (Enclose with "") """
+        if prompt == "":
+            await self.config.member(member).custom_text_prompt.set(None)
+            return await ctx.send(f"The prompt for user {member.mention} is now reset to default server prompt")
+        await self.config.member(member).custom_text_prompt.set(prompt)
+        res = f"The prompt for user {member.mention} is now changed to:\n"
+        res += box(f"{self._truncate_prompt(prompt)}")
+        return await ctx.send(res)
+
+
+    def _truncate_prompt(self, prompt):
+        return prompt[:1900] + "..." if len(prompt) > 1900 else prompt
 
     @commands.guild_only()
     @commands.Cog.listener()
