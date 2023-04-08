@@ -243,8 +243,8 @@ class AI_User(commands.Cog):
 
     @custom.command()
     @checks.is_owner()
-    async def guild(self, ctx, prompt : str = ""):
-        """ Set custom prompt for current guild (Enclose with "") """
+    async def server(self, ctx, prompt : str = ""):
+        """ Set custom prompt for current server (Enclose with "") """
         if prompt == "":
             await self.config.guild(ctx.guild).custom_text_prompt.set(None)
             return await ctx.send(f"The prompt for this server is now reset to the default prompt")
