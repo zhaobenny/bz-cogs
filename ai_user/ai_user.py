@@ -256,7 +256,7 @@ class AI_User(commands.Cog):
     @custom.command()
     @checks.is_owner()
     async def user(self, ctx, member: discord.Member, prompt : str = ""):
-        """ Set custom prompt per user in current guild (Enclose with "") """
+        """ Set custom prompt per user in current server (Enclose with "") """
         if prompt == "":
             await self.config.member(member).custom_text_prompt.set(None)
             return await ctx.send(f"The prompt for user {member.mention} is now reset to default server prompt")
