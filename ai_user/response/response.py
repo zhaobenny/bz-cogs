@@ -22,7 +22,7 @@ async def generate_response(message, config, prompt):
 
     response = await generate_openai_response(model, prompt)
 
-    if (await config.filter_responses()) and is_moderated_response(response, message):
+    if (not response or (await config.filter_responses()) and is_moderated_response(response, message)):
         return (False, "😶")
 
     bot_name = message.guild.me.name
