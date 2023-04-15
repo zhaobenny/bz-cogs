@@ -269,7 +269,6 @@ class AI_User(commands.Cog):
     def _truncate_prompt(self, prompt):
         return prompt[:1900] + "..." if len(prompt) > 1900 else prompt
 
-    @commands.guild_only()
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
         if not await self.is_common_valid_reply(message):
@@ -335,6 +334,9 @@ class AI_User(commands.Cog):
 
     async def is_common_valid_reply(self, message) -> bool:
         """ Run some common checks to see if a message is valid for the bot to reply to """
+        if not message.guild:
+            return False
+
         if await self.bot.cog_disabled_in_guild(self, message.guild):
             return False
 
