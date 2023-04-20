@@ -274,10 +274,13 @@ class AI_User(commands.Cog):
         if not await self.is_common_valid_reply(message):
             return
 
+        chance = random.random()
+        logger.debug(f"Rolled reply chance: {chance}, in {message.guild.name}. Reply chance: {self.cached_options[message.guild.id].get('reply_percent')}")
         if (await self.is_bot_mentioned_or_replied(message)):
             pass
-        elif random.random() > self.cached_options[message.guild.id].get("reply_percent"):
+        elif chance > self.cached_options[message.guild.id].get("reply_percent"):
             return
+        logger.debug(f"Passed reply chance check in {message.guild.name}")
 
         prompt_instance = await create_prompt_instance(message, self.config)
         prompt = await prompt_instance.get_prompt()
