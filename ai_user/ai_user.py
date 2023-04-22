@@ -191,9 +191,9 @@ class AI_User(commands.Cog):
         """ Show prompts """
         pass
 
-    @show.command()
+    @show.command(name="server")
     @checks.admin()
-    async def server(self, ctx):
+    async def server_prompt(self, ctx):
         """ Show current server prompt"""
         custom_text_prompt = await self.config.guild(ctx.guild).custom_text_prompt()
         res = "The prompt for this server is:\n"
