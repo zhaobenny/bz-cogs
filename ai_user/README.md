@@ -24,7 +24,7 @@ See custom prompt settings in:
 [p]ai_user prompt
 ```
 
-This option (enabled by default) filters out responses that contains any of the following words: "language model", "openai", "sorry", "apologize"
+This option (enabled by default) filters out responses that contains any of the following words: "language model", "openai", "sorry"
 Most responses with these words are pretty generic and bias the model away from the prompt.
 ```
 [p]ai_user filter_responses
