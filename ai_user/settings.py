@@ -33,7 +33,7 @@ class settings(MixinMeta):
     @ai_user.command()
     @checks.is_owner()
     async def scan_images(self, ctx):
-        """ Toggle image scanning (req. cpu usage / tesseract) """
+        """ Toggle global image scanning (req. cpu usage / tesseract) """
         try:
             importlib.import_module("pytesseract")
             importlib.import_module("torch")
@@ -206,7 +206,7 @@ class settings(MixinMeta):
     @custom.command()
     @checks.is_owner()
     async def server(self, ctx, prompt: str = ""):
-        """ Set custom prompt for current server (Enclose with "") """
+        """ Set custom prompt for current server (Enclose with \" \") """
         if prompt == "":
             await self.config.guild(ctx.guild).custom_text_prompt.set(None)
             return await ctx.send(f"The prompt for this server is now reset to the default prompt")
@@ -218,7 +218,7 @@ class settings(MixinMeta):
     @custom.command()
     @checks.is_owner()
     async def user(self, ctx, member: discord.Member, prompt: str = ""):
-        """ Set custom prompt per user in current server (Enclose with "") """
+        """ Set custom prompt per user in current server (Enclose with \" \") """
         if prompt == "":
             await self.config.member(member).custom_text_prompt.set(None)
             return await ctx.send(f"The prompt for user {member.mention} is now reset to default server prompt")

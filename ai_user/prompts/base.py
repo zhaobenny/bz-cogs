@@ -78,7 +78,7 @@ class Prompt:
         else:
             # avoid duplicates that will confuse the model
             history.append(
-                {"role": "system", "content": f'The following message is a reply to: User "{replied_message.author.name}" said {replied_message.content}'})
+                {"role": "system", "content": f'The following message is a reply to: User "{replied_message.author.name}" said: {replied_message.content}'})
 
     def _format_message(self, message: Message) -> Dict[str, str]:
         """ Formats a message into a JSON format for OpenAI """

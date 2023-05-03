@@ -15,7 +15,7 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 @retry(
     retry=(retry_if_exception(openai.error.Timeout) | retry_if_exception(
         openai.error.APIConnectionError) | retry_if_exception(openai.error.RateLimitError)),
-    wait=wait_random_exponential(min=1, max=10), stop=stop_after_delay(10),
+    wait=wait_random_exponential(min=1, max=5), stop=stop_after_delay(10),
     retry_error_callback=lambda _: logger.error("Retrying API request...", exc_info=True)
 )
 async def generate_openai_response(model, prompt):
