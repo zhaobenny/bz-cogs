@@ -15,5 +15,5 @@ lifx_light | Controls a singular smart lifx lightblub.
 
 [bz-cogs Discord](https://discord.gg/GwT2yHPqzN)
 
-## Contributors 🎉:
+## Contributors 🎉
 - [#2](https://github.com/zhaobenny/bz-cogs/pull/2) [@hollowstrawberry](https://github.com/hollowstrawberry)
