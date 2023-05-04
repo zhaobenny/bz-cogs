@@ -30,13 +30,16 @@ Most responses with these words are pretty generic and bias the model away from 
 [p]ai_user filter_responses
 ```
 
+### Have fun. 🎉
+![repetition](https://user-images.githubusercontent.com/46238123/227853613-1a524915-ed46-45f7-a154-94e90daf0cd7.jpg)
+
 ## Image scanning 🖼️
 
 ```
 [p]ai_user scan_images
 ```
 
-Image scanning, if turned on, will be very CPU intensive. Not recommended for multiple servers/channels.
+Image scanning, if turned on, will be very CPU intensive. Not recommended for busy servers/channels.
 See below for instructions on installing the necessary dependencies. (ARM not supported)
 
 
@@ -62,6 +65,3 @@ See [here](https://tesseract-ocr.github.io/tessdoc/Installation.html) for instru
 First time scanning an image will take longer due to the need to download the pretrained models. (OCR and image captioning models)
 
 ---
-
-### Have fun. 🎉
-![repetition](https://user-images.githubusercontent.com/46238123/227853613-1a524915-ed46-45f7-a154-94e90daf0cd7.jpg)

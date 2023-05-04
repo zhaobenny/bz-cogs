@@ -29,9 +29,11 @@ class Prompt:
         self.remove_id_field_in_prompt(full_prompt)
         return full_prompt
 
-    async def _get_previous_history(self, limit: int = 10):
+    async def _get_previous_history(self):
         """ Returns a history of messages before current message """
-        messages =  [message async for message in self.message.channel.history(limit=10, before=self.message)]
+
+        limit = await self.config.guild(self.message.guild).messages_lookback()
+        messages =  [message async for message in self.message.channel.history(limit=limit, before=self.message)]
 
         messages.reverse()
         for i, message in reversed(list(enumerate(messages))):

@@ -1,7 +1,7 @@
 
-from datetime import datetime, timezone
 import logging
 import random
+from datetime import datetime, timezone
 
 import discord
 import openai
@@ -23,16 +23,15 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
         self.config = Config.get_conf(self, identifier=754070)
         self.cached_options = {}
 
-        default_global = {
-            "scan_images": False,
-            "model": "gpt-3.5-turbo",
-            "filter_responses": True,
-        }
-
         default_guild = {
-            "channels_whitelist": [],
-            "custom_text_prompt": None,
             "reply_percent": 0.5,
+            "messages_lookback": 10,
+            "always_reply_on_ping_reply": True,
+            "scan_images": False,
+            "filter_responses": True,
+            "model": "gpt-3.5-turbo",
+            "custom_text_prompt": None,
+            "channels_whitelist": [],
         }
 
         default_member = {
@@ -40,7 +39,6 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
         }
 
         self.config.register_member(**default_member)
-        self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
 
     @commands.Cog.listener()
@@ -50,6 +48,7 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
 
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
+
         if not await self.is_common_valid_reply(message):
             return
 
