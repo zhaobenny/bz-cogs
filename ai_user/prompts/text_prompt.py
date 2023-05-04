@@ -38,7 +38,7 @@ class TextPrompt(Prompt):
 
         prompt.append(
             {"role": "system",
-                "content": f"You are {self.bot.name}. You are in a Discord text channel. {bot_prompt}"},
+                "content": f"You are {self.bot.name}. {bot_prompt}"},
         )
 
         if self.message.reference and not Prompt.is_id_in_messages(self.message.reference.message_id, prompt):

@@ -1,16 +1,16 @@
 
-from datetime import datetime, timezone
 import logging
 import random
+from datetime import datetime, timezone
 
 import discord
 import openai
-from redbot.core import Config, commands, app_commands
+from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
 from ai_user.abc import CompositeMetaClass
 from ai_user.prompts.prompt_factory import create_prompt_instance
-from ai_user.prompts.text_prompt import MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH
+from ai_user.prompts.text_prompt import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
 from ai_user.response.response import generate_response
 from ai_user.settings import settings
 
@@ -25,16 +25,16 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
         self.config = Config.get_conf(self, identifier=754070)
         self.cached_options = {}
 
-        default_global = {
-            "scan_images": False,
-            "model": "gpt-3.5-turbo",
-            "filter_responses": True,
-        }
-
         default_guild = {
-            "channels_whitelist": [],
-            "custom_text_prompt": None,
             "reply_percent": 0.5,
+            "messages_backread": 10,
+            "messages_backread_seconds": 60 * 120,
+            "reply_to_mentions_replies": False,
+            "scan_images": False,
+            "filter_responses": True,
+            "model": "gpt-3.5-turbo",
+            "custom_text_prompt": None,
+            "channels_whitelist": [],
         }
 
         default_member = {
@@ -42,7 +42,6 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
         }
 
         self.config.register_member(**default_member)
-        self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
 
     @app_commands.command(name="chat")
@@ -143,6 +142,10 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
         return True
 
     async def is_bot_mentioned_or_replied(self, message) -> bool:
+
+        if not (await self.config.guild(message.guild).reply_to_mentions_replies()):
+            return False
+
         if self.bot.user in message.mentions:
             return True
 

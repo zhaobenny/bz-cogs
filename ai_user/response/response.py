@@ -4,7 +4,7 @@ import logging
 import openai
 import openai.error
 from redbot.core import commands, Config
-from tenacity import (RetryError, retry, retry_if_exception_type, stop_after_delay,
+from tenacity import (retry, retry_if_exception_type, stop_after_delay,
                       wait_random_exponential)
 
 from ai_user.response.checks import is_moderated_response, is_reply
@@ -32,21 +32,21 @@ async def generate_response(ctx: commands.Context, config: Config, prompt):
     message = ctx.message
     logger.debug(
         f"Replying to message \"{message.content}\" in {message.guild.name} with prompt: \n{json.dumps(prompt, indent=4)}")
-    model = await config.model()
+    model = await config.guild(message.guild).model()
 
     async with ctx.typing():
         try:
             response = await generate_openai_response(model, prompt)
-        except openai.error.RateLimitError:
+        except openai.error.RateLimitError as e:
             trys = generate_openai_response.retry.statistics["attempt_number"]
             logger.warning(
-                f"Failed {trys} API request to OpenAI. You are being ratelimited, switch to a paid account or reduce percent chance of reply. Last exception was:", exc_info=True)
+                f"Failed {trys} API request to OpenAI. You may be ratelimited! Reduce percent chance of reply? See exception from Openai: {e}")
             return await ctx.react_quietly("💤")
         except:
             trys = generate_openai_response.retry.statistics["attempt_number"] or 1
             logger.error(
-                f"Failed {trys} API request to OpenAI. Last exception was:", exc_info=True)
-            return await ctx.react_quietly("⚠")
+                f"Failed {trys} API request(s) to OpenAI. Last exception was:", exc_info=True)
+            return await ctx.react_quietly("⚠️")
 
         if (await config.filter_responses()) and is_moderated_response(response, message):
             return await ctx.react_quietly("😶")
