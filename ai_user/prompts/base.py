@@ -31,8 +31,7 @@ class Prompt:
 
     async def _get_previous_history(self, limit: int = 10):
         """ Returns a history of messages before current message """
-
-        messages = await self.message.channel.history(limit=limit, before=self.message).flatten()
+        messages =  [message async for message in self.message.channel.history(limit=10, before=self.message)]
 
         messages.reverse()
         for i, message in reversed(list(enumerate(messages))):

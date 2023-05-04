@@ -1,6 +1,6 @@
-import datetime
 import logging
 import random
+from datetime import datetime, timezone
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -17,7 +17,7 @@ def is_moderated_response(response, message):
     return False
 
 async def is_reply(message):
-        time_diff = datetime.datetime.utcnow() - message.created_at
+        time_diff = datetime.now(timezone.utc) - message.created_at
         if time_diff.total_seconds() > 8:
             return True
         if (random.random() < 0.25):
