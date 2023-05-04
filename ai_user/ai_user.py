@@ -1,5 +1,5 @@
 
-import datetime
+from datetime import datetime, timezone
 import logging
 import random
 
@@ -72,7 +72,7 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
         if not await self.is_common_valid_reply(before):
             return
 
-        time_diff = datetime.datetime.utcnow() - after.created_at
+        time_diff = datetime.now(timezone.utc) - after.created_at
         if not (time_diff.total_seconds() <= 10):
             return
 

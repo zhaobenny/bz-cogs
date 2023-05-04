@@ -23,7 +23,7 @@ async def is_reply(message):
         if (random.random() < 0.25):
              return True
         try:
-            last_message = await message.channel.history(limit=1).flatten()
+            last_message = [m async for m in message.channel.history(limit=1)]
             if last_message[0].author == message.guild.me:
                 return True
         except:
