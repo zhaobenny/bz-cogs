@@ -38,7 +38,7 @@ class TextPrompt(Prompt):
 
         prompt.append(
             {"role": "system",
-                "content": f"You are {self.bot.name}. Do not include 'User \"{self.bot.name}\" said' in the response. Do not react to username before 'said:'. You are in a Discord text channel. {bot_prompt}"},
+                "content": f"You are {self.bot.name}. You are in a Discord text channel. {bot_prompt}"},
         )
 
         if self.message.reference and not Prompt.is_id_in_messages(self.message.reference.message_id, prompt):

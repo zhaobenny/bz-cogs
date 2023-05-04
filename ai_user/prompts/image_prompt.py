@@ -42,14 +42,14 @@ class ImagePrompt(Prompt):
         scanned_text = await ImagePrompt._extract_text_from_image(image)
         if scanned_text and len(scanned_text.split()) > 10:
             prompt = [
-                {"role": "system", "content": f"The following text is from a picture sent by user \"{self.message.author.name}\". You are in a Discord text channel. {bot_prompt}"},
+                {"role": "system", "content": f"The following text is from a picture sent by user \"{self.message.author.name}\". {bot_prompt}"},
                 {"role": "user", "content": scanned_text},
             ]
         else:
             confidence, caption = await ImagePrompt._create_prompt_from_image(image)
             if confidence > 0.45:
                 prompt = [
-                    {"role": "system", "content": f"The following is a description of a picture sent by user \"{self.message.author.name}\". You are in a Discord text channel. {bot_prompt}"},
+                    {"role": "system", "content": f"The following is a description of a picture sent by user \"{self.message.author.name}\". {bot_prompt}"},
                     {"role": "user", "content": caption},
                 ]
         if not prompt:

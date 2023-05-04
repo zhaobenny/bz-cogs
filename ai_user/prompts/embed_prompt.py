@@ -32,7 +32,7 @@ class EmbedPrompt(Prompt):
         prompt.extend(await (self._get_previous_history()))
         prompt.extend([
             {"role": "system",
-             "content": f"You are in a Discord text channel. A embed has been sent by {self.message.author.name}. {bot_prompt}"},
+             "content": f"A embed has been sent by {self.message.author.name}. {bot_prompt}"},
             {"role": "system",
              "content": f"The embed title is \"{self.message.embeds[0].title}\" and the description is \"{self.message.embeds[0].description}\""},
         ])

@@ -54,7 +54,7 @@ class Prompt:
         for i, message in enumerate(messages):
             if self.is_not_valid_message(message):
                 history.append(
-                    {"role": "system", "content": "A message containing an attachment/image or was too long was skipped from this history"})
+                    {"role": "system", "content": "A message containing an attachment/image or that was too long was skipped"})
                 continue
             if message.reference:
                 await self._handle_historical_reply(history, message)
