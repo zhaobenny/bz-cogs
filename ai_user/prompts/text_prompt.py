@@ -1,12 +1,12 @@
 import logging
 from typing import Optional
-
 from discord import Message
-
 from ai_user.prompts.base import Prompt
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
+MIN_MESSAGE_LENGTH = 5
+MAX_MESSAGE_LENGTH = 300
 
 class TextPrompt(Prompt):
     def __init__(self, message: Message, config):
@@ -17,12 +17,12 @@ class TextPrompt(Prompt):
             logger.debug(f"Skipping empty message in {message.guild.name}")
             return False
 
-        if len(message.content) < 5:
+        if len(message.content) < MIN_MESSAGE_LENGTH:
             logger.debug(
                 f"Skipping short message: {message.content} in {message.guild.name}")
             return False
 
-        if len(message.content.split()) > 300:
+        if len(message.content.split()) > MAX_MESSAGE_LENGTH:
             logger.debug(
                 f"Skipping long message: {message.content} in {message.guild.name}")
             return False
@@ -48,7 +48,6 @@ class TextPrompt(Prompt):
                 prompt.append(formattted_replied)
             except:
                 pass
-
 
         prompt.append(self._format_message(self.message))
 
