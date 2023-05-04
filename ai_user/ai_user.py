@@ -103,13 +103,16 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
         if not self.cached_options.get(message.guild.id):
             await self.cache_guild_options(message)
 
-        if (message.channel.id not in self.cached_options[message.guild.id].get("channels_whitelist")):
-            return False
-
         if not openai.api_key:
             await self.initalize_openai(message)
 
         if not openai.api_key:
+            return False
+
+        if isinstance(message.channel, discord.Thread):
+            if message.channel.parent.id not in self.cached_options[message.guild.id].get("channels_whitelist"):
+                return False
+        elif message.channel.id not in self.cached_options[message.guild.id].get("channels_whitelist"):
             return False
 
         return True
@@ -117,8 +120,11 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
     async def is_bot_mentioned_or_replied(self, message) -> bool:
         if self.bot.user in message.mentions:
             return True
-        elif (message.reference and (await message.channel.fetch_message(message.reference.message_id)).author == self.bot.user):
-            return True
+
+        if message.reference and message.reference.message_id:
+            reference_message = await message.channel.fetch_message(message.reference.message_id)
+            return reference_message.author == self.bot.user
+
         return False
 
     async def initalize_openai(self, message):
