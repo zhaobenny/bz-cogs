@@ -30,6 +30,12 @@ Most responses with these words are pretty generic and bias the model away from 
 [p]ai_user filter_responses
 ```
 
+Enable slash (/chat) command using:
+```
+[p]slash enablecog ai_user
+[p]slash sync
+```
+
 ## Image scanning 🖼️
 
 ```
