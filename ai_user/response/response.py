@@ -16,6 +16,7 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
     retry=(retry_if_exception_type(openai.error.Timeout) | retry_if_exception_type(
         openai.error.APIConnectionError) | retry_if_exception_type(openai.error.RateLimitError)),
     wait=wait_random_exponential(min=1, max=5), stop=stop_after_delay(10),
+    reraise=True
 )
 async def generate_openai_response(model, prompt):
     response = await openai.ChatCompletion.acreate(
@@ -33,15 +34,16 @@ async def generate_response(message, config, prompt):
 
     try:
         response = await generate_openai_response(model, prompt)
-    except RetryError:
+    except openai.error.RateLimitError:
         trys = generate_openai_response.retry.statistics["attempt_number"]
-        logger.error(
-            f"Failed {trys} API requests to OpenAI. The last exception was:", exc_info=True)
+        logger.warning(
+            f"Failed {trys} API request to OpenAI. You are being ratelimited, switch to a paid account or reduce percent chance of reply. Last exception was:", exc_info=True)
         return await message.add_reaction("💤")
     except:
+        trys = generate_openai_response.retry.statistics["attempt_number"] or 1
         logger.error(
-            "Failed API request to OpenAI. The exception was:", exc_info=True)
-        return await message.add_reaction("💤")
+            f"Failed {trys} API request to OpenAI. Last exception was:", exc_info=True)
+        return await message.add_reaction("⚠️")
 
     if (await config.filter_responses()) and is_moderated_response(response, message):
         return await message.add_reaction("😶")
