@@ -71,6 +71,9 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
 
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
+        if not self.cached_options.get(message.guild.id):
+            await self.cache_guild_options(message)
+
         if await self.is_bot_mentioned_or_replied(message):
             pass
         elif random.random() > self.cached_options[message.guild.id].get("reply_percent"):
@@ -90,6 +93,10 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
         """ Catch embed updates """
+
+        if not self.cached_options.get(before.guild.id):
+            await self.cache_guild_options(before)
+
         time_diff = datetime.now(timezone.utc) - after.created_at
         if not (time_diff.total_seconds() <= 10):
             return
@@ -120,9 +127,6 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
 
         if ctx.author.bot:
             return False
-
-        if not self.cached_options.get(ctx.guild.id):
-            await self.cache_guild_options(ctx.message)
 
         if not openai.api_key:
             await self.initalize_openai(ctx.message)
