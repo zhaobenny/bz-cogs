@@ -3,7 +3,7 @@ import logging
 
 import openai
 import openai.error
-from tenacity import (RetryError, retry, retry_if_exception, stop_after_delay,
+from tenacity import (RetryError, retry, retry_if_exception_type, stop_after_delay,
                       wait_random_exponential)
 
 from ai_user.response.checks import is_moderated_response, is_reply
@@ -13,10 +13,9 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 @retry(
-    retry=(retry_if_exception(openai.error.Timeout) | retry_if_exception(
-        openai.error.APIConnectionError) | retry_if_exception(openai.error.RateLimitError)),
+    retry=(retry_if_exception_type(openai.error.Timeout) | retry_if_exception_type(
+        openai.error.APIConnectionError) | retry_if_exception_type(openai.error.RateLimitError)),
     wait=wait_random_exponential(min=1, max=5), stop=stop_after_delay(10),
-    retry_error_callback=lambda _: logger.error("Retrying API request...", exc_info=True)
 )
 async def generate_openai_response(model, prompt):
     response = await openai.ChatCompletion.acreate(
