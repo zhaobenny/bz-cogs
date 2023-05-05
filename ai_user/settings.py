@@ -1,5 +1,6 @@
 import importlib
 import logging
+from typing import Optional
 
 import discord
 import openai
@@ -29,8 +30,8 @@ class settings(MixinMeta):
         embed.add_field(name="Model", value=await self.config.guild(message.guild).model(), inline=False)
         embed.add_field(name="Filter Responses", value=await self.config.guild(message.guild).filter_responses(), inline=False)
         embed.add_field(name="Reply Percent", value=f"{await self.config.guild(message.guild).reply_percent() * 100}%", inline=False)
-        embed.add_field(name="Whitelisted Channels", value=" ".join(
-            channels) if channels else "None", inline=False)
+        embed.add_field(name="Whitelisted Channels", value=" ".join(channels)\
+                        if channels else "None", inline=False)
         embed.add_field(name="Always Reply on Ping or Reply", value=await self.config.guild(message.guild).reply_to_mentions_replies(), inline=False)
         embed.add_field(name="Max Messages in History", value=f"{await self.config.guild(message.guild).messages_backread()}", inline=False)
         embed.add_field(name="Max Time (s) between each Message in History", value=f"{await self.config.guild(message.guild).messages_backread_seconds()}", inline=False)
@@ -38,7 +39,7 @@ class settings(MixinMeta):
 
     @ai_user.command()
     @checks.is_owner()
-    async def scan_images(self, ctx):
+    async def scan_images(self, ctx: commands.Context):
         """ Toggle image scanning (see README.md)"""
         try:
             importlib.import_module("pytesseract")
@@ -58,22 +59,18 @@ class settings(MixinMeta):
 
     @ai_user.command()
     @checks.is_owner()
-    async def percent(self, ctx, new_value):
+    async def percent(self, ctx: commands.Context, new_value: float):
         """Change the bot's response chance """
-        try:
-            new_value = float(new_value)
-        except ValueError:
-            return await ctx.send("Value must be a number")
         await self.config.guild(ctx.guild).reply_percent.set(new_value / 100)
         await self.cache_guild_options(ctx)
         embed = discord.Embed(
-            title="Chance that the bot will reply on this server is now:")
-        embed.add_field(name="", value=f"{new_value}%")
+            title="Chance that the bot will reply on this server is now:",
+            description=f"{new_value}%")
         return await ctx.send(embed=embed)
 
     @ai_user.command()
     @checks.is_owner()
-    async def model(self, ctx, new_value):
+    async def model(self, ctx: commands.Context, new_value: str):
         """ Changes chat completion model """
         if not openai.api_key:
             await self.initalize_openai(ctx)
@@ -87,26 +84,26 @@ class settings(MixinMeta):
 
         await self.config.guild(ctx.guild).set(new_value)
         embed = discord.Embed(
-            title="This server's chat model is now set to")
-        embed.add_field(name="", value=new_value)
+            title="This server's chat model is now set to:",
+            description=new_value)
         return await ctx.send(embed=embed)
 
     @ai_user.command()
     @checks.admin()
-    async def filter_responses(self, ctx):
+    async def filter_responses(self, ctx: commands.Context):
         """ Toggles rudimentary filtering of canned replies """
-        value = not await self.guild(ctx.guild).filter_responses()
+        value = not await self.config.guild(ctx.guild).filter_responses()
         await self.config.guild(ctx.guild).filter_responses.set(value)
         embed = discord.Embed(
-            title="Filtering canned responses for this server now set to")
-        embed.add_field(name="", value=value)
+            title="Filtering canned responses for this server now set to:",
+            description=f"{value}")
         return await ctx.send(embed=embed)
 
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def add(self, ctx, channel: discord.TextChannel):
+    async def add(self, ctx: commands.Context, channel: discord.TextChannel):
         """ Add a channel to the whitelist to allow the bot to reply in"""
-        if channel is None:
+        if not channel:
             return await ctx.send("Invalid channel mention, use #channel")
         new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         if channel.id in new_whitelist:
@@ -114,17 +111,16 @@ class settings(MixinMeta):
         new_whitelist.append(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         await self.cache_guild_options(ctx)
-        embed = discord.Embed(title="The server whitelist is now")
+        embed = discord.Embed(title="The server whitelist is now:")
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
-        embed.add_field(name="", value=" ".join(
-            channels) if channels else "None")
+        embed.description = "\n".join(channels) if channels else "None"
         return await ctx.send(embed=embed)
 
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def remove(self, ctx, channel: discord.TextChannel):
+    async def remove(self, ctx: commands.Context, channel: discord.TextChannel):
         """ Remove a channel from the whitelist"""
-        if channel is None:
+        if not channel:
             return await ctx.send("Invalid channel mention, use #channel")
         new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         if channel.id not in new_whitelist:
@@ -132,21 +128,20 @@ class settings(MixinMeta):
         new_whitelist.remove(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         await self.cache_guild_options(ctx)
-        embed = discord.Embed(title="The server whitelist is now")
+        embed = discord.Embed(title="The server whitelist is now:")
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
-        embed.add_field(name="", value=" ".join(
-            channels) if channels else "None")
+        embed.description = "\n".join(channels) if channels else "None"
         return await ctx.send(embed=embed)
 
     @ai_user.command()
     @checks.is_owner()
-    async def mentions_replies(self, ctx):
+    async def mentions_replies(self, ctx: commands.Context):
         """ Toggles bot always replying to mentions/replies """
         value = not await self.config.guild(ctx.guild).reply_to_mentions_replies()
         await self.config.guild(ctx.guild).reply_to_mentions_replies.set(value)
         embed = discord.Embed(
-            title="Always replying to mentions or replies for this server now set to")
-        embed.add_field(name="", value=value)
+            title="Always replying to mentions or replies for this server now set to:",
+            description=f"{value}")
         return await ctx.send(embed=embed)
 
     @ai_user.group()
@@ -157,30 +152,22 @@ class settings(MixinMeta):
 
     @history.command()
     @checks.is_owner()
-    async def backread(self, ctx, new_value):
+    async def backread(self, ctx: commands.Context, new_value: int):
         """ Set max amount of messages to be used"""
-        try:
-            new_value = int(new_value)
-        except ValueError:
-            return await ctx.send("Value must be a number")
         await self.config.guild(ctx.guild).messages_backread.set(new_value)
         embed = discord.Embed(
-            title="The number of previous messages used for context on this server is now")
-        embed.add_field(name="", value=f"{new_value}")
+            title="The number of previous messages used for context on this server is now:",
+            description=f"{new_value}")
         return await ctx.send(embed=embed)
 
     @history.command()
     @checks.is_owner()
-    async def time(self, ctx, new_value):
+    async def time(self, ctx: commands.Context, new_value: int):
         """ Set max time (s) allowed between messages to be used """
-        try:
-            new_value = int(new_value)
-        except ValueError:
-            return await ctx.send("Value must be a number")
         await self.config.guild(ctx.guild).messages_backread_seconds.set(new_value)
         embed = discord.Embed(
-            title="The max time (s) allowed between messages for context on this server is now")
-        embed.add_field(name="", value=f"{new_value}")
+            title="The max time (s) allowed between messages for context on this server is now:",
+            description=f"{new_value}")
         return await ctx.send(embed=embed)
 
     @ai_user.group()
@@ -191,7 +178,7 @@ class settings(MixinMeta):
 
     @prompt.command()
     @checks.is_owner()
-    async def reset(self, ctx):
+    async def reset(self, ctx: commands.Context):
         """ Reset ALL prompts (inc. user) to default (cynical)"""
         await self.config.guild(ctx.guild).custom_text_prompt.set(None)
         for member in ctx.guild.members:
@@ -206,7 +193,7 @@ class settings(MixinMeta):
 
     @show.command(name="server")
     @checks.admin()
-    async def server_prompt(self, ctx):
+    async def server_prompt(self, ctx: commands.Context):
         """ Show current server prompt"""
         custom_text_prompt = await self.config.guild(ctx.guild).custom_text_prompt()
         res = "The prompt for this server is:\n"
@@ -218,7 +205,7 @@ class settings(MixinMeta):
 
     @show.command()
     @checks.admin()
-    async def users(self, ctx):
+    async def users(self, ctx: commands.Context):
         """ Show all users with custom prompts """
         pages = []
         for member in ctx.guild.members:
@@ -235,7 +222,7 @@ class settings(MixinMeta):
 
     @prompt.command()
     @checks.admin()
-    async def preset(self, ctx, preset):
+    async def preset(self, ctx: commands.Context, *, preset: str):
         """ List presets using 'list', or set a preset """
         if preset == 'list':
             embed = discord.Embed(
@@ -258,9 +245,9 @@ class settings(MixinMeta):
 
     @custom.command()
     @checks.is_owner()
-    async def server(self, ctx, prompt: str = ""):
-        """ Set custom prompt for current server (Enclose with \" \") """
-        if prompt == "":
+    async def server(self, ctx: commands.Context, *, prompt: Optional[str]):
+        """ Set custom prompt for current server """
+        if not prompt:
             await self.config.guild(ctx.guild).custom_text_prompt.set(None)
             return await ctx.send(f"The prompt for this server is now reset to the default prompt")
         await self.config.guild(ctx.guild).custom_text_prompt.set(prompt)
@@ -270,9 +257,9 @@ class settings(MixinMeta):
 
     @custom.command()
     @checks.is_owner()
-    async def user(self, ctx, member: discord.Member, prompt: str = ""):
-        """ Set custom prompt per user in current server (Enclose \" \") """
-        if prompt == "":
+    async def user(self, ctx: commands.Context, member: discord.Member, *, prompt: Optional[str]):
+        """ Set custom prompt per user in current server """
+        if not prompt:
             await self.config.member(member).custom_text_prompt.set(None)
             return await ctx.send(f"The prompt for user {member.mention} is now reset to default server prompt")
         await self.config.member(member).custom_text_prompt.set(prompt)
@@ -280,11 +267,11 @@ class settings(MixinMeta):
         res += box(f"{self._truncate_prompt(prompt)}")
         return await ctx.send(res)
 
-    async def cache_guild_options(self, message):
+    async def cache_guild_options(self, message: discord.Message):
         self.cached_options[message.guild.id] = {
             "channels_whitelist": await self.config.guild(message.guild).channels_whitelist(),
             "reply_percent": await self.config.guild(message.guild).reply_percent(),
         }
 
-    def _truncate_prompt(self, prompt):
+    def _truncate_prompt(self, prompt: str) -> str:
         return prompt[:1900] + "..." if len(prompt) > 1900 else prompt
