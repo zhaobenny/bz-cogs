@@ -1,29 +1,28 @@
 
 import logging
 import random
-from datetime import datetime, timezone
-
 import discord
 import openai
+from datetime import datetime, timezone
 from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
 from ai_user.abc import CompositeMetaClass
 from ai_user.prompts.prompt_factory import create_prompt_instance
-from ai_user.prompts.text_prompt import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
+from ai_user.prompts.constants import MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH
 from ai_user.response.response import generate_response
-from ai_user.settings import settings
+from ai_user.settings import Settings
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
-class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
-
+class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
     def __init__(self, bot):
         super().__init__()
         self.bot: Red = bot
         self.config = Config.get_conf(self, identifier=754070)
         self.cached_options = {}
+        self.override_prompt_start_time = {}
 
         default_guild = {
             "reply_percent": 0.5,
@@ -35,6 +34,7 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
             "model": "gpt-3.5-turbo",
             "custom_text_prompt": None,
             "channels_whitelist": [],
+            "public_forget": False,
         }
 
         default_member = {
@@ -56,7 +56,8 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
         if not await self.is_common_valid_reply(ctx):
             return
 
-        prompt_instance = await create_prompt_instance(ctx.message, self.config)
+        start_time = self.override_prompt_start_time.get(ctx.guild.id, None)
+        prompt_instance = await create_prompt_instance(ctx.message, self.config, start_time)
         prompt = await prompt_instance.get_prompt()
         if prompt is None:
             return await ctx.send("Error: No prompt set.", ephemeral=True)
@@ -80,7 +81,8 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
         elif random.random() > self.cached_options[message.guild.id].get("reply_percent"):
             return
 
-        prompt_instance = await create_prompt_instance(message, self.config)
+        start_time = self.override_prompt_start_time.get(ctx.guild.id, None)
+        prompt_instance = await create_prompt_instance(message, self.config, start_time)
         prompt = await prompt_instance.get_prompt()
         if prompt is None:
             return
@@ -104,7 +106,8 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
 
         prompt = None
         if len(before.embeds) != len(after.embeds):
-            prompt_instance = await create_prompt_instance(after, self.config)
+            start_time = self.override_prompt_start_time.get(before.guild.id, None)
+            prompt_instance = await create_prompt_instance(after, self.config, start_time)
             prompt = await prompt_instance.get_prompt()
         if prompt is None:
             return
@@ -129,7 +132,7 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
             return False
 
         if not self.cached_options.get(ctx.message.guild.id):
-            await self.cache_guild_options(ctx.message)
+            await self.cache_guild_options(ctx)
 
         if isinstance(ctx.channel, discord.Thread):
             if ctx.channel.parent.id not in self.cached_options[ctx.guild.id].get("channels_whitelist"):

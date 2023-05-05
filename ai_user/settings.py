@@ -1,9 +1,8 @@
 import importlib
 import logging
-from typing import Optional
-
 import discord
 import openai
+from typing import Optional
 from redbot.core import checks, commands
 from redbot.core.utils.chat_formatting import box
 from redbot.core.utils.menus import DEFAULT_CONTROLS, menu
@@ -14,28 +13,38 @@ from ai_user.prompts.constants import DEFAULT_PROMPT, PRESETS
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
-class settings(MixinMeta):
+class Settings(MixinMeta):
     @commands.group()
     async def ai_user(self, _):
         pass
 
     @ai_user.command()
-    async def config(self, message):
+    async def forget(self, ctx: commands.Context):
+        """ Forces the AI to forget the current conversation up to this point. """
+        if not ctx.channel.permissions_for(ctx.author).manage_messages\
+                and not await self.config.guild(ctx.guild).public_forget():
+            return await ctx.react_quietly("❌")
+
+        self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
+        await ctx.react_quietly("✅")
+
+    @ai_user.command()
+    async def config(self, ctx: commands.Context):
         """ Returns current config """
-        whitelist = await self.config.guild(message.guild).channels_whitelist()
+        whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
 
         embed = discord.Embed(title="AI User Settings")
-        embed.add_field(name="Scan Images", value=await self.config.guild(message.guild).scan_images(), inline=False)
-        embed.add_field(name="Model", value=await self.config.guild(message.guild).model(), inline=False)
-        embed.add_field(name="Filter Responses", value=await self.config.guild(message.guild).filter_responses(), inline=False)
-        embed.add_field(name="Reply Percent", value=f"{await self.config.guild(message.guild).reply_percent() * 100}%", inline=False)
+        embed.add_field(name="Scan Images", value=await self.config.guild(ctx.guild).scan_images(), inline=False)
+        embed.add_field(name="Model", value=await self.config.guild(ctx.guild).model(), inline=False)
+        embed.add_field(name="Filter Responses", value=await self.config.guild(ctx.guild).filter_responses(), inline=False)
+        embed.add_field(name="Reply Percent", value=f"{await self.config.guild(ctx.guild).reply_percent() * 100}%", inline=False)
         embed.add_field(name="Whitelisted Channels", value=" ".join(channels)\
                         if channels else "None", inline=False)
-        embed.add_field(name="Always Reply on Ping or Reply", value=await self.config.guild(message.guild).reply_to_mentions_replies(), inline=False)
-        embed.add_field(name="Max Messages in History", value=f"{await self.config.guild(message.guild).messages_backread()}", inline=False)
-        embed.add_field(name="Max Time (s) between each Message in History", value=f"{await self.config.guild(message.guild).messages_backread_seconds()}", inline=False)
-        return await message.send(embed=embed)
+        embed.add_field(name="Always Reply on Ping or Reply", value=await self.config.guild(ctx.guild).reply_to_mentions_replies(), inline=False)
+        embed.add_field(name="Max Messages in History", value=f"{await self.config.guild(ctx.guild).messages_backread()}", inline=False)
+        embed.add_field(name="Max Time (s) between each Message in History", value=f"{await self.config.guild(ctx.guild).messages_backread_seconds()}", inline=False)
+        return await ctx.send(embed=embed)
 
     @ai_user.command()
     @checks.is_owner()
@@ -144,6 +153,17 @@ class settings(MixinMeta):
             description=f"{value}")
         return await ctx.send(embed=embed)
 
+    @ai_user.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def public_forget(self, ctx: commands.Context):
+        """ Toggles whether anyone can use the forget command, or only moderators. """
+        value = not await self.config.guild(ctx.guild).public_forget()
+        await self.config.guild(ctx.guild).public_forget.set(value)
+        embed = discord.Embed(
+            title="Anyone can use the forget command:",
+            description=f"{value}")
+        return await ctx.send(embed=embed)
+
     @ai_user.group()
     @checks.is_owner()
     async def history(self, _):
@@ -180,6 +200,7 @@ class settings(MixinMeta):
     @checks.is_owner()
     async def reset(self, ctx: commands.Context):
         """ Reset ALL prompts (inc. user) to default (cynical)"""
+        self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
         await self.config.guild(ctx.guild).custom_text_prompt.set(None)
         for member in ctx.guild.members:
             await self.config.member(member).custom_text_prompt.set(None)
@@ -247,6 +268,7 @@ class settings(MixinMeta):
     @checks.is_owner()
     async def server(self, ctx: commands.Context, *, prompt: Optional[str]):
         """ Set custom prompt for current server """
+        self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
         if not prompt:
             await self.config.guild(ctx.guild).custom_text_prompt.set(None)
             return await ctx.send(f"The prompt for this server is now reset to the default prompt")
@@ -267,11 +289,12 @@ class settings(MixinMeta):
         res += box(f"{self._truncate_prompt(prompt)}")
         return await ctx.send(res)
 
-    async def cache_guild_options(self, message: discord.Message):
-        self.cached_options[message.guild.id] = {
-            "channels_whitelist": await self.config.guild(message.guild).channels_whitelist(),
-            "reply_percent": await self.config.guild(message.guild).reply_percent(),
+    async def cache_guild_options(self, ctx: commands.Context):
+        self.cached_options[ctx.guild.id] = {
+            "channels_whitelist": await self.config.guild(ctx.guild).channels_whitelist(),
+            "reply_percent": await self.config.guild(ctx.guild).reply_percent(),
         }
 
-    def _truncate_prompt(self, prompt: str) -> str:
+    @staticmethod
+    def _truncate_prompt(prompt: str) -> str:
         return prompt[:1900] + "..." if len(prompt) > 1900 else prompt

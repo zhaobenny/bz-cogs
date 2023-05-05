@@ -2,17 +2,17 @@ import logging
 from typing import Optional
 from discord import Message
 from ai_user.prompts.base import Prompt
+from ai_user.prompts.constants import MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
-MIN_MESSAGE_LENGTH = 5
-MAX_MESSAGE_LENGTH = 300
 
 class TextPrompt(Prompt):
-    def __init__(self, message: Message, config):
-        super().__init__(message, config)
+    def __init__(self, message: Message, config, start_time):
+        super().__init__(message, config, start_time)
 
-    def _is_acceptable_message(self, message: Message) -> bool:
+    @staticmethod
+    def _is_acceptable_message(message: Message) -> bool:
         if not message.content:
             logger.debug(f"Skipping empty message in {message.guild.name}")
             return False
@@ -29,7 +29,7 @@ class TextPrompt(Prompt):
 
         return True
 
-    async def _create_prompt(self, bot_prompt) -> Optional[str]:
+    async def _create_prompt(self, bot_prompt) -> Optional[list[dict[str, str]]]:
         if not self._is_acceptable_message(self.message):
             return None
 

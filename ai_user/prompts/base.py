@@ -1,15 +1,17 @@
 from typing import Dict, Optional
-
-from discord import Message
+from datetime import datetime, timedelta
+from discord import Message, Member
+from redbot.core import Config
 
 from ai_user.prompts.constants import DEFAULT_PROMPT
 
 
 class Prompt:
-    def __init__(self, message: Message, config):
-        self.config = config
-        self.bot = message.guild.me
-        self.message = message
+    def __init__(self, message: Message, config: Config, start_time: datetime):
+        self.config: Config = config
+        self.bot: Member = message.guild.me
+        self.message: Message = message
+        self.start_time: datetime = start_time + timedelta(seconds=1) if start_time else None
 
     async def _create_prompt(self, bot_prompt: str) -> Optional[str]:
         raise NotImplementedError(
@@ -31,19 +33,16 @@ class Prompt:
 
     async def _get_previous_history(self):
         """ Returns a history of messages before current message """
-
         limit = await self.config.guild(self.message.guild).messages_backread()
-        messages = [message async for message in self.message.channel.history(limit=limit, before=self.message)]
+        messages = [message async for message in
+                    self.message.channel.history(limit=limit, before=self.message, after=self.start_time)]
 
         messages.reverse()
         for i, message in reversed(list(enumerate(messages))):
-            time_diff = 0
             if i != 0:
-                time_diff = (message.created_at -
-                             messages[i-1].created_at).total_seconds()
+                time_diff = (message.created_at - messages[i-1].created_at).total_seconds()
             else:
-                time_diff = (messages[0].created_at -
-                             self.message.created_at).total_seconds()
+                time_diff = (messages[0].created_at - self.message.created_at).total_seconds()
 
             if abs(time_diff) > await self.config.guild(self.message.guild).messages_backread_seconds():
                 if i == 0:

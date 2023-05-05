@@ -22,10 +22,10 @@ def to_thread(func: Callable) -> Coroutine:
 
 
 class ImagePrompt(Prompt):
-    def init(self, message: Message, config):
-        super().init(message, config)
+    def __init__(self, message: Message, config, start_time):
+        super().__init__(message, config, start_time)
 
-    async def _create_prompt(self, bot_prompt) -> Optional[str]:
+    async def _create_prompt(self, bot_prompt) -> Optional[list[dict[str, str]]]:
         image = self.message.attachments[0] if self.message.attachments else None
 
         if not image or not image.content_type.startswith('image/'):
@@ -39,14 +39,14 @@ class ImagePrompt(Prompt):
             return None
 
         prompt = None
-        scanned_text = await ImagePrompt._extract_text_from_image(image)
+        scanned_text = await self._extract_text_from_image(image)
         if scanned_text and len(scanned_text.split()) > 10:
             prompt = [
                 {"role": "system", "content": f"The following text is from a picture sent by user \"{self.message.author.name}\". {bot_prompt}"},
                 {"role": "user", "content": scanned_text},
             ]
         else:
-            confidence, caption = await ImagePrompt._create_prompt_from_image(image)
+            confidence, caption = await self._create_prompt_from_image(image)
             if confidence > 0.45:
                 prompt = [
                     {"role": "system", "content": f"The following is a description of a picture sent by user \"{self.message.author.name}\". {bot_prompt}"},
