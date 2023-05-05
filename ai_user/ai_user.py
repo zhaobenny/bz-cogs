@@ -70,16 +70,14 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
 
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
-        if not self.cached_options.get(message.guild.id):
-            await self.cache_guild_options(message)
+
+        ctx: commands.Context = await self.bot.get_context(message)
+        if not await self.is_common_valid_reply(ctx):
+            return
 
         if await self.is_bot_mentioned_or_replied(message):
             pass
         elif random.random() > self.cached_options[message.guild.id].get("reply_percent"):
-            return
-
-        ctx: commands.Context = await self.bot.get_context(message)
-        if not await self.is_common_valid_reply(ctx):
             return
 
         prompt_instance = await create_prompt_instance(message, self.config)
@@ -93,8 +91,9 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
         """ Catch embed updates """
 
-        if not self.cached_options.get(before.guild.id):
-            await self.cache_guild_options(before)
+        ctx: commands.Context = await self.bot.get_context(after)
+        if not await self.is_common_valid_reply(ctx):
+            return
 
         time_diff = datetime.now(timezone.utc) - after.created_at
         if not (time_diff.total_seconds() <= 10):
@@ -108,10 +107,6 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
             prompt_instance = await create_prompt_instance(after, self.config)
             prompt = await prompt_instance.get_prompt()
         if prompt is None:
-            return
-
-        ctx: commands.Context = await self.bot.get_context(after)
-        if not await self.is_common_valid_reply(ctx):
             return
 
         return await generate_response(ctx, self.config, prompt)
@@ -132,6 +127,9 @@ class AI_User(settings, commands.Cog, metaclass=CompositeMetaClass):
 
         if not openai.api_key:
             return False
+
+        if not self.cached_options.get(ctx.message.guild.id):
+            await self.cache_guild_options(ctx.message)
 
         if isinstance(ctx.channel, discord.Thread):
             if ctx.channel.parent.id not in self.cached_options[ctx.guild.id].get("channels_whitelist"):
