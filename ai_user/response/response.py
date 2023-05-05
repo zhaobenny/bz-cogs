@@ -48,7 +48,7 @@ async def generate_response(ctx: commands.Context, config: Config, prompt):
                 f"Failed {trys} API request(s) to OpenAI. Last exception was:", exc_info=True)
             return await ctx.react_quietly("⚠️")
 
-        if (await config.filter_responses()) and is_moderated_response(response, message):
+        if (await config.guild(ctx.guild).filter_responses()) and is_moderated_response(response, message):
             return await ctx.react_quietly("😶")
 
         bot_name = message.guild.me.name

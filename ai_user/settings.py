@@ -95,7 +95,7 @@ class settings(MixinMeta):
     @checks.admin()
     async def filter_responses(self, ctx):
         """ Toggles rudimentary filtering of canned replies """
-        value = not await self.config.filter_responses()
+        value = not await self.guild(ctx.guild).filter_responses()
         await self.config.guild(ctx.guild).filter_responses.set(value)
         embed = discord.Embed(
             title="Filtering canned responses for this server now set to")
