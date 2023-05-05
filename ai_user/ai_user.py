@@ -34,6 +34,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
             "model": "gpt-3.5-turbo",
             "custom_text_prompt": None,
             "channels_whitelist": [],
+            "public_forget": False,
         }
 
         default_member = {

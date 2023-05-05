@@ -21,6 +21,10 @@ class Settings(MixinMeta):
     @ai_user.command()
     async def forget(self, ctx: commands.Context):
         """ Forces the AI to forget the current conversation up to this point. """
+        if not ctx.channel.permissions_for(ctx.author).manage_messages\
+                and not await self.config.guild(ctx.guild).public_forget():
+            return await ctx.react_quietly("❌")
+
         self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
         await ctx.react_quietly("✅")
 
@@ -146,6 +150,17 @@ class Settings(MixinMeta):
         await self.config.guild(ctx.guild).reply_to_mentions_replies.set(value)
         embed = discord.Embed(
             title="Always replying to mentions or replies for this server now set to:",
+            description=f"{value}")
+        return await ctx.send(embed=embed)
+
+    @ai_user.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def public_forget(self, ctx: commands.Context):
+        """ Toggles whether anyone can use the forget command, or only moderators. """
+        value = not await self.config.guild(ctx.guild).public_forget()
+        await self.config.guild(ctx.guild).public_forget.set(value)
+        embed = discord.Embed(
+            title="Anyone can use the forget command:",
             description=f"{value}")
         return await ctx.send(embed=embed)
 
