@@ -10,10 +10,10 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 class EmbedPrompt(Prompt):
-    def __init__(self, message: Message, config):
-        super().__init__(message, config)
+    def __init__(self, message: Message, config, start_time):
+        super().__init__(message, config, start_time)
 
-    async def _create_prompt(self, bot_prompt) -> Optional[str]:
+    async def _create_prompt(self, bot_prompt) -> Optional[list[dict[str, str]]]:
         if len(self.message.embeds) == 0 or not self.message.embeds[0].title or not self.message.embeds[0].description:
             logger.debug(
                 f"Skipping unloaded embed in {self.message.guild.name}")
