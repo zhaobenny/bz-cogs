@@ -135,8 +135,9 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         if not self.cached_options.get(ctx.message.guild.id):
             await self.cache_guild_options(ctx)
 
-        if not ctx.interaction:
-            if isinstance(ctx.channel, discord.Thread):
+        if ctx.interaction:
+            return True
+        if isinstance(ctx.channel, discord.Thread):
                 if ctx.channel.parent.id not in self.cached_options[ctx.guild.id].get("channels_whitelist"):
                     return False
             elif ctx.channel.id not in self.cached_options[ctx.guild.id].get("channels_whitelist"):
