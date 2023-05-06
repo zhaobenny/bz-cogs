@@ -59,7 +59,7 @@ class Settings(MixinMeta):
             importlib.import_module("transformers")
             value = not (await self.config.guild(ctx.guild).scan_images())
             await self.config.guild(ctx.guild).scan_images.set(value)
-            embed = discord.Embed(title="⚠ WILL CAUSE HEAVY CPU LOAD ⚠", color=await ctx.embed_color())
+            embed = discord.Embed(title=":warning: WILL CAUSE HEAVY CPU LOAD :warning:", color=await ctx.embed_color())
             embed.add_field(
                 name="Scanning Images for this server now set to", value=value)
             return await ctx.send(embed=embed)
