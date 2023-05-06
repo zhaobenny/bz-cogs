@@ -17,6 +17,8 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
+    """ Utilize OpenAI to reply to messages and images in approved channels. """
+
     def __init__(self, bot):
         super().__init__()
         self.bot: Red = bot
@@ -54,7 +56,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         ctx = await commands.Context.from_interaction(inter)
         ctx.message.content = text
         if not await self.is_common_valid_reply(ctx):
-            return
+            return await ctx.send("You're not allowed to use this command here.", ephemeral=True)
 
         start_time = self.override_prompt_start_time.get(ctx.guild.id, None)
         prompt_instance = await create_prompt_instance(ctx.message, self.config, start_time)
@@ -116,47 +118,47 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
 
     async def is_common_valid_reply(self, ctx: commands.Context) -> bool:
         """ Run some common checks to see if a message is valid for the bot to reply to """
-        if not ctx.guild:
+        if not ctx.guild or ctx.author.bot:
             return False
-
         if await self.bot.cog_disabled_in_guild(self, ctx.guild):
             return False
-
-        if ctx.author.bot:
+        if not await self.bot.ignored_channel_or_guild(ctx):
+            return False
+        if not await self.bot.allowed_by_whitelist_blacklist(ctx.author):
             return False
 
         if not openai.api_key:
-            await self.initalize_openai(ctx.message)
-
+            await self.initalize_openai(ctx)
         if not openai.api_key:
             return False
 
         if not self.cached_options.get(ctx.message.guild.id):
             await self.cache_guild_options(ctx)
 
+        if ctx.interaction:
+            return True
+
         if isinstance(ctx.channel, discord.Thread):
             if ctx.channel.parent.id not in self.cached_options[ctx.guild.id].get("channels_whitelist"):
                 return False
-        elif ctx.channel.id not in self.cached_options[ctx.guild.id].get("channels_whitelist") and not ctx.interaction:
+        elif ctx.channel.id not in self.cached_options[ctx.guild.id].get("channels_whitelist"):
             return False
 
         return True
 
     async def is_bot_mentioned_or_replied(self, message) -> bool:
-
         if not (await self.config.guild(message.guild).reply_to_mentions_replies()):
             return False
-
         if self.bot.user in message.mentions:
             return True
-
         if message.reference and message.reference.message_id:
             reference_message = message.reference.cached_message or await message.channel.fetch_message(message.reference.message_id)
             return reference_message.author == self.bot.user
-
         return False
 
-    async def initalize_openai(self, message):
+    async def initalize_openai(self, ctx: commands.Context):
         openai.api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
         if not openai.api_key:
-            return await message.channel.send("OpenAI API key not set for ai_user. Please set it with `[p]set api openai api_key,API_KEY`")
+            await ctx.send(
+                f"OpenAI API key not set for `ai_user`. "
+                f"Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")

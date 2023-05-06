@@ -2,6 +2,7 @@ import importlib
 import logging
 import discord
 import openai
+import tiktoken
 from typing import Optional
 from redbot.core import checks, commands
 from redbot.core.utils.chat_formatting import box
@@ -15,12 +16,14 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 
 class Settings(MixinMeta):
     @commands.group()
+    @commands.guild_only()
     async def ai_user(self, _):
+        """ Utilize OpenAI to reply to messages and images in approved channels """
         pass
 
     @ai_user.command()
     async def forget(self, ctx: commands.Context):
-        """ Forces the AI to forget the current conversation up to this point. """
+        """ Forces the AI to forget the current conversation up to this point """
         if not ctx.channel.permissions_for(ctx.author).manage_messages\
                 and not await self.config.guild(ctx.guild).public_forget():
             return await ctx.react_quietly("❌")
@@ -34,7 +37,7 @@ class Settings(MixinMeta):
         whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
 
-        embed = discord.Embed(title="AI User Settings")
+        embed = discord.Embed(title="AI User Settings", color=await ctx.embed_color())
         embed.add_field(name="Scan Images", value=await self.config.guild(ctx.guild).scan_images(), inline=False)
         embed.add_field(name="Model", value=await self.config.guild(ctx.guild).model(), inline=False)
         embed.add_field(name="Filter Responses", value=await self.config.guild(ctx.guild).filter_responses(), inline=False)
@@ -49,15 +52,14 @@ class Settings(MixinMeta):
     @ai_user.command()
     @checks.is_owner()
     async def scan_images(self, ctx: commands.Context):
-        """ Toggle image scanning (see README.md)"""
+        """ Toggle image scanning (see README.md) """
         try:
             importlib.import_module("pytesseract")
             importlib.import_module("torch")
             importlib.import_module("transformers")
             value = not (await self.config.guild(ctx.guild).scan_images())
             await self.config.guild(ctx.guild).scan_images.set(value)
-            embed = discord.Embed(
-                title="⚠️ WILL CAUSE HEAVY CPU LOAD ⚠️")
+            embed = discord.Embed(title=":warning: WILL CAUSE HEAVY CPU LOAD :warning:", color=await ctx.embed_color())
             embed.add_field(
                 name="Scanning Images for this server now set to", value=value)
             return await ctx.send(embed=embed)
@@ -69,12 +71,13 @@ class Settings(MixinMeta):
     @ai_user.command()
     @checks.is_owner()
     async def percent(self, ctx: commands.Context, new_value: float):
-        """Change the bot's response chance """
+        """ Change the bot's response chance """
         await self.config.guild(ctx.guild).reply_percent.set(new_value / 100)
         await self.cache_guild_options(ctx)
         embed = discord.Embed(
             title="Chance that the bot will reply on this server is now:",
-            description=f"{new_value}%")
+            description=f"{new_value}%",
+            color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
     @ai_user.command()
@@ -94,24 +97,26 @@ class Settings(MixinMeta):
         await self.config.guild(ctx.guild).set(new_value)
         embed = discord.Embed(
             title="This server's chat model is now set to:",
-            description=new_value)
+            description=new_value,
+            color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
     @ai_user.command()
-    @checks.admin()
+    @checks.admin_or_permissions(manage_guild=True)
     async def filter_responses(self, ctx: commands.Context):
         """ Toggles rudimentary filtering of canned replies """
         value = not await self.config.guild(ctx.guild).filter_responses()
         await self.config.guild(ctx.guild).filter_responses.set(value)
         embed = discord.Embed(
             title="Filtering canned responses for this server now set to:",
-            description=f"{value}")
+            description=f"{value}",
+            color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def add(self, ctx: commands.Context, channel: discord.TextChannel):
-        """ Add a channel to the whitelist to allow the bot to reply in"""
+        """ Add a channel to the whitelist to allow the bot to reply in """
         if not channel:
             return await ctx.send("Invalid channel mention, use #channel")
         new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
@@ -120,7 +125,7 @@ class Settings(MixinMeta):
         new_whitelist.append(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         await self.cache_guild_options(ctx)
-        embed = discord.Embed(title="The server whitelist is now:")
+        embed = discord.Embed(title="The server whitelist is now:", color=await ctx.embed_color())
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.description = "\n".join(channels) if channels else "None"
         return await ctx.send(embed=embed)
@@ -128,7 +133,7 @@ class Settings(MixinMeta):
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def remove(self, ctx: commands.Context, channel: discord.TextChannel):
-        """ Remove a channel from the whitelist"""
+        """ Remove a channel from the whitelist """
         if not channel:
             return await ctx.send("Invalid channel mention, use #channel")
         new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
@@ -137,7 +142,7 @@ class Settings(MixinMeta):
         new_whitelist.remove(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         await self.cache_guild_options(ctx)
-        embed = discord.Embed(title="The server whitelist is now:")
+        embed = discord.Embed(title="The server whitelist is now:", color=await ctx.embed_color())
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.description = "\n".join(channels) if channels else "None"
         return await ctx.send(embed=embed)
@@ -150,34 +155,37 @@ class Settings(MixinMeta):
         await self.config.guild(ctx.guild).reply_to_mentions_replies.set(value)
         embed = discord.Embed(
             title="Always replying to mentions or replies for this server now set to:",
-            description=f"{value}")
+            description=f"{value}",
+            color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def public_forget(self, ctx: commands.Context):
-        """ Toggles whether anyone can use the forget command, or only moderators. """
+        """ Toggles whether anyone can use the forget command, or only moderators """
         value = not await self.config.guild(ctx.guild).public_forget()
         await self.config.guild(ctx.guild).public_forget.set(value)
         embed = discord.Embed(
             title="Anyone can use the forget command:",
-            description=f"{value}")
+            description=f"{value}",
+            color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
     @ai_user.group()
     @checks.is_owner()
     async def history(self, _):
-        """ Change the prompt context settings for the current server"""
+        """ Change the prompt context settings for the current server """
         pass
 
     @history.command()
     @checks.is_owner()
     async def backread(self, ctx: commands.Context, new_value: int):
-        """ Set max amount of messages to be used"""
+        """ Set max amount of messages to be used """
         await self.config.guild(ctx.guild).messages_backread.set(new_value)
         embed = discord.Embed(
             title="The number of previous messages used for context on this server is now:",
-            description=f"{new_value}")
+            description=f"{new_value}",
+            color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
     @history.command()
@@ -187,24 +195,25 @@ class Settings(MixinMeta):
         await self.config.guild(ctx.guild).messages_backread_seconds.set(new_value)
         embed = discord.Embed(
             title="The max time (s) allowed between messages for context on this server is now:",
-            description=f"{new_value}")
+            description=f"{new_value}",
+            color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
     @ai_user.group()
-    @checks.admin()
+    @checks.admin_or_permissions(manage_guild=True)
     async def prompt(self, _):
-        """ Change the prompt settings for the current server"""
+        """ Change the prompt settings for the current server """
         pass
 
     @prompt.command()
     @checks.is_owner()
     async def reset(self, ctx: commands.Context):
-        """ Reset ALL prompts (inc. user) to default (cynical)"""
+        """ Reset ALL prompts (inc. user) to default (cynical) """
         self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
         await self.config.guild(ctx.guild).custom_text_prompt.set(None)
         for member in ctx.guild.members:
             await self.config.member(member).custom_text_prompt.set(None)
-        embed = discord.Embed(title="All prompts resetted")
+        embed = discord.Embed(title="All prompts have been reset.", color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
     @prompt.group()
@@ -213,50 +222,63 @@ class Settings(MixinMeta):
         pass
 
     @show.command(name="server")
-    @checks.admin()
+    @checks.admin_or_permissions(manage_guild=True)
     async def server_prompt(self, ctx: commands.Context):
-        """ Show current server prompt"""
+        """ Show current server prompt """
         custom_text_prompt = await self.config.guild(ctx.guild).custom_text_prompt()
-        res = "The prompt for this server is:\n"
+        embed = discord.Embed(title=f"The prompt for this server is:", color=await ctx.embed_color())
         if custom_text_prompt:
-            res += box(f"{self._truncate_prompt(custom_text_prompt)}")
+            embed.description = f"{self._truncate_prompt(custom_text_prompt)}"
+            embed.add_field(name="Tokens", value=await self.get_tokens(ctx, custom_text_prompt))
         else:
-            res += box(f"{DEFAULT_PROMPT}")
-        return await ctx.send(res)
+            embed.description = f"{DEFAULT_PROMPT}"
+            embed.add_field(name="Tokens", value=await self.get_tokens(ctx, DEFAULT_PROMPT))
+        return await ctx.send(embed=embed)
 
     @show.command()
-    @checks.admin()
+    @checks.admin_or_permissions(manage_guild=True)
     async def users(self, ctx: commands.Context):
         """ Show all users with custom prompts """
         pages = []
         for member in ctx.guild.members:
             custom_text_prompt = await self.config.member(member).custom_text_prompt()
             if custom_text_prompt:
-                page = f"The prompt for user {member.name} is:"
+                tokens = await self.get_tokens(ctx, custom_text_prompt)
+                page = f"The prompt for user {member.name} is: `[{tokens} tokens]`"
                 page += box(f"\n{self._truncate_prompt(custom_text_prompt)}")
+                page = discord.Embed(
+                    title=f"The prompt for user {member.name} is:",
+                    description=self._truncate_prompt(custom_text_prompt),
+                    color=await ctx.embed_color())
+                page.add_field(name="Tokens", value=await self.get_tokens(ctx, custom_text_prompt))
                 pages.append(page)
         if not pages:
             return await ctx.send("No users with custom prompts")
         if len(pages) == 1:
-            return await ctx.send(pages[0])
+            return await ctx.send(embed=pages[0])
         return await menu(ctx, pages, DEFAULT_CONTROLS)
 
     @prompt.command()
-    @checks.admin()
+    @checks.admin_or_permissions(manage_guild=True)
     async def preset(self, ctx: commands.Context, *, preset: str):
         """ List presets using 'list', or set a preset """
         if preset == 'list':
             embed = discord.Embed(
-                title="Presets", description="Use `[p]prompt preset <preset>` to set a preset")
+                title="Presets",
+                description=f"Use `{ctx.clean_prefix}prompt preset <preset>` to set a preset.",
+                color=await ctx.embed_color())
             embed.add_field(name="Available presets",
                             value="\n".join(PRESETS.keys()), inline=False)
             return await ctx.send(embed=embed)
         if preset not in PRESETS:
-            return await ctx.send("Invalid preset. Use `list` to see available presets")
+            return await ctx.send("Invalid preset. Use `list` to see available presets.")
         await self.config.guild(ctx.guild).custom_text_prompt.set(PRESETS[preset])
-        res = "The prompt for this server is now changed to:\n"
-        res += box(f"{PRESETS[preset]}")
-        return await ctx.send(res)
+        embed = discord.Embed(
+            title="The prompt for this server is now changed to:",
+            description=f"{self._truncate_prompt(PRESETS[preset])}",
+            color=await ctx.embed_color())
+        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, PRESETS[preset]))
+        return await ctx.send(embed=embed)
 
     @prompt.group()
     @checks.is_owner()
@@ -273,9 +295,12 @@ class Settings(MixinMeta):
             await self.config.guild(ctx.guild).custom_text_prompt.set(None)
             return await ctx.send(f"The prompt for this server is now reset to the default prompt")
         await self.config.guild(ctx.guild).custom_text_prompt.set(prompt)
-        res = "The prompt for this server is now changed to:\n"
-        res += box(f"{self._truncate_prompt(prompt)}")
-        return await ctx.send(res)
+        embed = discord.Embed(
+            title="The prompt for this server is now changed to:",
+            description=f"{self._truncate_prompt(prompt)}",
+            color=await ctx.embed_color())
+        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+        return await ctx.send(embed=embed)
 
     @custom.command()
     @checks.is_owner()
@@ -283,11 +308,14 @@ class Settings(MixinMeta):
         """ Set custom prompt per user in current server """
         if not prompt:
             await self.config.member(member).custom_text_prompt.set(None)
-            return await ctx.send(f"The prompt for user {member.mention} is now reset to default server prompt")
+            return await ctx.send(f"The prompt for user {member.mention} is now reset to default server prompt.")
         await self.config.member(member).custom_text_prompt.set(prompt)
-        res = f"The prompt for user {member.mention} is now changed to:\n"
-        res += box(f"{self._truncate_prompt(prompt)}")
-        return await ctx.send(res)
+        embed = discord.Embed(
+            title=f"The prompt for user {member.mention} is now changed to:",
+            description=f"{self._truncate_prompt(prompt)}",
+            color=await ctx.embed_color())
+        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+        return await ctx.send(embed=embed)
 
     async def cache_guild_options(self, ctx: commands.Context):
         self.cached_options[ctx.guild.id] = {
@@ -295,6 +323,12 @@ class Settings(MixinMeta):
             "reply_percent": await self.config.guild(ctx.guild).reply_percent(),
         }
 
+    async def get_tokens(self, ctx: commands.Context, prompt: str) -> int:
+        prompt = f"You are {ctx.guild.me.name}. {prompt}"
+        encoding = tiktoken.encoding_for_model(await self.config.guild(ctx.guild).model())
+        return len(encoding.encode(prompt, disallowed_special=()))
+
     @staticmethod
     def _truncate_prompt(prompt: str) -> str:
         return prompt[:1900] + "..." if len(prompt) > 1900 else prompt
+
