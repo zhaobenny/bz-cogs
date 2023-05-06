@@ -243,7 +243,7 @@ class Settings(MixinMeta):
         for member in ctx.guild.members:
             custom_text_prompt = await self.config.member(member).custom_text_prompt()
             if custom_text_prompt:
-                tokens = self.get_tokens(ctx, custom_text_prompt)
+                tokens = await self.get_tokens(ctx, custom_text_prompt)
                 page = f"The prompt for user {member.name} is: `[{tokens} tokens]`"
                 page += box(f"\n{self._truncate_prompt(custom_text_prompt)}")
                 page = discord.Embed(
