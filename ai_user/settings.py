@@ -296,7 +296,7 @@ class Settings(MixinMeta):
         if len(pages) == 1:
             return await ctx.send(embed=pages[0])
         for i, page in enumerate(pages):
-            page.title = f"({i+1}/{len(pages)}) {page.title}"
+            page.set_footer(text=f"Page {i+1} of {len(pages)}")
         await SimpleMenu(pages).start(ctx)
 
     @prompt_show.command(name="channels")
@@ -317,7 +317,7 @@ class Settings(MixinMeta):
         if len(pages) == 1:
             return await ctx.send(embed=pages[0])
         for i, page in enumerate(pages):
-            page.title = f"({i+1}/{len(pages)}) {page.title}"
+            page.set_footer(text=f"Page {i+1} of {len(pages)}")
         await SimpleMenu(pages).start(ctx)
 
     @prompt.command(name="preset")
