@@ -39,13 +39,15 @@ class AIHordeImagePrompt(BaseImagePrompt):
         try:
             async with aiohttp.ClientSession() as session:
                 request = await session.post(f"https://stablehorde.net/api/v2/interrogate/async", json=payload, headers={"apikey": apikey})
-                response = await request.json()
                 if request.status != 202:
-                    raise aiohttp.ClientResponseError(None, (), status=response.status)
+                    raise aiohttp.ClientResponseError(None, (), status=request.status)
+
+                response = await request.json()
+                id = response["id"]
 
                 start_time = time.time()
                 while True:
-                    request = await session.get(f"https://stablehorde.net/api/v2/interrogate/status/{response['id']}")
+                    request = await session.get(f"https://stablehorde.net/api/v2/interrogate/status/{id}")
                     current_time = time.time()
                     elapsed_time = current_time - start_time
                     if request.status != 200:
