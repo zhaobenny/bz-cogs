@@ -23,9 +23,10 @@ class Prompt:
             Returns a list of messages to be used as the prompt for the OpenAI API
         """
 
-        bot_prompt = await self.config.member(self.message.author).custom_text_prompt()
-        if bot_prompt is None:
-            bot_prompt = await self.config.guild(self.message.guild).custom_text_prompt() or DEFAULT_PROMPT
+        bot_prompt = await self.config.member(self.message.author).custom_text_prompt() \
+            or await self.config.channel(self.message.channel).custom_text_prompt() \
+            or await self.config.guild(self.message.guild).custom_text_prompt() \
+            or DEFAULT_PROMPT
         full_prompt = await self._create_prompt(bot_prompt)
         if full_prompt is None:
             return None
