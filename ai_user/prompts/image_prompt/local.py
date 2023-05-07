@@ -41,7 +41,7 @@ class LocalImagePrompt(BaseImagePrompt):
                     {"role": "system", "content": f"The following is a description of a picture sent by user \"{self.message.author.name}\". {bot_prompt}"},
                     {"role": "user", "content": caption},
                 ]
-        if prompt == None:
+        if not prompt:
             logger.info(f"Skipping image in {self.message.guild.name}. Low confidence in image caption and text recognition.")
         return prompt
 

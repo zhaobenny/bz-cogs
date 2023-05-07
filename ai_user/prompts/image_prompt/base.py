@@ -1,7 +1,6 @@
 import logging
 from io import BytesIO
 from typing import Optional
-
 from discord import Message
 from PIL import Image
 
@@ -20,16 +19,14 @@ class BaseImagePrompt(Prompt):
 
         if not image or not image.content_type.startswith('image/'):
             return None
-
-        image_bytes = await image.read()
-        image = Image.open(BytesIO(image_bytes))
-        width, height = image.size
-
-        if width > 1500 or height > 2000:
+        if image.size > await self.config.guild(self.message.guild).max_image_size():
             logger.info(f"Skipping large image in {self.message.guild.name}")
             return None
 
-        prompt = await self._process_image(image, bot_prompt)
+        image_bytes = BytesIO()
+        await image.save(image_bytes)
+        image_pillow = Image.open(image_bytes)
+        prompt = await self._process_image(image_pillow, bot_prompt)
 
         if not prompt:
             return None
@@ -40,6 +37,6 @@ class BaseImagePrompt(Prompt):
         prompt[:0] = await self._get_previous_history()
         return prompt
 
-    async def _process_image(self, image : Image, bot_prompt: str) -> Optional[list[dict[str, str]]]:
+    async def _process_image(self, image: Image, bot_prompt: str) -> Optional[list[dict[str, str]]]:
         raise NotImplementedError(
             "_process_image() must be implemented in subclasses")
