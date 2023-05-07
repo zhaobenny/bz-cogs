@@ -8,14 +8,12 @@ cog install bz-cogs <cog>
 
 | Name | Description
 | --- | --- |
-ai_user | Human-like user behavior powered by OpenAI. [See here for more info.](https://github.com/zhaobenny/bz-cogs/tree/main/ai_user)
+ai_user | Utilize OpenAI to reply randomly to messages (or images) [See here for more info.](https://github.com/zhaobenny/bz-cogs/tree/main/ai_user)
 oneletteronly | Set nicknames to be initals for new users.
 lifx_light | Controls a singular smart lifx lightblub.
 
 
-[bz-cogs Support Discord](https://discord.gg/GwT2yHPqzN)
+[bz-cogs Discord](https://discord.gg/GwT2yHPqzN)
 
 ## Contributors 🎉
-<a href="https://github.com/zhaobenny/bz-cogs/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=zhaobenny/bz-cogs" />
-</a>
+- [#2](https://github.com/zhaobenny/bz-cogs/pull/2), [#3](https://github.com/zhaobenny/bz-cogs/pull/3) - [@hollowstrawberry](https://github.com/hollowstrawberry)
