@@ -55,15 +55,15 @@ class AIHordeImagePrompt(BaseImagePrompt):
                     response = await request.json()
                     if response["state"] == "done":
                         break
-                caption = response["forms"][0]["result"]
+                caption = response["forms"][0]["result"]["caption"]
         except:
             logger.error(
                 f"Failed scanning image using AI Horde", exc_info=True)
             return None
 
         prompt = [
-            {"role": "system", "content": f"The following is a description of a picture sent by user \"{self.message.author.name}\". {bot_prompt}"},
-            {"role": "user", "content": caption["caption"]},
+            {"role": "system", "content": f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is its description:"},
+            {"role": "user", "content": caption},
         ]
 
         return prompt
