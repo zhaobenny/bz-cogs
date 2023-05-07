@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import logging
 from typing import Callable, Coroutine, Optional
 
 import pytesseract
@@ -11,6 +12,7 @@ from transformers import (AutoTokenizer, VisionEncoderDecoderModel,
 
 from ai_user.prompts.image_prompt.base import BaseImagePrompt
 
+logger = logging.getLogger("red.bz_cogs.ai_user")
 
 def to_thread(func: Callable) -> Coroutine:
     # https://stackoverflow.com/questions/65881761/discord-gateway-warning-shard-id-none-heartbeat-blocked-for-more-than-10-second
@@ -39,6 +41,8 @@ class LocalImagePrompt(BaseImagePrompt):
                     {"role": "system", "content": f"The following is a description of a picture sent by user \"{self.message.author.name}\". {bot_prompt}"},
                     {"role": "user", "content": caption},
                 ]
+        if prompt == None:
+            logger.info(f"Skipping image in {self.message.guild.name}. Low confidence in image caption and text recognition.")
         return prompt
 
     @staticmethod
