@@ -35,9 +35,10 @@ class Prompt:
     async def _get_previous_history(self):
         """ Returns a history of messages before current message """
         limit = await self.config.guild(self.message.guild).messages_backread()
-        messages = [message async for message in
-                    self.message.channel.history(limit=limit, before=self.message, after=self.start_time)]
-
+        messages = [message async for message in self.message.channel.history(limit=limit,
+                                                                              before=self.message,
+                                                                              after=self.start_time,
+                                                                              oldest_first=False)]
         messages.reverse()
         for i, message in reversed(list(enumerate(messages))):
             if i != 0:

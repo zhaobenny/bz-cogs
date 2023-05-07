@@ -31,23 +31,23 @@ class Settings(MixinMeta):
         self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
         await ctx.react_quietly("✅")
 
-    @ai_user.command()
+    @ai_user.command(aliases=["settings", "showsettings"])
     async def config(self, ctx: commands.Context):
         """ Returns current config """
         whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
 
         embed = discord.Embed(title="AI User Settings", color=await ctx.embed_color())
-        embed.add_field(name="Model", value=await self.config.guild(ctx.guild).model(), inline=False)
-        embed.add_field(name="Scan Images", value=await self.config.guild(ctx.guild).scan_images(), inline=False)
-        embed.add_field(name="Scan Image Mode", value=await self.config.guild(ctx.guild).scan_images_mode(), inline=False)
-        embed.add_field(name="Filter Responses", value=await self.config.guild(ctx.guild).filter_responses(), inline=False)
-        embed.add_field(name="Reply Percent", value=f"{await self.config.guild(ctx.guild).reply_percent() * 100}%", inline=False)
-        embed.add_field(name="Whitelisted Channels", value=" ".join(channels)
-                        if channels else "None", inline=False)
-        embed.add_field(name="Always Reply on Ping or Reply", value=await self.config.guild(ctx.guild).reply_to_mentions_replies(), inline=False)
+        embed.add_field(name="Model", value=await self.config.guild(ctx.guild).model(), inline=True)
+        embed.add_field(name="Scan Images", value=await self.config.guild(ctx.guild).scan_images(), inline=True)
+        embed.add_field(name="Scan Image Mode", value=await self.config.guild(ctx.guild).scan_images_mode(), inline=True)
+        embed.add_field(name="Filter Responses", value=await self.config.guild(ctx.guild).filter_responses(), inline=True)
+        embed.add_field(name="Reply Percent", value=f"{await self.config.guild(ctx.guild).reply_percent() * 100:.2f}%", inline=True)
+        embed.add_field(name="Always Reply on Ping or Reply", value=await self.config.guild(ctx.guild).reply_to_mentions_replies(), inline=True)
         embed.add_field(name="Max Messages in History", value=f"{await self.config.guild(ctx.guild).messages_backread()}", inline=False)
-        embed.add_field(name="Max Time (s) between each Message in History", value=f"{await self.config.guild(ctx.guild).messages_backread_seconds()}", inline=False)
+        embed.add_field(name="Max Time (s) between each Message in History", value=await self.config.guild(ctx.guild).messages_backread_seconds(), inline=False)
+        embed.add_field(name="Public Forget Command", value=await self.config.guild(ctx.guild).public_forget(), inline=False)
+        embed.add_field(name="Whitelisted Channels", value=" ".join(channels) if channels else "None", inline=False)
         return await ctx.send(embed=embed)
 
     @ai_user.group()
@@ -71,7 +71,7 @@ class Settings(MixinMeta):
     @image.command()
     @checks.is_owner()
     async def mode(self, ctx: commands.Context, new_value: str):
-        """ Set method to scan (see cog README.md) """
+        """ Set method to scan, local or ai-horde (see cog README.md) """
         if new_value not in SCAN_IMAGE_MODES:
             await ctx.send(f"Invalid mode. Choose from: {', '.join(SCAN_IMAGE_MODES)}")
         elif new_value == "local":
@@ -79,14 +79,12 @@ class Settings(MixinMeta):
                 importlib.import_module("pytesseract")
                 importlib.import_module("torch")
                 importlib.import_module("transformers")
-                await self.config.guild(ctx.guild).scan_images.set(new_value)
+                await self.config.guild(ctx.guild).scan_images_mode.set(new_value)
                 embed = discord.Embed(title="Scanning Images for this server now set to", color=await ctx.embed_color())
-                embed.add_field(
-                    name=":warning: WILL CAUSE HEAVY CPU LOAD :warning:", value=new_value, inline=False)
+                embed.add_field(name=":warning: WILL CAUSE HEAVY CPU LOAD :warning:", value=new_value, inline=False)
                 return await ctx.send(embed=embed)
             except:
-                logger.error(
-                    "Image processing dependencies import failed. ", exc_info=True)
+                logger.error("Image processing dependencies import failed. ", exc_info=True)
                 await self.config.guild(ctx.guild).scan_images_mode.set("ai-horde")
                 return await ctx.send("Local image processing dependencies not available. Please install them (see cog README.md) to use this feature locally.")
         elif new_value == "ai-horde":
@@ -371,3 +369,4 @@ class Settings(MixinMeta):
     @staticmethod
     def _truncate_prompt(prompt: str) -> str:
         return prompt[:1900] + "..." if len(prompt) > 1900 else prompt
+

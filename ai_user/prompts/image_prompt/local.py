@@ -24,7 +24,6 @@ class LocalImagePrompt(BaseImagePrompt):
     def __init__(self, message: Message, config, start_time):
         super().__init__(message, config, start_time)
 
-
     async def _process_image(self, image : Image, bot_prompt: str) -> Optional[list[dict[str, str]]]:
         prompt = None
         scanned_text = await self._extract_text_from_image(image)
