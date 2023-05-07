@@ -8,7 +8,7 @@ from PIL import Image
 from redbot.core.bot import Red
 
 from ai_user.prompts.image_prompt.base import BaseImagePrompt
-from ai_user.prompts.constants import IMAGE_DIMENSIONS
+from ai_user.prompts.constants import IMAGE_RESOLUTION
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -20,13 +20,10 @@ class AIHordeImagePrompt(BaseImagePrompt):
 
     async def _process_image(self, image: Image, bot_prompt: str) -> Optional[list[dict[str, str]]]:
         apikey = (await self.redbot.get_shared_api_tokens("ai-horde")).get("api_key") or "0000000000"
+        image = self.scale_image(image, IMAGE_RESOLUTION ** 2)
         image_bytes = BytesIO()
-        if any(size > IMAGE_DIMENSIONS for size in image.size):
-            hsize = int((float(image.size[1]) * float(IMAGE_DIMENSIONS / float(image.size[0]))))
-            image = image.resize((IMAGE_DIMENSIONS, hsize), Image.Resampling.LANCZOS)
         image.convert('RGB').save(image_bytes, format='webp', exact=True)
         encoded_image = base64.b64encode(image_bytes.getvalue()).decode('utf-8')
-
         payload = {
             "source_image": encoded_image,
             "slow_workers": True,

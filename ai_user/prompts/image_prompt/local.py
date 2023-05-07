@@ -11,6 +11,7 @@ from transformers import (AutoTokenizer, VisionEncoderDecoderModel,
                           ViTImageProcessor)
 
 from ai_user.prompts.image_prompt.base import BaseImagePrompt
+from ai_user.prompts.constants import IMAGE_RESOLUTION
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -26,8 +27,9 @@ class LocalImagePrompt(BaseImagePrompt):
     def __init__(self, message: Message, config, start_time):
         super().__init__(message, config, start_time)
 
-    async def _process_image(self, image : Image, bot_prompt: str) -> Optional[list[dict[str, str]]]:
+    async def _process_image(self, image: Image, bot_prompt: str) -> Optional[list[dict[str, str]]]:
         prompt = None
+        image = self.scale_image(image, IMAGE_RESOLUTION ** 2)
         scanned_text = await self._extract_text_from_image(image)
         if scanned_text and len(scanned_text.split()) > 10:
             prompt = [
