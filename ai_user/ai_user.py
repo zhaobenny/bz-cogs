@@ -1,15 +1,19 @@
 
 import logging
 import random
+import re
+from datetime import datetime, timezone
+
 import discord
 import openai
-from datetime import datetime, timezone
 from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
 from ai_user.abc import CompositeMetaClass
-from ai_user.prompts.prompt_factory import create_prompt_instance
-from ai_user.prompts.constants import MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH
+from ai_user.prompts.constants import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
+from ai_user.prompts.embed_prompt import EmbedPrompt
+from ai_user.prompts.image_prompt.ai_horde import AIHordeImagePrompt
+from ai_user.prompts.text_prompt import TextPrompt
 from ai_user.response.response import generate_response
 from ai_user.settings import Settings
 
@@ -58,8 +62,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         if not await self.is_common_valid_reply(ctx):
             return await ctx.send("You're not allowed to use this command here.", ephemeral=True)
 
-        start_time = self.override_prompt_start_time.get(ctx.guild.id, None)
-        prompt_instance = await create_prompt_instance(ctx.message, self.config, start_time)
+        prompt_instance = await self.create_prompt_instance(ctx.message)
         prompt = await prompt_instance.get_prompt()
         if prompt is None:
             return await ctx.send("Error: No prompt set.", ephemeral=True)
@@ -83,8 +86,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         elif random.random() > self.cached_options[message.guild.id].get("reply_percent"):
             return
 
-        start_time = self.override_prompt_start_time.get(ctx.guild.id, None)
-        prompt_instance = await create_prompt_instance(message, self.config, start_time)
+        prompt_instance = await self.create_prompt_instance(message)
         prompt = await prompt_instance.get_prompt()
         if prompt is None:
             return
@@ -108,8 +110,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
 
         prompt = None
         if len(before.embeds) != len(after.embeds):
-            start_time = self.override_prompt_start_time.get(before.guild.id, None)
-            prompt_instance = await create_prompt_instance(after, self.config, start_time)
+            prompt_instance = await self.create_prompt_instance(after)
             prompt = await prompt_instance.get_prompt()
         if prompt is None:
             return
@@ -162,3 +163,25 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
             await ctx.send(
                 f"OpenAI API key not set for `ai_user`. "
                 f"Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
+
+    async def create_prompt_instance(self, message: discord.Message):
+        start_time = self.override_prompt_start_time.get(message.guild.id, None)
+        url_pattern = re.compile(r"(https?://\S+)")
+        contains_url = url_pattern.search(message.content)
+        if message.attachments and await self.config.guild(message.guild).scan_images():
+            if await self.config.guild(message.guild).scan_images_mode() == "local":
+                try:
+                    from ai_user.prompts.image_prompt.local import \
+                        LocalImagePrompt
+                    return LocalImagePrompt(message, self.config, start_time)
+                except ImportError:
+                    logger.error(
+                        f"Unable to load image scanning dependencies, disabling image scanning for this server f{message.guild.name}...")
+                    await self.config.guild(message.guild).scan_images.set(False)
+                    raise
+            elif await self.config.guild(message.guild).scan_images_mode() == "ai-horde":
+                return AIHordeImagePrompt(message, self.config, start_time, self.bot)
+        elif contains_url:
+            return EmbedPrompt(message, self.config, start_time)
+        else:
+            return TextPrompt(message, self.config, start_time)

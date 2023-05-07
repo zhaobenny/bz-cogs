@@ -6,3 +6,4 @@ PRESETS = {
 }
 MIN_MESSAGE_LENGTH = 5
 MAX_MESSAGE_LENGTH = 300
+SCAN_IMAGE_MODES = ["local", "ai-horde"]
