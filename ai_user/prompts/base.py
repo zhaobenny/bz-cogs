@@ -1,9 +1,10 @@
-from typing import Dict, Optional
 from datetime import datetime, timedelta
-from discord import Message, Member
+from typing import Dict, Optional
+
+from discord import Member, Message
 from redbot.core import Config
 
-from ai_user.prompts.constants import DEFAULT_PROMPT
+from ai_user.prompts.constants import DEFAULT_PROMPT, MAX_MESSAGE_LENGTH
 
 
 class Prompt:
@@ -89,7 +90,7 @@ class Prompt:
 
     @staticmethod
     def is_not_valid_message(message: Message) -> bool:
-        return len(message.attachments) >= 1 or len(message.content.split(" ")) > 300
+        return len(message.attachments) >= 1 or len(message.content.split(" ")) > MAX_MESSAGE_LENGTH
 
     @staticmethod
     def is_id_in_messages(id, messages):

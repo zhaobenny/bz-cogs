@@ -11,6 +11,7 @@ from transformers import (AutoTokenizer, VisionEncoderDecoderModel,
                           ViTImageProcessor)
 
 from ai_user.prompts.base import Prompt
+from ai_user.prompts.constants import MAX_MESSAGE_LENGTH
 
 
 def to_thread(func: Callable) -> Coroutine:
@@ -54,6 +55,8 @@ class ImagePrompt(Prompt):
                 ]
         if not prompt:
             return None
+        if self.message.content and not len(self.message.content.split(" ")) > MAX_MESSAGE_LENGTH:
+            prompt[:0] = [(self._format_message(self.message))]
         prompt[:0] = await self._get_previous_history()
         return prompt
 
