@@ -5,8 +5,7 @@ import openai
 import tiktoken
 from typing import Optional
 from redbot.core import checks, commands
-from redbot.core.utils.chat_formatting import box
-from redbot.core.utils.menus import DEFAULT_CONTROLS, menu
+from redbot.core.utils.menus import SimpleMenu
 
 from ai_user.abc import MixinMeta
 from ai_user.prompts.constants import DEFAULT_PROMPT, PRESETS, SCAN_IMAGE_MODES
@@ -243,62 +242,87 @@ class Settings(MixinMeta):
         """ Change the prompt settings for the current server """
         pass
 
-    @prompt.command()
+    @prompt.command(name="reset")
     @checks.is_owner()
-    async def reset(self, ctx: commands.Context):
-        """ Reset ALL prompts (inc. user) to default (cynical) """
+    async def prompt_reset(self, ctx: commands.Context):
+        """ Reset ALL prompts in this guild to default (inc. channels and members) """
         self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
         await self.config.guild(ctx.guild).custom_text_prompt.set(None)
         for member in ctx.guild.members:
             await self.config.member(member).custom_text_prompt.set(None)
+        for channel in ctx.guild.channels:
+            await self.config.channel(channel).custom_text_prompt.set(None)
         embed = discord.Embed(title="All prompts have been reset.", color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
-    @prompt.group()
-    async def show(self, _):
-        """ Show prompts """
-        pass
+    @prompt.group(name="show", invoke_without_command=True)
+    async def prompt_show(self, ctx):
+        """ Show the prompt for the current context. Subcommands: server, members, channels """
+        channel_prompt = await self.config.channel(ctx.channel).custom_text_prompt()
+        prompt = channel_prompt or await self.config.guild(ctx.guild).custom_text_prompt() or DEFAULT_PROMPT
+        embed = discord.Embed(
+            title=f"The prompt for this {'channel' if channel_prompt else 'server'} is:",
+            description=self._truncate_prompt(prompt),
+            color=await ctx.embed_color())
+        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+        await ctx.send(embed=embed)
 
-    @show.command(name="server")
-    @checks.admin_or_permissions(manage_guild=True)
-    async def server_prompt(self, ctx: commands.Context):
-        """ Show current server prompt """
-        custom_text_prompt = await self.config.guild(ctx.guild).custom_text_prompt()
-        embed = discord.Embed(title=f"The prompt for this server is:", color=await ctx.embed_color())
-        if custom_text_prompt:
-            embed.description = f"{self._truncate_prompt(custom_text_prompt)}"
-            embed.add_field(name="Tokens", value=await self.get_tokens(ctx, custom_text_prompt))
-        else:
-            embed.description = f"{DEFAULT_PROMPT}"
-            embed.add_field(name="Tokens", value=await self.get_tokens(ctx, DEFAULT_PROMPT))
-        return await ctx.send(embed=embed)
+    @prompt_show.command(name="server", aliases=["guild"])
+    async def show_server_prompt(self, ctx: commands.Context):
+        """ Show the current server prompt """
+        prompt = await self.config.guild(ctx.guild).custom_text_prompt() or DEFAULT_PROMPT
+        embed = discord.Embed(
+            title=f"The prompt for this server is:",
+            description=self._truncate_prompt(prompt),
+            color=await ctx.embed_color())
+        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+        await ctx.send(embed=embed)
 
-    @show.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def users(self, ctx: commands.Context):
+    @prompt_show.command(name="members", aliases=["users"])
+    async def show_user_prompts(self, ctx: commands.Context):
         """ Show all users with custom prompts """
         pages = []
         for member in ctx.guild.members:
-            custom_text_prompt = await self.config.member(member).custom_text_prompt()
-            if custom_text_prompt:
-                tokens = await self.get_tokens(ctx, custom_text_prompt)
-                page = f"The prompt for user {member.name} is: `[{tokens} tokens]`"
-                page += box(f"\n{self._truncate_prompt(custom_text_prompt)}")
+            prompt = await self.config.member(member).custom_text_prompt()
+            if prompt:
                 page = discord.Embed(
                     title=f"The prompt for user {member.name} is:",
-                    description=self._truncate_prompt(custom_text_prompt),
+                    description=self._truncate_prompt(prompt),
                     color=await ctx.embed_color())
-                page.add_field(name="Tokens", value=await self.get_tokens(ctx, custom_text_prompt))
+                page.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
                 pages.append(page)
         if not pages:
             return await ctx.send("No users with custom prompts")
         if len(pages) == 1:
             return await ctx.send(embed=pages[0])
-        return await menu(ctx, pages, DEFAULT_CONTROLS)
+        for i, page in enumerate(pages):
+            page.set_footer(text=f"Page {i+1} of {len(pages)}")
+        await SimpleMenu(pages).start(ctx)
 
-    @prompt.command()
+    @prompt_show.command(name="channels")
+    async def show_channel_prompts(self, ctx: commands.Context):
+        """ Show all channels with custom prompts """
+        pages = []
+        for channel in ctx.guild.channels:
+            prompt = await self.config.channel(channel).custom_text_prompt()
+            if prompt:
+                page = discord.Embed(
+                    title=f"The prompt for channel #{channel.name} is:",
+                    description=self._truncate_prompt(prompt),
+                    color=await ctx.embed_color())
+                page.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+                pages.append(page)
+        if not pages:
+            return await ctx.send("No channels with custom prompts")
+        if len(pages) == 1:
+            return await ctx.send(embed=pages[0])
+        for i, page in enumerate(pages):
+            page.set_footer(text=f"Page {i+1} of {len(pages)}")
+        await SimpleMenu(pages).start(ctx)
+
+    @prompt.command(name="preset")
     @checks.admin_or_permissions(manage_guild=True)
-    async def preset(self, ctx: commands.Context, *, preset: str):
+    async def prompt_preset(self, ctx: commands.Context, *, preset: str):
         """ List presets using 'list', or set a preset """
         if preset == 'list':
             embed = discord.Embed(
@@ -318,15 +342,15 @@ class Settings(MixinMeta):
         embed.add_field(name="Tokens", value=await self.get_tokens(ctx, PRESETS[preset]))
         return await ctx.send(embed=embed)
 
-    @prompt.group()
+    @prompt.group(name="set", aliases=["custom", "customize"])
     @checks.is_owner()
-    async def custom(self, _):
+    async def prompt_custom(self, _):
         """ Customize the prompt sent to OpenAI """
         pass
 
-    @custom.command()
+    @prompt_custom.command(name="server", aliases=["guild"])
     @checks.is_owner()
-    async def server(self, ctx: commands.Context, *, prompt: Optional[str]):
+    async def set_server_prompt(self, ctx: commands.Context, *, prompt: Optional[str]):
         """ Set custom prompt for current server """
         self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
         if not prompt:
@@ -340,16 +364,31 @@ class Settings(MixinMeta):
         embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
         return await ctx.send(embed=embed)
 
-    @custom.command()
+    @prompt_custom.command(name="member", aliases=["user"])
     @checks.is_owner()
-    async def user(self, ctx: commands.Context, member: discord.Member, *, prompt: Optional[str]):
-        """ Set custom prompt per user in current server """
+    async def set_user_prompt(self, ctx: commands.Context, member: discord.Member, *, prompt: Optional[str]):
+        """ Set custom prompt for a member of this server, overrides server and channel prompts """
         if not prompt:
             await self.config.member(member).custom_text_prompt.set(None)
             return await ctx.send(f"The prompt for user {member.mention} is now reset to default server prompt.")
         await self.config.member(member).custom_text_prompt.set(prompt)
         embed = discord.Embed(
             title=f"The prompt for user {member.mention} is now changed to:",
+            description=f"{self._truncate_prompt(prompt)}",
+            color=await ctx.embed_color())
+        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+        return await ctx.send(embed=embed)
+
+    @prompt_custom.command(name="channel")
+    @checks.is_owner()
+    async def set_channel_prompt(self, ctx: commands.Context, *, prompt: Optional[str]):
+        """ Set custom prompt for the current channel, overrides the server prompt """
+        if not prompt:
+            await self.config.channel(ctx.channel).custom_text_prompt.set(None)
+            return await ctx.send(f"The prompt for {ctx.channel.mention} is now reset to default server prompt.")
+        await self.config.channel(ctx.channel).custom_text_prompt.set(prompt)
+        embed = discord.Embed(
+            title=f"The prompt for channel #{ctx.channel.name} is now changed to:",
             description=f"{self._truncate_prompt(prompt)}",
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
