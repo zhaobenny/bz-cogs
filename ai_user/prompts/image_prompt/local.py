@@ -38,7 +38,7 @@ class LocalImagePrompt(BaseImagePrompt):
             confidence, caption = await self._create_caption_from_image(image)
             if confidence > 0.45:
                 prompt = [
-                    {"role": "system", "content": f"The following is a description of a picture sent by user \"{self.message.author.name}\". {bot_prompt}"},
+                    {"role": "system", "content": f"Pretend you can see the following image. The following is a description of a picture sent by user \"{self.message.author.name}\". {bot_prompt}"},
                     {"role": "user", "content": caption},
                 ]
         if prompt == None:

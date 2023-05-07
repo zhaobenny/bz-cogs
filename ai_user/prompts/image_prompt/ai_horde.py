@@ -64,7 +64,7 @@ class AIHordeImagePrompt(BaseImagePrompt):
             return None
 
         prompt = [
-            {"role": "system", "content": f"The following is a description of a picture sent by user \"{self.message.author.name}\". {bot_prompt}"},
+            {"role": "system", "content": f"Pretend you can see the following image. The following is a description of a picture sent by user \"{self.message.author.name}\". {bot_prompt}"},
             {"role": "user", "content": caption["caption"]},
         ]
 
