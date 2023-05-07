@@ -43,6 +43,7 @@ Enable slash (/chat) command using:
 
 ## Image scanning 🖼️
 
+See settings here:
 ```
 [p]ai_user image
 ```
@@ -61,12 +62,12 @@ AI Horde is a crowdsourced distributed cluster. Please contribute back if heavil
 1. Images will be uploaded to a third party (a volunteer worker machine)
 2. May be a queue if there are no workers available (faster if you have an [API key](https://stablehorde.net/#:~:text=0%20alchemy%20forms.-,Usage,-First%20Register%20an) and kudos)
 3. No OCR, only image captioning
-4. No confidence levels, so can not throw out bad captions
+4. No confidence levels, so can not ignore bad captions
 
 
 ### Local Image Scanning Mode
 
-Local image scanning mode will be very CPU intensive. Not recommended for busy servers/channels. First, images will be OCR'ed for text to use. If the OCR is of significant confidence, it will be captioned, and the caption will be used if it is of significant confidence.
+Local image scanning mode will be very CPU intensive. Not recommended for busy servers/channels. First, images will be OCR'ed for text to use. If the OCR is not of significant confidence, it will be captioned instead, and the caption will be used if it is of significant confidence.
 
 See below for instructions on installing the necessary dependencies. (ARM not supported)
 
@@ -91,5 +92,7 @@ See [here](https://tesseract-ocr.github.io/tessdoc/Installation.html) for instru
 
 
 First time scanning an image will take longer due to the need to download the pretrained models. (OCR and image captioning models)
+
+(For Docker installs, I also recommend binding  `/config/.cache/huggingface/hub` to a persistent volume to avoid redownloading the models every time the container is restarted)
 
 ---

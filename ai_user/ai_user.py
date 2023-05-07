@@ -36,6 +36,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
             "messages_backread_seconds": 60 * 120,
             "reply_to_mentions_replies": False,
             "scan_images": False,
+            "scan_images_mode": "ai-horde",
             "filter_responses": True,
             "model": "gpt-3.5-turbo",
             "custom_text_prompt": None,

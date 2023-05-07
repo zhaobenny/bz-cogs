@@ -38,8 +38,9 @@ class Settings(MixinMeta):
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
 
         embed = discord.Embed(title="AI User Settings", color=await ctx.embed_color())
-        embed.add_field(name="Scan Images", value=await self.config.guild(ctx.guild).scan_images(), inline=False)
         embed.add_field(name="Model", value=await self.config.guild(ctx.guild).model(), inline=False)
+        embed.add_field(name="Scan Images", value=await self.config.guild(ctx.guild).scan_images(), inline=False)
+        embed.add_field(name="Scan Image Mode", value=await self.config.guild(ctx.guild).scan_images_mode(), inline=False)
         embed.add_field(name="Filter Responses", value=await self.config.guild(ctx.guild).filter_responses(), inline=False)
         embed.add_field(name="Reply Percent", value=f"{await self.config.guild(ctx.guild).reply_percent() * 100}%", inline=False)
         embed.add_field(name="Whitelisted Channels", value=" ".join(channels)
