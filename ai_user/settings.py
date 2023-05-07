@@ -83,10 +83,10 @@ class Settings(MixinMeta):
     @checks.is_owner()
     async def image_maxsize(self, ctx: commands.Context, new_value: float):
         """ Set max download size in Megabytes for image scanning """
-        await self.config.guild(ctx.guild).max_image_size.set(new_value)
+        await self.config.guild(ctx.guild).max_image_size.set(new_value * 1024 * 1024)
         embed = discord.Embed(
             title="Max download size to scan images now set to:",
-            description=f"{new_value:.2f}",
+            description=f"{new_value:.2f} MB",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
