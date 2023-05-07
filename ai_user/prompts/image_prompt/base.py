@@ -1,10 +1,14 @@
+import logging
 from io import BytesIO
 from typing import Optional
+
 from discord import Message
 from PIL import Image
 
 from ai_user.prompts.base import Prompt
 from ai_user.prompts.constants import MAX_MESSAGE_LENGTH
+
+logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 class BaseImagePrompt(Prompt):
@@ -22,6 +26,7 @@ class BaseImagePrompt(Prompt):
         width, height = image.size
 
         if width > 1500 or height > 2000:
+            logger.info(f"Skipping large image in {self.message.guild.name}")
             return None
 
         prompt = await self._process_image(image, bot_prompt)

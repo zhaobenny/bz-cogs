@@ -57,7 +57,6 @@ class AIHordeImagePrompt(BaseImagePrompt):
                     response = await request.json()
                     if response["state"] == "done":
                         break
-                print(response)
                 caption = response["forms"][0]["result"]
         except:
             logger.error(
