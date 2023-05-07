@@ -3,7 +3,7 @@ import re
 def remove_template_from_response(response: str, bot_name: str) -> str:
     patterns = [
         rf'^(User )?"?{bot_name}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
-        rf'^As {bot_name}, I( might| would| could)? (respond|reply)( with)?:?',
+        rf'^As "?{bot_name}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
         rf'^{bot_name}:',
     ]
     response = response.strip(' "')
