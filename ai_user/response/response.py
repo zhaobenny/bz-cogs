@@ -52,7 +52,6 @@ async def generate_response(ctx: commands.Context, config: Config, prompt):
             return await ctx.react_quietly("😶")
 
         bot_name = message.guild.me.name
-        response = response.strip('"')
         response = remove_template_from_response(response, bot_name)
         direct_reply = not ctx.interaction and await is_reply(message)
 

@@ -1,11 +1,15 @@
 import re
 
-def remove_template_from_response(response, bot_name):
+def remove_template_from_response(response: str, bot_name: str) -> str:
     patterns = [
-        r'^User "{}" said:'.format(bot_name),
-        r'^{}:'.format(bot_name),
-        r'^\w+[\"]? said:',
+        rf'^(User )?"?{bot_name}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
+        rf'^As "?{bot_name}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
+        rf'^{bot_name}:',
     ]
+    response = response.strip(' "')
     for pattern in patterns:
-        response = re.sub(pattern, '', response)
+        response = re.sub(pattern, '', response).strip(' \n":')
+        if response.count('"') == 1:
+            response = response.replace('"', '')
     return response
+
