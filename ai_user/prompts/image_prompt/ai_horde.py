@@ -19,7 +19,6 @@ class AIHordeImagePrompt(BaseImagePrompt):
         super().__init__(message, config, start_time)
         self.redbot = bot
 
-
     async def _process_image(self, image: Image, bot_prompt: str) -> Optional[list[dict[str, str]]]:
         apikey = (await self.redbot.get_shared_api_tokens("ai-horde")).get("api_key") or "0000000000"
         image_bytes = BytesIO()
@@ -40,20 +39,17 @@ class AIHordeImagePrompt(BaseImagePrompt):
         try:
             async with aiohttp.ClientSession() as session:
                 request = await session.post(f"https://stablehorde.net/api/v2/interrogate/async", json=payload, headers={"apikey": apikey})
-                if request.status != 202:
-                    raise aiohttp.ClientResponseError(status=response.status)
-
                 response = await request.json()
-                id = response["id"]
+                if request.status != 202:
+                    raise aiohttp.ClientResponseError(None, (), status=response.status)
 
                 start_time = time.time()
                 while True:
-                    request = await session.get(f"https://stablehorde.net/api/v2/interrogate/status/{id}")
+                    request = await session.get(f"https://stablehorde.net/api/v2/interrogate/status/{response['id']}")
                     current_time = time.time()
                     elapsed_time = current_time - start_time
                     if request.status != 200:
-                        raise aiohttp.ClientResponseError(
-                            status=response.status)
+                        raise aiohttp.ClientResponseError(None, (), status=response.status)
                     elif elapsed_time > 30:
                         raise Exception("Request timed out")
                     response = await request.json()
@@ -68,7 +64,7 @@ class AIHordeImagePrompt(BaseImagePrompt):
 
         prompt = [
             {"role": "system", "content": f"The following is a description of a picture sent by user \"{self.message.author.name}\". {bot_prompt}"},
-            {"role": "user", "content": caption},
+            {"role": "user", "content": caption["caption"]},
         ]
 
         return prompt

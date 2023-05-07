@@ -71,7 +71,7 @@ class Settings(MixinMeta):
     @image.command()
     @checks.is_owner()
     async def mode(self, ctx: commands.Context, new_value: str):
-        """ Set method to scan (see cog README.md) """
+        """ Set method to scan, local or ai-horde (see cog README.md) """
         if new_value not in SCAN_IMAGE_MODES:
             await ctx.send(f"Invalid mode. Choose from: {', '.join(SCAN_IMAGE_MODES)}")
         elif new_value == "local":
@@ -79,14 +79,12 @@ class Settings(MixinMeta):
                 importlib.import_module("pytesseract")
                 importlib.import_module("torch")
                 importlib.import_module("transformers")
-                await self.config.guild(ctx.guild).scan_images.set(new_value)
+                await self.config.guild(ctx.guild).scan_images_mode.set(new_value)
                 embed = discord.Embed(title="Scanning Images for this server now set to", color=await ctx.embed_color())
-                embed.add_field(
-                    name=":warning: WILL CAUSE HEAVY CPU LOAD :warning:", value=new_value, inline=False)
+                embed.add_field(name=":warning: WILL CAUSE HEAVY CPU LOAD :warning:", value=new_value, inline=False)
                 return await ctx.send(embed=embed)
             except:
-                logger.error(
-                    "Image processing dependencies import failed. ", exc_info=True)
+                logger.error("Image processing dependencies import failed. ", exc_info=True)
                 await self.config.guild(ctx.guild).scan_images_mode.set("ai-horde")
                 return await ctx.send("Local image processing dependencies not available. Please install them (see cog README.md) to use this feature locally.")
         elif new_value == "ai-horde":
