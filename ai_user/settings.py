@@ -266,6 +266,7 @@ class Settings(MixinMeta):
             description=self._truncate_prompt(prompt),
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+        await ctx.send(embed=embed)
 
     @prompt_show.command(name="server", aliases=["guild"])
     async def show_server_prompt(self, ctx: commands.Context):
