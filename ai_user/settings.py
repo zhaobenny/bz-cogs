@@ -295,6 +295,8 @@ class Settings(MixinMeta):
             return await ctx.send("No users with custom prompts")
         if len(pages) == 1:
             return await ctx.send(embed=pages[0])
+        for i, page in enumerate(pages):
+            page.title = f"({i+1}/{len(pages)}) {page.title}"
         await SimpleMenu(pages).start(ctx)
 
     @prompt_show.command(name="channels")
@@ -314,6 +316,8 @@ class Settings(MixinMeta):
             return await ctx.send("No channels with custom prompts")
         if len(pages) == 1:
             return await ctx.send(embed=pages[0])
+        for i, page in enumerate(pages):
+            page.title = f"({i+1}/{len(pages)}) {page.title}"
         await SimpleMenu(pages).start(ctx)
 
     @prompt.command(name="preset")
