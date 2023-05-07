@@ -31,23 +31,23 @@ class Settings(MixinMeta):
         self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
         await ctx.react_quietly("✅")
 
-    @ai_user.command()
+    @ai_user.command(aliases=["settings", "showsettings"])
     async def config(self, ctx: commands.Context):
         """ Returns current config """
         whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
 
         embed = discord.Embed(title="AI User Settings", color=await ctx.embed_color())
-        embed.add_field(name="Model", value=await self.config.guild(ctx.guild).model(), inline=False)
-        embed.add_field(name="Scan Images", value=await self.config.guild(ctx.guild).scan_images(), inline=False)
-        embed.add_field(name="Scan Image Mode", value=await self.config.guild(ctx.guild).scan_images_mode(), inline=False)
-        embed.add_field(name="Filter Responses", value=await self.config.guild(ctx.guild).filter_responses(), inline=False)
-        embed.add_field(name="Reply Percent", value=f"{await self.config.guild(ctx.guild).reply_percent() * 100}%", inline=False)
-        embed.add_field(name="Whitelisted Channels", value=" ".join(channels)
-                        if channels else "None", inline=False)
-        embed.add_field(name="Always Reply on Ping or Reply", value=await self.config.guild(ctx.guild).reply_to_mentions_replies(), inline=False)
+        embed.add_field(name="Model", value=await self.config.guild(ctx.guild).model(), inline=True)
+        embed.add_field(name="Scan Images", value=await self.config.guild(ctx.guild).scan_images(), inline=True)
+        embed.add_field(name="Scan Image Mode", value=await self.config.guild(ctx.guild).scan_images_mode(), inline=True)
+        embed.add_field(name="Filter Responses", value=await self.config.guild(ctx.guild).filter_responses(), inline=True)
+        embed.add_field(name="Reply Percent", value=f"{await self.config.guild(ctx.guild).reply_percent() * 100:.2f}%", inline=True)
+        embed.add_field(name="Always Reply on Ping or Reply", value=await self.config.guild(ctx.guild).reply_to_mentions_replies(), inline=True)
         embed.add_field(name="Max Messages in History", value=f"{await self.config.guild(ctx.guild).messages_backread()}", inline=False)
-        embed.add_field(name="Max Time (s) between each Message in History", value=f"{await self.config.guild(ctx.guild).messages_backread_seconds()}", inline=False)
+        embed.add_field(name="Max Time (s) between each Message in History", value=await self.config.guild(ctx.guild).messages_backread_seconds(), inline=False)
+        embed.add_field(name="Public Forget Command", value=await self.config.guild(ctx.guild).public_forget(), inline=False)
+        embed.add_field(name="Whitelisted Channels", value=" ".join(channels) if channels else "None", inline=False)
         return await ctx.send(embed=embed)
 
     @ai_user.group()
