@@ -43,13 +43,16 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
             "channels_whitelist": [],
             "public_forget": False,
         }
-
         default_member = {
+            "custom_text_prompt": None,
+        }
+        default_channel = {
             "custom_text_prompt": None,
         }
 
         self.config.register_member(**default_member)
         self.config.register_guild(**default_guild)
+        self.config.register_channel(**default_channel)
 
     @app_commands.command(name="chat")
     @app_commands.describe(text="The prompt you want to send to the AI.")
