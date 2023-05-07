@@ -1,6 +1,5 @@
 import asyncio
 import functools
-from io import BytesIO
 from typing import Callable, Coroutine, Optional
 
 import pytesseract
@@ -10,7 +9,7 @@ from PIL import Image
 from transformers import (AutoTokenizer, VisionEncoderDecoderModel,
                           ViTImageProcessor)
 
-from ai_user.prompts.base import Prompt
+from ai_user.prompts.image_prompt.base import BaseImagePrompt
 
 
 def to_thread(func: Callable) -> Coroutine:
@@ -21,23 +20,12 @@ def to_thread(func: Callable) -> Coroutine:
     return wrapper
 
 
-class ImagePrompt(Prompt):
+class LocalImagePrompt(BaseImagePrompt):
     def __init__(self, message: Message, config, start_time):
         super().__init__(message, config, start_time)
 
-    async def _create_prompt(self, bot_prompt) -> Optional[list[dict[str, str]]]:
-        image = self.message.attachments[0] if self.message.attachments else None
 
-        if not image or not image.content_type.startswith('image/'):
-            return None
-
-        image_bytes = await image.read()
-        image = Image.open(BytesIO(image_bytes))
-        width, height = image.size
-
-        if width > 1500 or height > 2000:
-            return None
-
+    async def _process_image(self, image : Image, bot_prompt: str) -> Optional[list[dict[str, str]]]:
         prompt = None
         scanned_text = await self._extract_text_from_image(image)
         if scanned_text and len(scanned_text.split()) > 10:
@@ -46,15 +34,12 @@ class ImagePrompt(Prompt):
                 {"role": "user", "content": scanned_text},
             ]
         else:
-            confidence, caption = await self._create_prompt_from_image(image)
+            confidence, caption = await self._create_caption_from_image(image)
             if confidence > 0.45:
                 prompt = [
                     {"role": "system", "content": f"The following is a description of a picture sent by user \"{self.message.author.name}\". {bot_prompt}"},
                     {"role": "user", "content": caption},
                 ]
-        if not prompt:
-            return None
-        prompt[:0] = await self._get_previous_history()
         return prompt
 
     @staticmethod
@@ -68,7 +53,7 @@ class ImagePrompt(Prompt):
 
     @staticmethod
     @to_thread
-    def _create_prompt_from_image(image: Image.Image):
+    def _create_caption_from_image(image: Image.Image):
         # based off https://huggingface.co/nlpconnect/vit-gpt2-image-captioning/discussions/6
 
         MODEL_NAME = "nlpconnect/vit-gpt2-image-captioning"

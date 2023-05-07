@@ -5,6 +5,7 @@ from typing import Optional
 from discord import Message
 
 from ai_user.prompts.base import Prompt
+from ai_user.prompts.constants import MAX_MESSAGE_LENGTH
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -37,8 +38,7 @@ class EmbedPrompt(Prompt):
              "content": f"The embed title is \"{self.message.embeds[0].title}\" and the description is \"{self.message.embeds[0].description}\""},
         ])
 
-        if len(self.message.content) > 0:
-            prompt.append(
-                {"role": "user", "content": f"{self.message.content}"})
+        if self.message.content and not len(self.message.content.split(" ")) > MAX_MESSAGE_LENGTH:
+            prompt[:0] = [self._format_message(self.message)]
 
         return prompt

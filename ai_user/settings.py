@@ -9,7 +9,7 @@ from redbot.core.utils.chat_formatting import box
 from redbot.core.utils.menus import DEFAULT_CONTROLS, menu
 
 from ai_user.abc import MixinMeta
-from ai_user.prompts.constants import DEFAULT_PROMPT, PRESETS
+from ai_user.prompts.constants import DEFAULT_PROMPT, PRESETS, SCAN_IMAGE_MODES
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -38,35 +38,75 @@ class Settings(MixinMeta):
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
 
         embed = discord.Embed(title="AI User Settings", color=await ctx.embed_color())
-        embed.add_field(name="Scan Images", value=await self.config.guild(ctx.guild).scan_images(), inline=False)
         embed.add_field(name="Model", value=await self.config.guild(ctx.guild).model(), inline=False)
+        embed.add_field(name="Scan Images", value=await self.config.guild(ctx.guild).scan_images(), inline=False)
+        embed.add_field(name="Scan Image Mode", value=await self.config.guild(ctx.guild).scan_images_mode(), inline=False)
         embed.add_field(name="Filter Responses", value=await self.config.guild(ctx.guild).filter_responses(), inline=False)
         embed.add_field(name="Reply Percent", value=f"{await self.config.guild(ctx.guild).reply_percent() * 100}%", inline=False)
-        embed.add_field(name="Whitelisted Channels", value=" ".join(channels)\
+        embed.add_field(name="Whitelisted Channels", value=" ".join(channels)
                         if channels else "None", inline=False)
         embed.add_field(name="Always Reply on Ping or Reply", value=await self.config.guild(ctx.guild).reply_to_mentions_replies(), inline=False)
         embed.add_field(name="Max Messages in History", value=f"{await self.config.guild(ctx.guild).messages_backread()}", inline=False)
         embed.add_field(name="Max Time (s) between each Message in History", value=f"{await self.config.guild(ctx.guild).messages_backread_seconds()}", inline=False)
         return await ctx.send(embed=embed)
 
-    @ai_user.command()
+    @ai_user.group()
     @checks.is_owner()
-    async def scan_images(self, ctx: commands.Context):
-        """ Toggle image scanning (see README.md) """
-        try:
-            importlib.import_module("pytesseract")
-            importlib.import_module("torch")
-            importlib.import_module("transformers")
-            value = not (await self.config.guild(ctx.guild).scan_images())
-            await self.config.guild(ctx.guild).scan_images.set(value)
-            embed = discord.Embed(title=":warning: WILL CAUSE HEAVY CPU LOAD :warning:", color=await ctx.embed_color())
+    async def image(self, _):
+        """ Change the image scan setting for the current server. (See cog README.md) """
+        pass
+
+    @image.command()
+    @checks.is_owner()
+    async def scan(self, ctx: commands.Context):
+        """ Toggle image scanning for the current server """
+        value = not (await self.config.guild(ctx.guild).scan_images())
+        await self.config.guild(ctx.guild).scan_images.set(value)
+        embed = discord.Embed(
+            title="Scanning Images for this server now set to:",
+            description=f"{value}",
+            color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
+
+    @image.command()
+    @checks.is_owner()
+    async def mode(self, ctx: commands.Context, new_value: str):
+        """ Set method to scan (see cog README.md) """
+        if new_value not in SCAN_IMAGE_MODES:
+            await ctx.send(f"Invalid mode. Choose from: {', '.join(SCAN_IMAGE_MODES)}")
+        elif new_value == "local":
+            try:
+                importlib.import_module("pytesseract")
+                importlib.import_module("torch")
+                importlib.import_module("transformers")
+                await self.config.guild(ctx.guild).scan_images.set(new_value)
+                embed = discord.Embed(title="Scanning Images for this server now set to", color=await ctx.embed_color())
+                embed.add_field(
+                    name=":warning: WILL CAUSE HEAVY CPU LOAD :warning:", value=new_value, inline=False)
+                return await ctx.send(embed=embed)
+            except:
+                logger.error(
+                    "Image processing dependencies import failed. ", exc_info=True)
+                await self.config.guild(ctx.guild).scan_images_mode.set("ai-horde")
+                return await ctx.send("Local image processing dependencies not available. Please install them (see cog README.md) to use this feature locally.")
+        elif new_value == "ai-horde":
+            await self.config.guild(ctx.guild).scan_images_mode.set("ai-horde")
+            embed = discord.Embed(title="Scanning Images for this server now set to", description=new_value, color=await ctx.embed_color())
+            if (await self.bot.get_shared_api_tokens("ai-horde")).get("api_key"):
+                key_description = "Key set."
+            else:
+                key_description = f"No key set. \n Request will be lower priority.\n  \
+                                   Create one [here](https://stablehorde.net/#:~:text=0%20alchemy%20forms.-,Usage,-First%20Register%20an)\
+                                   and set it with `{ctx.clean_prefix}set api ai-horde api_key,API_KEY`"
             embed.add_field(
-                name="Scanning Images for this server now set to", value=value)
+                name="AI Horde API key:",
+                value=key_description,
+                inline=False)
+            embed.add_field(
+                name="Reminder",
+                value="AI Horde is a crowdsourced volunteer service. \n Please contribute back if heavily used. See [here](https://stablehorde.net/)",
+                inline=False)
             return await ctx.send(embed=embed)
-        except:
-            logger.error("Image processing dependencies import failed. ", exc_info=True)
-            await self.config.guild(ctx.guild).scan_images.set(False)
-            await ctx.send("Image processing dependencies not available. Please install them (see cog README.md) to use this feature.")
 
     @ai_user.command()
     @checks.is_owner()
@@ -265,7 +305,7 @@ class Settings(MixinMeta):
         if preset == 'list':
             embed = discord.Embed(
                 title="Presets",
-                description=f"Use `{ctx.clean_prefix}prompt preset <preset>` to set a preset.",
+                description=f"Use `{ctx.clean_prefix}ai_user prompt preset <preset>` to set a preset.",
                 color=await ctx.embed_color())
             embed.add_field(name="Available presets",
                             value="\n".join(PRESETS.keys()), inline=False)
