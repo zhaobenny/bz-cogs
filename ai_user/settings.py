@@ -5,8 +5,7 @@ import openai
 import tiktoken
 from typing import Optional
 from redbot.core import checks, commands
-from redbot.core.utils.chat_formatting import box
-from redbot.core.utils.menus import DEFAULT_CONTROLS, menu
+from redbot.core.utils.menus import SimpleMenu
 
 from ai_user.abc import MixinMeta
 from ai_user.prompts.constants import DEFAULT_PROMPT, PRESETS, SCAN_IMAGE_MODES
@@ -296,7 +295,7 @@ class Settings(MixinMeta):
             return await ctx.send("No users with custom prompts")
         if len(pages) == 1:
             return await ctx.send(embed=pages[0])
-        return await menu(ctx, pages, DEFAULT_CONTROLS)
+        await SimpleMenu(pages).start(ctx)
 
     @prompt_show.command(name="channels")
     async def show_channel_prompts(self, ctx: commands.Context):
@@ -315,7 +314,7 @@ class Settings(MixinMeta):
             return await ctx.send("No channels with custom prompts")
         if len(pages) == 1:
             return await ctx.send(embed=pages[0])
-        return await menu(ctx, pages, DEFAULT_CONTROLS)
+        await SimpleMenu(pages).start(ctx)
 
     @prompt.command(name="preset")
     @checks.admin_or_permissions(manage_guild=True)
