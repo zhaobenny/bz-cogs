@@ -37,16 +37,28 @@ class Settings(MixinMeta):
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
 
         embed = discord.Embed(title="AI User Settings", color=await ctx.embed_color())
-        embed.add_field(name="Model", value=await self.config.guild(ctx.guild).model(), inline=True)
-        embed.add_field(name="Scan Images", value=await self.config.guild(ctx.guild).scan_images(), inline=True)
-        embed.add_field(name="Scan Image Mode", value=await self.config.guild(ctx.guild).scan_images_mode(), inline=True)
-        embed.add_field(name="Filter Responses", value=await self.config.guild(ctx.guild).filter_responses(), inline=True)
-        embed.add_field(name="Reply Percent", value=f"{await self.config.guild(ctx.guild).reply_percent() * 100:.2f}%", inline=True)
-        embed.add_field(name="Always Reply on Ping or Reply", value=await self.config.guild(ctx.guild).reply_to_mentions_replies(), inline=True)
-        embed.add_field(name="Max Messages in History", value=f"{await self.config.guild(ctx.guild).messages_backread()}", inline=False)
-        embed.add_field(name="Max Time (s) between each Message in History", value=await self.config.guild(ctx.guild).messages_backread_seconds(), inline=False)
-        embed.add_field(name="Public Forget Command", value=await self.config.guild(ctx.guild).public_forget(), inline=False)
-        embed.add_field(name="Whitelisted Channels", value=" ".join(channels) if channels else "None", inline=False)
+        embed.add_field(name="Model",
+                        value=await self.config.guild(ctx.guild).model(), inline=True)
+        embed.add_field(name="Filter Responses",
+                        value=await self.config.guild(ctx.guild).filter_responses(), inline=True)
+        embed.add_field(name="Reply Percent",
+                        value=f"{await self.config.guild(ctx.guild).reply_percent() * 100:.2f}%", inline=True)
+        embed.add_field(name="Scan Images",
+                        value=await self.config.guild(ctx.guild).scan_images(), inline=True)
+        embed.add_field(name="Scan Image Mode",
+                        value=await self.config.guild(ctx.guild).scan_images_mode(), inline=True)
+        embed.add_field(name="Scan Image Max Size",
+                        value=f"{await self.config.guild(ctx.guild).max_image_size() / 1024 / 1024:.2f} MB", inline=True)
+        embed.add_field(name="Always Reply on Ping or Reply",
+                        value=await self.config.guild(ctx.guild).reply_to_mentions_replies(), inline=False)
+        embed.add_field(name="Max Messages in History",
+                        value=f"{await self.config.guild(ctx.guild).messages_backread()}", inline=False)
+        embed.add_field(name="Max Time (s) between each Message in History",
+                        value=await self.config.guild(ctx.guild).messages_backread_seconds(), inline=False)
+        embed.add_field(name="Public Forget Command",
+                        value=await self.config.guild(ctx.guild).public_forget(), inline=False)
+        embed.add_field(name="Whitelisted Channels",
+                        value=" ".join(channels) if channels else "None", inline=False)
         return await ctx.send(embed=embed)
 
     @ai_user.group()
@@ -55,9 +67,9 @@ class Settings(MixinMeta):
         """ Change the image scan setting for the current server. (See cog README.md) """
         pass
 
-    @image.command()
+    @image.command(name="scan")
     @checks.is_owner()
-    async def scan(self, ctx: commands.Context):
+    async def image_scanning(self, ctx: commands.Context):
         """ Toggle image scanning for the current server """
         value = not (await self.config.guild(ctx.guild).scan_images())
         await self.config.guild(ctx.guild).scan_images.set(value)
@@ -67,9 +79,20 @@ class Settings(MixinMeta):
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
-    @image.command()
+    @image.command(name="maxsize")
     @checks.is_owner()
-    async def mode(self, ctx: commands.Context, new_value: str):
+    async def image_maxsize(self, ctx: commands.Context, new_value: float):
+        """ Set max download size in Megabytes for image scanning """
+        await self.config.guild(ctx.guild).max_image_size.set(new_value * 1024 * 1024)
+        embed = discord.Embed(
+            title="Max download size to scan images now set to:",
+            description=f"{new_value:.2f} MB",
+            color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
+
+    @image.command(name="mode")
+    @checks.is_owner()
+    async def image_mode(self, ctx: commands.Context, new_value: str):
         """ Set method to scan, local or ai-horde (see cog README.md) """
         if new_value not in SCAN_IMAGE_MODES:
             await ctx.send(f"Invalid mode. Choose from: {', '.join(SCAN_IMAGE_MODES)}")
@@ -113,7 +136,7 @@ class Settings(MixinMeta):
         await self.cache_guild_options(ctx)
         embed = discord.Embed(
             title="Chance that the bot will reply on this server is now:",
-            description=f"{new_value}%",
+            description=f"{new_value:.2f}%",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
