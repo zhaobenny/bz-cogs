@@ -50,16 +50,16 @@ class Settings(MixinMeta):
                         value=await self.config.guild(ctx.guild).scan_images_mode())
         embed.add_field(name="Scan Image Max Size", inline=True,
                         value=f"{await self.config.guild(ctx.guild).max_image_size() / 1024 / 1024:.2f} MB")
-        embed.add_field(name="Always Reply on Ping or Reply", inline=False,
-                        value=await self.config.guild(ctx.guild).reply_to_mentions_replies())
-        embed.add_field(name="Max Messages in History", inline=False,
+        embed.add_field(name="Max Messages in History", inline=True,
                         value=f"{await self.config.guild(ctx.guild).messages_backread()}")
+        embed.add_field(name="Always Reply if Pinged", inline=True,
+                        value=await self.config.guild(ctx.guild).reply_to_mentions_replies())
+        embed.add_field(name="Ignore Regex Pattern", inline=True,
+                        value=await self.config.guild(ctx.guild).ignore_regex())
         embed.add_field(name="Max Time (s) between each Message in History", inline=False,
                         value=await self.config.guild(ctx.guild).messages_backread_seconds())
         embed.add_field(name="Public Forget Command", inline=False,
                         value=await self.config.guild(ctx.guild).public_forget())
-        embed.add_field(name="Ignore Regex Pattern", inline=False,
-                        value=await self.config.guild(ctx.guild).ignore_regex())
         embed.add_field(name="Whitelisted Channels", inline=False,
                         value=" ".join(channels) if channels else "None")
         return await ctx.send(embed=embed)
