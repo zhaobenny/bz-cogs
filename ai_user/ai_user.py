@@ -27,8 +27,11 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         super().__init__()
         self.bot: Red = bot
         self.config = Config.get_conf(self, identifier=754070)
-        self.cached_options = {}
-        self.override_prompt_start_time = {}
+        # cached options
+        self.channels_whitelist: dict[int, list[int]] = {}
+        self.reply_percent: dict[int, float] = {}
+        self.ignore_regex: dict[int, re.Pattern] = {}
+        self.override_prompt_start_time: dict[int, datetime] = {}
 
         default_guild = {
             "reply_percent": 0.5,
@@ -43,6 +46,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
             "custom_text_prompt": None,
             "channels_whitelist": [],
             "public_forget": False,
+            "ignore_regex": None,
         }
         default_member = {
             "custom_text_prompt": None,
@@ -54,6 +58,19 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         self.config.register_member(**default_member)
         self.config.register_guild(**default_guild)
         self.config.register_channel(**default_channel)
+
+    async def cog_load(self):
+        for guild in self.bot.guilds:
+            self.channels_whitelist[guild.id] = await self.config.guild(guild).channels_whitelist()
+            self.reply_percent[guild.id] = await self.config.guild(guild).reply_percent()
+            pattern = await self.config.guild(guild).ignore_regex()
+            self.ignore_regex[guild.id] = re.compile(pattern) if pattern else None
+
+    async def red_delete_data_for_user(self, *, requester, user_id: int):
+        for guild in self.bot.guilds:
+            member = guild.get_member(user_id)
+            if member:
+                await self.config.member(member).clear()
 
     @app_commands.command(name="chat")
     @app_commands.describe(text="The prompt you want to send to the AI.")
@@ -81,14 +98,13 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
 
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
-
         ctx: commands.Context = await self.bot.get_context(message)
         if not await self.is_common_valid_reply(ctx):
             return
 
         if await self.is_bot_mentioned_or_replied(message):
             pass
-        elif random.random() > self.cached_options[message.guild.id].get("reply_percent"):
+        elif random.random() > self.reply_percent.get(message.guild.id, 0.5):
             return
 
         prompt_instance = await self.create_prompt_instance(message)
@@ -100,8 +116,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
-        """ Catch embed updates """
-
+        """ Catch embeds loading """
         ctx: commands.Context = await self.bot.get_context(after)
         if not await self.is_common_valid_reply(ctx):
             return
@@ -110,7 +125,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         if not (time_diff.total_seconds() <= 10):
             return
 
-        if random.random() > self.cached_options[before.guild.id].get("reply_percent"):
+        if random.random() > self.reply_percent.get(before.guild.id, 0.5):
             return
 
         prompt = None
@@ -124,7 +139,14 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
 
     async def is_common_valid_reply(self, ctx: commands.Context) -> bool:
         """ Run some common checks to see if a message is valid for the bot to reply to """
-        if not ctx.guild or ctx.author.bot:
+        if not ctx.guild or ctx.author.bot or not self.channels_whitelist.get(ctx.guild.id, []):
+            return False
+        if not ctx.interaction and (
+            isinstance(ctx.channel, discord.Thread) and ctx.channel.parent.id not in self.channels_whitelist[ctx.guild.id]
+            or ctx.channel.id not in self.channels_whitelist[ctx.guild.id]
+        ):
+            return False
+        if self.ignore_regex[ctx.guild.id] and self.ignore_regex[ctx.guild.id].search(ctx.message.content):
             return False
         if await self.bot.cog_disabled_in_guild(self, ctx.guild):
             return False
@@ -136,18 +158,6 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         if not openai.api_key:
             await self.initalize_openai(ctx)
         if not openai.api_key:
-            return False
-
-        if not self.cached_options.get(ctx.message.guild.id):
-            await self.cache_guild_options(ctx)
-
-        if ctx.interaction:
-            return True
-
-        if isinstance(ctx.channel, discord.Thread):
-            if ctx.channel.parent.id not in self.cached_options[ctx.guild.id].get("channels_whitelist"):
-                return False
-        elif ctx.channel.id not in self.cached_options[ctx.guild.id].get("channels_whitelist"):
             return False
 
         return True

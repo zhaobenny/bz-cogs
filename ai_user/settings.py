@@ -3,6 +3,7 @@ import logging
 import discord
 import openai
 import tiktoken
+import re
 from typing import Optional
 from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
@@ -37,28 +38,30 @@ class Settings(MixinMeta):
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
 
         embed = discord.Embed(title="AI User Settings", color=await ctx.embed_color())
-        embed.add_field(name="Model",
-                        value=await self.config.guild(ctx.guild).model(), inline=True)
-        embed.add_field(name="Filter Responses",
-                        value=await self.config.guild(ctx.guild).filter_responses(), inline=True)
-        embed.add_field(name="Reply Percent",
-                        value=f"{await self.config.guild(ctx.guild).reply_percent() * 100:.2f}%", inline=True)
-        embed.add_field(name="Scan Images",
-                        value=await self.config.guild(ctx.guild).scan_images(), inline=True)
-        embed.add_field(name="Scan Image Mode",
-                        value=await self.config.guild(ctx.guild).scan_images_mode(), inline=True)
-        embed.add_field(name="Scan Image Max Size",
-                        value=f"{await self.config.guild(ctx.guild).max_image_size() / 1024 / 1024:.2f} MB", inline=True)
-        embed.add_field(name="Always Reply on Ping or Reply",
-                        value=await self.config.guild(ctx.guild).reply_to_mentions_replies(), inline=False)
-        embed.add_field(name="Max Messages in History",
-                        value=f"{await self.config.guild(ctx.guild).messages_backread()}", inline=False)
-        embed.add_field(name="Max Time (s) between each Message in History",
-                        value=await self.config.guild(ctx.guild).messages_backread_seconds(), inline=False)
-        embed.add_field(name="Public Forget Command",
-                        value=await self.config.guild(ctx.guild).public_forget(), inline=False)
-        embed.add_field(name="Whitelisted Channels",
-                        value=" ".join(channels) if channels else "None", inline=False)
+        embed.add_field(name="Model", inline=True,
+                        value=await self.config.guild(ctx.guild).model())
+        embed.add_field(name="Filter Responses", inline=True,
+                        value=await self.config.guild(ctx.guild).filter_responses())
+        embed.add_field(name="Reply Percent", inline=True,
+                        value=f"{await self.config.guild(ctx.guild).reply_percent() * 100:.2f}%")
+        embed.add_field(name="Scan Images", inline=True,
+                        value=await self.config.guild(ctx.guild).scan_images())
+        embed.add_field(name="Scan Image Mode", inline=True,
+                        value=await self.config.guild(ctx.guild).scan_images_mode())
+        embed.add_field(name="Scan Image Max Size", inline=True,
+                        value=f"{await self.config.guild(ctx.guild).max_image_size() / 1024 / 1024:.2f} MB")
+        embed.add_field(name="Always Reply on Ping or Reply", inline=False,
+                        value=await self.config.guild(ctx.guild).reply_to_mentions_replies())
+        embed.add_field(name="Max Messages in History", inline=False,
+                        value=f"{await self.config.guild(ctx.guild).messages_backread()}")
+        embed.add_field(name="Max Time (s) between each Message in History", inline=False,
+                        value=await self.config.guild(ctx.guild).messages_backread_seconds())
+        embed.add_field(name="Public Forget Command", inline=False,
+                        value=await self.config.guild(ctx.guild).public_forget())
+        embed.add_field(name="Ignore Regex Pattern", inline=False,
+                        value=await self.config.guild(ctx.guild).ignore_regex())
+        embed.add_field(name="Whitelisted Channels", inline=False,
+                        value=" ".join(channels) if channels else "None")
         return await ctx.send(embed=embed)
 
     @ai_user.group()
@@ -133,7 +136,7 @@ class Settings(MixinMeta):
     async def percent(self, ctx: commands.Context, new_value: float):
         """ Change the bot's response chance """
         await self.config.guild(ctx.guild).reply_percent.set(new_value / 100)
-        await self.cache_guild_options(ctx)
+        self.reply_percent[ctx.guild.id] = new_value / 100
         embed = discord.Embed(
             title="Chance that the bot will reply on this server is now:",
             description=f"{new_value:.2f}%",
@@ -175,6 +178,25 @@ class Settings(MixinMeta):
 
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)
+    async def ignore(self, ctx: commands.Context, *, regex_pattern: Optional[str]):
+        """ Messages matching this regex won't be replied to by the AI """
+        if not regex_pattern:
+            await self.config.guild(ctx.guild).ignore_regex.set(None)
+            self.ignore_regex[ctx.guild.id] = None
+            return await ctx.send("The ignore regex has been cleared.")
+        try:
+            self.ignore_regex[ctx.guild.id] = re.compile(regex_pattern)
+        except:
+            return await ctx.send("Sorry, but that regex pattern seems to be invalid.")
+        await self.config.guild(ctx.guild).ignore_regex.set(regex_pattern)
+        embed = discord.Embed(
+            title="The ignore regex is now:",
+            description=f"`{regex_pattern}`",
+            color=await ctx.embed_color())
+        await ctx.send(embed=embed)
+
+    @ai_user.command()
+    @checks.admin_or_permissions(manage_guild=True)
     async def add(self, ctx: commands.Context, channel: discord.TextChannel):
         """ Add a channel to the whitelist to allow the bot to reply in """
         if not channel:
@@ -184,7 +206,7 @@ class Settings(MixinMeta):
             return await ctx.send("Channel already in whitelist")
         new_whitelist.append(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
-        await self.cache_guild_options(ctx)
+        self.whitelisted_channels[ctx.guild.id] = new_whitelist
         embed = discord.Embed(title="The server whitelist is now:", color=await ctx.embed_color())
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.description = "\n".join(channels) if channels else "None"
@@ -201,7 +223,7 @@ class Settings(MixinMeta):
             return await ctx.send("Channel not in whitelist")
         new_whitelist.remove(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
-        await self.cache_guild_options(ctx)
+        self.whitelisted_channels[ctx.guild.id] = new_whitelist
         embed = discord.Embed(title="The server whitelist is now:", color=await ctx.embed_color())
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.description = "\n".join(channels) if channels else "None"
@@ -416,12 +438,6 @@ class Settings(MixinMeta):
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
         return await ctx.send(embed=embed)
-
-    async def cache_guild_options(self, ctx: commands.Context):
-        self.cached_options[ctx.guild.id] = {
-            "channels_whitelist": await self.config.guild(ctx.guild).channels_whitelist(),
-            "reply_percent": await self.config.guild(ctx.guild).reply_percent(),
-        }
 
     async def get_tokens(self, ctx: commands.Context, prompt: str) -> int:
         prompt = f"You are {ctx.guild.me.name}. {prompt}"

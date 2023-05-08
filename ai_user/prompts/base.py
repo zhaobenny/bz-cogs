@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 from typing import Dict, Optional
-
 from discord import Member, Message
 from redbot.core import Config
 
@@ -66,9 +65,9 @@ class Prompt:
 
         return history
 
-    async def _handle_historical_reply(self, history, message):
+    async def _handle_historical_reply(self, history: list, message: Message):
         try:
-            replied_message = await message.channel.fetch_message(message.reference.message_id)
+            replied_message = message.reference.cached_message or await message.channel.fetch_message(message.reference.message_id)
         except:
             return
         if self.is_not_valid_message(replied_message):
