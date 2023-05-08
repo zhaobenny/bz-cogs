@@ -206,7 +206,7 @@ class Settings(MixinMeta):
             return await ctx.send("Channel already in whitelist")
         new_whitelist.append(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
-        self.whitelisted_channels[ctx.guild.id] = new_whitelist
+        self.channels_whitelist[ctx.guild.id] = new_whitelist
         embed = discord.Embed(title="The server whitelist is now:", color=await ctx.embed_color())
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.description = "\n".join(channels) if channels else "None"
@@ -223,7 +223,7 @@ class Settings(MixinMeta):
             return await ctx.send("Channel not in whitelist")
         new_whitelist.remove(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
-        self.whitelisted_channels[ctx.guild.id] = new_whitelist
+        self.channels_whitelist[ctx.guild.id] = new_whitelist
         embed = discord.Embed(title="The server whitelist is now:", color=await ctx.embed_color())
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.description = "\n".join(channels) if channels else "None"
