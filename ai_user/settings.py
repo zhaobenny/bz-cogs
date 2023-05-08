@@ -50,15 +50,15 @@ class Settings(MixinMeta):
                         value=await self.config.guild(ctx.guild).scan_images_mode())
         embed.add_field(name="Scan Image Max Size", inline=True,
                         value=f"{await self.config.guild(ctx.guild).max_image_size() / 1024 / 1024:.2f} MB")
-        embed.add_field(name="Max Messages in History", inline=True,
-                        value=f"{await self.config.guild(ctx.guild).messages_backread()}")
+        embed.add_field(name="Max History Size", inline=True,
+                        value=f"{await self.config.guild(ctx.guild).messages_backread()} messages")
+        embed.add_field(name="Max History Gap", inline=True,
+                        value=f"{await self.config.guild(ctx.guild).messages_backread_seconds()} seconds")
         embed.add_field(name="Always Reply if Pinged", inline=True,
                         value=await self.config.guild(ctx.guild).reply_to_mentions_replies())
         embed.add_field(name="Ignore Regex Pattern", inline=True,
                         value=await self.config.guild(ctx.guild).ignore_regex())
-        embed.add_field(name="Max Time (s) between each Message in History", inline=False,
-                        value=await self.config.guild(ctx.guild).messages_backread_seconds())
-        embed.add_field(name="Public Forget Command", inline=False,
+        embed.add_field(name="Public Forget Command", inline=True,
                         value=await self.config.guild(ctx.guild).public_forget())
         embed.add_field(name="Whitelisted Channels", inline=False,
                         value=" ".join(channels) if channels else "None")
@@ -259,9 +259,9 @@ class Settings(MixinMeta):
         """ Change the prompt context settings for the current server """
         pass
 
-    @history.command()
+    @history.command(name="backread", aliases=["messages", "size"])
     @checks.is_owner()
-    async def backread(self, ctx: commands.Context, new_value: int):
+    async def history_backread(self, ctx: commands.Context, new_value: int):
         """ Set max amount of messages to be used """
         await self.config.guild(ctx.guild).messages_backread.set(new_value)
         embed = discord.Embed(
@@ -270,9 +270,9 @@ class Settings(MixinMeta):
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
-    @history.command()
+    @history.command(name="time", aliases=["gap"])
     @checks.is_owner()
-    async def time(self, ctx: commands.Context, new_value: int):
+    async def history_time(self, ctx: commands.Context, new_value: int):
         """ Set max time (s) allowed between messages to be used """
         await self.config.guild(ctx.guild).messages_backread_seconds.set(new_value)
         embed = discord.Embed(
