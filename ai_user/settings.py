@@ -157,8 +157,7 @@ class Settings(MixinMeta):
 
         if new_value not in gpt_models:
             return await ctx.send(f"Invalid model. Choose from: {', '.join(gpt_models)}")
-
-        await self.config.guild(ctx.guild).set(new_value)
+        await self.config.guild(ctx.guild).model.set(new_value)
         embed = discord.Embed(
             title="This server's chat model is now set to:",
             description=new_value,
