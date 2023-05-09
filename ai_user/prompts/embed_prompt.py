@@ -5,7 +5,7 @@ from typing import Optional
 from discord import Message
 
 from ai_user.prompts.base import Prompt
-from ai_user.prompts.constants import MAX_MESSAGE_LENGTH
+from ai_user.constants import MAX_MESSAGE_LENGTH
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -17,16 +17,7 @@ class EmbedPrompt(Prompt):
     async def _create_prompt(self, bot_prompt) -> Optional[list[dict[str, str]]]:
         if len(self.message.embeds) == 0 or not self.message.embeds[0].title or not self.message.embeds[0].description:
             logger.debug(
-                f"Skipping unloaded embed in {self.message.guild.name}")
-            return None
-
-        tenor_pattern = r"^https:\/\/tenor\.com\/view\/"
-
-        is_tenor_gif = re.match(tenor_pattern, self.message.embeds[0].url)
-
-        if is_tenor_gif:
-            logger.debug(
-                f"Skipping gif: {self.message.embeds[0].url} in {self.message.guild.name}")
+                f"Skipping unloaded / unsupported embed in {self.message.guild.name}")
             return None
 
         prompt = []

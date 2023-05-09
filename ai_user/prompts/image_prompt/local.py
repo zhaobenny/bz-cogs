@@ -10,8 +10,8 @@ from PIL import Image
 from transformers import (AutoTokenizer, VisionEncoderDecoderModel,
                           ViTImageProcessor)
 
+from ai_user.constants import IMAGE_RESOLUTION
 from ai_user.prompts.image_prompt.base import BaseImagePrompt
-from ai_user.prompts.constants import IMAGE_RESOLUTION
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -33,7 +33,7 @@ class LocalImagePrompt(BaseImagePrompt):
         scanned_text = await self._extract_text_from_image(image)
         if scanned_text and len(scanned_text.split()) > 10:
             prompt = [
-                {"role": "system", "content": f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is it what its text says:"},
+                {"role": "system", "content": f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is what its text says:"},
                 {"role": "user", "content": scanned_text},
             ]
         else:

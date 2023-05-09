@@ -1,8 +1,10 @@
 import logging
 from typing import Optional
+
 from discord import Message
+
 from ai_user.prompts.base import Prompt
-from ai_user.prompts.constants import MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH
+from ai_user.constants import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -41,7 +43,7 @@ class TextPrompt(Prompt):
                 "content": f"You are {self.bot.name}. {bot_prompt}"},
         )
 
-        if self.message.reference and not Prompt.is_id_in_messages(self.message.reference.message_id, prompt):
+        if self.message.reference and not self.is_id_in_messages(self.message.reference.message_id, prompt):
             try:
                 replied = await self.message.channel.fetch_message(self.message.reference.message_id)
                 formattted_replied = self._format_message(replied)
