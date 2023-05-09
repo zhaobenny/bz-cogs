@@ -31,7 +31,7 @@ class Prompt:
         full_prompt = await self._create_prompt(bot_prompt)
         if full_prompt is None:
             return None
-        self.remove_id_field_in_prompt(full_prompt)
+        # self.remove_id_field_in_prompt(full_prompt)
         return full_prompt
 
     async def _get_previous_history(self):

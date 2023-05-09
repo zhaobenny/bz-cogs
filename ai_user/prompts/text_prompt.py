@@ -4,7 +4,13 @@ from typing import Optional
 from discord import Message
 
 from ai_user.prompts.base import Prompt
+from ai_user.prompts.common.messages_item import MessagesItem
+from ai_user.prompts.common.messages_system_item import MessagesSystemItem
+from ai_user.prompts.common.messages_list import MessagesList
 from ai_user.constants import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
+from ai_user.prompts.common.messages_item import MessagesItem
+from ai_user.prompts.common.messages_system_item import MessagesSystemItem
+from ai_user.prompts.common.messages_list import MessagesList
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -35,22 +41,18 @@ class TextPrompt(Prompt):
         if not self._is_acceptable_message(self.message):
             return None
 
-        prompt = []
-        prompt.extend(await self._get_previous_history())
+        messages = MessagesList()
+        # prompt.extend(await self._get_previous_history())
 
-        prompt.append(
-            {"role": "system",
-                "content": f"You are {self.bot.name}. {bot_prompt}"},
-        )
+        messages.append(MessagesSystemItem(content=f"You are {self.bot.name}. {bot_prompt}"))
 
-        if self.message.reference and not self.is_id_in_messages(self.message.reference.message_id, prompt):
+        if self.message.reference and not messages.is_id_in_messages(self.message.reference.message_id):
             try:
                 replied = await self.message.channel.fetch_message(self.message.reference.message_id)
-                formattted_replied = self._format_message(replied)
-                prompt.append(formattted_replied)
+                messages.append(replied)
             except:
                 pass
 
-        prompt.append(self._format_message(self.message))
+        messages.append(MessagesItem(message=self.message, bot=self.bot))
 
-        return prompt
+        return messages
