@@ -11,7 +11,7 @@ from transformers import (AutoTokenizer, VisionEncoderDecoderModel,
                           ViTImageProcessor)
 
 from ai_user.constants import IMAGE_RESOLUTION
-from ai_user.prompts.image_prompt.base import BaseImagePrompt
+from ai_user.prompts.image.base import BaseImagePrompt
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 

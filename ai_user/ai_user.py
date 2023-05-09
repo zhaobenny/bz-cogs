@@ -12,7 +12,7 @@ from redbot.core.bot import Red
 from ai_user.abc import CompositeMetaClass
 from ai_user.constants import AI_HORDE_MODE, DEFAULT_REPLY_PERCENT, IMAGE_RESOLUTION, MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
 from ai_user.prompts.embed_prompt import EmbedPrompt
-from ai_user.prompts.image_prompt.ai_horde import AIHordeImagePrompt
+from ai_user.prompts.image.ai_horde import AIHordeImagePrompt
 from ai_user.prompts.text_prompt import TextPrompt
 from ai_user.response.response import generate_response
 from ai_user.settings import Settings
@@ -185,7 +185,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         if message.attachments and await self.config.guild(message.guild).scan_images():
             if await self.config.guild(message.guild).scan_images_mode() == "local":
                 try:
-                    from ai_user.prompts.image_prompt.local import \
+                    from ai_user.prompts.image.local import \
                         LocalImagePrompt
                     return LocalImagePrompt(message, self.config, start_time)
                 except ImportError:
