@@ -116,7 +116,7 @@ class Settings(MixinMeta):
         elif new_value == AI_HORDE_MODE:
             await self.config.guild(ctx.guild).scan_images_mode.set(AI_HORDE_MODE)
             embed = discord.Embed(title="Scanning Images for this server now set to", description=new_value, color=await ctx.embed_color())
-            if (await self.bot.get_shared_api_tokens(AI_HORDE_MODE)).get("api_key"):
+            if (await self.bot.get_shared_api_tokens('ai-horde')).get("api_key"):
                 key_description = "Key set."
             else:
                 key_description = f"No key set. \n Request will be lower priority.\n  \

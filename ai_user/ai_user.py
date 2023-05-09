@@ -39,7 +39,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
             "reply_to_mentions_replies": False,
             "scan_images": False,
             "scan_images_mode": AI_HORDE_MODE,
-            "max_image_size": 2 * IMAGE_RESOLUTION * IMAGE_RESOLUTION,
+            "max_image_size": 2 * (1024 * 1024),
             "filter_responses": True,
             "model": "gpt-3.5-turbo",
             "custom_text_prompt": None,
