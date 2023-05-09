@@ -103,7 +103,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
 
         if await self.is_bot_mentioned_or_replied(message):
             pass
-        elif random.random() > self.cached_options[message.guild.id].get("reply_percent"):
+        elif random.random() > self.reply_percent.get(message.guild.id, DEFAULT_REPLY_PERCENT):
             return
 
         prompt_instance = await self.create_prompt_instance(message)
