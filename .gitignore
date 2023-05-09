@@ -1,5 +1,6 @@
 .redbot-data/
 .python-version
+audio.wav
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

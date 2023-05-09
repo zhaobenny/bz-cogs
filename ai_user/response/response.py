@@ -9,6 +9,7 @@ from tenacity import (retry, retry_if_exception_type, stop_after_delay,
 
 from ai_user.response.checks import is_moderated_response, is_reply
 from ai_user.response.processing import remove_patterns_from_response
+from ai_user.response.tts import sent_tts_response
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -21,10 +22,11 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 )
 async def generate_openai_response(model, prompt):
     response = await openai.ChatCompletion.acreate(
-        model=model,
-        messages=prompt,
-    )
+         model=model,
+         messages=prompt,
+     )
     response = response["choices"][0]["message"]["content"]
+
     return response
 
 
@@ -54,6 +56,8 @@ async def generate_response(ctx: commands.Context, config: Config, prompt):
         bot_name = message.guild.me.name
         response = remove_patterns_from_response(response, bot_name)
         should_direct_reply = not ctx.interaction and await is_reply(message)
+
+        await sent_tts_response(ctx, response)
 
         if should_direct_reply:
             return await message.reply(response, mention_author=False)
