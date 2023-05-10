@@ -10,15 +10,14 @@ from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
 from ai_user.abc import CompositeMetaClass
-from ai_user.prompts.constants import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
+from ai_user.constants import AI_HORDE_MODE, DEFAULT_REPLY_PERCENT, IMAGE_RESOLUTION, MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
 from ai_user.prompts.embed_prompt import EmbedPrompt
-from ai_user.prompts.image_prompt.ai_horde import AIHordeImagePrompt
+from ai_user.prompts.image.ai_horde import AIHordeImagePrompt
 from ai_user.prompts.text_prompt import TextPrompt
 from ai_user.response.response import generate_response
 from ai_user.settings import Settings
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
-
 
 class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
     """ Utilize OpenAI to reply to messages and images in approved channels. """
@@ -34,13 +33,13 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         self.override_prompt_start_time: dict[int, datetime] = {}
 
         default_guild = {
-            "reply_percent": 0.5,
+            "reply_percent": DEFAULT_REPLY_PERCENT,
             "messages_backread": 10,
             "messages_backread_seconds": 60 * 120,
             "reply_to_mentions_replies": False,
             "scan_images": False,
-            "scan_images_mode": "ai-horde",
-            "max_image_size": 2 * 1024 * 1024,
+            "scan_images_mode": AI_HORDE_MODE,
+            "max_image_size": 2 * (1024 * 1024),
             "filter_responses": True,
             "model": "gpt-3.5-turbo",
             "custom_text_prompt": None,
@@ -105,7 +104,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
 
         if await self.is_bot_mentioned_or_replied(message):
             pass
-        elif random.random() > self.reply_percent.get(message.guild.id, 0.5):
+        elif random.random() > self.reply_percent.get(message.guild.id, DEFAULT_REPLY_PERCENT):
             return
 
         prompt_instance = await self.create_prompt_instance(message)
@@ -126,7 +125,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         if not (time_diff.total_seconds() <= 10):
             return
 
-        if random.random() > self.reply_percent.get(before.guild.id, 0.5):
+        if random.random() > self.reply_percent.get(before.guild.id, DEFAULT_REPLY_PERCENT):
             return
 
         prompt = None
@@ -187,7 +186,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         if message.attachments and await self.config.guild(message.guild).scan_images():
             if await self.config.guild(message.guild).scan_images_mode() == "local":
                 try:
-                    from ai_user.prompts.image_prompt.local import \
+                    from ai_user.prompts.image.local import \
                         LocalImagePrompt
                     return LocalImagePrompt(message, self.config, start_time)
                 except ImportError:

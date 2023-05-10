@@ -9,7 +9,8 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from ai_user.abc import MixinMeta
-from ai_user.prompts.constants import DEFAULT_PROMPT, PRESETS, SCAN_IMAGE_MODES
+from ai_user.prompts.presets import DEFAULT_PROMPT, PRESETS
+from ai_user.constants import AI_HORDE_MODE, LOCAL_MODE, SCAN_IMAGE_MODES
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -90,7 +91,7 @@ class Settings(MixinMeta):
         """ Set method to scan, local or ai-horde (see cog README.md) """
         if new_value not in SCAN_IMAGE_MODES:
             await ctx.send(f"Invalid mode. Choose from: {', '.join(SCAN_IMAGE_MODES)}")
-        elif new_value == "local":
+        elif new_value == LOCAL_MODE:
             try:
                 importlib.import_module("pytesseract")
                 importlib.import_module("torch")
@@ -101,12 +102,12 @@ class Settings(MixinMeta):
                 return await ctx.send(embed=embed)
             except:
                 logger.error("Image processing dependencies import failed. ", exc_info=True)
-                await self.config.guild(ctx.guild).scan_images_mode.set("ai-horde")
+                await self.config.guild(ctx.guild).scan_images_mode.set(AI_HORDE_MODE)
                 return await ctx.send("Local image processing dependencies not available. Please install them (see cog README.md) to use this feature locally.")
-        elif new_value == "ai-horde":
-            await self.config.guild(ctx.guild).scan_images_mode.set("ai-horde")
+        elif new_value == AI_HORDE_MODE:
+            await self.config.guild(ctx.guild).scan_images_mode.set(AI_HORDE_MODE)
             embed = discord.Embed(title="Scanning Images for this server now set to", description=new_value, color=await ctx.embed_color())
-            if (await self.bot.get_shared_api_tokens("ai-horde")).get("api_key"):
+            if (await self.bot.get_shared_api_tokens('ai-horde')).get("api_key"):
                 key_description = "Key set."
             else:
                 key_description = f"No key set. \n Request will be lower priority.\n  \
@@ -147,8 +148,7 @@ class Settings(MixinMeta):
 
         if new_value not in gpt_models:
             return await ctx.send(f"Invalid model. Choose from: {', '.join(gpt_models)}")
-
-        await self.config.guild(ctx.guild).set(new_value)
+        await self.config.guild(ctx.guild).model.set(new_value)
         embed = discord.Embed(
             title="This server's chat model is now set to:",
             description=new_value,

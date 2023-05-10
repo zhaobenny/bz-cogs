@@ -8,7 +8,7 @@ from tenacity import (retry, retry_if_exception_type, stop_after_delay,
                       wait_random_exponential)
 
 from ai_user.response.checks import is_moderated_response, is_reply
-from ai_user.response.processing import remove_template_from_response
+from ai_user.response.processing import remove_patterns_from_response
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -52,10 +52,10 @@ async def generate_response(ctx: commands.Context, config: Config, prompt):
             return await ctx.react_quietly("😶")
 
         bot_name = message.guild.me.name
-        response = remove_template_from_response(response, bot_name)
-        direct_reply = not ctx.interaction and await is_reply(message)
+        response = remove_patterns_from_response(response, bot_name)
+        should_direct_reply = not ctx.interaction and await is_reply(message)
 
-        if direct_reply:
+        if should_direct_reply:
             return await message.reply(response, mention_author=False)
         else:
             return await ctx.send(response)

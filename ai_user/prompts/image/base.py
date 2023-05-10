@@ -5,7 +5,7 @@ from discord import Message
 from PIL import Image
 
 from ai_user.prompts.base import Prompt
-from ai_user.prompts.constants import MAX_MESSAGE_LENGTH
+from ai_user.constants import MAX_MESSAGE_LENGTH
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 

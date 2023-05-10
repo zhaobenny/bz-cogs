@@ -3,7 +3,8 @@ from typing import Dict, Optional
 from discord import Member, Message
 from redbot.core import Config
 
-from ai_user.prompts.constants import DEFAULT_PROMPT, MAX_MESSAGE_LENGTH
+from ai_user.prompts.presets import DEFAULT_PROMPT
+from ai_user.constants import MAX_MESSAGE_LENGTH
 
 
 class Prompt:
@@ -11,11 +12,12 @@ class Prompt:
         self.config: Config = config
         self.bot: Member = message.guild.me
         self.message: Message = message
-        self.start_time: datetime = start_time + timedelta(seconds=1) if start_time else None
+        self.start_time: datetime = start_time + \
+            timedelta(seconds=1) if start_time else None
 
     async def _create_prompt(self, bot_prompt: str) -> Optional[str]:
         raise NotImplementedError(
-            "_create_full_prompt() must be implemented in subclasses")
+            "_create_prompt() must be implemented in subclasses")
 
     async def get_prompt(self) -> Optional[str]:
         """
@@ -42,9 +44,11 @@ class Prompt:
         messages.reverse()
         for i, message in reversed(list(enumerate(messages))):
             if i != 0:
-                time_diff = (message.created_at - messages[i-1].created_at).total_seconds()
+                time_diff = (message.created_at -
+                             messages[i-1].created_at).total_seconds()
             else:
-                time_diff = (messages[0].created_at - self.message.created_at).total_seconds()
+                time_diff = (messages[0].created_at -
+                             self.message.created_at).total_seconds()
 
             if abs(time_diff) > await self.config.guild(self.message.guild).messages_backread_seconds():
                 if i == 0:
@@ -57,15 +61,15 @@ class Prompt:
         for i, message in enumerate(messages):
             if self.is_not_valid_message(message):
                 history.append(
-                    {"role": "system", "content": "A message containing an attachment/image or that was too long was skipped"})
+                    {"role": "system", "content": "A message was skipped"})
                 continue
             if message.reference:
-                await self._handle_historical_reply(history, message)
+                await self._handle_reply_in_history(history, message)
             history.append(self._format_message(message))
 
         return history
 
-    async def _handle_historical_reply(self, history: list, message: Message):
+    async def _handle_reply_in_history(self, history: list, message: Message):
         try:
             replied_message = message.reference.cached_message or await message.channel.fetch_message(message.reference.message_id)
         except:
@@ -85,13 +89,13 @@ class Prompt:
     def _format_message(self, message: Message) -> Dict[str, str]:
         """ Formats a message into a JSON format for OpenAI """
         role = "user" if message.author != self.bot else "assistant"
-        message_content = Prompt._mention_to_text(message)
+        message_content = self._mention_to_text(message)
         content = f'User "{message.author.name}" said: {message_content}' if role == "user" else message_content
         return {"id": message.id, "role": role, "content": content}
 
     @staticmethod
     def is_not_valid_message(message: Message) -> bool:
-        return len(message.attachments) >= 1 or len(message.content.split(" ")) > MAX_MESSAGE_LENGTH
+        return (not message.content) or len(message.attachments) >= 1 or len(message.content.split(" ")) > MAX_MESSAGE_LENGTH
 
     @staticmethod
     def is_id_in_messages(id, messages):
