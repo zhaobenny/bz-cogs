@@ -37,11 +37,6 @@ async def generate_openai_response(model, prompt):
 async def generate_response(ctx: commands.Context, config: Config, prompt : MessagesList):
     message = ctx.message
 
-    messages = prompt.messages
-
-    print(messages)
-    print(messages[1].asdict())
-    print()
 
 
     logger.debug(

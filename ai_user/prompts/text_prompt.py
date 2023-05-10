@@ -5,12 +5,8 @@ from discord import Message
 
 from ai_user.prompts.base import Prompt
 from ai_user.prompts.common.messages_item import MessagesItem
-from ai_user.prompts.common.messages_system_item import MessagesSystemItem
 from ai_user.prompts.common.messages_list import MessagesList
 from ai_user.constants import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
-from ai_user.prompts.common.messages_item import MessagesItem
-from ai_user.prompts.common.messages_system_item import MessagesSystemItem
-from ai_user.prompts.common.messages_list import MessagesList
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -41,10 +37,12 @@ class TextPrompt(Prompt):
         if not self._is_acceptable_message(self.message):
             return None
 
-        messages = MessagesList()
+        messages = MessagesList(self.bot, self.config)
         # prompt.extend(await self._get_previous_history())
 
-        messages.append(MessagesSystemItem(content=f"You are {self.bot.name}. {bot_prompt}"))
+        messages.add_system(f"You are {self.bot.name}. {bot_prompt}")
+
+        messages.add_msg(self.message.content, self.message)
 
         if self.message.reference and not messages.is_id_in_messages(self.message.reference.message_id):
             try:
@@ -52,7 +50,5 @@ class TextPrompt(Prompt):
                 messages.append(replied)
             except:
                 pass
-
-        messages.append(MessagesItem(message=self.message, bot=self.bot))
 
         return messages
