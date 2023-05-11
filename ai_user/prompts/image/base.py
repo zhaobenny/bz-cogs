@@ -1,10 +1,13 @@
 import logging
 from io import BytesIO
+
 from discord import Message
 from PIL import Image
+from redbot.core import Config
 
+from ai_user.common.constants import MAX_MESSAGE_LENGTH
+from ai_user.common.types import ContextOptions
 from ai_user.prompts.base import Prompt
-from ai_user.constants import MAX_MESSAGE_LENGTH
 from ai_user.prompts.common.helpers import format_text_content
 from ai_user.prompts.common.messages_list import MessagesList
 
@@ -12,10 +15,11 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 class BaseImagePrompt(Prompt):
-    def __init__(self, message: Message, config, start_time):
-        super().__init__(message, config, start_time)
+    def __init__(self, message: Message, config: Config, context_options: ContextOptions):
+        super().__init__(message, config, context_options)
+        self.cached_messages = context_options.cached_messages
 
-    async def _create_prompt(self, bot_prompt) -> MessagesList:
+    async def _handle_message(self) -> MessagesList:
         image = self.message.attachments[0] if self.message.attachments else None
 
         if not image or not image.content_type.startswith('image/'):
@@ -27,17 +31,17 @@ class BaseImagePrompt(Prompt):
         image_bytes = BytesIO()
         await image.save(image_bytes)
         image_pillow = Image.open(image_bytes)
-        messages = await self._process_image(image_pillow, bot_prompt)
+        self.messages = await self._process_image(image_pillow)
 
-        if not messages:
+        if not self.messages:
             return None
 
         if self.message.content and not len(self.message.content.split(" ")) > MAX_MESSAGE_LENGTH:
-            await messages.add_msg(format_text_content(self.message), self.message)
+            await self.messages.add_msg(format_text_content(self.message), self.message)
 
-        return messages
+        return self.messages
 
-    async def _process_image(self, image: Image, bot_prompt: str) -> MessagesList:
+    async def _process_image(self, image: Image) -> MessagesList:
         raise NotImplementedError("_process_image() must be implemented in subclasses")
 
     @staticmethod

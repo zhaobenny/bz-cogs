@@ -1,5 +1,6 @@
 import logging
 from dataclasses import asdict, dataclass, field
+from datetime import datetime, timedelta
 from typing import List
 
 import tiktoken
@@ -7,7 +8,8 @@ from discord import Message
 from redbot.core import Config
 from redbot.core.bot import Red
 
-from ai_user.constants import OPENAI_MODEL_TOKEN_LIMIT
+from ai_user.common.constants import OPENAI_MODEL_TOKEN_LIMIT
+from ai_user.common.types import ContextOptions
 from ai_user.prompts.common.helpers import (RoleType, format_embed_content,
                                             format_text_content,
                                             is_embed_valid)
@@ -61,13 +63,15 @@ class MessagesList:
             result.append(asdict(message))
         return result
 
-    async def create_context(self, start_time=None, ignore_regex=None):
+    async def create_context(self, context_options: ContextOptions):
         limit = await self.config.guild(self.initial_message.guild).messages_backread()
         MAX_SECONDS_GAP = await self.config.guild(self.initial_message.guild).messages_backread_seconds()
-        self.ignore_regex = ignore_regex
+        start_time: datetime = context_options.start_time + \
+            timedelta(seconds=1) if context_options.start_time else None
+        self.ignore_regex = context_options.ignore_regex
+        self.cached_messages = context_options.cached_messages
         if not self.model:
             self.model = (await self.config.guild(self.initial_message.guild).model())
-
 
         past_messages = [message async for message in self.initial_message.channel.history(limit=limit,
                                                                                            before=self.initial_message,
@@ -99,10 +103,13 @@ class MessagesList:
             # TODO: handle references
             pass
 
+        print(self.cached_messages)
+
         if len(message.embeds) > 0 and is_embed_valid(message):
             return await self.add_msg(format_embed_content(message), message, prepend=True)
         elif message.content:
             return await self.add_msg(format_text_content(message), message, prepend=True)
+        elif message.id in self.cached_messages:
+            return await self.add_msg(self.cached_messages[message.id], message, prepend=True)
         else:
-            # TODO: handle attachments
             return await self.add_system("Message skipped", prepend=True)

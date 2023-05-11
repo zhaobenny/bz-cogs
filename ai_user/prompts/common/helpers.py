@@ -9,11 +9,11 @@ RoleType = Literal['user', 'assistant', 'system']
 
 
 def format_text_content(message: Message):
-    return f"{message.author.name} said: {message.content}"
+    return f"User \"{message.author.name}\" said: {message.content}"
 
 
 def format_embed_content(message: Message):
-    return f"{message.author.name}: [Embed with title \"{message.embeds[0].title}\" and description \"{message.embeds[0].description}\"]"
+    return f"User \"{message.author.name}\" sent: [Embed with title \"{message.embeds[0].title}\" and description \"{message.embeds[0].description}\"]"
 
 
 def is_embed_valid(message: Message):

@@ -1,23 +1,23 @@
 import logging
 import re
-from typing import Optional
 
 from discord import Message
+from redbot.core import Config
 
+from ai_user.common.constants import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
+from ai_user.common.types import ContextOptions
 from ai_user.prompts.base import Prompt
 from ai_user.prompts.common.helpers import format_text_content
 from ai_user.prompts.common.messages_list import MessagesList
-from ai_user.constants import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 class TextPrompt(Prompt):
-    def __init__(self, message: Message, config, start_time):
-        super().__init__(message, config, start_time)
+    def __init__(self, message: Message, config: Config, context_options: ContextOptions):
+        super().__init__(message, config, context_options)
 
-    @staticmethod
-    def _is_acceptable_message(message: Message) -> bool:
+    def _is_acceptable_message(self, message: Message) -> bool:
         mention_pattern = re.compile(r'^<@!?(\d+)>$')
 
         if not message.content:
@@ -40,24 +40,10 @@ class TextPrompt(Prompt):
 
         return True
 
-    async def _create_prompt(self, bot_prompt) -> Optional[list[dict[str, str]]]:
+    async def _handle_message(self) -> MessagesList:
         if not self._is_acceptable_message(self.message):
             return None
 
-        messages = MessagesList(self.bot, self.config, self.message)
+        await self.messages.add_msg(format_text_content(self.message), self.message)
 
-        await messages.add_system(f"{bot_prompt}")
-
-        if self.message.reference:
-            try:
-                replied = self.message.reference.cached_message or await self.message.channel.fetch_message(self.message.reference.message_id)
-                if self._is_acceptable_message(replied):
-                    await messages.add_msg(format_text_content(replied), replied)
-            except:
-                pass
-
-        await messages.add_msg(format_text_content(self.message), self.message)
-
-        await messages.create_context(self.start_time)
-
-        return messages
+        return self.messages

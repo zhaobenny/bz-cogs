@@ -1,4 +1,3 @@
-from dataclasses import asdict
 import datetime
 import json
 import logging
@@ -24,14 +23,11 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
     reraise=True
 )
 async def generate_openai_response(model, prompt):
-    # response = await openai.ChatCompletion.acreate(
-    #     model=model,
-    #     messages=prompt,
-    # )
-    # response = response["choices"][0]["message"]["content"]
-    # DEBUG PLEASE REMOVE VVV
-    words = ["Apple", "Orange", "Pineapple", "Ice cream"]
-    response = words[random.randint(0, len(words) - 1)] + " - " + str(datetime.datetime.now())
+    response = await openai.ChatCompletion.acreate(
+        model=model,
+        messages=prompt,
+    )
+    response = response["choices"][0]["message"]["content"]
     return response
 
 
@@ -41,8 +37,6 @@ async def generate_response(ctx: commands.Context, config: Config, prompt: Messa
     debug_content = f"\"{message.content}\"" if message.content else ""
     logger.debug(
         f"Replying to message {debug_content} in {message.guild.name} with prompt: \n{json.dumps(prompt.get_messages(), indent=4)}")
-    # DEBUG PLEASE REMOVE
-    print(len(prompt.get_messages()))
 
     model = await config.guild(message.guild).model()
 

@@ -1,20 +1,23 @@
 import asyncio
 import functools
 import logging
-from typing import Callable, Coroutine, Optional
+from typing import Callable, Coroutine
 
 import pytesseract
 import torch
 from discord import Message
 from PIL import Image
+from redbot.core import Config
 from transformers import (AutoTokenizer, VisionEncoderDecoderModel,
                           ViTImageProcessor)
 
-from ai_user.constants import IMAGE_RESOLUTION
+from ai_user.common.constants import IMAGE_RESOLUTION
+from ai_user.common.types import ContextOptions
 from ai_user.prompts.common.messages_list import MessagesList
 from ai_user.prompts.image.base import BaseImagePrompt
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
+
 
 def to_thread(func: Callable) -> Coroutine:
     # https://stackoverflow.com/questions/65881761/discord-gateway-warning-shard-id-none-heartbeat-blocked-for-more-than-10-second
@@ -25,29 +28,28 @@ def to_thread(func: Callable) -> Coroutine:
 
 
 class LocalImagePrompt(BaseImagePrompt):
-    def __init__(self, message: Message, config, start_time):
-        super().__init__(message, config, start_time)
+    def __init__(self, message: Message, config: Config, context_options: ContextOptions):
+        super().__init__(message, config, context_options)
 
-    async def _process_image(self, image: Image, bot_prompt: str) -> Optional[list[dict[str, str]]]:
+    async def _process_image(self, image: Image):
         image = self.scale_image(image, IMAGE_RESOLUTION ** 2)
         scanned_text = await self._extract_text_from_image(image)
 
         messages = MessagesList(self.bot, self.config, self.message)
 
         if scanned_text and len(scanned_text.split()) > 10:
-            messages.add_system(f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is what its text says:")
-            messages.add_msg(f"{self.message.author.name}\": [Image saying \"{scanned_text}\"]", self.message)
+            caption_content = f"{self.message.author.name}\": [Image saying \"{scanned_text}\"]"
         else:
             confidence, caption = await self._create_caption_from_image(image)
             if confidence < 0.45:
-                logger.info(f"Skipping image in {self.message.guild.name}. Low confidence in image caption and text recognition.")
+                logger.info(
+                    f"Skipping image in {self.message.guild.name}. Low confidence in image caption and text recognition.")
                 logger.debug(f"Image was captioned \"{caption}\" with a confidence of {confidence:.2f}")
                 return None
+            caption_content = f"User \"{self.message.author.name}\" sent: [Image: {caption}]"
 
-            await messages.add_system(f"{bot_prompt}")
-            await messages.add_msg(f"{self.message.author.name}: [Image: {caption}]", self.message)
-
-        await messages.create_context(self.start_time)
+        await self.messages.add_msg(caption_content, self.message)
+        self.cached_messages[self.message.id] = caption_content
         return messages
 
     @staticmethod
