@@ -50,8 +50,9 @@ class TextPrompt(Prompt):
 
         if self.message.reference:
             try:
-                replied = await self.message.channel.fetch_message(self.message.reference.message_id)
-                messages.add_msg(replied.content, replied)
+                replied = self.message.reference.cached_message or await self.message.channel.fetch_message(self.message.reference.message_id)
+                if self._is_acceptable_message(replied):
+                    messages.add_msg(format_text_content(replied), replied)
             except:
                 pass
 

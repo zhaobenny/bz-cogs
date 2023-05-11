@@ -5,7 +5,7 @@ from discord import Message
 from ai_user.constants import MAX_MESSAGE_LENGTH
 
 from ai_user.prompts.base import Prompt
-from ai_user.prompts.common.helpers import format_text_content
+from ai_user.prompts.common.helpers import format_embed_content
 from ai_user.prompts.common.messages_list import MessagesList
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
@@ -23,12 +23,9 @@ class EmbedPrompt(Prompt):
 
         messages = MessagesList(self.bot, self.config)
 
-        if self.message.content and not len(self.message.content.split(" ")) > MAX_MESSAGE_LENGTH:
-            messages.add_msg(format_text_content(self.message), self.message)
-
         messages.add_system(f"{bot_prompt}")
 
-        messages.add_msg(f"{self.message.author.name}: [Embed with title \"{self.message.embeds[0].title}\" and description \"{self.message.embeds[0].description}\"]", self.message)
+        messages.add_msg(format_embed_content(self.message), self.message)
 
         await messages.create_context(self.message, self.start_time)
 

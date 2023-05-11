@@ -4,7 +4,7 @@ from typing import List
 from discord import Message
 from redbot.core import Config
 from redbot.core.bot import Red
-from ai_user.prompts.common.helpers import RoleType
+from ai_user.prompts.common.helpers import RoleType, format_embed_content, format_text_content, is_embed_valid
 
 from ai_user.prompts.common.messages_item import MessagesItem
 
@@ -56,9 +56,9 @@ class MessagesList:
 
         for i in range(len(past_messages)-1):
             if await self._valid_time_between_messages(past_messages, i, max_seconds_limit):
-                self.add_msg(past_messages[i].content, past_messages[i], prepend=True)
+                await self._add_contextual_message(past_messages[i])
             else:
-                self.add_msg(past_messages[i].content, past_messages[i], prepend=True)
+                await self._add_contextual_message(past_messages[i])
                 return
 
     async def _valid_time_between_messages(self, past_messages: List[Message], index, max_seconds_limit) -> bool:
@@ -66,3 +66,18 @@ class MessagesList:
         if time_between_messages > max_seconds_limit:
             return False
         return True
+
+    async def _add_contextual_message(self, message : Message):
+        if message.reference:
+            # TODO: handle reference
+            pass
+
+        if len(message.embeds) > 0 and is_embed_valid(message):
+            self.add_msg(format_embed_content(message), message, prepend=True)
+        elif message.content:
+            self.add_msg(format_text_content(message), message, prepend=True)
+        else:
+            self.add_system("Message skipped")
+
+
+
