@@ -23,10 +23,8 @@ class EmbedPrompt(Prompt):
         prompt = []
         prompt.extend(await (self._get_previous_history()))
         prompt.extend([
-            {"role": "system",
-             "content": f"A embed has been sent by {self.message.author.name}. {bot_prompt}"},
-            {"role": "system",
-             "content": f"The embed title is \"{self.message.embeds[0].title}\" and the description is \"{self.message.embeds[0].description}\""},
+            {"role": "system", "content": bot_prompt},
+            {"role": "user", "content": f"{self.message.author.name}: [Embed with title \"{self.message.embeds[0].title}\" and description \"{self.message.embeds[0].description}\"]"},
         ])
 
         if self.message.content and not len(self.message.content.split(" ")) > MAX_MESSAGE_LENGTH:
