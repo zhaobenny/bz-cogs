@@ -38,17 +38,18 @@ class TextPrompt(Prompt):
             return None
 
         messages = MessagesList(self.bot, self.config)
-        # prompt.extend(await self._get_previous_history())
 
         messages.add_system(f"You are {self.bot.name}. {bot_prompt}")
 
-        messages.add_msg(self.message.content, self.message)
-
-        if self.message.reference and not messages.is_id_in_messages(self.message.reference.message_id):
+        if self.message.reference:
             try:
                 replied = await self.message.channel.fetch_message(self.message.reference.message_id)
-                messages.append(replied)
+                messages.add_msg(replied.content, replied)
             except:
                 pass
+
+        messages.add_msg(self.message.content, self.message)
+
+        await messages.create_context(self.message, self.start_time)
 
         return messages

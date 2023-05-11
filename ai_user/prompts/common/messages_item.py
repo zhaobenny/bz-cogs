@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-from typing import Literal
 
-RoleType = Literal['user', 'assistant', 'system']
+from ai_user.prompts.common.helpers import RoleType
 
 @dataclass(frozen=True)
 class MessagesItem:
