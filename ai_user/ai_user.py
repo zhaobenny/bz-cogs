@@ -185,7 +185,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         url_pattern = re.compile(r"(https?://\S+)")
         contains_url = url_pattern.search(message.content)
         if message.attachments and await self.config.guild(message.guild).scan_images():
-            with await ctx.typing():
+            async with ctx.typing():
                 if await self.config.guild(message.guild).scan_images_mode() == "local":
                     try:
                         from ai_user.prompts.image.local import \
