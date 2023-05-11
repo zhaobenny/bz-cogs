@@ -10,6 +10,7 @@ from PIL import Image
 from redbot.core.bot import Red
 
 from ai_user.constants import IMAGE_RESOLUTION
+from ai_user.prompts.common.messages_list import MessagesList
 from ai_user.prompts.image.base import BaseImagePrompt
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
@@ -67,9 +68,12 @@ class AIHordeImagePrompt(BaseImagePrompt):
                 f"Failed scanning image using AI Horde", exc_info=True)
             return None
 
-        prompt = [
-            {"role": "system", "content": f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is its description:"},
-            {"role": "user", "content": caption},
-        ]
+        messages = MessagesList(self.bot, self.config)
 
-        return prompt
+        messages.add_system(f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is its description:")
+        messages.add_msg(f"{self.message.author.name}: [Image: {caption}]", self.message)
+
+        await messages.create_context(self.message, self.start_time)
+
+        return messages
+

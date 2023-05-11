@@ -29,6 +29,7 @@ async def generate_openai_response(model, prompt):
     #     messages=prompt,
     # )
     # response = response["choices"][0]["message"]["content"]
+    # DEBUG PLEASE REMOVE VVV
     words = ["Apple", "Orange", "Pineapple", "Ice cream"]
     response = words[random.randint(0, len(words) - 1)]  + " - " + str(datetime.datetime.now())
     return response
@@ -41,6 +42,9 @@ async def generate_response(ctx: commands.Context, config: Config, prompt : Mess
 
     logger.debug(
         f"Replying to message \"{message.content}\" in {message.guild.name} with prompt: \n{json.dumps(prompt.get_messages(), indent=4)}")
+    # DEBUG PLEASE REMOVE
+    print(len(prompt.get_messages()))
+
     model = await config.guild(message.guild).model()
 
     async with ctx.typing():

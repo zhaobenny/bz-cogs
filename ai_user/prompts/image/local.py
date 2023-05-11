@@ -11,6 +11,7 @@ from transformers import (AutoTokenizer, VisionEncoderDecoderModel,
                           ViTImageProcessor)
 
 from ai_user.constants import IMAGE_RESOLUTION
+from ai_user.prompts.common.messages_list import MessagesList
 from ai_user.prompts.image.base import BaseImagePrompt
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
@@ -28,25 +29,27 @@ class LocalImagePrompt(BaseImagePrompt):
         super().__init__(message, config, start_time)
 
     async def _process_image(self, image: Image, bot_prompt: str) -> Optional[list[dict[str, str]]]:
-        prompt = None
         image = self.scale_image(image, IMAGE_RESOLUTION ** 2)
         scanned_text = await self._extract_text_from_image(image)
+
+        messages = MessagesList(self.bot, self.config)
+
+        await messages.create_context(self.message, self.start_time)
         if scanned_text and len(scanned_text.split()) > 10:
-            prompt = [
-                {"role": "system", "content": f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is what its text says:"},
-                {"role": "user", "content": scanned_text},
-            ]
+            messages.add_system(f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is what its text says:")
+            messages.add_msg(f"{scanned_text}", self.message)
         else:
             confidence, caption = await self._create_caption_from_image(image)
-            if confidence > 0.45:
-                prompt = [
-                    {"role": "system", "content": f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is its description:"},
-                    {"role": "user", "content": caption},
-                ]
-        if not prompt:
-            logger.info(f"Skipping image in {self.message.guild.name}. Low confidence in image caption and text recognition.")
-            logger.debug(f"Image was captioned \"{caption}\" with a confidence of {confidence:.2f}")
-        return prompt
+            if confidence < 0.45:
+                logger.info(f"Skipping image in {self.message.guild.name}. Low confidence in image caption and text recognition.")
+                logger.debug(f"Image was captioned \"{caption}\" with a confidence of {confidence:.2f}")
+                return None
+
+            messages.add_system(f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is its description:")
+            messages.add_msg(f"{self.message.author.name}: [Image: {caption}]", self.message)
+
+        messages.create_context(self.message, self.start_time)
+        return messages
 
     @staticmethod
     @to_thread

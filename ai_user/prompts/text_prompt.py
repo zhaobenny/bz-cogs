@@ -1,10 +1,11 @@
 import logging
+import re
 from typing import Optional
 
 from discord import Message
 
 from ai_user.prompts.base import Prompt
-from ai_user.prompts.common.messages_item import MessagesItem
+from ai_user.prompts.common.helpers import format_text_content
 from ai_user.prompts.common.messages_list import MessagesList
 from ai_user.constants import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
 
@@ -17,8 +18,14 @@ class TextPrompt(Prompt):
 
     @staticmethod
     def _is_acceptable_message(message: Message) -> bool:
+        mention_pattern = re.compile(r'^<@!?(\d+)>$')
+
         if not message.content:
             logger.debug(f"Skipping empty message in {message.guild.name}")
+            return False
+
+        if mention_pattern.match(message.content):
+            logger.debug(f"Skipping singular mention message in {message.guild.name}")
             return False
 
         if len(message.content) < MIN_MESSAGE_LENGTH:
@@ -48,7 +55,7 @@ class TextPrompt(Prompt):
             except:
                 pass
 
-        messages.add_msg(self.message.content, self.message)
+        messages.add_msg(format_text_content(self.message), self.message)
 
         await messages.create_context(self.message, self.start_time)
 

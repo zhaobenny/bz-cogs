@@ -3,9 +3,11 @@ import re
 from typing import Optional
 
 from discord import Message
+from ai_user.constants import MAX_MESSAGE_LENGTH
 
 from ai_user.prompts.base import Prompt
-from ai_user.constants import MAX_MESSAGE_LENGTH
+from ai_user.prompts.common.helpers import format_text_content
+from ai_user.prompts.common.messages_list import MessagesList
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -20,16 +22,15 @@ class EmbedPrompt(Prompt):
                 f"Skipping unloaded / unsupported embed in {self.message.guild.name}")
             return None
 
-        prompt = []
-        prompt.extend(await (self._get_previous_history()))
-        prompt.extend([
-            {"role": "system",
-             "content": f"A embed has been sent by {self.message.author.name}. {bot_prompt}"},
-            {"role": "system",
-             "content": f"The embed title is \"{self.message.embeds[0].title}\" and the description is \"{self.message.embeds[0].description}\""},
-        ])
+        messages = MessagesList(self.bot, self.config)
 
         if self.message.content and not len(self.message.content.split(" ")) > MAX_MESSAGE_LENGTH:
-            prompt[:0] = [self._format_message(self.message)]
+            messages.add_msg(format_text_content(self.message), self.message)
 
-        return prompt
+        messages.add_system(f"You are {self.bot.name}. A embed has been sent by {self.message.author.name}. {bot_prompt}")
+
+        messages.add_msg(f" \"{self.message.embeds[0].title}\" \"{self.message.embeds[0].description}\"", self.message)
+
+        await messages.create_context(self.message, self.start_time)
+
+        return messages

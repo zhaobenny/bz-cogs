@@ -1,11 +1,12 @@
 import logging
 from io import BytesIO
-from typing import Optional
 from discord import Message
 from PIL import Image
 
 from ai_user.prompts.base import Prompt
 from ai_user.constants import MAX_MESSAGE_LENGTH
+from ai_user.prompts.common.helpers import format_text_content
+from ai_user.prompts.common.messages_list import MessagesList
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -14,7 +15,7 @@ class BaseImagePrompt(Prompt):
     def __init__(self, message: Message, config, start_time):
         super().__init__(message, config, start_time)
 
-    async def _create_prompt(self, bot_prompt) -> Optional[list[dict[str, str]]]:
+    async def _create_prompt(self, bot_prompt) -> MessagesList:
         image = self.message.attachments[0] if self.message.attachments else None
 
         if not image or not image.content_type.startswith('image/'):
@@ -26,18 +27,17 @@ class BaseImagePrompt(Prompt):
         image_bytes = BytesIO()
         await image.save(image_bytes)
         image_pillow = Image.open(image_bytes)
-        prompt = await self._process_image(image_pillow, bot_prompt)
+        messages = await self._process_image(image_pillow, bot_prompt)
 
-        if not prompt:
+        if not messages:
             return None
 
         if self.message.content and not len(self.message.content.split(" ")) > MAX_MESSAGE_LENGTH:
-            prompt[:0] = [(self._format_message(self.message))]
+            messages.add_msg(format_text_content(self.message), self.message)
 
-        prompt[:0] = await self._get_previous_history()
-        return prompt
+        return messages
 
-    async def _process_image(self, image: Image, bot_prompt: str) -> Optional[list[dict[str, str]]]:
+    async def _process_image(self, image: Image, bot_prompt: str) -> MessagesList:
         raise NotImplementedError(
             "_process_image() must be implemented in subclasses")
 
