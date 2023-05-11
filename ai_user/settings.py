@@ -35,34 +35,25 @@ class Settings(MixinMeta):
     @ai_user.command(aliases=["settings", "showsettings"])
     async def config(self, ctx: commands.Context):
         """ Returns current config """
+        config = await self.config.guild(ctx.guild).get_raw()
         whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
 
         embed = discord.Embed(title="AI User Settings", color=await ctx.embed_color())
-        embed.add_field(name="Model", inline=True,
-                        value=await self.config.guild(ctx.guild).model())
-        embed.add_field(name="Filter Responses", inline=True,
-                        value=await self.config.guild(ctx.guild).filter_responses())
-        embed.add_field(name="Reply Percent", inline=True,
-                        value=f"{await self.config.guild(ctx.guild).reply_percent() * 100:.2f}%")
-        embed.add_field(name="Scan Images", inline=True,
-                        value=await self.config.guild(ctx.guild).scan_images())
-        embed.add_field(name="Scan Image Mode", inline=True,
-                        value=await self.config.guild(ctx.guild).scan_images_mode())
-        embed.add_field(name="Scan Image Max Size", inline=True,
-                        value=f"{await self.config.guild(ctx.guild).max_image_size() / 1024 / 1024:.2f} MB")
-        embed.add_field(name="Max History Size", inline=True,
-                        value=f"{await self.config.guild(ctx.guild).messages_backread()} messages")
-        embed.add_field(name="Max History Gap", inline=True,
-                        value=f"{await self.config.guild(ctx.guild).messages_backread_seconds()} seconds")
-        embed.add_field(name="Always Reply if Pinged", inline=True,
-                        value=await self.config.guild(ctx.guild).reply_to_mentions_replies())
-        embed.add_field(name="Ignore Regex Pattern", inline=True,
-                        value=await self.config.guild(ctx.guild).ignore_regex())
-        embed.add_field(name="Public Forget Command", inline=True,
-                        value=await self.config.guild(ctx.guild).public_forget())
-        embed.add_field(name="Whitelisted Channels", inline=False,
-                        value=" ".join(channels) if channels else "None")
+
+        embed.add_field(name="Model", inline=True, value=config['model'])
+        embed.add_field(name="Filter Responses", inline=True, value=config['filter_responses'])
+        embed.add_field(name="Reply Percent", inline=True, value=f"{config['reply_percent'] * 100:.2f}%")
+        embed.add_field(name="Scan Images", inline=True, value=config['scan_images'])
+        embed.add_field(name="Scan Image Mode", inline=True, value=config['scan_images_mode'])
+        embed.add_field(name="Scan Image Max Size", inline=True, value=f"{config['max_image_size'] / 1024 / 1024:.2f} MB")
+        embed.add_field(name="Max History Size", inline=True, value=f"{config['messages_backread']} messages")
+        embed.add_field(name="Max History Gap", inline=True, value=f"{config['messages_backread_seconds']} seconds")
+        embed.add_field(name="Always Reply if Pinged", inline=True, value=config['reply_to_mentions_replies'])
+        embed.add_field(name="Ignore Regex Pattern", inline=True, value=f"`{config['ignore_regex']}`")
+        embed.add_field(name="Public Forget Command", inline=True, value=config['public_forget'])
+        embed.add_field(name="Whitelisted Channels", inline=False, value=' '.join(channels) if channels else "None")
+
         return await ctx.send(embed=embed)
 
     @ai_user.group()

@@ -59,11 +59,12 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         self.config.register_channel(**default_channel)
 
     async def cog_load(self):
-        for guild in self.bot.guilds:
-            self.channels_whitelist[guild.id] = await self.config.guild(guild).channels_whitelist()
-            self.reply_percent[guild.id] = await self.config.guild(guild).reply_percent()
-            pattern = await self.config.guild(guild).ignore_regex()
-            self.ignore_regex[guild.id] = re.compile(pattern) if pattern else None
+        all_config = await self.config.all_guilds()
+        for guild_id, config in all_config.items():
+            self.channels_whitelist[guild_id] = config["channels_whitelist"]
+            self.reply_percent[guild_id] = config["reply_percent"]
+            pattern = config["ignore_regex"]
+            self.ignore_regex[guild_id] = re.compile(pattern) if pattern else None
 
     async def red_delete_data_for_user(self, *, requester, user_id: int):
         for guild in self.bot.guilds:
