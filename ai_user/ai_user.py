@@ -84,7 +84,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         if not await self.is_common_valid_reply(ctx):
             return await ctx.send("You're not allowed to use this command here.", ephemeral=True)
 
-        prompt_instance = await self.create_prompt_instance(ctx.message)
+        prompt_instance = await self.create_prompt_instance(ctx)
         prompt = await prompt_instance.get_prompt()
         if prompt is None:
             return await ctx.send("Error: No prompt set.", ephemeral=True)
@@ -107,7 +107,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         elif random.random() > self.reply_percent.get(message.guild.id, DEFAULT_REPLY_PERCENT):
             return
 
-        prompt_instance = await self.create_prompt_instance(message)
+        prompt_instance = await self.create_prompt_instance(ctx)
         prompt = await prompt_instance.get_prompt()
         if prompt is None:
             return
@@ -130,7 +130,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
 
         prompt = None
         if len(before.embeds) != len(after.embeds):
-            prompt_instance = await self.create_prompt_instance(after)
+            prompt_instance = await self.create_prompt_instance(ctx)
             prompt = await prompt_instance.get_prompt()
         if prompt is None:
             return
@@ -179,23 +179,25 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
                 f"OpenAI API key not set for `ai_user`. "
                 f"Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
 
-    async def create_prompt_instance(self, message: discord.Message):
+    async def create_prompt_instance(self, ctx: commands.Context):
+        message = ctx.message
         start_time = self.override_prompt_start_time.get(message.guild.id, None)
         url_pattern = re.compile(r"(https?://\S+)")
         contains_url = url_pattern.search(message.content)
         if message.attachments and await self.config.guild(message.guild).scan_images():
-            if await self.config.guild(message.guild).scan_images_mode() == "local":
-                try:
-                    from ai_user.prompts.image.local import \
-                        LocalImagePrompt
-                    return LocalImagePrompt(message, self.config, start_time)
-                except ImportError:
-                    logger.error(
-                        f"Unable to load image scanning dependencies, disabling image scanning for this server f{message.guild.name}...")
-                    await self.config.guild(message.guild).scan_images.set(False)
-                    raise
-            elif await self.config.guild(message.guild).scan_images_mode() == "ai-horde":
-                return AIHordeImagePrompt(message, self.config, start_time, self.bot)
+            with await ctx.typing():
+                if await self.config.guild(message.guild).scan_images_mode() == "local":
+                    try:
+                        from ai_user.prompts.image.local import \
+                            LocalImagePrompt
+                        return LocalImagePrompt(message, self.config, start_time)
+                    except ImportError:
+                        logger.error(
+                            f"Unable to load image scanning dependencies, disabling image scanning for this server f{message.guild.name}...")
+                        await self.config.guild(message.guild).scan_images.set(False)
+                        raise
+                elif await self.config.guild(message.guild).scan_images_mode() == "ai-horde":
+                    return AIHordeImagePrompt(message, self.config, start_time, self.bot)
         elif contains_url:
             return EmbedPrompt(message, self.config, start_time)
         else:
