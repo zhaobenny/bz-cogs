@@ -31,17 +31,16 @@ async def generate_openai_response(model, prompt):
     # response = response["choices"][0]["message"]["content"]
     # DEBUG PLEASE REMOVE VVV
     words = ["Apple", "Orange", "Pineapple", "Ice cream"]
-    response = words[random.randint(0, len(words) - 1)]  + " - " + str(datetime.datetime.now())
+    response = words[random.randint(0, len(words) - 1)] + " - " + str(datetime.datetime.now())
     return response
 
 
-async def generate_response(ctx: commands.Context, config: Config, prompt : MessagesList):
+async def generate_response(ctx: commands.Context, config: Config, prompt: MessagesList):
     message = ctx.message
 
-
-
+    debug_content = f"\"{message.content}\"" if message.content else ""
     logger.debug(
-        f"Replying to message \"{message.content}\" in {message.guild.name} with prompt: \n{json.dumps(prompt.get_messages(), indent=4)}")
+        f"Replying to message {debug_content} in {message.guild.name} with prompt: \n{json.dumps(prompt.get_messages(), indent=4)}")
     # DEBUG PLEASE REMOVE
     print(len(prompt.get_messages()))
 

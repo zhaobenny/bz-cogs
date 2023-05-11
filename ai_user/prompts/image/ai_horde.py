@@ -72,7 +72,7 @@ class AIHordeImagePrompt(BaseImagePrompt):
         await messages.add_system(f"{bot_prompt}")
         await messages.add_msg(f"{self.message.author.name}: [Image: {caption}]", self.message)
 
-        await messages.create_context(self.message, self.start_time)
+        await messages.create_context(self.start_time)
 
         return messages
 

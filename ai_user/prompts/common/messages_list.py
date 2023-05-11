@@ -24,6 +24,7 @@ class MessagesList:
     messages: list = field(default_factory=list)
     messages_ids: set = field(default_factory=set)
     tokens: int = 0
+    _encoding: tiktoken.Encoding = None
 
     async def add_msg(self, content: str, message: Message, prepend: bool = False):
         if message.id in self.messages_ids:
@@ -44,10 +45,10 @@ class MessagesList:
         await self._add_tokens(content)
 
     async def _add_tokens(self, content):
-        if not self.encoding:
+        if not self._encoding:
             model = (await self.config.guild(self.initial_message.guild).model())
-            self.encoding = tiktoken.encoding_for_model(model)
-        tokens = self.encoding.encode(content, disallowed_special=())
+            self._encoding = tiktoken.encoding_for_model(model)
+        tokens = self._encoding.encode(content, disallowed_special=())
         self.tokens += len(tokens)
 
     def _get_insertion_index(self, prepend: bool) -> int:
@@ -94,9 +95,9 @@ class MessagesList:
             pass
 
         if len(message.embeds) > 0 and is_embed_valid(message):
-            self.add_msg(format_embed_content(message), message, prepend=True)
+            await self.add_msg(format_embed_content(message), message, prepend=True)
         elif message.content:
-            self.add_msg(format_text_content(message), message, prepend=True)
+            await self.add_msg(format_text_content(message), message, prepend=True)
         else:
             # TODO: handle attachments
-            self.add_system("Message skipped")
+            await self.add_system("Message skipped", prepend=True)
