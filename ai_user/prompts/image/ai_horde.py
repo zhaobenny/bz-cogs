@@ -2,14 +2,13 @@ import asyncio
 import base64
 import logging
 import time
+import aiohttp
 from io import BytesIO
 from typing import Optional
-
-import aiohttp
 from PIL import Image
 from redbot.core.bot import Red
 
-from ai_user.constants import IMAGE_RESOLUTION
+from ai_user.constants import IMAGE_RESOLUTION, IMAGE_TIMEOUT
 from ai_user.prompts.common.messages_list import MessagesList
 from ai_user.prompts.image.base import BaseImagePrompt
 
@@ -57,20 +56,20 @@ class AIHordeImagePrompt(BaseImagePrompt):
                         break
 
                     elapsed_time = time.monotonic() - start_time
-                    if elapsed_time > 30:
+                    if elapsed_time > IMAGE_TIMEOUT:
                         raise Exception("Request timed out")
 
                     await asyncio.sleep(1)
 
                 caption = response["forms"][0]["result"]["caption"]
+                logger.info(f"AI Horde image caption result: {caption}")
         except:
-            logger.error(
-                f"Failed scanning image using AI Horde", exc_info=True)
+            logger.error(f"Failed scanning image using AI Horde", exc_info=True)
             return None
 
         messages = MessagesList(self.bot, self.config)
 
-        messages.add_system(f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is its description:")
+        messages.add_system(f"{bot_prompt}")
         messages.add_msg(f"{self.message.author.name}: [Image: {caption}]", self.message)
 
         await messages.create_context(self.message, self.start_time)

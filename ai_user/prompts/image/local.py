@@ -37,7 +37,7 @@ class LocalImagePrompt(BaseImagePrompt):
         await messages.create_context(self.message, self.start_time)
         if scanned_text and len(scanned_text.split()) > 10:
             messages.add_system(f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is what its text says:")
-            messages.add_msg(f"{scanned_text}", self.message)
+            messages.add_msg(f"{self.message.author.name}\": [Image saying \"{scanned_text}\"]"}, self.message)
         else:
             confidence, caption = await self._create_caption_from_image(image)
             if confidence < 0.45:

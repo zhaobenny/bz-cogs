@@ -46,7 +46,7 @@ class TextPrompt(Prompt):
 
         messages = MessagesList(self.bot, self.config)
 
-        messages.add_system(f"You are {self.bot.name}. {bot_prompt}")
+        messages.add_system(f"{bot_prompt}")
 
         if self.message.reference:
             try:

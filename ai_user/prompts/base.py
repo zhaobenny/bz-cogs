@@ -4,8 +4,7 @@ from discord import Member, Message
 from redbot.core import Config
 
 from ai_user.prompts.presets import DEFAULT_PROMPT
-from ai_user.constants import MAX_MESSAGE_LENGTH
-
+from ai_user.constants import MAX_HISTORY_MESSAGE_LENGTH
 
 class Prompt:
     def __init__(self, message: Message, config: Config, start_time: datetime):
@@ -28,6 +27,7 @@ class Prompt:
             or await self.config.channel(self.message.channel).custom_text_prompt() \
             or await self.config.guild(self.message.guild).custom_text_prompt() \
             or DEFAULT_PROMPT
+        bot_prompt = f"You are {self.bot.name}. {bot_prompt}"
         full_prompt = await self._create_prompt(bot_prompt)
         if full_prompt is None:
             return None
@@ -35,4 +35,4 @@ class Prompt:
 
     @staticmethod
     def is_not_valid_message(message: Message) -> bool:
-        return (not message.content) or len(message.attachments) >= 1 or len(message.content.split(" ")) > MAX_MESSAGE_LENGTH
+        return (not message.content) or len(message.attachments) >= 1 or len(message.content.split(" ")) > MAX_HISTORY_MESSAGE_LENGTH

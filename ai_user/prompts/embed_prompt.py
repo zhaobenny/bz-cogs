@@ -1,5 +1,4 @@
 import logging
-import re
 from typing import Optional
 
 from discord import Message
@@ -27,9 +26,9 @@ class EmbedPrompt(Prompt):
         if self.message.content and not len(self.message.content.split(" ")) > MAX_MESSAGE_LENGTH:
             messages.add_msg(format_text_content(self.message), self.message)
 
-        messages.add_system(f"You are {self.bot.name}. A embed has been sent by {self.message.author.name}. {bot_prompt}")
+        messages.add_system(f"{bot_prompt}")
 
-        messages.add_msg(f" \"{self.message.embeds[0].title}\" \"{self.message.embeds[0].description}\"", self.message)
+        messages.add_msg(f"{self.message.author.name}: [Embed with title \"{self.message.embeds[0].title}\" and description \"{self.message.embeds[0].description}\"]", self.message)
 
         await messages.create_context(self.message, self.start_time)
 
