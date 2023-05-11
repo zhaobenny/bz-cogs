@@ -67,10 +67,10 @@ class AIHordeImagePrompt(BaseImagePrompt):
             logger.error(f"Failed scanning image using AI Horde", exc_info=True)
             return None
 
-        messages = MessagesList(self.bot, self.config)
+        messages = MessagesList(self.bot, self.config, self.message)
 
-        messages.add_system(f"{bot_prompt}")
-        messages.add_msg(f"{self.message.author.name}: [Image: {caption}]", self.message)
+        await messages.add_system(f"{bot_prompt}")
+        await messages.add_msg(f"{self.message.author.name}: [Image: {caption}]", self.message)
 
         await messages.create_context(self.message, self.start_time)
 

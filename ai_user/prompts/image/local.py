@@ -32,7 +32,7 @@ class LocalImagePrompt(BaseImagePrompt):
         image = self.scale_image(image, IMAGE_RESOLUTION ** 2)
         scanned_text = await self._extract_text_from_image(image)
 
-        messages = MessagesList(self.bot, self.config)
+        messages = MessagesList(self.bot, self.config, self.message)
 
         if scanned_text and len(scanned_text.split()) > 10:
             messages.add_system(f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is what its text says:")
@@ -44,8 +44,8 @@ class LocalImagePrompt(BaseImagePrompt):
                 logger.debug(f"Image was captioned \"{caption}\" with a confidence of {confidence:.2f}")
                 return None
 
-            messages.add_system(f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is its description:")
-            messages.add_msg(f"{self.message.author.name}: [Image: {caption}]", self.message)
+            await messages.add_system(f"{bot_prompt}")
+            await messages.add_msg(f"{self.message.author.name}: [Image: {caption}]", self.message)
 
         await messages.create_context(self.message, self.start_time)
         return messages

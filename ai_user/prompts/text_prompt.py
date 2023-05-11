@@ -44,7 +44,7 @@ class TextPrompt(Prompt):
         if not self._is_acceptable_message(self.message):
             return None
 
-        messages = MessagesList(self.bot, self.config)
+        messages = MessagesList(self.bot, self.config, self.message)
 
         messages.add_system(f"{bot_prompt}")
 
@@ -52,12 +52,12 @@ class TextPrompt(Prompt):
             try:
                 replied = self.message.reference.cached_message or await self.message.channel.fetch_message(self.message.reference.message_id)
                 if self._is_acceptable_message(replied):
-                    messages.add_msg(format_text_content(replied), replied)
+                    await messages.add_msg(format_text_content(replied), replied)
             except:
                 pass
 
-        messages.add_msg(format_text_content(self.message), self.message)
+        await messages.add_msg(format_text_content(self.message), self.message)
 
-        await messages.create_context(self.message, self.start_time)
+        await messages.create_context(self.start_time)
 
         return messages

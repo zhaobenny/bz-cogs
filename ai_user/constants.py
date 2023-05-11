@@ -1,6 +1,14 @@
 LOCAL_MODE = "local"
 AI_HORDE_MODE = "ai-horde"
 SCAN_IMAGE_MODES = [LOCAL_MODE, AI_HORDE_MODE]
+OPENAI_MODEL_TOKEN_LIMIT = {
+    "gpt-4": 7000,
+    "gpt-4-0314": 7000,
+    "gpt-4-32k": 31000,
+    "gpt-4-32k-0314": 31000,
+    "gpt-3.5-turbo": 3000,
+    "gpt-3.5-turbo-0301": 3000,
+}
 DEFAULT_REPLY_PERCENT = 0.5
 MIN_MESSAGE_LENGTH = 5
 MAX_MESSAGE_LENGTH = 300

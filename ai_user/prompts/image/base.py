@@ -33,13 +33,12 @@ class BaseImagePrompt(Prompt):
             return None
 
         if self.message.content and not len(self.message.content.split(" ")) > MAX_MESSAGE_LENGTH:
-            messages.add_msg(format_text_content(self.message), self.message)
+            await messages.add_msg(format_text_content(self.message), self.message)
 
         return messages
 
     async def _process_image(self, image: Image, bot_prompt: str) -> MessagesList:
-        raise NotImplementedError(
-            "_process_image() must be implemented in subclasses")
+        raise NotImplementedError("_process_image() must be implemented in subclasses")
 
     @staticmethod
     def scale_image(image: Image, target_resolution: int) -> Image:

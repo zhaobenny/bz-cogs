@@ -2,7 +2,6 @@ import logging
 from typing import Optional
 
 from discord import Message
-from ai_user.constants import MAX_MESSAGE_LENGTH
 
 from ai_user.prompts.base import Prompt
 from ai_user.prompts.common.helpers import format_embed_content
@@ -21,11 +20,11 @@ class EmbedPrompt(Prompt):
                 f"Skipping unloaded / unsupported embed in {self.message.guild.name}")
             return None
 
-        messages = MessagesList(self.bot, self.config)
+        messages = MessagesList(self.bot, self.config, self.message)
 
-        messages.add_system(f"{bot_prompt}")
+        await messages.add_system(f"{bot_prompt}")
 
-        messages.add_msg(format_embed_content(self.message), self.message)
+        await messages.add_msg(format_embed_content(self.message), self.message)
 
         await messages.create_context(self.message, self.start_time)
 
