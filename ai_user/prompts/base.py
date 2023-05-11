@@ -88,7 +88,7 @@ class Prompt:
         """ Formats a message into a JSON format for OpenAI """
         role = "user" if message.author != self.bot else "assistant"
         message_content = self._mention_to_text(message)
-        content = f'User "{message.author.name}" said: {message_content}' if role == "user" else message_content
+        content = f"{message.author.name}: {message_content}"
         return {"id": message.id, "role": role, "content": content}
 
     @staticmethod
