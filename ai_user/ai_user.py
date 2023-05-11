@@ -10,7 +10,7 @@ from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
 from ai_user.abc import CompositeMetaClass
-from ai_user.constants import AI_HORDE_MODE, DEFAULT_REPLY_PERCENT, IMAGE_RESOLUTION, MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
+from ai_user.constants import AI_HORDE_MODE, DEFAULT_REPLY_PERCENT, MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
 from ai_user.prompts.embed_prompt import EmbedPrompt
 from ai_user.prompts.image.ai_horde import AIHordeImagePrompt
 from ai_user.prompts.text_prompt import TextPrompt

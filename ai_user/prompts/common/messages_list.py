@@ -63,7 +63,7 @@ class MessagesList:
 
     async def create_context(self, start_time=None, ignore_regex=None):
         limit = await self.config.guild(self.initial_message.guild).messages_backread()
-        max_seconds_limit = await self.config.guild(self.initial_message.guild).messages_backread_seconds()
+        MAX_SECONDS_GAP = await self.config.guild(self.initial_message.guild).messages_backread_seconds()
         self.ignore_regex = ignore_regex
         if not self.model:
             self.model = (await self.config.guild(self.initial_message.guild).model())
@@ -74,22 +74,20 @@ class MessagesList:
                                                                                            after=start_time,
                                                                                            oldest_first=False)]
 
-        if abs((past_messages[0].created_at - self.initial_message.created_at).total_seconds()) > max_seconds_limit:
+        if abs((past_messages[0].created_at - self.initial_message.created_at).total_seconds()) > MAX_SECONDS_GAP:
             return
 
         for i in range(len(past_messages)-1):
             if self.tokens > OPENAI_MODEL_TOKEN_LIMIT.get(self.model, 3000):
-                logger.warning(f"{self.tokens} tokens used - nearing limit, stopping context creation")
-                return
-            if await self._valid_time_between_messages(past_messages, i, max_seconds_limit):
+                return logger.warning(f"{self.tokens} tokens used - nearing limit, stopping context creation")
+            if await self._valid_time_between_messages(past_messages, i, MAX_SECONDS_GAP):
                 await self._add_contextual_message(past_messages[i])
             else:
                 await self._add_contextual_message(past_messages[i])
-                return
 
-    async def _valid_time_between_messages(self, past_messages: List[Message], index, max_seconds_limit) -> bool:
+    async def _valid_time_between_messages(self, past_messages: List[Message], index, max_gap) -> bool:
         time_between_messages = abs(past_messages[index].created_at - past_messages[index+1].created_at).total_seconds()
-        if time_between_messages > max_seconds_limit:
+        if time_between_messages > max_gap:
             return False
         return True
 
