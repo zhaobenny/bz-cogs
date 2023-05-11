@@ -42,7 +42,7 @@ async def generate_response(ctx: commands.Context, config: Config, prompt: Messa
 
     async with ctx.typing():
         try:
-            response = await generate_openai_response(model, prompt)
+            response = await generate_openai_response(model, prompt.get_messages())
         except openai.error.RateLimitError as e:
             trys = generate_openai_response.retry.statistics["attempt_number"]
             logger.warning(

@@ -78,7 +78,7 @@ class MessagesList:
                                                                                            after=start_time,
                                                                                            oldest_first=False)]
 
-        if abs((past_messages[0].created_at - self.initial_message.created_at).total_seconds()) > MAX_SECONDS_GAP:
+        if past_messages and abs((past_messages[0].created_at - self.initial_message.created_at).total_seconds()) > MAX_SECONDS_GAP:
             return
 
         for i in range(len(past_messages)-1):
@@ -97,19 +97,21 @@ class MessagesList:
 
     async def _add_contextual_message(self, message: Message):
         if self.ignore_regex and self.ignore_regex.search(message.content):
-            return await self.add_system("Message skipped", prepend=True)
+            return
 
         if message.reference:
             # TODO: handle references
             pass
 
-        print(self.cached_messages)
+        if message.id in self.cached_messages:
+            await self.add_msg(self.cached_messages[message.id], message, prepend=True)
+        elif message.attachments:
+            return await self.add_system("A message was skipped", prepend=True)
 
         if len(message.embeds) > 0 and is_embed_valid(message):
             return await self.add_msg(format_embed_content(message), message, prepend=True)
-        elif message.content:
-            return await self.add_msg(format_text_content(message), message, prepend=True)
-        elif message.id in self.cached_messages:
-            return await self.add_msg(self.cached_messages[message.id], message, prepend=True)
-        else:
-            return await self.add_system("Message skipped", prepend=True)
+
+        if message.content:
+            await self.add_msg(format_text_content(message), message, prepend=True)
+
+

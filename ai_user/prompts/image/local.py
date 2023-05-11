@@ -35,8 +35,6 @@ class LocalImagePrompt(BaseImagePrompt):
         image = self.scale_image(image, IMAGE_RESOLUTION ** 2)
         scanned_text = await self._extract_text_from_image(image)
 
-        messages = MessagesList(self.bot, self.config, self.message)
-
         if scanned_text and len(scanned_text.split()) > 10:
             caption_content = f"{self.message.author.name}\": [Image saying \"{scanned_text}\"]"
         else:
@@ -50,7 +48,7 @@ class LocalImagePrompt(BaseImagePrompt):
 
         await self.messages.add_msg(caption_content, self.message)
         self.cached_messages[self.message.id] = caption_content
-        return messages
+        return self.messages
 
     @staticmethod
     @to_thread
