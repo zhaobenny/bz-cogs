@@ -33,15 +33,15 @@ class LocalImagePrompt(BaseImagePrompt):
         scanned_text = await self._extract_text_from_image(image)
         if scanned_text and len(scanned_text.split()) > 10:
             prompt = [
-                {"role": "system", "content": f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is what its text says:"},
-                {"role": "user", "content": scanned_text},
+                {"role": "system", "content": bot_prompt},
+                {"role": "user", "content": f"{self.message.author.name}\": [Image saying \"{scanned_text}\"]"},
             ]
         else:
             confidence, caption = await self._create_caption_from_image(image)
             if confidence > 0.45:
                 prompt = [
-                    {"role": "system", "content": f"{bot_prompt} \"{self.message.author.name}\" sent an image. Here is its description:"},
-                    {"role": "user", "content": caption},
+                    {"role": "system", "content": bot_prompt},
+                    {"role": "user", "content": f"{self.message.author.name}: [Image: {caption}]"},
                 ]
         if not prompt:
             logger.info(f"Skipping image in {self.message.guild.name}. Low confidence in image caption and text recognition.")

@@ -4,8 +4,7 @@ from discord import Member, Message
 from redbot.core import Config
 
 from ai_user.prompts.presets import DEFAULT_PROMPT
-from ai_user.constants import MAX_MESSAGE_LENGTH
-
+from ai_user.constants import MAX_HISTORY_MESSAGE_LENGTH
 
 class Prompt:
     def __init__(self, message: Message, config: Config, start_time: datetime):
@@ -28,6 +27,7 @@ class Prompt:
             or await self.config.channel(self.message.channel).custom_text_prompt() \
             or await self.config.guild(self.message.guild).custom_text_prompt() \
             or DEFAULT_PROMPT
+        bot_prompt = f"You are {self.bot.name}. {bot_prompt}"
         full_prompt = await self._create_prompt(bot_prompt)
         if full_prompt is None:
             return None
@@ -78,13 +78,11 @@ class Prompt:
             return
         if len(history) > 0 and history[-1].get("id", -1) == replied_message.id:
             return
-        formatted_replied_message = self._format_message(replied_message)
         if not self.is_id_in_messages(replied_message.id, history):
-            history.append(formatted_replied_message)
-        else:
-            # avoid duplicates that will confuse the model
+            message_content = self._mention_to_text(replied_message)
             history.append(
-                {"role": "system", "content": f'The following message is a reply to: User "{replied_message.author.name}" said: {replied_message.content}'})
+                {"role": "system", "content": f'[The following message is a reply to:]\n'
+                                              f'{replied_message.author.name}: {message_content}'})
 
     def _format_message(self, message: Message) -> Dict[str, str]:
         """ Formats a message into a JSON format for OpenAI """
@@ -95,7 +93,7 @@ class Prompt:
 
     @staticmethod
     def is_not_valid_message(message: Message) -> bool:
-        return (not message.content) or len(message.attachments) >= 1 or len(message.content.split(" ")) > MAX_MESSAGE_LENGTH
+        return (not message.content) or len(message.attachments) >= 1 or len(message.content) > MAX_HISTORY_MESSAGE_LENGTH
 
     @staticmethod
     def is_id_in_messages(id, messages):

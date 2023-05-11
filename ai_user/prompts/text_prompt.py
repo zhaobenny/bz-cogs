@@ -37,10 +37,8 @@ class TextPrompt(Prompt):
 
         prompt = []
         prompt.extend(await self._get_previous_history())
-
         prompt.append(
-            {"role": "system",
-                "content": f"You are {self.bot.name}. {bot_prompt}"},
+            {"role": "system", "content": bot_prompt},
         )
 
         if self.message.reference and not self.is_id_in_messages(self.message.reference.message_id, prompt):

@@ -38,8 +38,7 @@ class BaseImagePrompt(Prompt):
         return prompt
 
     async def _process_image(self, image: Image, bot_prompt: str) -> Optional[list[dict[str, str]]]:
-        raise NotImplementedError(
-            "_process_image() must be implemented in subclasses")
+        raise NotImplementedError("_process_image() must be implemented in subclasses")
 
     @staticmethod
     def scale_image(image: Image, target_resolution: int) -> Image:
