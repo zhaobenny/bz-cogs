@@ -25,6 +25,7 @@ class MessagesList:
     messages_ids: set = field(default_factory=set)
     tokens: int = 0
     _encoding: tiktoken.Encoding = None
+    model: str = None
 
     async def add_msg(self, content: str, message: Message, prepend: bool = False):
         if message.id in self.messages_ids:
@@ -46,8 +47,8 @@ class MessagesList:
 
     async def _add_tokens(self, content):
         if not self._encoding:
-            model = (await self.config.guild(self.initial_message.guild).model())
-            self._encoding = tiktoken.encoding_for_model(model)
+            self.model = (await self.config.guild(self.initial_message.guild).model())
+            self._encoding = tiktoken.encoding_for_model(self.model)
         tokens = self._encoding.encode(content, disallowed_special=())
         self.tokens += len(tokens)
 
@@ -60,10 +61,13 @@ class MessagesList:
             result.append(asdict(message))
         return result
 
-    async def create_context(self, start_time=None):
+    async def create_context(self, start_time=None, ignore_regex=None):
         limit = await self.config.guild(self.initial_message.guild).messages_backread()
         max_seconds_limit = await self.config.guild(self.initial_message.guild).messages_backread_seconds()
-        model = await self.config.guild(self.initial_message.guild).model()
+        self.ignore_regex = ignore_regex
+        if not self.model:
+            self.model = (await self.config.guild(self.initial_message.guild).model())
+
 
         past_messages = [message async for message in self.initial_message.channel.history(limit=limit,
                                                                                            before=self.initial_message,
@@ -74,7 +78,7 @@ class MessagesList:
             return
 
         for i in range(len(past_messages)-1):
-            if self.tokens > OPENAI_MODEL_TOKEN_LIMIT.get(model, 3000):
+            if self.tokens > OPENAI_MODEL_TOKEN_LIMIT.get(self.model, 3000):
                 logger.warning(f"{self.tokens} tokens used - nearing limit, stopping context creation")
                 return
             if await self._valid_time_between_messages(past_messages, i, max_seconds_limit):
@@ -90,14 +94,17 @@ class MessagesList:
         return True
 
     async def _add_contextual_message(self, message: Message):
+        if self.ignore_regex and self.ignore_regex.search(message.content):
+            return await self.add_system("Message skipped", prepend=True)
+
         if message.reference:
-            # TODO: handle reference
+            # TODO: handle references
             pass
 
         if len(message.embeds) > 0 and is_embed_valid(message):
-            await self.add_msg(format_embed_content(message), message, prepend=True)
+            return await self.add_msg(format_embed_content(message), message, prepend=True)
         elif message.content:
-            await self.add_msg(format_text_content(message), message, prepend=True)
+            return await self.add_msg(format_text_content(message), message, prepend=True)
         else:
             # TODO: handle attachments
-            await self.add_system("Message skipped", prepend=True)
+            return await self.add_system("Message skipped", prepend=True)
