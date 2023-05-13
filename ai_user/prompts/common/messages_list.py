@@ -1,18 +1,15 @@
 import logging
+import tiktoken
+import re
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
-from typing import List
-
-import tiktoken
-from discord import Message
+from typing import List, Union
+from discord import Message, User, Member
 from redbot.core import Config
-from redbot.core.bot import Red
 
 from ai_user.common.constants import OPENAI_MODEL_TOKEN_LIMIT
 from ai_user.common.types import ContextOptions
-from ai_user.prompts.common.helpers import (RoleType, format_embed_content,
-                                            format_text_content,
-                                            is_embed_valid)
+from ai_user.prompts.common.helpers import RoleType, format_embed_content, format_text_content, is_embed_valid
 from ai_user.prompts.common.messages_item import MessagesItem
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
@@ -20,7 +17,7 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 
 @dataclass()
 class MessagesList:
-    bot: Red
+    bot: Union[User, Member]
     config: Config
     initial_message: Message
     messages: list = field(default_factory=list)
@@ -28,11 +25,14 @@ class MessagesList:
     tokens: int = 0
     _encoding: tiktoken.Encoding = None
     model: str = None
+    ignore_regex: re.Pattern = None,
+    cached_messages = None
 
     async def add_msg(self, content: str, message: Message, prepend: bool = False):
         if message.id in self.messages_ids:
             return
 
+        # noinspection PyTypeChecker
         role: RoleType = "user" if message.author.id != self.bot.id else "assistant"
         messages_item = MessagesItem(role, content)
 
@@ -65,7 +65,7 @@ class MessagesList:
 
     async def create_context(self, context_options: ContextOptions):
         limit = await self.config.guild(self.initial_message.guild).messages_backread()
-        MAX_SECONDS_GAP = await self.config.guild(self.initial_message.guild).messages_backread_seconds()
+        max_seconds_gap = await self.config.guild(self.initial_message.guild).messages_backread_seconds()
         start_time: datetime = context_options.start_time + \
             timedelta(seconds=1) if context_options.start_time else None
         self.ignore_regex = context_options.ignore_regex
@@ -78,18 +78,19 @@ class MessagesList:
                                                                                            after=start_time,
                                                                                            oldest_first=False)]
 
-        if past_messages and abs((past_messages[0].created_at - self.initial_message.created_at).total_seconds()) > MAX_SECONDS_GAP:
+        if past_messages and abs((past_messages[0].created_at - self.initial_message.created_at).total_seconds()) > max_seconds_gap:
             return
 
         for i in range(len(past_messages)-1):
             if self.tokens > OPENAI_MODEL_TOKEN_LIMIT.get(self.model, 3000):
                 return logger.warning(f"{self.tokens} tokens used - nearing limit, stopping context creation")
-            if await self._valid_time_between_messages(past_messages, i, MAX_SECONDS_GAP):
+            if await self._valid_time_between_messages(past_messages, i, max_seconds_gap):
                 await self._add_contextual_message(past_messages[i])
             else:
-                await self._add_contextual_message(past_messages[i])
+                break
 
-    async def _valid_time_between_messages(self, past_messages: List[Message], index, max_gap) -> bool:
+    @staticmethod
+    async def _valid_time_between_messages(past_messages: List[Message], index, max_gap) -> bool:
         time_between_messages = abs(past_messages[index].created_at - past_messages[index+1].created_at).total_seconds()
         if time_between_messages > max_gap:
             return False
@@ -113,5 +114,3 @@ class MessagesList:
 
         if message.content:
             await self.add_msg(format_text_content(message), message, prepend=True)
-
-

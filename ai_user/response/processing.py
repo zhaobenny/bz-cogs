@@ -13,4 +13,3 @@ def remove_patterns_from_response(response: str, bot_name: str) -> str:
         if response.count('"') == 1:
             response = response.replace('"', '')
     return response
-

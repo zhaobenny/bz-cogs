@@ -1,6 +1,6 @@
 import logging
 import re
-
+from typing import Optional
 from discord import Message
 from redbot.core import Config
 
@@ -17,7 +17,8 @@ class TextPrompt(Prompt):
     def __init__(self, message: Message, config: Config, context_options: ContextOptions):
         super().__init__(message, config, context_options)
 
-    def _is_acceptable_message(self, message: Message) -> bool:
+    @staticmethod
+    def _is_acceptable_message(message: Message) -> bool:
         mention_pattern = re.compile(r'^<@!?(\d+)>$')
 
         if not message.content:
@@ -40,7 +41,7 @@ class TextPrompt(Prompt):
 
         return True
 
-    async def _handle_message(self) -> MessagesList:
+    async def _handle_message(self) -> Optional[MessagesList]:
         if not self._is_acceptable_message(self.message):
             return None
 

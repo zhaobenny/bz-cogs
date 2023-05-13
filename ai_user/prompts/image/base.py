@@ -1,6 +1,6 @@
 import logging
 from io import BytesIO
-
+from typing import Optional
 from discord import Message
 from PIL import Image
 from redbot.core import Config
@@ -19,7 +19,7 @@ class BaseImagePrompt(Prompt):
         super().__init__(message, config, context_options)
         self.cached_messages = context_options.cached_messages
 
-    async def _handle_message(self) -> MessagesList:
+    async def _handle_message(self) -> Optional[MessagesList]:
         image = self.message.attachments[0] if self.message.attachments else None
 
         if not image or not image.content_type.startswith('image/'):
@@ -41,7 +41,7 @@ class BaseImagePrompt(Prompt):
 
         return self.messages
 
-    async def _process_image(self, image: Image) -> MessagesList:
+    async def _process_image(self, image: Image) -> Optional[MessagesList]:
         raise NotImplementedError("_process_image() must be implemented in subclasses")
 
     @staticmethod

@@ -1,5 +1,5 @@
 class Cache(dict):
-    def __init__(self, limit : int):
+    def __init__(self, limit: int):
         super().__init__()
         self.limit = limit
         self.keys = []

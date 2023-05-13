@@ -1,5 +1,5 @@
 import logging
-
+from typing import Optional
 from discord import Message
 from redbot.core import Config
 
@@ -15,7 +15,7 @@ class EmbedPrompt(Prompt):
     def __init__(self, message: Message, config: Config, context_options: ContextOptions):
         super().__init__(message, config, context_options)
 
-    async def _handle_message(self) -> MessagesList:
+    async def _handle_message(self) -> Optional[MessagesList]:
         if len(self.message.embeds) == 0 or not self.message.embeds[0].title or not self.message.embeds[0].description:
             logger.debug(
                 f"Skipping unloaded / unsupported embed in {self.message.guild.name}")

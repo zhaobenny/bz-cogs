@@ -1,5 +1,6 @@
 from discord import Member, Message
 from redbot.core import Config
+from typing import Optional
 
 from ai_user.common.constants import MAX_HISTORY_MESSAGE_LENGTH
 from ai_user.common.types import ContextOptions
@@ -9,17 +10,17 @@ from ai_user.prompts.presets import DEFAULT_PROMPT
 
 
 class Prompt:
-    def __init__(self, message: Message, config: Config, context_options : ContextOptions):
+    def __init__(self, message: Message, config: Config, context_options: ContextOptions):
         self.config: Config = config
         self.bot: Member = message.guild.me
         self.message: Message = message
         self.context_options = context_options
+        self.messages: Optional[MessagesList] = None
 
-
-    async def _handle_message(self, messages : MessagesList) -> MessagesList:
+    async def _handle_message(self) -> Optional[MessagesList]:
         raise NotImplementedError("_handle_message() must be implemented in subclasses")
 
-    async def get_list(self) -> MessagesList:
+    async def get_list(self) -> Optional[MessagesList]:
         """
             Returns a list of messages to be used as the prompt for the OpenAI API
         """
@@ -50,4 +51,4 @@ class Prompt:
 
     @staticmethod
     def _is_valid_reply(message: Message) -> bool:
-        return (message.content) and len(message.attachments) < 1 and len(message.content.split(" ")) < MAX_HISTORY_MESSAGE_LENGTH
+        return message.content and len(message.attachments) < 1 and len(message.content.split(" ")) < MAX_HISTORY_MESSAGE_LENGTH
