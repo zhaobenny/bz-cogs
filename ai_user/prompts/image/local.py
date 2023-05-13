@@ -6,12 +6,11 @@ from typing import Callable, Coroutine
 import pytesseract
 from discord import Message
 from PIL import Image
-from transformers import BlipProcessor, BlipForConditionalGeneration
-
+from redbot.core import Config
+from transformers import BlipForConditionalGeneration, BlipProcessor
 
 from ai_user.common.constants import IMAGE_RESOLUTION
 from ai_user.common.types import ContextOptions
-from ai_user.prompts.common.messages_list import MessagesList
 from ai_user.prompts.image.base import BaseImagePrompt
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
@@ -65,4 +64,3 @@ class LocalImagePrompt(BaseImagePrompt):
         caption = (processor.decode(out[0], skip_special_tokens=True))
 
         return caption
-
