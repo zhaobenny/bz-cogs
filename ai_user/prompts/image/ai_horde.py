@@ -2,24 +2,27 @@ import asyncio
 import base64
 import logging
 import time
-import aiohttp
 from io import BytesIO
-from typing import Optional
+
+import aiohttp
+from discord import Message
 from PIL import Image
+from redbot.core import Config
 from redbot.core.bot import Red
 
-from ai_user.constants import IMAGE_RESOLUTION, IMAGE_TIMEOUT
+from ai_user.common.constants import IMAGE_RESOLUTION, IMAGE_TIMEOUT
+from ai_user.common.types import ContextOptions
 from ai_user.prompts.image.base import BaseImagePrompt
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 class AIHordeImagePrompt(BaseImagePrompt):
-    def __init__(self, message, config, start_time, bot: Red):
-        super().__init__(message, config, start_time)
+    def __init__(self, message: Message, config: Config, context_options: ContextOptions, bot: Red):
+        super().__init__(message, config, context_options)
         self.redbot = bot
 
-    async def _process_image(self, image: Image, bot_prompt: str) -> Optional[list[dict[str, str]]]:
+    async def _process_image(self, image: Image):
         apikey = (await self.redbot.get_shared_api_tokens("ai-horde")).get("api_key") or "0000000000"
         image = self.scale_image(image, IMAGE_RESOLUTION ** 2)
         image_bytes = BytesIO()
@@ -66,9 +69,8 @@ class AIHordeImagePrompt(BaseImagePrompt):
             logger.error(f"Failed scanning image using AI Horde", exc_info=True)
             return None
 
-        prompt = [
-            {"role": "system", "content": bot_prompt},
-            {"role": "user", "content": f"{self.message.author.name}: [Image: {caption}]"}
-        ]
+        caption_content = f"User \"{self.message.author.name}\" sent: [Image: {caption}]"
+        await self.messages.add_msg(caption_content, self.message)
+        self.cached_messages[self.message.id] = caption_content
+        return self.messages
 
-        return prompt

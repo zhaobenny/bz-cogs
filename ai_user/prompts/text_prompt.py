@@ -1,22 +1,31 @@
 import logging
-from typing import Optional
+import re
 
 from discord import Message
+from redbot.core import Config
 
+from ai_user.common.constants import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
+from ai_user.common.types import ContextOptions
 from ai_user.prompts.base import Prompt
-from ai_user.constants import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
+from ai_user.prompts.common.helpers import format_text_content
+from ai_user.prompts.common.messages_list import MessagesList
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 class TextPrompt(Prompt):
-    def __init__(self, message: Message, config, start_time):
-        super().__init__(message, config, start_time)
+    def __init__(self, message: Message, config: Config, context_options: ContextOptions):
+        super().__init__(message, config, context_options)
 
-    @staticmethod
-    def _is_acceptable_message(message: Message) -> bool:
+    def _is_acceptable_message(self, message: Message) -> bool:
+        mention_pattern = re.compile(r'^<@!?(\d+)>$')
+
         if not message.content:
             logger.debug(f"Skipping empty message in {message.guild.name}")
+            return False
+
+        if mention_pattern.match(message.content):
+            logger.debug(f"Skipping singular mention message in {message.guild.name}")
             return False
 
         if len(message.content) < MIN_MESSAGE_LENGTH:
@@ -31,24 +40,10 @@ class TextPrompt(Prompt):
 
         return True
 
-    async def _create_prompt(self, bot_prompt) -> Optional[list[dict[str, str]]]:
+    async def _handle_message(self) -> MessagesList:
         if not self._is_acceptable_message(self.message):
             return None
 
-        prompt = []
-        prompt.extend(await self._get_previous_history())
-        prompt.append(
-            {"role": "system", "content": bot_prompt},
-        )
+        await self.messages.add_msg(format_text_content(self.message), self.message)
 
-        if self.message.reference and not self.is_id_in_messages(self.message.reference.message_id, prompt):
-            try:
-                replied = await self.message.channel.fetch_message(self.message.reference.message_id)
-                formattted_replied = self._format_message(replied)
-                prompt.append(formattted_replied)
-            except:
-                pass
-
-        prompt.append(self._format_message(self.message))
-
-        return prompt
+        return self.messages
