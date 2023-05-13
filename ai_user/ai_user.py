@@ -90,7 +90,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
             return await ctx.send("You're not allowed to use this command here.", ephemeral=True)
 
         prompt_instance = await self.create_prompt_instance(ctx)
-        prompt = await prompt_instance.get_prompt()
+        prompt = await prompt_instance.get_list()
         if prompt is None:
             return await ctx.send("Error: No prompt set.", ephemeral=True)
 
