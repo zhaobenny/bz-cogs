@@ -10,7 +10,7 @@ from redbot.core.utils.menus import SimpleMenu
 
 from ai_user.abc import MixinMeta
 from ai_user.prompts.presets import DEFAULT_PROMPT, PRESETS
-from ai_user.constants import AI_HORDE_MODE, LOCAL_MODE, SCAN_IMAGE_MODES
+from ai_user.common.constants import AI_HORDE_MODE, LOCAL_MODE, SCAN_IMAGE_MODES
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 

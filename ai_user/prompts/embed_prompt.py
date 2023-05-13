@@ -1,33 +1,26 @@
 import logging
-import re
-from typing import Optional
 
 from discord import Message
+from redbot.core import Config
 
+from ai_user.common.types import ContextOptions
 from ai_user.prompts.base import Prompt
-from ai_user.constants import MAX_MESSAGE_LENGTH
+from ai_user.prompts.common.helpers import format_embed_content
+from ai_user.prompts.common.messages_list import MessagesList
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 class EmbedPrompt(Prompt):
-    def __init__(self, message: Message, config, start_time):
-        super().__init__(message, config, start_time)
+    def __init__(self, message: Message, config: Config, context_options: ContextOptions):
+        super().__init__(message, config, context_options)
 
-    async def _create_prompt(self, bot_prompt) -> Optional[list[dict[str, str]]]:
+    async def _handle_message(self) -> MessagesList:
         if len(self.message.embeds) == 0 or not self.message.embeds[0].title or not self.message.embeds[0].description:
             logger.debug(
                 f"Skipping unloaded / unsupported embed in {self.message.guild.name}")
             return None
 
-        prompt = []
-        prompt.extend(await (self._get_previous_history()))
-        prompt.extend([
-            {"role": "system", "content": bot_prompt},
-            {"role": "user", "content": f'User "{self.message.author.name}" sent: [Embed with title "{self.message.embeds[0].title}" and description "{self.message.embeds[0].description}"]'},
-        ])
+        await self.messages.add_msg(format_embed_content(self.message), self.message)
 
-        if self.message.content and not len(self.message.content.split(" ")) > MAX_MESSAGE_LENGTH:
-            prompt[:0] = [self._format_message(self.message)]
-
-        return prompt
+        return self.messages

@@ -1,19 +1,20 @@
 import asyncio
 import functools
 import logging
-from typing import Callable, Coroutine, Optional
+from typing import Callable, Coroutine
 
 import pytesseract
-import torch
 from discord import Message
 from PIL import Image
-from transformers import (AutoTokenizer, VisionEncoderDecoderModel,
-                          ViTImageProcessor)
+from redbot.core import Config
+from transformers import BlipForConditionalGeneration, BlipProcessor
 
-from ai_user.constants import IMAGE_RESOLUTION
+from ai_user.common.constants import IMAGE_RESOLUTION
+from ai_user.common.types import ContextOptions
 from ai_user.prompts.image.base import BaseImagePrompt
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
+
 
 def to_thread(func: Callable) -> Coroutine:
     # https://stackoverflow.com/questions/65881761/discord-gateway-warning-shard-id-none-heartbeat-blocked-for-more-than-10-second
@@ -24,29 +25,22 @@ def to_thread(func: Callable) -> Coroutine:
 
 
 class LocalImagePrompt(BaseImagePrompt):
-    def __init__(self, message: Message, config, start_time):
-        super().__init__(message, config, start_time)
+    def __init__(self, message: Message, config: Config, context_options: ContextOptions):
+        super().__init__(message, config, context_options)
 
-    async def _process_image(self, image: Image, bot_prompt: str) -> Optional[list[dict[str, str]]]:
-        prompt = None
+    async def _process_image(self, image: Image):
         image = self.scale_image(image, IMAGE_RESOLUTION ** 2)
         scanned_text = await self._extract_text_from_image(image)
+
         if scanned_text and len(scanned_text.split()) > 10:
-            prompt = [
-                {"role": "system", "content": bot_prompt},
-                {"role": "user", "content": f'User "{self.message.author.name}" sent: [Image saying "{scanned_text}"]'},
-            ]
+            caption_content = f'User "{self.message.author.name}" sent: [Image saying "{scanned_text}"]'
         else:
-            confidence, caption = await self._create_caption_from_image(image)
-            if confidence > 0.45:
-                prompt = [
-                    {"role": "system", "content": bot_prompt},
-                    {"role": "user", "content": f'User "{self.message.author.name}" sent: [Image: {caption}]'},
-                ]
-        if not prompt:
-            logger.info(f"Skipping image in {self.message.guild.name}. Low confidence in image caption and text recognition.")
-            logger.debug(f"Image was captioned \"{caption}\" with a confidence of {confidence:.2f}")
-        return prompt
+            caption = await self._create_caption_from_image(image)
+            caption_content = f'User "{self.message.author.name}" sent: [Image: {caption}]'
+
+        await self.messages.add_msg(caption_content, self.message)
+        self.cached_messages[self.message.id] = caption_content
+        return self.messages
 
     @staticmethod
     @to_thread
@@ -60,34 +54,13 @@ class LocalImagePrompt(BaseImagePrompt):
     @staticmethod
     @to_thread
     def _create_caption_from_image(image: Image.Image):
-        # based off https://huggingface.co/nlpconnect/vit-gpt2-image-captioning/discussions/6
+        processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+        model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
 
-        MODEL_NAME = "nlpconnect/vit-gpt2-image-captioning"
-        max_length = 16  # max token length of the generated caption
-        num_beams = 4  # choices to make at each step
-        gen_kwargs = {"max_length": max_length,
-                      "num_beams": num_beams,
-                      "output_scores": True,
-                      "return_dict_in_generate": True}
+        inputs = processor(image, return_tensors="pt")
 
-        model = VisionEncoderDecoderModel.from_pretrained(MODEL_NAME)
-        feature_extractor = ViTImageProcessor.from_pretrained(MODEL_NAME)
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-        device = torch.device("cpu")
-        model.to(device)
+        out = model.generate(**inputs)
 
-        if image.mode != "RGB":
-            image = image.convert(mode="RGB")
+        caption = (processor.decode(out[0], skip_special_tokens=True))
 
-        pixel_values = feature_extractor(
-            images=[image], return_tensors="pt").pixel_values
-        pixel_values = pixel_values.to(device)
-
-        output_ids = model.generate(pixel_values, **gen_kwargs)
-
-        prob = float(torch.exp(output_ids.sequences_scores)[0])
-        preds = tokenizer.batch_decode(
-            output_ids.sequences, skip_special_tokens=True)
-        pred = preds[0].strip()
-
-        return prob, pred
+        return caption

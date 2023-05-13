@@ -10,7 +10,10 @@ from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
 from ai_user.abc import CompositeMetaClass
-from ai_user.constants import AI_HORDE_MODE, DEFAULT_REPLY_PERCENT, IMAGE_RESOLUTION, MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
+from ai_user.common.cache import Cache
+from ai_user.common.constants import AI_HORDE_MODE, DEFAULT_REPLY_PERCENT, MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
+from ai_user.common.types import ContextOptions
+from ai_user.prompts.common.messages_item import MessagesItem
 from ai_user.prompts.embed_prompt import EmbedPrompt
 from ai_user.prompts.image.ai_horde import AIHordeImagePrompt
 from ai_user.prompts.text_prompt import TextPrompt
@@ -18,6 +21,7 @@ from ai_user.response.response import generate_response
 from ai_user.settings import Settings
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
+
 
 class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
     """ Utilize OpenAI to reply to messages and images in approved channels. """
@@ -31,6 +35,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         self.reply_percent: dict[int, float] = {}
         self.ignore_regex: dict[int, re.Pattern] = {}
         self.override_prompt_start_time: dict[int, datetime] = {}
+        self.cached_messages: Cache[int, MessagesItem] = Cache(limit=50)
 
         default_guild = {
             "reply_percent": DEFAULT_REPLY_PERCENT,
@@ -85,7 +90,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
             return await ctx.send("You're not allowed to use this command here.", ephemeral=True)
 
         prompt_instance = await self.create_prompt_instance(ctx)
-        prompt = await prompt_instance.get_prompt()
+        prompt = await prompt_instance.get_list()
         if prompt is None:
             return await ctx.send("Error: No prompt set.", ephemeral=True)
 
@@ -108,7 +113,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
             return
 
         prompt_instance = await self.create_prompt_instance(ctx)
-        prompt = await prompt_instance.get_prompt()
+        prompt = await prompt_instance.get_list()
         if prompt is None:
             return
 
@@ -131,7 +136,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         prompt = None
         if len(before.embeds) != len(after.embeds):
             prompt_instance = await self.create_prompt_instance(ctx)
-            prompt = await prompt_instance.get_prompt()
+            prompt = await prompt_instance.get_list()
         if prompt is None:
             return
 
@@ -142,7 +147,8 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         if not ctx.guild or ctx.author.bot or not self.channels_whitelist.get(ctx.guild.id, []):
             return False
         if not ctx.interaction and (
-            isinstance(ctx.channel, discord.Thread) and ctx.channel.parent.id not in self.channels_whitelist[ctx.guild.id]
+            isinstance(
+                ctx.channel, discord.Thread) and ctx.channel.parent.id not in self.channels_whitelist[ctx.guild.id]
             or ctx.channel.id not in self.channels_whitelist[ctx.guild.id]
         ):
             return False
@@ -181,24 +187,26 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
 
     async def create_prompt_instance(self, ctx: commands.Context):
         message = ctx.message
-        start_time = self.override_prompt_start_time.get(message.guild.id, None)
+        start_time = self.override_prompt_start_time.get(ctx.guild.id, None)
         url_pattern = re.compile(r"(https?://\S+)")
         contains_url = url_pattern.search(message.content)
+        extra_config = ContextOptions(
+            start_time=start_time, ignore_regex=self.ignore_regex[ctx.guild.id], cached_messages=self.cached_messages)
         if message.attachments and await self.config.guild(message.guild).scan_images():
             async with ctx.typing():
                 if await self.config.guild(message.guild).scan_images_mode() == "local":
                     try:
                         from ai_user.prompts.image.local import \
                             LocalImagePrompt
-                        return LocalImagePrompt(message, self.config, start_time)
+                        return LocalImagePrompt(message, self.config, extra_config)
                     except ImportError:
                         logger.error(
                             f"Unable to load image scanning dependencies, disabling image scanning for this server f{message.guild.name}...")
                         await self.config.guild(message.guild).scan_images.set(False)
                         raise
                 elif await self.config.guild(message.guild).scan_images_mode() == "ai-horde":
-                    return AIHordeImagePrompt(message, self.config, start_time, self.bot)
+                    return AIHordeImagePrompt(message, self.config, extra_config, self.bot)
         elif contains_url:
-            return EmbedPrompt(message, self.config, start_time)
+            return EmbedPrompt(message, self.config, extra_config)
         else:
-            return TextPrompt(message, self.config, start_time)
+            return TextPrompt(message, self.config, extra_config)

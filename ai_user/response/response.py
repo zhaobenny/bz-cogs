@@ -1,11 +1,14 @@
+import datetime
 import json
 import logging
+import random
 
 import openai
 import openai.error
 from redbot.core import commands, Config
 from tenacity import (retry, retry_if_exception_type, stop_after_delay,
                       wait_random_exponential)
+from ai_user.prompts.common.messages_list import MessagesList
 
 from ai_user.response.checks import is_moderated_response, is_reply
 from ai_user.response.processing import remove_patterns_from_response
@@ -28,15 +31,18 @@ async def generate_openai_response(model, prompt):
     return response
 
 
-async def generate_response(ctx: commands.Context, config: Config, prompt):
+async def generate_response(ctx: commands.Context, config: Config, prompt: MessagesList):
     message = ctx.message
+
+    debug_content = f"\"{message.content}\"" if message.content else ""
     logger.debug(
-        f"Replying to message \"{message.content}\" in {message.guild.name} with prompt: \n{json.dumps(prompt, indent=4)}")
+        f"Replying to message {debug_content} in {message.guild.name} with prompt: \n{json.dumps(prompt.get_messages(), indent=4)}")
+
     model = await config.guild(message.guild).model()
 
     async with ctx.typing():
         try:
-            response = await generate_openai_response(model, prompt)
+            response = await generate_openai_response(model, prompt.get_messages())
         except openai.error.RateLimitError as e:
             trys = generate_openai_response.retry.statistics["attempt_number"]
             logger.warning(
