@@ -68,7 +68,7 @@ class AIHordeImagePrompt(BaseImagePrompt):
 
         prompt = [
             {"role": "system", "content": bot_prompt},
-            {"role": "user", "content": f"{self.message.author.name}: [Image: {caption}]"}
+            {"role": "user", "content": f'User "{self.message.author.name}" sent: [Image: {caption}]'}
         ]
 
         return prompt
