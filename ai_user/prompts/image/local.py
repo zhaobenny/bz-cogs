@@ -4,12 +4,10 @@ import logging
 from typing import Callable, Coroutine
 
 import pytesseract
-import torch
 from discord import Message
 from PIL import Image
-from redbot.core import Config
-from transformers import (AutoTokenizer, VisionEncoderDecoderModel,
-                          ViTImageProcessor)
+from transformers import BlipProcessor, BlipForConditionalGeneration
+
 
 from ai_user.common.constants import IMAGE_RESOLUTION
 from ai_user.common.types import ContextOptions
@@ -38,12 +36,7 @@ class LocalImagePrompt(BaseImagePrompt):
         if scanned_text and len(scanned_text.split()) > 10:
             caption_content = f"{self.message.author.name}\": [Image saying \"{scanned_text}\"]"
         else:
-            confidence, caption = await self._create_caption_from_image(image)
-            if confidence < 0.45:
-                logger.info(
-                    f"Skipping image in {self.message.guild.name}. Low confidence in image caption and text recognition.")
-                logger.debug(f"Image was captioned \"{caption}\" with a confidence of {confidence:.2f}")
-                return None
+            caption = await self._create_caption_from_image(image)
             caption_content = f"User \"{self.message.author.name}\" sent: [Image: {caption}]"
 
         await self.messages.add_msg(caption_content, self.message)
@@ -62,34 +55,14 @@ class LocalImagePrompt(BaseImagePrompt):
     @staticmethod
     @to_thread
     def _create_caption_from_image(image: Image.Image):
-        # based off https://huggingface.co/nlpconnect/vit-gpt2-image-captioning/discussions/6
+        processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+        model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
 
-        MODEL_NAME = "nlpconnect/vit-gpt2-image-captioning"
-        max_length = 16  # max token length of the generated caption
-        num_beams = 4  # choices to make at each step
-        gen_kwargs = {"max_length": max_length,
-                      "num_beams": num_beams,
-                      "output_scores": True,
-                      "return_dict_in_generate": True}
+        inputs = processor(image, return_tensors="pt")
 
-        model = VisionEncoderDecoderModel.from_pretrained(MODEL_NAME)
-        feature_extractor = ViTImageProcessor.from_pretrained(MODEL_NAME)
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-        device = torch.device("cpu")
-        model.to(device)
+        out = model.generate(**inputs)
 
-        if image.mode != "RGB":
-            image = image.convert(mode="RGB")
+        caption = (processor.decode(out[0], skip_special_tokens=True))
 
-        pixel_values = feature_extractor(
-            images=[image], return_tensors="pt").pixel_values
-        pixel_values = pixel_values.to(device)
+        return caption
 
-        output_ids = model.generate(pixel_values, **gen_kwargs)
-
-        prob = float(torch.exp(output_ids.sequences_scores)[0])
-        preds = tokenizer.batch_decode(
-            output_ids.sequences, skip_special_tokens=True)
-        pred = preds[0].strip()
-
-        return prob, pred

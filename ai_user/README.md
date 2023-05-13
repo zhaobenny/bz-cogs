@@ -62,7 +62,6 @@ AI Horde is a crowdsourced distributed cluster. Please contribute back if heavil
 1. Images will be uploaded to a third party (a volunteer worker machine)
 2. May be a queue if there are no workers available (faster if you have an [API key](https://stablehorde.net/#:~:text=0%20alchemy%20forms.-,Usage,-First%20Register%20an) and kudos)
 3. No OCR, only image captioning
-4. No confidence levels, so can not ignore bad captions
 
 
 ### Local Image Scanning Mode
