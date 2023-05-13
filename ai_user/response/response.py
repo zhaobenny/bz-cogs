@@ -1,15 +1,11 @@
-import datetime
 import json
 import logging
-import random
-
 import openai
 import openai.error
 from redbot.core import commands, Config
-from tenacity import (retry, retry_if_exception_type, stop_after_delay,
-                      wait_random_exponential)
-from ai_user.prompts.common.messages_list import MessagesList
+from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_random_exponential
 
+from ai_user.prompts.common.messages_list import MessagesList
 from ai_user.response.checks import is_moderated_response, is_reply
 from ai_user.response.processing import remove_patterns_from_response
 
@@ -34,7 +30,7 @@ async def generate_openai_response(model, prompt):
 async def generate_response(ctx: commands.Context, config: Config, prompt: MessagesList):
     message = ctx.message
 
-    debug_content = f"\"{message.content}\"" if message.content else ""
+    debug_content = f'"{message.content}"' if message.content else ""
     logger.debug(
         f"Replying to message {debug_content} in {message.guild.name} with prompt: \n{json.dumps(prompt.get_messages(), indent=4)}")
 
