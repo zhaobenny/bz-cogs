@@ -87,6 +87,7 @@ class MessagesList:
             if await self._valid_time_between_messages(past_messages, i, max_seconds_gap):
                 await self._add_contextual_message(past_messages[i])
             else:
+                await self._add_contextual_message(past_messages[i])
                 break
 
     @staticmethod
