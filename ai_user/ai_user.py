@@ -20,7 +20,7 @@ from ai_user.prompts.embed.youtube import YoutubeLinkPrompt
 from ai_user.prompts.image.ai_horde import AIHordeImagePrompt
 from ai_user.prompts.sticker_prompt import StickerPrompt
 from ai_user.prompts.text_prompt import TextPrompt
-from ai_user.response.response import generate_response
+from ai_user.response.palm.response import generate_response
 from ai_user.settings import Settings
 
 logger = logging.getLogger("red.bz_cogs.ai_user")

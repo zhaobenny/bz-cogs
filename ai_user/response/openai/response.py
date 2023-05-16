@@ -6,8 +6,8 @@ from redbot.core import commands, Config
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_random_exponential
 
 from ai_user.prompts.common.messages_list import MessagesList
-from ai_user.response.checks import is_moderated_response, is_reply
-from ai_user.response.processing import remove_patterns_from_response
+from ai_user.response.common.checks import is_moderated_response, is_reply
+from ai_user.response.common.processing import remove_patterns_from_response
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
