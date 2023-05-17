@@ -11,7 +11,7 @@ from ai_user.prompts.common.messages_list import MessagesList
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
-class EmbedPrompt(Prompt):
+class GenericEmbedPrompt(Prompt):
     def __init__(self, message: Message, config: Config, context_options: ContextOptions):
         super().__init__(message, config, context_options)
 
