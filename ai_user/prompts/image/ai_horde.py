@@ -29,6 +29,8 @@ class AIHordeImagePrompt(BaseImagePrompt):
         image_bytes = BytesIO()
         image.convert('RGB').save(image_bytes, format='webp', exact=True)
         encoded_image = base64.b64encode(image_bytes.getvalue()).decode('utf-8')
+        author = self.message.author.nick or self.message.author.name
+
         payload = {
             "source_image": encoded_image,
             "slow_workers": True,
@@ -70,7 +72,7 @@ class AIHordeImagePrompt(BaseImagePrompt):
             logger.error(f"Failed scanning image using AI Horde", exc_info=True)
             return None
 
-        caption_content = f'User "{self.message.author.name}" sent: [Image: {caption}]'
+        caption_content = f'User "{author}" sent: [Image: {caption}]'
         await self.messages.add_msg(caption_content, self.message, force=True)
         self.cached_messages[self.message.id] = caption_content
         return self.messages

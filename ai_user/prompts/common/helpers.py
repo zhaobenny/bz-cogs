@@ -9,21 +9,24 @@ RoleType = Literal['user', 'assistant', 'system']
 
 
 def format_text_content(message: Message):
-    return f'User "{message.author.name}" said: {message.content}'
+    author = message.author.nick or message.author.name
+    return f'User "{author}" said: {message.content}'
 
 
 def format_embed_content(message: Message):
-    return f'User "{message.author.name}" sent: [Embed with title "{message.embeds[0].title}" and description "{message.embeds[0].description}"]'
+    author = message.author.nick or message.author.name
+    return f'User "{author}" sent: [Embed with title "{message.embeds[0].title}" and description "{message.embeds[0].description}"]'
 
 async def format_sticker_content(message: Message):
+    author = message.author.nick or message.author.name
     try:
         sticker = await message.stickers[0].fetch()
         description = sticker.description or ""
         description_text = f' and description "{description}"' if description else ""
-        return f'User "{message.author.name}" sent: [Sticker with name "{sticker.name}"{description_text}]'
+        return f'User "{author}" sent: [Sticker with name "{sticker.name}"{description_text}]'
     except:
         sticker_name = message.stickers[0].name
-        return f'User "{message.author.name}" sent: [Sticker with name "{sticker_name}"]'
+        return f'User "{author}" sent: [Sticker with name "{sticker_name}"]'
 
 def is_embed_valid(message: Message):
     if not message.embeds[0].title or not message.embeds[0].description:

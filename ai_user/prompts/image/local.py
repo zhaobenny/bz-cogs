@@ -32,12 +32,13 @@ class LocalImagePrompt(BaseImagePrompt):
     async def _process_image(self, image: Image) -> Optional[MessagesList]:
         image = self.scale_image(image, IMAGE_RESOLUTION ** 2)
         scanned_text = await self._extract_text_from_image(image)
+        author = self.message.author.nick or self.message.author.name
 
         if scanned_text and len(scanned_text.split()) > 10:
-            caption_content = f'User "{self.message.author.name}" sent: [Image saying "{scanned_text}"]'
+            caption_content = f'User "{author}" sent: [Image saying "{scanned_text}"]'
         else:
             caption = await self._create_caption_from_image(image)
-            caption_content = f'User "{self.message.author.name}" sent: [Image: {caption}]'
+            caption_content = f'User "{author}" sent: [Image: {caption}]'
 
         await self.messages.add_msg(caption_content, self.message, force=True)
         self.cached_messages[self.message.id] = caption_content

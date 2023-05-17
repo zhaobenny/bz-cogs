@@ -21,6 +21,8 @@ class YoutubeLinkPrompt(Prompt):
 
     async def _handle_message(self) -> Optional[MessagesList]:
         video_id = await self._get_video_id(self.message.content)
+        author = self.message.author.nick or self.message.author.name
+
 
         if not video_id:
             return None
@@ -30,9 +32,9 @@ class YoutubeLinkPrompt(Prompt):
         remaining_message = self.remove_youtube_links(self.message.content)
 
         if remaining_message:
-            await self.messages.add_msg(f'User "{self.message.author.name}" said: {remaining_message}', self.message)
+            await self.messages.add_msg(f'User "{author}" said: {remaining_message}', self.message)
 
-        await self.messages.add_msg(f'User "{self.message.author.name}" sent: [Link to Youtube video with title "{video_title}" and description "{description}" from channel "{channel_title}"]', self.message, force=True)
+        await self.messages.add_msg(f'User "{author}" sent: [Link to Youtube video with title "{video_title}" and description "{description}" from channel "{channel_title}"]', self.message, force=True)
 
         return self.messages
 
