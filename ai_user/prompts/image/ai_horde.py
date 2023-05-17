@@ -52,7 +52,7 @@ class AIHordeImagePrompt(BaseImagePrompt):
                 while True:
                     request = await session.get(f"https://stablehorde.net/api/v2/interrogate/status/{session_id}")
                     if request.status != 200:
-                        raise aiohttp.ClientResponseError(None, (), status=response.status)
+                        raise aiohttp.ClientResponseError(None, (), status=request.status)
 
                     response = await request.json()
                     if response["state"] == "done":
