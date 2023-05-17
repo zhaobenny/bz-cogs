@@ -9,7 +9,7 @@ from redbot.core import Config
 
 from ai_user.common.constants import OPENAI_MODEL_TOKEN_LIMIT
 from ai_user.common.types import ContextOptions
-from ai_user.prompts.common.helpers import RoleType, format_embed_content, format_text_content, is_embed_valid
+from ai_user.prompts.common.helpers import RoleType, format_embed_content, format_sticker_content, format_text_content, is_embed_valid
 from ai_user.prompts.common.messages_item import MessagesItem
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
@@ -104,6 +104,9 @@ class MessagesList:
         if message.reference:
             # TODO: handle references
             pass
+
+        if message.stickers:
+            return await self.add_msg(await format_sticker_content(message), message, prepend=True)
 
         if message.id in self.cached_messages:
             await self.add_msg(self.cached_messages[message.id], message, prepend=True)

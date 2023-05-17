@@ -16,6 +16,7 @@ from ai_user.common.types import ContextOptions
 from ai_user.prompts.common.messages_item import MessagesItem
 from ai_user.prompts.embed_prompt import EmbedPrompt
 from ai_user.prompts.image.ai_horde import AIHordeImagePrompt
+from ai_user.prompts.sticker_prompt import StickerPrompt
 from ai_user.prompts.text_prompt import TextPrompt
 from ai_user.response.response import generate_response
 from ai_user.settings import Settings
@@ -208,5 +209,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
                     return AIHordeImagePrompt(message, self.config, extra_config, self.bot)
         elif contains_url:
             return EmbedPrompt(message, self.config, extra_config)
+        elif message.stickers:
+            return StickerPrompt(message, self.config, extra_config)
         else:
             return TextPrompt(message, self.config, extra_config)
