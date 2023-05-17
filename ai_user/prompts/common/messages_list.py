@@ -28,8 +28,9 @@ class MessagesList:
     ignore_regex: re.Pattern = None,
     cached_messages = None
 
-    async def add_msg(self, content: str, message: Message, prepend: bool = False):
-        if message.id in self.messages_ids:
+    async def add_msg(self, content: str, message: Message, prepend: bool = False, force: bool = False):
+        if message.id in self.messages_ids and not force:
+            logger.debug(f"Skipping duplicate message in {message.guild.name} when creating context")
             return
 
         # noinspection PyTypeChecker
@@ -110,6 +111,8 @@ class MessagesList:
 
         if message.id in self.cached_messages:
             await self.add_msg(self.cached_messages[message.id], message, prepend=True)
+            if message.content:
+                await self.add_msg(format_text_content(message), message, prepend=True, force=True)
         elif message.attachments:
             return await self.add_system("A message was skipped", prepend=True)
 

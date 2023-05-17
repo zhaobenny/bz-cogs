@@ -31,13 +31,14 @@ class BaseImagePrompt(Prompt):
         image_bytes = BytesIO()
         await image.save(image_bytes)
         image_pillow = Image.open(image_bytes)
+
+        if self.message.content and not len(self.message.content.split(" ")) > MAX_MESSAGE_LENGTH:
+            await self.messages.add_msg(format_text_content(self.message), self.message)
+
         self.messages = await self._process_image(image_pillow)
 
         if not self.messages:
             return None
-
-        if self.message.content and not len(self.message.content.split(" ")) > MAX_MESSAGE_LENGTH:
-            await self.messages.add_msg(format_text_content(self.message), self.message)
 
         return self.messages
 

@@ -39,7 +39,7 @@ class LocalImagePrompt(BaseImagePrompt):
             caption = await self._create_caption_from_image(image)
             caption_content = f'User "{self.message.author.name}" sent: [Image: {caption}]'
 
-        await self.messages.add_msg(caption_content, self.message)
+        await self.messages.add_msg(caption_content, self.message, force=True)
         self.cached_messages[self.message.id] = caption_content
         return self.messages
 
