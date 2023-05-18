@@ -1,11 +1,18 @@
 import re
 
-def remove_patterns_from_response(response: str, bot_name: str) -> str:
+from discord import Member
+
+
+def remove_patterns_from_response(response: str, bot_member: Member) -> str:
     patterns = [
-        rf'^(User )?"?{bot_name}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
-        rf'^As "?{bot_name}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
-        rf'^[<({{\[]{bot_name}[>)}}\]]',  # [name], {name}, <name>, (name)
-        rf'^{bot_name}:',
+        rf'^(User )?"?{bot_member.name}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
+        rf'^As "?{bot_member.name}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
+        rf'^[<({{\[]{bot_member.name}[>)}}\]]',  # [name], {name}, <name>, (name)
+        rf'^{bot_member.name}:',
+        rf'^(User )?"?{bot_member.nick}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
+        rf'^As "?{bot_member.nick}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
+        rf'^[<({{\[]{bot_member.nick}[>)}}\]]',  # [name], {name}, <name>, (name)
+        rf'^{bot_member.nick}:',
     ]
     response = response.strip(' "')
     for pattern in patterns:

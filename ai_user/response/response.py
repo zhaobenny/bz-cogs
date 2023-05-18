@@ -53,8 +53,8 @@ async def generate_response(ctx: commands.Context, config: Config, prompt: Messa
         if (await config.guild(ctx.guild).filter_responses()) and is_moderated_response(response, message):
             return await ctx.react_quietly("😶")
 
-        bot_name = message.guild.me.name
-        response = remove_patterns_from_response(response, bot_name)
+        bot_member = message.guild.me
+        response = remove_patterns_from_response(response, bot_member)
         should_direct_reply = not ctx.interaction and await is_reply(message)
 
         if should_direct_reply:
