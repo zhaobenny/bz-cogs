@@ -24,13 +24,7 @@ See custom prompt settings in:
 [p]ai_user prompt
 ```
 
-This option (enabled by default) filters out responses that contains any of the following words: "language model", "openai", "sorry"
-Most responses with these words are pretty generic and bias the model away from the prompt.
-```
-[p]ai_user filter_responses
-```
-
-Enable slash (/chat) command using:
+Optionally, enable slash (/chat) command using:
 ```
 [p]slash enablecog ai_user
 [p]slash sync
@@ -95,6 +89,6 @@ See [here](https://tesseract-ocr.github.io/tessdoc/Installation.html) for instru
 
 First time scanning an image will take longer due to the need to download the pretrained models. (OCR and image captioning models)
 
-(For Docker installs, I also recommend binding  `/config/.cache/huggingface/hub` to a persistent volume to avoid redownloading the models every time the container is restarted)
+(For Docker installs, I also recommend binding  `/config/.cache/huggingface/hub` to a persistent volume to avoid redownloading models every time the container is restarted)
 
 ---
