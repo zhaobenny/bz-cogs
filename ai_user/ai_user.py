@@ -11,7 +11,7 @@ from redbot.core.bot import Red
 
 from ai_user.abc import CompositeMetaClass
 from ai_user.common.cache import Cache
-from ai_user.common.constants import (AI_HORDE_MODE, DEFAULT_REPLY_PERCENT,
+from ai_user.common.constants import (AI_HORDE_MODE, DEFAULT_BLOCKLIST, DEFAULT_REMOVELIST, DEFAULT_REPLY_PERCENT,
                                       MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
 from ai_user.model.openai.response import OpenAI_LLM_Response
 from ai_user.prompt_factory import PromptFactory
@@ -43,12 +43,13 @@ class AI_User(Settings, PromptFactory, commands.Cog, metaclass=CompositeMetaClas
             "scan_images": False,
             "scan_images_mode": AI_HORDE_MODE,
             "max_image_size": 2 * (1024 * 1024),
-            "filter_responses": True,
             "model": "gpt-3.5-turbo",
             "custom_text_prompt": None,
             "channels_whitelist": [],
             "public_forget": False,
             "ignore_regex": None,
+            "blocklist_regexes": DEFAULT_BLOCKLIST,
+            "removelist_regexes": DEFAULT_REMOVELIST,
         }
         default_member = {
             "custom_text_prompt": None,

@@ -1,16 +1,19 @@
 import importlib
 import logging
+import re
+from typing import Optional
+
 import discord
 import openai
 import tiktoken
-import re
-from typing import Optional
 from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from ai_user.abc import MixinMeta
+from ai_user.common.constants import (AI_HORDE_MODE, DEFAULT_BLOCKLIST,
+                                      DEFAULT_REMOVELIST, LOCAL_MODE,
+                                      SCAN_IMAGE_MODES)
 from ai_user.prompts.presets import DEFAULT_PROMPT, PRESETS
-from ai_user.common.constants import AI_HORDE_MODE, LOCAL_MODE, SCAN_IMAGE_MODES
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -46,11 +49,13 @@ class Settings(MixinMeta):
         embed.add_field(name="Reply Percent", inline=True, value=f"{config['reply_percent'] * 100:.2f}%")
         embed.add_field(name="Scan Images", inline=True, value=config['scan_images'])
         embed.add_field(name="Scan Image Mode", inline=True, value=config['scan_images_mode'])
-        embed.add_field(name="Scan Image Max Size", inline=True, value=f"{config['max_image_size'] / 1024 / 1024:.2f} MB")
+        embed.add_field(name="Scan Image Max Size", inline=True,
+                        value=f"{config['max_image_size'] / 1024 / 1024:.2f} MB")
         embed.add_field(name="Max History Size", inline=True, value=f"{config['messages_backread']} messages")
         embed.add_field(name="Max History Gap", inline=True, value=f"{config['messages_backread_seconds']} seconds")
         embed.add_field(name="Always Reply if Pinged", inline=True, value=config['reply_to_mentions_replies'])
-        embed.add_field(name="Ignore Regex Pattern", inline=True, value=f"`{config['ignore_regex']}`")
+        embed.add_field(name="Block Regex list", inline=True, value=f"`{config['blocklist_regexes']}`")
+        embed.add_field(name="Remove Regex list", inline=True, value=f"`{config['removelist_regexes']}`")
         embed.add_field(name="Public Forget Command", inline=True, value=config['public_forget'])
         embed.add_field(name="Whitelisted Channels", inline=False, value=' '.join(channels) if channels else "None")
 
@@ -157,18 +162,6 @@ class Settings(MixinMeta):
 
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def filter_responses(self, ctx: commands.Context):
-        """ Toggles rudimentary filtering of canned replies """
-        value = not await self.config.guild(ctx.guild).filter_responses()
-        await self.config.guild(ctx.guild).filter_responses.set(value)
-        embed = discord.Embed(
-            title="Filtering canned responses for this server now set to:",
-            description=f"{value}",
-            color=await ctx.embed_color())
-        return await ctx.send(embed=embed)
-
-    @ai_user.command()
-    @checks.admin_or_permissions(manage_guild=True)
     async def ignore(self, ctx: commands.Context, *, regex_pattern: Optional[str]):
         """ Messages matching this regex won't be replied to by the AI """
         if not regex_pattern:
@@ -221,9 +214,21 @@ class Settings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @ai_user.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def public_forget(self, ctx: commands.Context):
+        """ Toggles whether anyone can use the forget command, or only moderators """
+        value = not await self.config.guild(ctx.guild).public_forget()
+        await self.config.guild(ctx.guild).public_forget.set(value)
+        embed = discord.Embed(
+            title="Anyone can use the forget command:",
+            description=f"{value}",
+            color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
+
+    @ai_user.command(name="force_reply_to_mentions", aliases=["mentions_replies"])
     @checks.is_owner()
-    async def mentions_replies(self, ctx: commands.Context):
-        """ Toggles bot always replying to mentions/replies """
+    async def force_reply_to_mentions(self, ctx: commands.Context):
+        """ Toggles always replying to mentions/replies """
         value = not await self.config.guild(ctx.guild).reply_to_mentions_replies()
         await self.config.guild(ctx.guild).reply_to_mentions_replies.set(value)
         embed = discord.Embed(
@@ -232,7 +237,122 @@ class Settings(MixinMeta):
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
-    @ai_user.command()
+    @ai_user.group(name="response_regex")
+    @checks.admin_or_permissions(manage_guild=True)
+    async def response_regex(self, _):
+        """ Change settings for regex performed on bot responses """
+        pass
+
+    @response_regex.group(name="blocklist")
+    @checks.admin_or_permissions(manage_guild=True)
+    async def blocklist(self, _):
+        """ Any generated bot messages matching these regex patterns will not sent """
+
+    @blocklist.command(name="add")
+    @checks.admin_or_permissions(manage_guild=True)
+    async def blocklist_add(self, ctx: commands.Context, regex_pattern: str):
+        """Add a regex pattern to the blocklist"""
+        try:
+            re.compile(regex_pattern)
+        except re.error:
+            return await ctx.send("Sorry, but that regex pattern seems to be invalid.")
+
+        blocklist_regexes = await self.config.guild(ctx.guild).blocklist_regexes()
+
+        if regex_pattern not in blocklist_regexes:
+            blocklist_regexes.append(regex_pattern)
+            await self.config.guild(ctx.guild).blocklist_regexes.set(blocklist_regexes)
+            await ctx.send(f"The regex pattern `{regex_pattern}` has been added to the blocklist.")
+        else:
+            await ctx.send(f"The regex pattern `{regex_pattern}` is already in the blocklist.")
+
+    @blocklist.command(name="remove")
+    @checks.admin_or_permissions(manage_guild=True)
+    async def blocklist_remove(self, ctx: commands.Context, regex_pattern: str):
+        """Remove a regex pattern from the blacklist"""
+        blocklist_regexes = await self.config.guild(ctx.guild).blocklist_regexes()
+
+        if regex_pattern in blocklist_regexes:
+            blocklist_regexes.remove(regex_pattern)
+            await self.config.guild(ctx.guild).blocklist_regexes.set(blocklist_regexes)
+            await ctx.send(f"The regex pattern `{regex_pattern}` has been removed from the blocklist.")
+        else:
+            await ctx.send(f"The regex pattern `{regex_pattern}` is not in the blocklist.")
+
+    @blocklist.command(name="show")
+    @checks.admin_or_permissions(manage_guild=True)
+    async def blocklist_show(self, ctx: commands.Context):
+        """Show the current regex patterns in the blocklist"""
+        blocklist_regexes = await self.config.guild(ctx.guild).blocklist_regexes()
+
+        if not blocklist_regexes:
+            await ctx.send("The blocklist is empty.")
+        else:
+            formatted_list = "\n".join(blocklist_regexes)
+            await ctx.send(f"The current regex patterns in the blocklist are:\n```\n{formatted_list}\n```")
+
+    @blocklist.command(name="reset")
+    @checks.admin_or_permissions(manage_guild=True)
+    async def blocklist_reset(self, ctx: commands.Context):
+        """Reset the blocklist to default """
+        await self.config.guild(ctx.guild).blocklist_regexes.set(DEFAULT_BLOCKLIST)
+        await ctx.send("The message blocklist has been reset.")
+
+    @response_regex.group(name="removelist")
+    @checks.admin_or_permissions(manage_guild=True)
+    async def removelist(self, _):
+        """ Any string in generated bot messages matching these regex patterns will be removed """
+
+    @removelist.command(name="add")
+    @checks.admin_or_permissions(manage_guild=True)
+    async def removelist_add(self, ctx: commands.Context, regex_pattern: str):
+        """Add a regex pattern to the removelist"""
+        try:
+            re.compile(regex_pattern)
+        except re.error:
+            return await ctx.send("Sorry, but that regex pattern seems to be invalid.")
+
+        removelist_regexes = await self.config.guild(ctx.guild).removelist_regexes()
+
+        if regex_pattern not in removelist_regexes:
+            removelist_regexes.append(regex_pattern)
+            await self.config.guild(ctx.guild).removelist_regexes.set(removelist_regexes)
+            await ctx.send(f"The regex pattern `{regex_pattern}` has been added to the removelist.")
+        else:
+            await ctx.send(f"The regex pattern `{regex_pattern}` is already in the removelist.")
+
+    @removelist.command(name="remove")
+    @checks.admin_or_permissions(manage_guild=True)
+    async def removelist_remove(self, ctx: commands.Context, regex_pattern: str):
+        """Remove a regex pattern from the removelist"""
+        removelist_regexes = await self.config.guild(ctx.guild).removelist_regexes()
+
+        if regex_pattern in removelist_regexes:
+            removelist_regexes.remove(regex_pattern)
+            await self.config.guild(ctx.guild).removelist_regexes.set(removelist_regexes)
+            await ctx.send(f"The regex pattern `{regex_pattern}` has been removed from the removelist.")
+        else:
+            await ctx.send(f"The regex pattern `{regex_pattern}` is not in the removelist.")
+
+    @removelist.command(name="show")
+    @checks.admin_or_permissions(manage_guild=True)
+    async def removelist_show(self, ctx: commands.Context):
+        """Show the current regex patterns in the removelist"""
+        removelist_regexes = await self.config.guild(ctx.guild).removelist_regexes()
+
+        if not removelist_regexes:
+            await ctx.send("The removelist is empty.")
+        else:
+            formatted_list = "\n".join(removelist_regexes)
+            await ctx.send(f"The current regex patterns in the removelist are:\n```\n{formatted_list}\n```")
+
+    @removelist.command(name="reset")
+    @checks.admin_or_permissions(manage_guild=True)
+    async def removelist_reset(self, ctx: commands.Context):
+        """Reset the removelist to default """
+        await self.config.guild(ctx.guild).removelist_regexes.set(DEFAULT_REMOVELIST)
+        await ctx.send("The message removelist has been reset.")
+
     @checks.admin_or_permissions(manage_guild=True)
     async def public_forget(self, ctx: commands.Context):
         """ Toggles whether anyone can use the forget command, or only moderators """
@@ -438,4 +558,3 @@ class Settings(MixinMeta):
     @staticmethod
     def _truncate_prompt(prompt: str) -> str:
         return prompt[:1900] + "..." if len(prompt) > 1900 else prompt
-

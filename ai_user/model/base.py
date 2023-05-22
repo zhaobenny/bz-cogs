@@ -35,12 +35,10 @@ class Base_LLM_Response():
         if not self.response:
             return
 
-        if (await self.config.guild(self.ctx.guild).filter_responses()) and self.check_if_response_blocked():
-            await self.ctx.react_quietly("😶")
-        self.remove_patterns_from_response()
-        if self.check_blacklist_patterns():
+        await self.remove_patterns_from_response()
+        if await self.check_if_response_blocked():
             logger.debug(
-                f"Filtered out canned response replying to \"{self.ctx.message.content}\" in {self.ctx.message.content}: \n{self.response}")
+                f"Blocked response replying to \"{self.ctx.message.content}\" in {self.ctx.message.guild}: \n{self.response}")
             await self.ctx.react_quietly("😶")
             return
         should_direct_reply = not self.ctx.interaction and await self.is_reply()
@@ -50,8 +48,9 @@ class Base_LLM_Response():
         else:
             return await self.ctx.send(self.response)
 
-    def remove_patterns_from_response(self) -> str:
+    async def remove_patterns_from_response(self) -> str:
         bot_member = self.ctx.message.guild.me
+
         patterns = [
             rf'^(User )?"?{bot_member.name}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
             rf'^As "?{bot_member.name}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
@@ -62,6 +61,7 @@ class Base_LLM_Response():
             rf'^[<({{\[]{bot_member.nick}[>)}}\]]',  # [name], {name}, <name>, (name)
             rf'^{bot_member.nick}:',
         ]
+        patterns += await self.config.guild(self.ctx.guild).removelist_regexes()
         response = self.response.strip(' "')
         for pattern in patterns:
             response = re.sub(pattern, '', response).strip(' \n":')
@@ -69,15 +69,12 @@ class Base_LLM_Response():
                 response = response.replace('"', '')
         self.response = response
 
-    def check_if_response_blocked(self):
-        """ filters out responses that are wooden """
-
+    async def check_if_response_blocked(self):
+        patterns = await self.config.guild(self.ctx.guild).blocklist_regexes()
         response = self.response.lower()
-        filters = ["language model", "openai"]
-
-        if any(match in response for match in filters):
-            return True
-
+        for pattern in patterns:
+            if re.search(pattern, response):
+                return True
         return False
 
     async def is_reply(self):
