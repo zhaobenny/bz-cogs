@@ -50,21 +50,6 @@ class Base_LLM_Response():
         else:
             return await self.ctx.send(self.response)
 
-    async def is_reply(self):
-        message = self.ctx.message
-        time_diff = datetime.now(timezone.utc) - message.created_at
-        if time_diff.total_seconds() > 8:
-            return True
-        if random.random() < 0.25:
-            return True
-        try:
-            last_message = [m async for m in message.channel.history(limit=1)]
-            if last_message[0].author == message.guild.me:
-                return True
-        except:
-            pass
-        return False
-
     def remove_patterns_from_response(self) -> str:
         bot_member = self.ctx.message.guild.me
         patterns = [
@@ -93,4 +78,19 @@ class Base_LLM_Response():
         if any(match in response for match in filters):
             return True
 
+        return False
+
+    async def is_reply(self):
+        message = self.ctx.message
+        time_diff = datetime.now(timezone.utc) - message.created_at
+        if time_diff.total_seconds() > 8:
+            return True
+        if random.random() < 0.25:
+            return True
+        try:
+            last_message = [m async for m in message.channel.history(limit=1)]
+            if last_message[0].author == message.guild.me:
+                return True
+        except:
+            pass
         return False
