@@ -54,21 +54,24 @@ Utilize [AI Horde's](https://stablehorde.net/) Image Alchemy to caption images.
 
 AI Horde is a crowdsourced distributed cluster. Please contribute back if heavily used.
 
-#### Pros vs Local mode
+Compared to local captioning mode:
+#### Pros
 1. No need to manually install dependencies
-2. No need for a powerful x86 CPU
+2. Good x86 CPU not needed
+3. No load on machine, that Redbot is running on
 
-#### Limitations vs Local mode
-1. Images will be uploaded to a third party (a volunteer worker machine)
-2. May be a queue if there are no workers available (faster if you have an [API key](https://stablehorde.net/#:~:text=0%20alchemy%20forms.-,Usage,-First%20Register%20an) and kudos)
+#### Cons
+1. Images will be uploaded to a **third party** (a volunteer worker machine)
+2. May be a queue if there are no workers available (faster if you have an [API key](https://stablehorde.net/register) and [kudos](https://dbzer0.com/blog/the-kudos-based-economy-for-the-koboldai-horde/))
 3. No OCR, only image captioning
 
 
 ### Local Image Scanning Mode
 
-Local image scanning mode will be very CPU intensive. Not recommended for busy servers/channels. First, images will be OCR'ed for text to use. If the OCR is not of significant confidence, it will be captioned instead, and the caption will be used if it is of significant confidence.
+Local image scanning mode will be very CPU intensive. (Not recommended for busy servers/channel)
+First, images will be OCR'ed for text to use. If the OCR is not of significant confidence, it will be captioned instead using [BLIP](https://huggingface.co/Salesforce/blip-image-captioning-base).
 
-See below for instructions on installing the necessary dependencies. (ARM not supported)
+See below for instructions on installing the necessary dependencies. *(x86 only)*
 
 
 #### 1. Install Python Dependencies

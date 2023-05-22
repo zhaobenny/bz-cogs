@@ -8,8 +8,8 @@ from discord import Message, User, Member
 from redbot.core import Config
 
 from ai_user.common.constants import OPENAI_MODEL_TOKEN_LIMIT
-from ai_user.common.types import ContextOptions
-from ai_user.prompts.common.helpers import RoleType, format_embed_content, format_sticker_content, format_text_content, is_embed_valid
+from ai_user.common.types import ContextOptions, RoleType
+from ai_user.prompts.common.helpers import format_embed_content, format_sticker_content, format_text_content, is_embed_valid
 from ai_user.prompts.common.messages_item import MessagesItem
 
 logger = logging.getLogger("red.bz_cogs.ai_user")

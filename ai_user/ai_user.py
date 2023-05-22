@@ -13,20 +13,15 @@ from ai_user.abc import CompositeMetaClass
 from ai_user.common.cache import Cache
 from ai_user.common.constants import (AI_HORDE_MODE, DEFAULT_REPLY_PERCENT,
                                       MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
-from ai_user.common.types import ContextOptions
+from ai_user.model.openai.response import OpenAI_LLM_Response
+from ai_user.prompt_factory import PromptFactory
 from ai_user.prompts.common.messages_item import MessagesItem
-from ai_user.prompts.embed.generic import GenericEmbedPrompt
-from ai_user.prompts.embed.youtube import YoutubeLinkPrompt
-from ai_user.prompts.image.ai_horde import AIHordeImagePrompt
-from ai_user.prompts.sticker_prompt import StickerPrompt
-from ai_user.prompts.text_prompt import TextPrompt
-from ai_user.response.palm.response import generate_response
 from ai_user.settings import Settings
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
-class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
+class AI_User(Settings, PromptFactory, commands.Cog, metaclass=CompositeMetaClass):
     """ Utilize OpenAI to reply to messages and images in approved channels. """
 
     def __init__(self, bot):
@@ -97,7 +92,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         if prompt is None:
             return await ctx.send("Error: No prompt set.", ephemeral=True)
 
-        await generate_response(ctx, self.config, prompt)
+        await OpenAI_LLM_Response(ctx, self.config, prompt).sent_response()
 
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, api_tokens):
@@ -120,7 +115,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         if prompt is None:
             return
 
-        return await generate_response(ctx, self.config, prompt)
+        await OpenAI_LLM_Response(ctx, self.config, prompt).sent_response()
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
@@ -136,7 +131,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         if random.random() > self.reply_percent.get(before.guild.id, DEFAULT_REPLY_PERCENT):
             return
 
-        if self.contains_youtube_link(after.content): # should be handled the first time
+        if self.contains_youtube_link(after.content):  # should be handled the first time
             return
 
         prompt = None
@@ -146,7 +141,7 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
         if prompt is None:
             return
 
-        return await generate_response(ctx, self.config, prompt)
+        await OpenAI_LLM_Response(ctx, self.config, prompt).sent_response()
 
     async def is_common_valid_reply(self, ctx: commands.Context) -> bool:
         """ Run some common checks to see if a message is valid for the bot to reply to """
@@ -190,47 +185,3 @@ class AI_User(Settings, commands.Cog, metaclass=CompositeMetaClass):
             await ctx.send(
                 f"OpenAI API key not set for `ai_user`. "
                 f"Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
-
-    async def create_prompt_instance(self, ctx: commands.Context):
-        message = ctx.message
-        start_time = self.override_prompt_start_time.get(ctx.guild.id, None)
-        url_pattern = re.compile(r"(https?://\S+)")
-        contains_url = url_pattern.search(message.content)
-        extra_config = ContextOptions(
-            start_time=start_time, ignore_regex=self.ignore_regex[ctx.guild.id], cached_messages=self.cached_messages)
-        if message.attachments and await self.config.guild(message.guild).scan_images():
-            return await self.handle_image_prompt(message, extra_config)
-        elif contains_url:
-            return await self.handle_embed_prompt(message, extra_config)
-        elif message.stickers:
-            return StickerPrompt(message, self.config, extra_config)
-        else:
-            return TextPrompt(message, self.config, extra_config)
-
-    async def handle_image_prompt(self, message: discord.Message, extra_config):
-        async with message.channel.typing():
-            if await self.config.guild(message.guild).scan_images_mode() == "local":
-                try:
-                    from ai_user.prompts.image.local import \
-                        LocalImagePrompt
-                    return LocalImagePrompt(message, self.config, extra_config)
-                except ImportError:
-                    logger.error(
-                        f"Unable to load image scanning dependencies, disabling image scanning for this server f{message.guild.name}...")
-                    await self.config.guild(message.guild).scan_images.set(False)
-                    raise
-            elif await self.config.guild(message.guild).scan_images_mode() == "ai-horde":
-                return AIHordeImagePrompt(message, self.config, extra_config, self.bot)
-
-    async def handle_embed_prompt(self, message: discord.Message, extra_config):
-        if self.contains_youtube_link(message.content):
-            youtube_api = (await self.bot.get_shared_api_tokens("youtube")).get("api_key")
-            if youtube_api:
-                return YoutubeLinkPrompt(message, self.config, extra_config, youtube_api)
-        return GenericEmbedPrompt(message, self.config, extra_config)
-
-    @staticmethod
-    def contains_youtube_link(link):
-        youtube_regex = r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?(.+)'
-        match = re.search(youtube_regex, link)
-        return bool(match)

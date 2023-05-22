@@ -1,12 +1,7 @@
-from typing import Literal
-
 from discord import Message
 import logging
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
-
-RoleType = Literal['user', 'assistant', 'system']
-
 
 def format_text_content(message: Message):
     author = message.author.nick or message.author.name
