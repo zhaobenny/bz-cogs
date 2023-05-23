@@ -50,13 +50,16 @@ class MessagesList:
 
     async def _add_tokens(self, content):
         if not self._encoding:
-            self.model = (await self.config.guild(self.initial_message.guild).model())
-            try:
-                self._encoding = tiktoken.encoding_for_model(self.model)
-            except KeyError:
-                self._encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+            await self.initialize_encoding()
         tokens = self._encoding.encode(content, disallowed_special=())
         self.tokens += len(tokens)
+
+    async def initialize_encoding(self):
+        self.model = (await self.config.guild(self.initial_message.guild).model())
+        try:
+            self._encoding = tiktoken.encoding_for_model(self.model)
+        except KeyError:
+            self._encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
     def _get_insertion_index(self, prepend: bool) -> int:
         return 0 if prepend else len(self.messages)

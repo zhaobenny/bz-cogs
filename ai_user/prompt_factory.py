@@ -5,6 +5,7 @@ import discord
 from redbot.core import commands
 
 from ai_user.abc import MixinMeta
+from ai_user.common.constants import AI_HORDE_MODE, LOCAL_MODE
 from ai_user.common.types import ContextOptions
 from ai_user.prompts.embed.generic import GenericEmbedPrompt
 from ai_user.prompts.embed.youtube import YoutubeLinkPrompt
@@ -22,18 +23,18 @@ class PromptFactory(MixinMeta):
         contains_url = url_pattern.search(message.content)
         extra_config = ContextOptions(
             start_time=start_time, ignore_regex=self.ignore_regex[ctx.guild.id], cached_messages=self.cached_messages)
-        if message.attachments and await self.config.guild(message.guild).scan_images():
+        if message.stickers:
+            return StickerPrompt(message, self.config, extra_config)
+        elif message.attachments and await self.config.guild(message.guild).scan_images():
             return await self.handle_image_prompt(message, extra_config)
         elif contains_url:
             return await self.handle_embed_prompt(message, extra_config)
-        elif message.stickers:
-            return StickerPrompt(message, self.config, extra_config)
         else:
             return TextPrompt(message, self.config, extra_config)
 
     async def handle_image_prompt(self, message: discord.Message, extra_config):
         async with message.channel.typing():
-            if await self.config.guild(message.guild).scan_images_mode() == "local":
+            if await self.config.guild(message.guild).scan_images_mode() == LOCAL_MODE:
                 try:
                     from ai_user.prompts.image.local import LocalImagePrompt
                     return LocalImagePrompt(message, self.config, extra_config)
@@ -42,7 +43,7 @@ class PromptFactory(MixinMeta):
                         f"Unable to load image scanning dependencies, disabling image scanning for this server f{message.guild.name}...")
                     await self.config.guild(message.guild).scan_images.set(False)
                     raise
-            elif await self.config.guild(message.guild).scan_images_mode() == "ai-horde":
+            elif await self.config.guild(message.guild).scan_images_mode() == AI_HORDE_MODE:
                 return AIHordeImagePrompt(message, self.config, extra_config, self.bot)
 
     async def handle_embed_prompt(self, message: discord.Message, extra_config):

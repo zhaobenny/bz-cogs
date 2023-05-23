@@ -6,7 +6,13 @@ from abc import ABC
 from ai_user.common.cache import Cache
 from ai_user.prompts.common.messages_item import MessagesItem
 
-# taken from here: https://github.com/Cog-Creators/Red-DiscordBot/blob/V3/develop/redbot/cogs/mod/abc.py
+
+# for other mixins to use
+@commands.group()
+@commands.guild_only()
+async def ai_user(self, _):
+    """ Utilize OpenAI to reply to messages and images in approved channels """
+    pass
 
 
 class CompositeMetaClass(type(commands.Cog), type(ABC)):

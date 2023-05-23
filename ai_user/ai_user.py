@@ -13,10 +13,10 @@ from ai_user.abc import CompositeMetaClass
 from ai_user.common.cache import Cache
 from ai_user.common.constants import (AI_HORDE_MODE, DEFAULT_BLOCKLIST, DEFAULT_REMOVELIST, DEFAULT_REPLY_PERCENT,
                                       MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
-from ai_user.model.openai.response import OpenAI_LLM_Response
+from ai_user.model.openai import OpenAI_LLM_Response
 from ai_user.prompt_factory import PromptFactory
 from ai_user.prompts.common.messages_item import MessagesItem
-from ai_user.settings import Settings
+from ai_user.settings.base import Settings
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -68,9 +68,9 @@ class AI_User(Settings, PromptFactory, commands.Cog, metaclass=CompositeMetaClas
         self.config.register_global(**default_global)
 
     async def cog_load(self):
-        all_config = await self.config.all_guilds()
         if await self.config.custom_openai_endpoint():
             openai.api_base = await self.config.custom_openai_endpoint()
+        all_config = await self.config.all_guilds()
         for guild_id, config in all_config.items():
             self.channels_whitelist[guild_id] = config["channels_whitelist"]
             self.reply_percent[guild_id] = config["reply_percent"]
