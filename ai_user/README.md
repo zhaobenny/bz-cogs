@@ -92,3 +92,15 @@ First time scanning an image will take longer due to the need to download the pr
 (For Docker installs, I also recommend binding  `/config/.cache/huggingface/hub` to a persistent volume to avoid redownloading models every time the container is restarted)
 
 ---
+
+#### Custom OpenAI endpoint
+
+For advanced users!
+
+OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. gpt4all or FastChat)
+
+This can be set using:
+```
+[p]ai_user custom_openai <ENDPOINT>
+```
+Third pary models may have undesirable results.

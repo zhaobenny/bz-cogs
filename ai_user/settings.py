@@ -45,7 +45,6 @@ class Settings(MixinMeta):
         embed = discord.Embed(title="AI User Settings", color=await ctx.embed_color())
 
         embed.add_field(name="Model", inline=True, value=config['model'])
-        embed.add_field(name="Filter Responses", inline=True, value=config['filter_responses'])
         embed.add_field(name="Reply Percent", inline=True, value=f"{config['reply_percent'] * 100:.2f}%")
         embed.add_field(name="Scan Images", inline=True, value=config['scan_images'])
         embed.add_field(name="Scan Image Mode", inline=True, value=config['scan_images_mode'])
@@ -148,8 +147,11 @@ class Settings(MixinMeta):
             await self.initalize_openai(ctx)
 
         models_list = openai.Model.list()
-        gpt_models = [model.id for model in models_list['data']
-                      if model.id.startswith('gpt')]
+
+        if openai.api_base.startswith("https://api.openai.com/"):
+            gpt_models = [model.id for model in models_list['data'] if model.id.startswith('gpt')]
+        else:
+            gpt_models = [model.id for model in models_list['data']]
 
         if new_value not in gpt_models:
             return await ctx.send(f"Invalid model. Choose from: {', '.join(gpt_models)}")
@@ -159,6 +161,33 @@ class Settings(MixinMeta):
             description=new_value,
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
+
+    @ai_user.command()
+    @checks.is_owner()
+    async def custom_openai(self, ctx: commands.Context, url: Optional[str]):
+        """ Sets a custom OpenAI endpoint (for gpt4all / FastChat)"""
+        if not url:
+            openai.api_base = "https://api.openai.com/v1"
+            await self.config.custom_openai_endpoint.set(None)
+        else:
+            await self.config.custom_openai_endpoint.set(url)
+            openai.api_base = url
+
+        embed = discord.Embed(title="Bot Custom OpenAI endpoint", color=await ctx.embed_color())
+        embed.add_field(
+            name=":warning: Warning :warning:", value="All model selections may need changing.", inline=False)
+
+        if url:
+            embed.description = f"Endpoint set to {url}."
+            embed.add_field(
+                name="Models", value="Third party models may have undesirable results, compared to OpenAI.", inline=False)
+            embed.add_field(
+                name="Note", value="This is an advanced feature. \
+                    \n If you don't know what you're doing, don't use it",  inline=False)
+        else:
+            embed.description = "Endpoint reset back to offical OpenAI endpoint."
+
+        await ctx.send(embed=embed)
 
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)

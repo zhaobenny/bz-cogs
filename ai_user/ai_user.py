@@ -35,6 +35,10 @@ class AI_User(Settings, PromptFactory, commands.Cog, metaclass=CompositeMetaClas
         self.override_prompt_start_time: dict[int, datetime] = {}
         self.cached_messages: Cache[int, MessagesItem] = Cache(limit=50)
 
+        default_global = {
+            "custom_openai_endpoint": None,
+        }
+
         default_guild = {
             "reply_percent": DEFAULT_REPLY_PERCENT,
             "messages_backread": 10,
@@ -61,9 +65,12 @@ class AI_User(Settings, PromptFactory, commands.Cog, metaclass=CompositeMetaClas
         self.config.register_member(**default_member)
         self.config.register_guild(**default_guild)
         self.config.register_channel(**default_channel)
+        self.config.register_global(**default_global)
 
     async def cog_load(self):
         all_config = await self.config.all_guilds()
+        if await self.config.custom_openai_endpoint():
+            openai.api_base = await self.config.custom_openai_endpoint()
         for guild_id, config in all_config.items():
             self.channels_whitelist[guild_id] = config["channels_whitelist"]
             self.reply_percent[guild_id] = config["reply_percent"]
