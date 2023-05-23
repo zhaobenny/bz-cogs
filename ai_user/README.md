@@ -95,7 +95,7 @@ First time scanning an image will take longer due to the need to download the pr
 
 #### Custom OpenAI endpoint
 
-For advanced users!
+⚠️ For advanced users!
 
 OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. gpt4all or FastChat)
 
@@ -103,4 +103,4 @@ This can be set using:
 ```
 [p]ai_user custom_openai <ENDPOINT>
 ```
-Third pary models may have undesirable results.
+Third party models may have undesirable results.
