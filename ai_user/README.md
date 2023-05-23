@@ -13,12 +13,6 @@ Change the percentage of eligible messages to reply to (defaults to 50% per serv
 [p]ai_user percent <PERCENT>
 ```
 
-See other settings using:
-
-```
-[p]ai_user
-```
-
 See custom prompt settings in:
 ```
 [p]ai_user prompt
@@ -30,12 +24,21 @@ Optionally, enable slash (/chat) command using:
 [p]slash sync
 ```
 
+See other settings using:
+
+```
+[p]ai_user
+```
+
 ### Have fun. 🎉
 ![repetition](https://user-images.githubusercontent.com/46238123/227853613-1a524915-ed46-45f7-a154-94e90daf0cd7.jpg)
 
 ---
 
 ## Image scanning 🖼️
+
+![image_seeing](https://github.com/zhaobenny/bz-cogs/assets/46238123/8b0019f3-8b38-4578-b511-a350e10fce2d)
+
 
 See settings here:
 ```
@@ -93,14 +96,14 @@ First time scanning an image will take longer due to the need to download the pr
 
 ---
 
-#### Custom OpenAI endpoint
+### Custom OpenAI endpoint
 
-⚠️ For advanced users!
+⚠️ For advanced users! ⚠️
 
 OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. gpt4all or FastChat)
 
 This can be set using:
 ```
-[p]ai_user custom_openai <ENDPOINT>
+[p]ai_user response custom_openai <ENDPOINT>
 ```
 Third party models may have undesirable results.
