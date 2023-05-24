@@ -32,7 +32,7 @@ class Prompt:
 
         self.messages = MessagesList(self.bot, self.config, self.message)
 
-        await self.messages.add_system(f"You are {self.bot.name}. {bot_prompt}")
+        await self.messages.add_system(f"You are {self.bot.display_name}. {bot_prompt}")
 
         if self.message.reference:
             try:

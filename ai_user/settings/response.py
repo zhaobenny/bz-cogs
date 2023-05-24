@@ -55,7 +55,7 @@ class ResponseSettings(MixinMeta):
 
     @blocklist.command(name="add")
     @checks.admin_or_permissions(manage_guild=True)
-    async def blocklist_add(self, ctx: commands.Context, regex_pattern: str):
+    async def blocklist_add(self, ctx: commands.Context, *, regex_pattern: str):
         """Add a regex pattern to the blocklist"""
         try:
             re.compile(regex_pattern)
@@ -73,7 +73,7 @@ class ResponseSettings(MixinMeta):
 
     @blocklist.command(name="remove")
     @checks.admin_or_permissions(manage_guild=True)
-    async def blocklist_remove(self, ctx: commands.Context, regex_pattern: str):
+    async def blocklist_remove(self, ctx: commands.Context, *, regex_pattern: str):
         """Remove a regex pattern from the blacklist"""
         blocklist_regexes = await self.config.guild(ctx.guild).blocklist_regexes()
 
@@ -110,7 +110,7 @@ class ResponseSettings(MixinMeta):
 
     @removelist.command(name="add")
     @checks.admin_or_permissions(manage_guild=True)
-    async def removelist_add(self, ctx: commands.Context, regex_pattern: str):
+    async def removelist_add(self, ctx: commands.Context, *, regex_pattern: str):
         """Add a regex pattern to the removelist"""
         try:
             re.compile(regex_pattern)
@@ -128,7 +128,7 @@ class ResponseSettings(MixinMeta):
 
     @removelist.command(name="remove")
     @checks.admin_or_permissions(manage_guild=True)
-    async def removelist_remove(self, ctx: commands.Context, regex_pattern: str):
+    async def removelist_remove(self, ctx: commands.Context, *, regex_pattern: str):
         """Remove a regex pattern from the removelist"""
         removelist_regexes = await self.config.guild(ctx.guild).removelist_regexes()
 

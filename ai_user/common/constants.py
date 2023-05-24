@@ -3,7 +3,7 @@ DEFAULT_BLOCKLIST = [
     "language model"
 ]
 DEFAULT_REMOVELIST = [
-    r'^As an AI language model'
+    r'^As an AI language model,'
 ]
 OPENAI_MODEL_TOKEN_LIMIT = {
     "gpt-4": 7000,
