@@ -161,7 +161,7 @@ class AI_User(Settings, PromptFactory, commands.Cog, metaclass=CompositeMetaClas
             or ctx.channel.id not in self.channels_whitelist[ctx.guild.id]
         ):
             return False
-        if self.ignore_regex[ctx.guild.id] and self.ignore_regex[ctx.guild.id].search(ctx.message.content):
+        if self.ignore_regex.get(ctx.guild.id) and self.ignore_regex[ctx.guild.id].search(ctx.message.content):
             return False
         if await self.bot.cog_disabled_in_guild(self, ctx.guild):
             return False
