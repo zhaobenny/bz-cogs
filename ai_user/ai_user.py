@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 import discord
 import openai
-from redbot.core import Config, app_commands, commands
+from redbot.core import Config, app_commands, commands, checks
 from redbot.core.bot import Red
 
 from ai_user.abc import CompositeMetaClass
@@ -17,6 +17,7 @@ from ai_user.model.openai import OpenAI_LLM_Response
 from ai_user.prompt_factory import PromptFactory
 from ai_user.prompts.common.messages_item import MessagesItem
 from ai_user.settings.base import Settings
+from .proxy import ProxyOpenAI
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
@@ -34,6 +35,8 @@ class AI_User(Settings, PromptFactory, commands.Cog, metaclass=CompositeMetaClas
         self.ignore_regex: dict[int, re.Pattern] = {}
         self.override_prompt_start_time: dict[int, datetime] = {}
         self.cached_messages: Cache[int, MessagesItem] = Cache(limit=50)
+        self.split_long_responses = False  # Initialize the attribute
+        self.proxy_openai = ProxyOpenAI(await self.config.custom_openai_endpoint())
 
         default_global = {
             "custom_openai_endpoint": None,
@@ -44,6 +47,7 @@ class AI_User(Settings, PromptFactory, commands.Cog, metaclass=CompositeMetaClas
             "messages_backread": 10,
             "messages_backread_seconds": 60 * 120,
             "reply_to_mentions_replies": False,
+            "split_long_responses": False,
             "scan_images": False,
             "scan_images_mode": AI_HORDE_MODE,
             "max_image_size": 2 * (1024 * 1024),
@@ -68,8 +72,12 @@ class AI_User(Settings, PromptFactory, commands.Cog, metaclass=CompositeMetaClas
         self.config.register_global(**default_global)
 
     async def cog_load(self):
-        if await self.config.custom_openai_endpoint():
-            openai.api_base = await self.config.custom_openai_endpoint()
+        custom_openai_endpoint = await self.config.custom_openai_endpoint()
+        if custom_openai_endpoint:
+            openai.api_base = custom_openai_endpoint
+            self.proxy_openai = ProxyOpenAI(custom_openai_endpoint)
+        else:
+            return
         all_config = await self.config.all_guilds()
         for guild_id, config in all_config.items():
             self.channels_whitelist[guild_id] = config["channels_whitelist"]
@@ -107,6 +115,32 @@ class AI_User(Settings, PromptFactory, commands.Cog, metaclass=CompositeMetaClas
         if service_name == "openai":
             openai.api_key = api_tokens.get("api_key")
 
+    @staticmethod
+    def split_response(response, max_length):
+        chunks = []
+        current_chunk = ''
+        for sentence in response.split('. '):
+            sentence = sentence.strip()
+            if len(current_chunk) + len(sentence) + 1 > max_length:  # +1 for the period
+                if current_chunk:
+                    chunks.append(current_chunk)
+                words = sentence.split(' ')
+                current_chunk = words[0]
+                for word in words[1:]:
+                    if len(current_chunk) + len(word) + 1 > max_length:  # +1 for the space
+                        chunks.append(current_chunk)
+                        current_chunk = word
+                    else:
+                        current_chunk += ' ' + word
+            else:
+                if current_chunk:
+                    current_chunk += '. ' + sentence
+                else:
+                    current_chunk = sentence
+        if current_chunk:
+            chunks.append(current_chunk)
+        return chunks
+
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
         ctx: commands.Context = await self.bot.get_context(message)
@@ -123,7 +157,20 @@ class AI_User(Settings, PromptFactory, commands.Cog, metaclass=CompositeMetaClas
         if prompt is None:
             return
 
-        await OpenAI_LLM_Response(ctx, self.config, prompt).sent_response()
+        response = await OpenAI_LLM_Response(ctx, self.config,
+                                             prompt).get_response()  # assuming get_response() returns the response
+
+        # Check if the bot should split long responses
+        if await self.config.guild(ctx.guild).split_long_responses():
+            # Split the response into chunks of 2000 characters or less
+            chunks = AI_User.split_response(response, 2000)  # Corrected here
+
+            # Send each chunk as a separate message
+            for chunk in chunks:
+                await ctx.send(chunk)
+        else:
+            # Send the response as a single message
+            await ctx.send(response)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
@@ -193,3 +240,74 @@ class AI_User(Settings, PromptFactory, commands.Cog, metaclass=CompositeMetaClas
             await ctx.send(
                 f"OpenAI API key not set for `ai_user`. "
                 f"Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
+
+    self.proxy_openai = ProxyOpenAI(await self.config.custom_openai_endpoint())
+
+    # making sure there isn't any issues with custom parameters - to be safe always use this when switch back and forth
+    @commands.command()
+    async def reset_ai_user(self, ctx):
+        """Reset the parameters for the AI user."""
+        self.proxy_openai.reset_parameters()
+        await ctx.send("Parameters reset to default values.", ephemeral=True)
+
+    async def proxy(self, ctx, *, args):
+        """This is for if your model needs it """
+
+        # Check if the custom_openai_endpoint flag is set
+        if not await self.config.custom_openai_endpoint():
+            await ctx.send(
+                "This method is only for those using custom API endpoints like oobabooga's webui, if you already have an Open AI key, use that instead.",
+                ephemeral=True)
+            return
+
+        # Split the arguments by commas
+        args = args.split(',')
+
+        # Create a dictionary to hold the parameters
+        parameters = {}
+
+        # Loop through the arguments
+        for arg in args:
+            # Split the argument into a key and a value
+            key, value = arg.split('=')
+
+            # Strip any leading or trailing whitespace from the key and value
+            key = key.strip()
+            value = value.strip()
+
+            # Add the key and value to the parameters dictionary
+            parameters[key] = value
+
+        # Convert the parameters to a string
+        parameters_str = json.dumps(parameters)
+
+        # Check if the parameters exceed the 1024 character limit
+        if len(parameters_str) > 1024:
+            await ctx.send("Error: The parameters exceed the 1024 character limit for Discord bots.", ephemeral=True)
+            return
+
+        # Update the parameters in the ProxyOpenAI instance
+        self.proxy_openai.update_parameters(parameters)
+
+        await ctx.send(f"Parameters updated: {parameters}", ephemeral=True)
+
+
+    # just making sure your wallet isn't dead because of this
+    @commands.command()
+    @checks.is_owner()
+    async def chunk(self, ctx, status: str):
+        """Enable or disable splitting of long responses into multiple messages.
+
+        Usage: [p]ai_user chunk TRUE/FALSE or ON/OFF
+        """
+        status = status.lower()
+        if status in ["true", "on"]:
+            self.split_long_responses = True
+            await ctx.send("Long response splitting is now enabled.")
+        elif status in ["false", "off"]:
+            self.split_long_responses = False
+            await ctx.send("Long response splitting is now disabled.")
+        else:
+            await ctx.send("Invalid status. Please enter either TRUE/FALSE or ON/OFF.")
+
+
