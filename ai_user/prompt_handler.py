@@ -15,7 +15,8 @@ from ai_user.prompts.text_prompt import TextPrompt
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
-class PromptFactory(MixinMeta):
+
+class PromptHandler(MixinMeta):
     async def create_prompt_instance(self, ctx: commands.Context):
         message = ctx.message
         start_time = self.override_prompt_start_time.get(ctx.guild.id, None)
@@ -24,34 +25,34 @@ class PromptFactory(MixinMeta):
         extra_config = ContextOptions(
             start_time=start_time, ignore_regex=self.ignore_regex[ctx.guild.id], cached_messages=self.cached_messages)
         if message.stickers:
-            return StickerPrompt(message, self.config, extra_config)
+            return StickerPrompt(self, message)
         elif message.attachments and await self.config.guild(message.guild).scan_images():
-            return await self.handle_image_prompt(message, extra_config)
+            return await self.handle_image_prompt(message)
         elif contains_url:
-            return await self.handle_embed_prompt(message, extra_config)
+            return await self.handle_embed_prompt(message)
         else:
-            return TextPrompt(message, self.config, extra_config)
+            return TextPrompt(self, message)
 
-    async def handle_image_prompt(self, message: discord.Message, extra_config):
+    async def handle_image_prompt(self, message: discord.Message):
         async with message.channel.typing():
             if await self.config.guild(message.guild).scan_images_mode() == LOCAL_MODE:
                 try:
                     from ai_user.prompts.image.local import LocalImagePrompt
-                    return LocalImagePrompt(message, self.config, extra_config)
+                    return LocalImagePrompt(self, message)
                 except ImportError:
                     logger.error(
                         f"Unable to load image scanning dependencies, disabling image scanning for this server f{message.guild.name}...")
                     await self.config.guild(message.guild).scan_images.set(False)
                     raise
             elif await self.config.guild(message.guild).scan_images_mode() == AI_HORDE_MODE:
-                return AIHordeImagePrompt(message, self.config, extra_config, self.bot)
+                return AIHordeImagePrompt(self, message)
 
-    async def handle_embed_prompt(self, message: discord.Message, extra_config):
+    async def handle_embed_prompt(self, message: discord.Message):
         if self.contains_youtube_link(message.content):
             youtube_api = (await self.bot.get_shared_api_tokens("youtube")).get("api_key")
             if youtube_api:
-                return YoutubeLinkPrompt(message, self.config, extra_config, youtube_api)
-        return GenericEmbedPrompt(message, self.config, extra_config)
+                return YoutubeLinkPrompt(self, message)
+        return GenericEmbedPrompt(self, message)
 
     @staticmethod
     def contains_youtube_link(link):

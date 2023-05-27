@@ -4,10 +4,7 @@ import re
 from typing import Optional
 
 import aiohttp
-from discord import Message
-from redbot.core import Config
 
-from ai_user.common.types import ContextOptions
 from ai_user.prompts.base import Prompt
 from ai_user.prompts.common.messages_list import MessagesList
 
@@ -15,14 +12,13 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 class YoutubeLinkPrompt(Prompt):
-    def __init__(self, message: Message, config: Config, context_options: ContextOptions, api_key: str):
-        super().__init__(message, config, context_options)
-        self.api_key = api_key
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     async def _handle_message(self) -> Optional[MessagesList]:
+        self.api_key = (await self.bot.get_shared_api_tokens("youtube")).get("api_key")
         video_id = await self._get_video_id(self.message.content)
         author = self.message.author.nick or self.message.author.name
-
 
         if not video_id:
             return None

@@ -1,17 +1,14 @@
 import asyncio
 import base64
 import logging
-import aiohttp
 import time
 from io import BytesIO
-from PIL import Image
 from typing import Optional
-from discord import Message
-from redbot.core import Config
-from redbot.core.bot import Red
+
+import aiohttp
+from PIL import Image
 
 from ai_user.common.constants import IMAGE_RESOLUTION, IMAGE_TIMEOUT
-from ai_user.common.types import ContextOptions
 from ai_user.prompts.common.messages_list import MessagesList
 from ai_user.prompts.image.base import BaseImagePrompt
 
@@ -19,12 +16,11 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 class AIHordeImagePrompt(BaseImagePrompt):
-    def __init__(self, message: Message, config: Config, context_options: ContextOptions, bot: Red):
-        super().__init__(message, config, context_options)
-        self.redbot = bot
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     async def _process_image(self, image: Image) -> Optional[MessagesList]:
-        apikey = (await self.redbot.get_shared_api_tokens("ai-horde")).get("api_key") or "0000000000"
+        apikey = (await self.bot.get_shared_api_tokens("ai-horde")).get("api_key") or "0000000000"
         image = self.scale_image(image, IMAGE_RESOLUTION ** 2)
         image_bytes = BytesIO()
         image.convert('RGB').save(image_bytes, format='webp', exact=True)

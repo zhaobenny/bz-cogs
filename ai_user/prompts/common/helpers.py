@@ -6,6 +6,8 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 
 def format_text_content(message: Message):
     content = _mention_to_text(message)
+    if message.author.id == message.guild.me.id:
+        return f'{content}'
     return f'User "{message.author.display_name}" said: {content}'
 
 

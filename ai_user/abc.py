@@ -1,7 +1,9 @@
-from datetime import datetime
-from redbot.core import commands, Config
-from redbot.core.bot import Red
+import re
 from abc import ABC
+from datetime import datetime
+
+from redbot.core import Config, commands
+from redbot.core.bot import Red
 
 from ai_user.common.cache import Cache
 from ai_user.prompts.common.messages_item import MessagesItem
@@ -26,3 +28,4 @@ class MixinMeta(ABC):
         self.cached_options: dict
         self.override_prompt_start_time: dict[int, datetime]
         self.cached_messages: Cache[int, MessagesItem]
+        self.ignore_regex: dict[int, re.Pattern]
