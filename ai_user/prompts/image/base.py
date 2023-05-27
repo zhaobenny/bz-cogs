@@ -1,12 +1,9 @@
 import logging
 from io import BytesIO
 from typing import Optional
-from discord import Message
 from PIL import Image
-from redbot.core import Config
 
 from ai_user.common.constants import MAX_MESSAGE_LENGTH
-from ai_user.common.types import ContextOptions
 from ai_user.prompts.base import Prompt
 from ai_user.prompts.common.helpers import format_text_content
 from ai_user.prompts.common.messages_list import MessagesList
@@ -15,9 +12,8 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 class BaseImagePrompt(Prompt):
-    def __init__(self, message: Message, config: Config, context_options: ContextOptions):
-        super().__init__(message, config, context_options)
-        self.cached_messages = context_options.cached_messages
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     async def _handle_message(self) -> Optional[MessagesList]:
         image = self.message.attachments[0] if self.message.attachments else None

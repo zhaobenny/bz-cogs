@@ -2,15 +2,12 @@ import asyncio
 import functools
 import logging
 from typing import Callable, Coroutine, Optional
-from PIL import Image
-from discord import Message
-from redbot.core import Config
 
 import pytesseract
+from PIL import Image
 from transformers import BlipForConditionalGeneration, BlipProcessor
 
 from ai_user.common.constants import IMAGE_RESOLUTION
-from ai_user.common.types import ContextOptions
 from ai_user.prompts.common.messages_list import MessagesList
 from ai_user.prompts.image.base import BaseImagePrompt
 
@@ -26,8 +23,8 @@ def to_thread(func: Callable) -> Coroutine:
 
 
 class LocalImagePrompt(BaseImagePrompt):
-    def __init__(self, message: Message, config: Config, context_options: ContextOptions):
-        super().__init__(message, config, context_options)
+    def __init__(self, *args,**kwargs):
+        super().__init__(*args, **kwargs)
 
     async def _process_image(self, image: Image) -> Optional[MessagesList]:
         image = self.scale_image(image, IMAGE_RESOLUTION ** 2)
@@ -44,20 +41,11 @@ class LocalImagePrompt(BaseImagePrompt):
         self.cached_messages[self.message.id] = caption_content
         return self.messages
 
-    @staticmethod
     @to_thread
-    def _extract_text_from_image(image: Image.Image):
-        data = pytesseract.image_to_data(
-            image, output_type=pytesseract.Output.DICT, timeout=30)
-        text = " ".join(word for i, word in enumerate(data["text"])
-                        if int(data["conf"][i]) >= 60)
-        return text.strip()
-
-    @staticmethod
-    @to_thread
-    def _create_caption_from_image(image: Image.Image):
-        processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-        model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+    def _create_caption_from_image(self, image: Image.Image):
+        cache_path = self.cog_data_path or "~/.cache/huggingface/datasets"
+        processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base", cache_dir=cache_path)
+        model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base", cache_dir=cache_path)
 
         inputs = processor(image, return_tensors="pt")
 
@@ -66,3 +54,12 @@ class LocalImagePrompt(BaseImagePrompt):
         caption = (processor.decode(out[0], skip_special_tokens=True))
 
         return caption
+
+    @staticmethod
+    @to_thread
+    def _extract_text_from_image(image: Image.Image):
+        data = pytesseract.image_to_data(
+            image, output_type=pytesseract.Output.DICT, timeout=30)
+        text = " ".join(word for i, word in enumerate(data["text"])
+                        if int(data["conf"][i]) >= 60)
+        return text.strip()

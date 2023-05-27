@@ -92,8 +92,6 @@ See [here](https://tesseract-ocr.github.io/tessdoc/Installation.html) for instru
 
 First time scanning an image will take longer due to the need to download the pretrained models. (OCR and image captioning models)
 
-(For Docker installs, I also recommend binding  `/config/.cache/huggingface/hub` to a persistent volume to avoid redownloading models every time the container is restarted)
-
 ---
 
 ### Custom OpenAI endpoint

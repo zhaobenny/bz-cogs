@@ -10,12 +10,13 @@ from ai_user.prompts.presets import DEFAULT_PROMPT
 
 
 class Prompt:
-    def __init__(self, message: Message, config: Config, context_options: ContextOptions):
+    def __init__(self, cog: MixinMeta, message):
         self.config: Config = config
         self.bot: Member = message.guild.me
         self.message: Message = message
         self.context_options = context_options
         self.messages: Optional[MessagesList] = None
+        self.cog_data_path = cog_data_path(cog)
 
     async def _handle_message(self) -> Optional[MessagesList]:
         raise NotImplementedError("_handle_message() must be implemented in subclasses")
