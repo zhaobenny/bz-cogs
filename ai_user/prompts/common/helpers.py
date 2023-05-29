@@ -24,9 +24,10 @@ def _mention_to_text(message: Message) -> str:
     for mentioned in mentions:
         if mentioned in message.channel_mentions:
             content = content.replace(mentioned.mention, f'#{mentioned.name}')
+        elif mentioned in message.role_mentions:
+            content = content.replace(mentioned.mention, f'@{mentioned.name}')
         else:
-            name = mentioned.nick or mentioned.name
-            content = content.replace(mentioned.mention, f'@{name}')
+            content = content.replace(mentioned.mention, f'@{mentioned.display_name }')
 
     return content
 
