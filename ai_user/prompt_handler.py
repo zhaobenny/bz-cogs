@@ -19,11 +19,8 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 class PromptHandler(MixinMeta):
     async def create_prompt_instance(self, ctx: commands.Context):
         message = ctx.message
-        start_time = self.override_prompt_start_time.get(ctx.guild.id, None)
         url_pattern = re.compile(r"(https?://\S+)")
         contains_url = url_pattern.search(message.content)
-        extra_config = ContextOptions(
-            start_time=start_time, ignore_regex=self.ignore_regex[ctx.guild.id], cached_messages=self.cached_messages)
         if message.stickers:
             return StickerPrompt(self, message)
         elif message.attachments and await self.config.guild(message.guild).scan_images():

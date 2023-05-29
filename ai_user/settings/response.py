@@ -23,8 +23,8 @@ class ResponseSettings(MixinMeta):
 
     @response.command()
     @checks.is_owner()
-    async def custom_openai(self, ctx: commands.Context, url: Optional[str]):
-        """ Sets a custom OpenAI endpoint """
+    async def endpoint(self, ctx: commands.Context, url: Optional[str]):
+        """ Sets the OpenAI endpoint to a custom one (must be OpenAI API compatible ) """
         if not url:
             openai.api_base = "https://api.openai.com/v1"
             await self.config.custom_openai_endpoint.set(None)
