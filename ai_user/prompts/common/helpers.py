@@ -27,7 +27,7 @@ def _mention_to_text(message: Message) -> str:
         elif mentioned in message.role_mentions:
             content = content.replace(mentioned.mention, f'@{mentioned.name}')
         else:
-            content = content.replace(mentioned.mention, f'@{mentioned.display_name }')
+            content = content.replace(mentioned.mention, f'@{mentioned.display_name}')
 
     return content
 

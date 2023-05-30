@@ -49,12 +49,42 @@ class Settings(ImageSettings, PromptSettings, ResponseSettings, MixinMeta):
         embed.add_field(name="Max History Size", inline=True, value=f"{config['messages_backread']} messages")
         embed.add_field(name="Max History Gap", inline=True, value=f"{config['messages_backread_seconds']} seconds")
         embed.add_field(name="Always Reply if Pinged", inline=True, value=config['reply_to_mentions_replies'])
-        embed.add_field(name="Block Regex list", inline=True, value=f"`{config['blocklist_regexes']}`")
-        embed.add_field(name="Remove Regex list", inline=True, value=f"`{config['removelist_regexes']}`")
         embed.add_field(name="Public Forget Command", inline=True, value=config['public_forget'])
         embed.add_field(name="Whitelisted Channels", inline=False, value=' '.join(channels) if channels else "None")
 
-        return await ctx.send(embed=embed)
+        regex_embed = discord.Embed(title="AI User Regex Settings", color=await ctx.embed_color())
+        removelist_regexes = config['removelist_regexes']
+        if isinstance(config['removelist_regexes'], list):
+            total_length = 0
+            removelist_regexes = []
+
+            for item in config['removelist_regexes']:
+                if total_length + len(item) <= 1000:
+                    removelist_regexes.append(item)
+                    total_length += len(item)
+                else:
+                    removelist_regexes.append("More regexes not shown...")
+                    break
+
+        blocklist_regexes = config['blocklist_regexes']
+        if isinstance(config['blocklist_regexes'], list):
+            total_length = 0
+            blocklist_regexes = []
+
+            for item in config['blocklist_regexes']:
+                if total_length + len(item) <= 1000:
+                    blocklist_regexes.append(item)
+                    total_length += len(item)
+                else:
+                    blocklist_regexes.append("More regexes not shown...")
+                    break
+
+        regex_embed.add_field(name="Block Regex list", value=f"`{blocklist_regexes}`")
+        regex_embed.add_field(name="Remove Regex list", value=f"`{removelist_regexes}`")
+        regex_embed.add_field(name="Ignore Regex", value=config['ignore_regex'])
+
+        await ctx.send(embed=embed)
+        return await ctx.send(embed=regex_embed)
 
     @ai_user.command()
     @checks.is_owner()
