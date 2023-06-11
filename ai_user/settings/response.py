@@ -25,7 +25,7 @@ class ResponseSettings(MixinMeta):
     @checks.is_owner()
     async def endpoint(self, ctx: commands.Context, url: Optional[str]):
         """ Sets the OpenAI endpoint to a custom one (must be OpenAI API compatible ) """
-        if not url:
+        if not url or url in ["clear", "reset"]:
             openai.api_base = "https://api.openai.com/v1"
             await self.config.custom_openai_endpoint.set(None)
         else:
@@ -34,7 +34,7 @@ class ResponseSettings(MixinMeta):
 
         embed = discord.Embed(title="Bot Custom OpenAI endpoint", color=await ctx.embed_color())
         embed.add_field(
-            name=":warning: Warning :warning:", value="All model selections may need changing.", inline=False)
+            name=":warning: Warning :warning:", value="All model/parameters selections for each server may need changing.", inline=False)
 
         if url:
             embed.description = f"Endpoint set to {url}."

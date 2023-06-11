@@ -1,4 +1,6 @@
+import json
 import logging
+from typing import Optional
 
 import discord
 import openai
@@ -146,10 +148,51 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
             gpt_models = [model.id for model in models_list['data']]
 
         if new_value not in gpt_models:
-            return await ctx.send(f"Invalid model. Choose from: {', '.join(gpt_models)}")
+            return await ctx.send(f"Invalid model. Choose from: {''.join([f'```{model}```' for model in gpt_models])}")
         await self.config.guild(ctx.guild).model.set(new_value)
         embed = discord.Embed(
             title="This server's chat model is now set to:",
             description=new_value,
             color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
+
+    @ai_user.command(name="parameters")
+    @checks.is_owner()
+    async def parameters(self, ctx: commands.Context, *, json_block: Optional[str]):
+        """ Set parameters for OpenAI's chat completion using JSON code block """
+
+        if json_block in ['reset', 'clear']:
+            await self.config.guild(ctx.guild).parameters.set(None)
+            return await ctx.send("Parameters reset to default")
+
+        embed = discord.Embed(title="Custom Parameters", color=await ctx.embed_color())
+        embed.add_field(
+            name=":warning: Warning :warning:", value="No checks were done to see if parameters were compatible", inline=False)
+
+        if json_block == 'show' or not json_block:
+            data = await self.config.guild(ctx.guild).parameters()
+            embed.add_field(name="Parameters", value=f"```{json.dumps(data, indent=4)}```", inline=False)
+            embed.add_field(name="OpenAI reference for possible parameters",
+                            value=f"https://platform.openai.com/docs/api-reference/chat/create", inline=False)
+            embed.add_field(name="Reset parameters to default",
+                            value=f"```{ctx.clean_prefix}ai_user parameters reset```", inline=False)
+            return await ctx.send(embed=embed)
+
+        if not json_block.startswith("```"):
+            return await ctx.send("Please use a code block (`` eg. ```json ``)")
+
+        json_block = json_block.replace("```json", "").replace("```", "")
+
+        try:
+            data = json.loads(json_block)
+            await self.config.guild(ctx.guild).parameters.set(data)
+        except json.JSONDecodeError:
+            return await ctx.channel.send("Invalid JSON format!")
+
+        embed.add_field(name="Parameters", value=f"```{json.dumps(data, indent=4)}```", inline=False)
+        embed.add_field(name="OpenAI reference for possible parameters",
+                        value=f"https://platform.openai.com/docs/api-reference/chat/create", inline=False)
+        embed.add_field(name="Reset parameters to default",
+                        value=f"```{ctx.clean_prefix}ai_user parameters reset```", inline=False)
+
         return await ctx.send(embed=embed)

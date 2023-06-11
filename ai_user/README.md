@@ -98,10 +98,15 @@ First time scanning an image will take longer due to the need to download the pr
 
 ⚠️ For advanced users! ⚠️
 
-OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. gpt4all or FastChat)
+OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. gpt4all or text-generation-webui)
 
 This can be set using:
 ```
 [p]ai_user response custom_openai <ENDPOINT>
 ```
-Third party models may have undesirable results.
+Third party models may have undesirable results! Models will also need changing per server.
+
+You may also want to set custom parameters (per server) when doing this, eg:
+```
+[p]ai_user parameters ```json {"frequency_penalty": 2.0, "max_tokens": 900,  "logit_bias":{"420": -100}}```
+```

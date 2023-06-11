@@ -21,10 +21,18 @@ class OpenAI_LLM_Response(Base_LLM_Response):
         reraise=True
     )
     async def request_openai(self, model):
+        custom_parameters = await self.config.guild(self.ctx.guild).parameters()
+        kwargs = {}
+
+        if custom_parameters is not None:
+            kwargs.update(custom_parameters)
+
         response = await openai.ChatCompletion.acreate(
             model=model,
             messages=self.prompt.get_messages(),
+            **kwargs
         )
+
         response = response["choices"][0]["message"]["content"]
         return response
 

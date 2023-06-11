@@ -56,6 +56,7 @@ class AI_User(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClas
             "ignore_regex": None,
             "blocklist_regexes": DEFAULT_BLOCKLIST,
             "removelist_regexes": DEFAULT_REMOVELIST,
+            "parameters": None,
         }
         default_member = {
             "custom_text_prompt": None,
