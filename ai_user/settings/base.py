@@ -1,6 +1,5 @@
 import json
 import logging
-from typing import Optional
 
 import discord
 import openai
@@ -16,15 +15,20 @@ logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
 class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings, MixinMeta):
+
     @commands.group()
     @commands.guild_only()
     async def ai_user(self, _):
-        """ Utilize OpenAI to reply to messages and images in approved channels """
+        """ Utilize OpenAI to reply to messages and images in approved channels"""
         pass
 
-    @ai_user.command()
+    @ai_user.command(aliases=["lobotomize"])
     async def forget(self, ctx: commands.Context):
-        """ Forces the AI to forget the current conversation up to this point """
+        """ Forces the bot to forget the current conversation up to this point
+
+            This is useful if the LLM is stuck doing unwanted behaviour or giving undesirable results.
+            See `[p]ai_user triggers public_forget` to allow non-admins to use this command.
+        """
         if not ctx.channel.permissions_for(ctx.author).manage_messages\
                 and not await self.config.guild(ctx.guild).public_forget():
             return await ctx.react_quietly("❌")
@@ -34,7 +38,10 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
 
     @ai_user.command(aliases=["settings", "showsettings"])
     async def config(self, ctx: commands.Context):
-        """ Returns current config """
+        """ Returns current config
+
+            (Current config per server)
+        """
         config = await self.config.guild(ctx.guild).get_raw()
         whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
@@ -80,29 +87,36 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
                     blocklist_regexes.append("More regexes not shown...")
                     break
 
-        regex_embed.add_field(name="Block Regex list", value=f"`{blocklist_regexes}`")
-        regex_embed.add_field(name="Remove Regex list", value=f"`{removelist_regexes}`")
-        regex_embed.add_field(name="Ignore Regex", value=config['ignore_regex'])
+        regex_embed.add_field(name="Block list", value=f"`{blocklist_regexes}`")
+        regex_embed.add_field(name="Remove list", value=f"`{removelist_regexes}`")
+        regex_embed.add_field(name="Ignore Regex", value=f"`{config['ignore_regex']}`")
 
         await ctx.send(embed=embed)
         return await ctx.send(embed=regex_embed)
 
     @ai_user.command()
     @checks.is_owner()
-    async def percent(self, ctx: commands.Context, new_value: float):
-        """ Change the bot's response chance """
-        await self.config.guild(ctx.guild).reply_percent.set(new_value / 100)
-        self.reply_percent[ctx.guild.id] = new_value / 100
+    async def percent(self, ctx: commands.Context, percent: float):
+        """ Change the bot's response chance
+
+            (Setting is per server)
+        """
+        await self.config.guild(ctx.guild).reply_percent.set(percent / 100)
+        self.reply_percent[ctx.guild.id] = percent / 100
         embed = discord.Embed(
             title="Chance that the bot will reply on this server is now:",
-            description=f"{new_value:.2f}%",
+            description=f"{percent:.2f}%",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def add(self, ctx: commands.Context, channel: discord.TextChannel):
-        """ Add a channel to the whitelist to allow the bot to reply in """
+        """ Adds a channel to the whitelist
+
+        **Arguments**
+            - `channel` A mention of the channel
+        """
         if not channel:
             return await ctx.send("Invalid channel mention, use #channel")
         new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
@@ -119,7 +133,11 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
     @ai_user.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def remove(self, ctx: commands.Context, channel: discord.TextChannel):
-        """ Remove a channel from the whitelist """
+        """ Remove a channel from the whitelist
+
+        **Arguments**
+            - `channel` A mention of the channel
+        """
         if not channel:
             return await ctx.send("Invalid channel mention, use #channel")
         new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
@@ -135,8 +153,12 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
 
     @ai_user.command()
     @checks.is_owner()
-    async def model(self, ctx: commands.Context, new_value: str):
-        """ Changes chat completion model """
+    async def model(self, ctx: commands.Context, model: str):
+        """ Changes chat completion model
+
+             To see a list of available models, use `[p]ai_user model list`
+             (Setting is per server)
+        """
         if not openai.api_key:
             await self.initalize_openai(ctx)
 
@@ -147,19 +169,39 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
         else:
             gpt_models = [model.id for model in models_list['data']]
 
-        if new_value not in gpt_models:
-            return await ctx.send(f"Invalid model. Choose from: {''.join([f'```{model}```' for model in gpt_models])}")
-        await self.config.guild(ctx.guild).model.set(new_value)
+        if model == 'list':
+            embed = discord.Embed(title="Available Models", color=await ctx.embed_color())
+            embed.description = '\n'.join([f"`{model}`" for model in gpt_models])
+            return await ctx.send(embed=embed)
+
+        if model not in gpt_models:
+            await ctx.send(":warning: Not a valid model! :warning:")
+            embed = discord.Embed(title="Available Models", color=await ctx.embed_color())
+            embed.description = '\n'.join([f"`{model}`" for model in gpt_models])
+            return await ctx.send(embed=embed)
+
+        await self.config.guild(ctx.guild).model.set(model)
         embed = discord.Embed(
             title="This server's chat model is now set to:",
-            description=new_value,
+            description=model,
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
     @ai_user.command(name="parameters")
     @checks.is_owner()
-    async def parameters(self, ctx: commands.Context, *, json_block: Optional[str]):
-        """ Set parameters for OpenAI's chat completion using JSON code block """
+    async def parameters(self, ctx: commands.Context, *, json_block: str):
+        """ Set parameters for an endpoint using a JSON code block
+
+
+            To reset parameters to default, use `[p]ai_user parameters reset`
+            To show current parameters, use `[p]ai_user parameters show`
+
+            Example command:
+            `[p]ai_user parameters ```{"frequency_penalty": 2.0, "max_tokens": 200, "logit_bias":{"88": -100}}``` `
+
+            See [here](https://platform.openai.com/docs/api-reference/chat/create) for possible parameters
+            (Setting is per server)
+        """
 
         if json_block in ['reset', 'clear']:
             await self.config.guild(ctx.guild).parameters.set(None)
@@ -169,17 +211,13 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
         embed.add_field(
             name=":warning: Warning :warning:", value="No checks were done to see if parameters were compatible", inline=False)
 
-        if json_block == 'show' or not json_block:
+        if json_block in ['show', 'list']:
             data = await self.config.guild(ctx.guild).parameters()
             embed.add_field(name="Parameters", value=f"```{json.dumps(data, indent=4)}```", inline=False)
-            embed.add_field(name="OpenAI reference for possible parameters",
-                            value=f"https://platform.openai.com/docs/api-reference/chat/create", inline=False)
-            embed.add_field(name="Reset parameters to default",
-                            value=f"```{ctx.clean_prefix}ai_user parameters reset```", inline=False)
             return await ctx.send(embed=embed)
 
         if not json_block.startswith("```"):
-            return await ctx.send("Please use a code block (`` eg. ```json ``)")
+            return await ctx.send(":warning: Please use a code block (`` eg. ```json ``)")
 
         json_block = json_block.replace("```json", "").replace("```", "")
 
@@ -190,9 +228,4 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
             return await ctx.channel.send("Invalid JSON format!")
 
         embed.add_field(name="Parameters", value=f"```{json.dumps(data, indent=4)}```", inline=False)
-        embed.add_field(name="OpenAI reference for possible parameters",
-                        value=f"https://platform.openai.com/docs/api-reference/chat/create", inline=False)
-        embed.add_field(name="Reset parameters to default",
-                        value=f"```{ctx.clean_prefix}ai_user parameters reset```", inline=False)
-
         return await ctx.send(embed=embed)

@@ -106,7 +106,7 @@ This can be set using:
 ```
 Third party models may have undesirable results! Models will also need changing per server.
 
-You may also want to set custom parameters (per server) when doing this, eg:
+You may also want to set custom parameters (per server). See:
 ```
-[p]ai_user parameters ```json {"frequency_penalty": 2.0, "max_tokens": 900,  "logit_bias":{"420": -100}}```
+[p]ai_user parameters
 ```

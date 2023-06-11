@@ -19,13 +19,19 @@ class ResponseSettings(MixinMeta):
     @ai_user.group(name="response")
     @checks.admin_or_permissions(manage_guild=True)
     async def response(self, _):
-        """ Change bot response settings """
+        """ Change bot response settings
+
+            (All subcommands are per server)
+        """
         pass
 
     @response.command()
     @checks.is_owner()
     async def endpoint(self, ctx: commands.Context, url: Optional[str]):
-        """ Sets the OpenAI endpoint to a custom one (must be OpenAI API compatible ) """
+        """ Sets the OpenAI endpoint to a custom one (must be OpenAI API compatible)
+
+            Reset to official OpenAI endpoint with `[p]ai_user response endpoint clear`
+        """
         if not url or url in ["clear", "reset"]:
             openai.api_base = "https://api.openai.com/v1"
             await self.config.custom_openai_endpoint.set(None)
@@ -52,7 +58,7 @@ class ResponseSettings(MixinMeta):
     @response.group(name="blocklist")
     @checks.admin_or_permissions(manage_guild=True)
     async def blocklist(self, _):
-        """ Any generated bot messages matching these regex patterns will not sent """
+        """ Any generated responses matching these regex patterns will not sent """
 
     @blocklist.command(name="add")
     @checks.admin_or_permissions(manage_guild=True)
@@ -118,7 +124,7 @@ class ResponseSettings(MixinMeta):
     @response.group(name="removelist")
     @checks.admin_or_permissions(manage_guild=True)
     async def removelist(self, _):
-        """ Any string in generated bot messages matching these regex patterns will be removed """
+        """ Any string in a generated response matching these regex patterns will be removed """
 
     @removelist.command(name="add")
     @checks.admin_or_permissions(manage_guild=True)

@@ -14,13 +14,18 @@ class ImageSettings(MixinMeta):
     @ai_user.group()
     @checks.is_owner()
     async def image(self, _):
-        """ Change the image scan setting for the current server. (See cog README.md) """
+        """ Change the image scan setting
+
+            Go [here](https://github.com/zhaobenny/bz-cogs/tree/main/ai_user#image-scanning-%EF%B8%8F) for more info.
+
+            (All subcommands are per server)
+        """
         pass
 
     @image.command(name="scan")
     @checks.is_owner()
     async def image_scanning(self, ctx: commands.Context):
-        """ Toggle image scanning for the current server """
+        """ Toggle image scanning """
         value = not (await self.config.guild(ctx.guild).scan_images())
         await self.config.guild(ctx.guild).scan_images.set(value)
         embed = discord.Embed(
@@ -31,37 +36,42 @@ class ImageSettings(MixinMeta):
 
     @image.command(name="maxsize")
     @checks.is_owner()
-    async def image_maxsize(self, ctx: commands.Context, new_value: float):
+    async def image_maxsize(self, ctx: commands.Context, size: float):
         """ Set max download size in Megabytes for image scanning """
-        await self.config.guild(ctx.guild).max_image_size.set(new_value * 1024 * 1024)
+        await self.config.guild(ctx.guild).max_image_size.set(size * 1024 * 1024)
         embed = discord.Embed(
             title="Max download size to scan images now set to:",
-            description=f"{new_value:.2f} MB",
+            description=f"{size:.2f} MB",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
     @image.command(name="mode")
     @checks.is_owner()
-    async def image_mode(self, ctx: commands.Context, new_value: str):
-        """ Set method to scan, local or ai-horde (see cog README.md) """
-        if new_value not in SCAN_IMAGE_MODES:
+    async def image_mode(self, ctx: commands.Context, mode: str):
+        """ Set method for scanning images
+
+            The following modes are available, please see links for more details:
+            - [local](https://github.com/zhaobenny/bz-cogs/tree/main/ai_user#local-image-scanning-mode)
+            - [ai-horde](https://github.com/zhaobenny/bz-cogs/tree/main/ai_user#ai-horde-image-scanning-mode)
+        """
+        if mode not in SCAN_IMAGE_MODES:
             await ctx.send(f"Invalid mode. Choose from: {', '.join(SCAN_IMAGE_MODES)}")
-        elif new_value == LOCAL_MODE:
+        elif mode == LOCAL_MODE:
             try:
                 importlib.import_module("pytesseract")
                 importlib.import_module("torch")
                 importlib.import_module("transformers")
-                await self.config.guild(ctx.guild).scan_images_mode.set(new_value)
+                await self.config.guild(ctx.guild).scan_images_mode.set(mode)
                 embed = discord.Embed(title="Scanning Images for this server now set to", color=await ctx.embed_color())
-                embed.add_field(name=":warning: WILL CAUSE HEAVY CPU LOAD :warning:", value=new_value, inline=False)
+                embed.add_field(name=":warning: WILL CAUSE HEAVY CPU LOAD :warning:", value=mode, inline=False)
                 return await ctx.send(embed=embed)
             except:
                 logger.error("Image processing dependencies import failed. ", exc_info=True)
                 await self.config.guild(ctx.guild).scan_images_mode.set(AI_HORDE_MODE)
-                return await ctx.send("Local image processing dependencies not available. Please install them (see cog README.md) to use this feature locally.")
-        elif new_value == AI_HORDE_MODE:
+                return await ctx.send(":warning: Local image processing dependencies not available. Please install them (see cog README.md) to use this feature locally.")
+        elif mode == AI_HORDE_MODE:
             await self.config.guild(ctx.guild).scan_images_mode.set(AI_HORDE_MODE)
-            embed = discord.Embed(title="Scanning Images for this server now set to", description=new_value, color=await ctx.embed_color())
+            embed = discord.Embed(title="Scanning Images for this server now set to", description=mode, color=await ctx.embed_color())
             if (await self.bot.get_shared_api_tokens('ai-horde')).get("api_key"):
                 key_description = "Key set."
             else:

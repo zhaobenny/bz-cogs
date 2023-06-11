@@ -18,7 +18,10 @@ class PromptSettings(MixinMeta):
     @ai_user.group()
     @checks.admin_or_permissions(manage_guild=True)
     async def prompt(self, _):
-        """ Change the prompt settings for the current server """
+        """ Change the prompt settings for the current server
+
+            (All subcommands are per server)
+        """
         pass
 
     @prompt.command(name="reset")
@@ -59,7 +62,7 @@ class PromptSettings(MixinMeta):
 
     @prompt_show.command(name="members", aliases=["users"])
     async def show_user_prompts(self, ctx: commands.Context):
-        """ Show all users with custom prompts """
+        """ Show users with custom prompts """
         pages = []
         for member in ctx.guild.members:
             prompt = await self.config.member(member).custom_text_prompt()
@@ -176,7 +179,11 @@ class PromptSettings(MixinMeta):
     @prompt.group()
     @checks.is_owner()
     async def history(self, _):
-        """ Change the prompt context settings for the current server """
+        """ Change the prompt context settings for the current server
+
+            The most recent messages that are within the time gap and message limits are used to create context.
+            Context is used to help the LLM generate a response.
+        """
         pass
 
     @history.command(name="backread", aliases=["messages", "size"])
@@ -193,7 +200,12 @@ class PromptSettings(MixinMeta):
     @history.command(name="time", aliases=["gap"])
     @checks.is_owner()
     async def history_time(self, ctx: commands.Context, new_value: int):
-        """ Set max time (s) allowed between messages to be used """
+        """ Set max time (s) allowed between messages to be used
+
+            eg. if set to 60, once messsages are more than 60 seconds apart, more messages will not be added.
+
+            Helpful to prevent the LLM from mixing up context from different conversations.
+        """
         await self.config.guild(ctx.guild).messages_backread_seconds.set(new_value)
         embed = discord.Embed(
             title="The max time (s) allowed between messages for context on this server is now:",

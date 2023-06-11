@@ -19,7 +19,7 @@ class TriggerSettings(MixinMeta):
     @trigger.command(name="ignore", aliases=["ignoreregex"])
     @checks.admin_or_permissions(manage_guild=True)
     async def ignore(self, ctx: commands.Context, *, regex_pattern: Optional[str]):
-        """ Messages matching this regex won't be replied to by the bot """
+        """ Messages matching this regex won't be replied to or seen, by the bot """
         if not regex_pattern:
             await self.config.guild(ctx.guild).ignore_regex.set(None)
             self.ignore_regex[ctx.guild.id] = None
@@ -58,4 +58,3 @@ class TriggerSettings(MixinMeta):
             description=f"{value}",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
-
