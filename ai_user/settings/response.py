@@ -1,11 +1,12 @@
 import logging
 import re
 from typing import Optional
+
 import discord
 import openai
-
 from redbot.core import checks, commands
-
+from redbot.core.utils.chat_formatting import box, pagify
+from redbot.core.utils.menus import SimpleMenu
 
 from ai_user.abc import MixinMeta, ai_user
 from ai_user.common.constants import DEFAULT_BLOCKLIST, DEFAULT_REMOVELIST
@@ -89,12 +90,23 @@ class ResponseSettings(MixinMeta):
     async def blocklist_show(self, ctx: commands.Context):
         """Show the current regex patterns in the blocklist"""
         blocklist_regexes = await self.config.guild(ctx.guild).blocklist_regexes()
+        pages = []
 
         if not blocklist_regexes:
-            await ctx.send("The blocklist is empty.")
-        else:
-            formatted_list = "\n".join(blocklist_regexes)
-            await ctx.send(f"The current regex patterns in the blocklist are:\n```\n{formatted_list}\n```")
+            return await ctx.send("The blocklist is empty.")
+
+        formatted_list = "\n".join(blocklist_regexes)
+        for text in pagify(formatted_list, page_length=888):
+            page = discord.Embed(
+                title=f"List of regexs to block for bot messages in {ctx.guild.name}",
+                description=box(text),
+                color=await ctx.embed_color())
+            pages.append(page)
+
+        for i, page in enumerate(pages):
+            page.set_footer(text=f"Page {i+1} of {len(pages)}")
+
+        return await SimpleMenu(pages).start(ctx)
 
     @blocklist.command(name="reset")
     @checks.admin_or_permissions(manage_guild=True)
@@ -144,12 +156,23 @@ class ResponseSettings(MixinMeta):
     async def removelist_show(self, ctx: commands.Context):
         """Show the current regex patterns in the removelist"""
         removelist_regexes = await self.config.guild(ctx.guild).removelist_regexes()
-
         if not removelist_regexes:
-            await ctx.send("The removelist is empty.")
-        else:
-            formatted_list = "\n".join(removelist_regexes)
-            await ctx.send(f"The current regex patterns in the removelist are:\n```\n{formatted_list}\n```")
+            return await ctx.send("The removelist is empty.")
+
+        pages = []
+
+        formatted_list = "\n".join(removelist_regexes)
+        for text in pagify(formatted_list, page_length=888):
+            page = discord.Embed(
+                title=f"List of regexs to remove for bot messages in {ctx.guild.name}",
+                description=box(text),
+                color=await ctx.embed_color())
+            pages.append(page)
+
+        for i, page in enumerate(pages):
+            page.set_footer(text=f"Page {i+1} of {len(pages)}")
+
+        return await SimpleMenu(pages).start(ctx)
 
     @removelist.command(name="reset")
     @checks.admin_or_permissions(manage_guild=True)
