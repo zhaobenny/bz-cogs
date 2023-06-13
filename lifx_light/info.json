@@ -3,5 +3,6 @@
     "description" : "Control a single Lifx light",
     "install_msg" : "Remember to set light id and Lifx key before using, commands found in [p]light",
     "short": "Control a single Lifx light",
-    "min_bot_version": "3.5.0"
+    "min_bot_version": "3.5.0",
+    "hidden": true
 }
