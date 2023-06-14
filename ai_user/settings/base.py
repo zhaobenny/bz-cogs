@@ -45,20 +45,24 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
         config = await self.config.guild(ctx.guild).get_raw()
         whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
+        embeds = []
 
-        embed = discord.Embed(title="AI User Settings", color=await ctx.embed_color())
+        main_embed = discord.Embed(title="AI User Settings", color=await ctx.embed_color())
 
-        embed.add_field(name="Model", inline=True, value=config['model'])
-        embed.add_field(name="Reply Percent", inline=True, value=f"{config['reply_percent'] * 100:.2f}%")
-        embed.add_field(name="Scan Images", inline=True, value=config['scan_images'])
-        embed.add_field(name="Scan Image Mode", inline=True, value=config['scan_images_mode'])
-        embed.add_field(name="Scan Image Max Size", inline=True,
-                        value=f"{config['max_image_size'] / 1024 / 1024:.2f} MB")
-        embed.add_field(name="Max History Size", inline=True, value=f"{config['messages_backread']} messages")
-        embed.add_field(name="Max History Gap", inline=True, value=f"{config['messages_backread_seconds']} seconds")
-        embed.add_field(name="Always Reply if Pinged", inline=True, value=config['reply_to_mentions_replies'])
-        embed.add_field(name="Public Forget Command", inline=True, value=config['public_forget'])
-        embed.add_field(name="Whitelisted Channels", inline=False, value=' '.join(channels) if channels else "None")
+        main_embed.add_field(name="Model", inline=True, value=config['model'])
+        main_embed.add_field(name="Reply Percent", inline=True, value=f"{config['reply_percent'] * 100:.2f}%")
+        main_embed.add_field(name="Scan Images", inline=True, value=config['scan_images'])
+        main_embed.add_field(name="Scan Image Mode", inline=True, value=config['scan_images_mode'])
+        main_embed.add_field(name="Scan Image Max Size", inline=True,
+                             value=f"{config['max_image_size'] / 1024 / 1024:.2f} MB")
+        main_embed.add_field(name="Max History Size", inline=True, value=f"{config['messages_backread']} messages")
+        main_embed.add_field(name="Max History Gap", inline=True,
+                             value=f"{config['messages_backread_seconds']} seconds")
+        main_embed.add_field(name="Always Reply if Pinged", inline=True, value=config['reply_to_mentions_replies'])
+        main_embed.add_field(name="Public Forget Command", inline=True, value=config['public_forget'])
+        main_embed.add_field(name="Whitelisted Channels", inline=False,
+                             value=' '.join(channels) if channels else "None")
+        embeds.append(main_embed)
 
         regex_embed = discord.Embed(title="AI User Regex Settings", color=await ctx.embed_color())
         removelist_regexes = config['removelist_regexes']
@@ -90,15 +94,27 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
         regex_embed.add_field(name="Block list", value=f"`{blocklist_regexes}`")
         regex_embed.add_field(name="Remove list", value=f"`{removelist_regexes}`")
         regex_embed.add_field(name="Ignore Regex", value=f"`{config['ignore_regex']}`")
+        embeds.append(regex_embed)
 
-        await ctx.send(embed=embed)
-        return await ctx.send(embed=regex_embed)
+        parameters = config["parameters"]
+        if parameters is not None:
+            parameters = json.loads(parameters)
+            parameters_embed = discord.Embed(title="Custom Parameters to Endpoint", color=await ctx.embed_color())
+            for key, value in parameters.items():
+                parameters_embed.add_field(name=key, value=f"```{json.dumps(value, indent=4)}```", inline=False)
+            embeds.append(parameters_embed)
+
+        for embed in embeds:
+            await ctx.send(embed=embed)
+        return
 
     @ai_user.command()
     @checks.is_owner()
     async def percent(self, ctx: commands.Context, percent: float):
         """ Change the bot's response chance
 
+            **Arguments**
+                - `percent` A number between 0 and 100
             (Setting is per server)
         """
         await self.config.guild(ctx.guild).reply_percent.set(percent / 100)
@@ -158,6 +174,9 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
 
              To see a list of available models, use `[p]ai_user model list`
              (Setting is per server)
+
+            **Arguments**
+                - `model` The model to use eg. `gpt-4`
         """
         if not openai.api_key:
             await self.initalize_openai(ctx)
@@ -209,23 +228,22 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
 
         embed = discord.Embed(title="Custom Parameters", color=await ctx.embed_color())
         embed.add_field(
-            name=":warning: Warning :warning:", value="No checks were done to see if parameters were compatible", inline=False)
+            name=":warning: Warning :warning:", value="No checks were done to see if parameters were compatible \n ----------------------------------------", inline=False)
 
-        if json_block in ['show', 'list']:
-            data = await self.config.guild(ctx.guild).parameters()
-            embed.add_field(name="Parameters", value=f"```{json.dumps(data, indent=4)}```", inline=False)
-            return await ctx.send(embed=embed)
+        parameters = await self.config.guild(ctx.guild).parameters()
+        data = {} if parameters is None else json.loads(parameters)
 
-        if not json_block.startswith("```"):
-            return await ctx.send(":warning: Please use a code block (`` eg. ```json ``)")
+        if json_block not in ['show', 'list']:
+            if not json_block.startswith("```"):
+                return await ctx.send(":warning: Please use a code block (`` eg. ```json ``)")
 
-        json_block = json_block.replace("```json", "").replace("```", "")
+            json_block = json_block.replace("```json", "").replace("```", "")
 
-        try:
-            data = json.loads(json_block)
-            await self.config.guild(ctx.guild).parameters.set(data)
-        except json.JSONDecodeError:
-            return await ctx.channel.send("Invalid JSON format!")
-
-        embed.add_field(name="Parameters", value=f"```{json.dumps(data, indent=4)}```", inline=False)
+            try:
+                data = json.loads(json_block)
+                await self.config.guild(ctx.guild).parameters.set(json.dumps(data))
+            except json.JSONDecodeError:
+                return await ctx.channel.send("Invalid JSON format!")
+        for key, value in data.items():
+            embed.add_field(name=key, value=f"```{json.dumps(value, indent=4)}```", inline=False)
         return await ctx.send(embed=embed)
