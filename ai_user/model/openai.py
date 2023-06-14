@@ -1,3 +1,4 @@
+import json
 import logging
 import openai
 import openai.error
@@ -15,9 +16,8 @@ class OpenAI_LLM_Response(Base_LLM_Response):
         super().__init__(ctx, config, prompt)
 
     @retry(
-        retry=(retry_if_exception_type(openai.error.Timeout) | retry_if_exception_type(
-            openai.error.APIConnectionError) | retry_if_exception_type(openai.error.RateLimitError)),
-        wait=wait_random_exponential(min=1, max=5), stop=stop_after_delay(10),
+        retry=(retry_if_exception_type((openai.error.Timeout, openai.error.APIConnectionError, openai.error.RateLimitError))),
+        wait=wait_random_exponential(min=1, max=5), stop=stop_after_delay(12),
         reraise=True
     )
     async def request_openai(self, model):
@@ -25,6 +25,7 @@ class OpenAI_LLM_Response(Base_LLM_Response):
         kwargs = {}
 
         if custom_parameters is not None:
+            custom_parameters = json.loads(custom_parameters)
             kwargs.update(custom_parameters)
 
         response = await openai.ChatCompletion.acreate(

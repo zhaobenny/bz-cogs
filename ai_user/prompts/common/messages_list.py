@@ -89,7 +89,7 @@ class MessagesList:
             return
 
         for i in range(len(past_messages)-1):
-            if self.tokens > OPENAI_MODEL_TOKEN_LIMIT.get(self.model, 3000):
+            if self.model.startswith("gpt-") and self.tokens > OPENAI_MODEL_TOKEN_LIMIT.get(self.model, 3000):
                 return logger.warning(f"{self.tokens} tokens used - nearing limit, stopping context creation")
             if await self._valid_time_between_messages(past_messages, i, max_seconds_gap):
                 await self._add_contextual_message(past_messages[i])

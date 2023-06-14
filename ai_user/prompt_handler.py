@@ -6,7 +6,6 @@ from redbot.core import commands
 
 from ai_user.abc import MixinMeta
 from ai_user.common.constants import AI_HORDE_MODE, LOCAL_MODE
-from ai_user.common.types import ContextOptions
 from ai_user.prompts.embed.generic import GenericEmbedPrompt
 from ai_user.prompts.embed.youtube import YoutubeLinkPrompt
 from ai_user.prompts.image.ai_horde import AIHordeImagePrompt
