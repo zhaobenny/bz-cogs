@@ -1,0 +1,21 @@
+{
+    "author": [
+        "zhaobenny"
+    ],
+    "description": "Utilize OpenAI to select the 'best' react for a message",
+    "install_msg": "[p]aiemoteadmin to see owner cmds, add a whitelisted channel as server admin using [p]aiemote allow <#channel>",
+    "short": "OpenAI-powered reacts",
+    "requirements": [
+        "openai",
+        "tenacity",
+        "tiktoken"
+    ],
+    "end_user_data_statement": "This cog does not persistently store data or metadata about users, but chat messages be sent to OpenAI to generate an emoji selection. Please refer to: <https://openai.com/policies/privacy-policy>. ",
+    "tags": [
+        "openai",
+        "chatgpt",
+        "react"
+    ],
+    "min_bot_version": "3.5.0",
+    "hidden": true
+}
