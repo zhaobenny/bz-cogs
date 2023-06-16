@@ -100,6 +100,10 @@ class aiemote(commands.Cog):
             return None
 
     async def is_valid_to_react(self, ctx: commands.Context):
+        if ctx.guild is None or ctx.author.bot:
+            return False
+
+        whitelist = self.whitelist.get(ctx.guild.id, [])
         if await self.bot.cog_disabled_in_guild(self, ctx.guild):
             return False
         if not await self.bot.ignored_channel_or_guild(ctx):
@@ -107,9 +111,6 @@ class aiemote(commands.Cog):
         if not await self.bot.allowed_by_whitelist_blacklist(ctx.author):
             return False
 
-        whitelist = self.whitelist.get(ctx.guild.id, [])
-        if ctx.guild is None or ctx.author.bot:
-            return False
         if (not isinstance(ctx.channel, discord.Thread) and (ctx.channel.id not in whitelist)):
             return False
         if (isinstance(ctx.channel, discord.Thread) and (ctx.channel.parent_id not in whitelist)):
