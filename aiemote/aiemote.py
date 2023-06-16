@@ -63,7 +63,7 @@ class aiemote(commands.Cog):
         ctx: commands.Context = await self.bot.get_context(message)
         if not (await self.is_valid_to_react(ctx)):
             return
-        if (self.percent > random.randint(0, 100)):
+        if (self.percent < random.randint(0, 99)):
             return
         emoji = await self.pick_emoji(message)
         if emoji:
