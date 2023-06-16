@@ -5,6 +5,7 @@ from typing import Optional
 import discord
 import openai
 import tiktoken
+from emoji import EMOJI_DATA
 from redbot.core import Config, checks, commands
 from redbot.core.bot import Red
 
@@ -238,44 +239,69 @@ class aiemote(commands.Cog):
             await self.config.extra_instruction.set(instruction)
         return await ctx.tick()
 
+    async def check_valid_emoji(self, ctx: commands.Context, emoji):
+        if not emoji.startswith("<:") and emoji not in EMOJI_DATA.keys():
+            await ctx.send("Invalid emoji!")
+            return False
+        else:
+            try:
+                discord.PartialEmoji.from_str(emoji)
+            except:
+                await ctx.send("Invalid emoji! Custom emojis must be usable by the bot itself")
+                return False
+        return True
+
+    async def add_emoji(self, ctx: commands.Context, emoji_list, emoji, description):
+        if any(item["emoji"] == str(emoji) for item in emoji_list):
+            await ctx.send("Emoji already in list")
+            return False
+
+        emoji_list.append({
+            "description": description,
+            "emoji": str(emoji)
+        })
+        return True
+
+    async def remove_emoji(self, ctx: commands.Context, emoji_list, emoji):
+        index = next((i for i, item in enumerate(emoji_list) if item["emoji"] == str(emoji)), -1)
+        if index == -1:
+            return await ctx.send("Emoji not in list")
+
+        del emoji_list[index]
+        return True
+
     @aiemote_admin.command(name="add")
     @checks.is_owner()
-    async def add_global_emoji(self, ctx: commands.Context, emoji: discord.Emoji, *, description: str):
+    async def add_global_emoji(self, ctx: commands.Context, emoji, *, description: str):
         """ Add a emoji to the global list
 
             *Arguments*
             - `<emoji>` The emoji to add
             - `<description>` A description of the emoji to be used by OpenAI
         """
+        if not await self.check_valid_emoji(ctx, emoji):
+            return
+
         emojis = await self.config.global_emojis()
-        for item in emojis:
-            if item["emoji"] == str(emoji):
-                return await ctx.send("Emoji already in list")
-        emojis.append({
-            "description": description,
-            "emoji": str(emoji)
-        })
-        await self.config.global_emojis.set(emojis)
-        return await ctx.tick()
+        if await self.add_emoji(ctx, emojis, emoji, description):
+            await self.config.global_emojis.set(emojis)
+            await ctx.tick()
 
     @aiemote_admin.command(name="remove")
     @checks.is_owner()
-    async def remove_global_emoji(self, ctx: commands.Context, emoji: discord.Emoji):
+    async def remove_global_emoji(self, ctx: commands.Context, emoji):
         """ Remove a emoji from the global list
 
             *Arguments*
             - `<emoji>` The emoji to remove
         """
+        if not await self.check_valid_emoji(ctx, emoji):
+            return
+
         emojis = await self.config.global_emojis()
-        index = -1
-        for item in emojis:
-            if item["emoji"] == str(emoji):
-                index = emojis.index(item)
-        if index == -1:
-            return await ctx.send("Emoji not in list")
-        del emojis[index]
-        await self.config.global_emojis.set(emojis)
-        return await ctx.tick()
+        if await self.remove_emoji(ctx, emojis, emoji):
+            await self.config.global_emojis.set(emojis)
+            await ctx.tick()
 
     @aiemote_admin.command(name="config", aliases=["settings", "list", "conf"])
     @checks.is_owner()
@@ -307,42 +333,36 @@ class aiemote(commands.Cog):
 
     @aiemote_admin.command(name="sadd")
     @checks.is_owner()
-    async def add_server_emoji(self, ctx: commands.Context, emoji: discord.Emoji, *, description: str):
+    async def add_server_emoji(self, ctx: commands.Context, emoji, *, description: str):
         """ Add a emoji to this current server list
 
             *Arguments*
             - `<emoji>` The emoji to add
             - `<description>` A description of the emoji to be used by OpenAI
         """
-        emojis = await self.config.guild(ctx.guild).server_emojis()
-        for item in emojis:
-            if item["emoji"] == str(emoji):
-                return await ctx.send("Emoji already in list")
-        emojis.append({
-            "description": description,
-            "emoji": str(emoji)
-        })
-        await self.config.guild(ctx.guild).server_emojis.set(emojis)
-        return await ctx.tick()
+        if not await self.check_valid_emoji(ctx, emoji):
+            return
+
+        emojis = await self.config.server_emojis()
+        if await self.add_emoji(ctx, emojis, emoji, description):
+            await self.config.server_emojis.set(emojis)
+            await ctx.tick()
 
     @aiemote_admin.command(name="sremove")
     @checks.is_owner()
-    async def remove_server_emoji(self, ctx: commands.Context, emoji: discord.Emoji):
+    async def remove_server_emoji(self, ctx: commands.Context, emoji):
         """ Remove a emoji from this current server list
 
             *Arguments*
             - `<emoji>` The emoji to remove
         """
+        if not await self.check_valid_emoji(ctx, emoji):
+            return
+
         emojis = await self.config.guild(ctx.guild).server_emojis()
-        index = -1
-        for item in emojis:
-            if item["emoji"] == str(emoji):
-                index = emojis.index(item)
-        if index == -1:
-            return await ctx.send("Emoji not in list")
-        del emojis[index]
-        await self.config.guild(ctx.guild).server_emojis.set(emojis)
-        return await ctx.tick()
+        if await self.remove_emoji(ctx, emojis, emoji):
+            await self.config.guild(ctx.guild).server_emojis.set(emojis)
+            await ctx.tick()
 
     @aiemote_admin.command(name="percent")
     @checks.is_owner()

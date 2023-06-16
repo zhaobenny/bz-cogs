@@ -8,7 +8,8 @@
     "requirements": [
         "openai",
         "tenacity",
-        "tiktoken"
+        "tiktoken",
+        "emoji"
     ],
     "end_user_data_statement": "This cog does not persistently store data or metadata about users, but chat messages be sent to OpenAI to generate an emoji selection. Please refer to: <https://openai.com/policies/privacy-policy>. ",
     "tags": [
