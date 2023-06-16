@@ -108,5 +108,5 @@ Third party models may have undesirable results! Models will also need changing 
 
 You may also want to set custom parameters (per server). See:
 ```
-[p]ai_user parameters
+[p]ai_user response parameters
 ```

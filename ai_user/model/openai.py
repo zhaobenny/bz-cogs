@@ -28,6 +28,10 @@ class OpenAI_LLM_Response(Base_LLM_Response):
             custom_parameters = json.loads(custom_parameters)
             kwargs.update(custom_parameters)
 
+        if kwargs.get("logit_bias") is None:
+            logit_bias = json.loads(await self.config.guild(self.ctx.guild).weights())
+            kwargs["logit_bias"] = logit_bias
+
         response = await openai.ChatCompletion.acreate(
             model=model,
             messages=self.prompt.get_messages(),

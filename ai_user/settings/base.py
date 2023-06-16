@@ -78,20 +78,6 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
                     removelist_regexes.append("More regexes not shown...")
                     break
 
-        blocklist_regexes = config['blocklist_regexes']
-        if isinstance(config['blocklist_regexes'], list):
-            total_length = 0
-            blocklist_regexes = []
-
-            for item in config['blocklist_regexes']:
-                if total_length + len(item) <= 1000:
-                    blocklist_regexes.append(item)
-                    total_length += len(item)
-                else:
-                    blocklist_regexes.append("More regexes not shown...")
-                    break
-
-        regex_embed.add_field(name="Block list", value=f"`{blocklist_regexes}`")
         regex_embed.add_field(name="Remove list", value=f"`{removelist_regexes}`")
         regex_embed.add_field(name="Ignore Regex", value=f"`{config['ignore_regex']}`")
         embeds.append(regex_embed)
@@ -204,46 +190,4 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
             title="This server's chat model is now set to:",
             description=model,
             color=await ctx.embed_color())
-        return await ctx.send(embed=embed)
-
-    @ai_user.command(name="parameters")
-    @checks.is_owner()
-    async def parameters(self, ctx: commands.Context, *, json_block: str):
-        """ Set parameters for an endpoint using a JSON code block
-
-
-            To reset parameters to default, use `[p]ai_user parameters reset`
-            To show current parameters, use `[p]ai_user parameters show`
-
-            Example command:
-            `[p]ai_user parameters ```{"frequency_penalty": 2.0, "max_tokens": 200, "logit_bias":{"88": -100}}``` `
-
-            See [here](https://platform.openai.com/docs/api-reference/chat/create) for possible parameters
-            (Setting is per server)
-        """
-
-        if json_block in ['reset', 'clear']:
-            await self.config.guild(ctx.guild).parameters.set(None)
-            return await ctx.send("Parameters reset to default")
-
-        embed = discord.Embed(title="Custom Parameters", color=await ctx.embed_color())
-        embed.add_field(
-            name=":warning: Warning :warning:", value="No checks were done to see if parameters were compatible \n ----------------------------------------", inline=False)
-
-        parameters = await self.config.guild(ctx.guild).parameters()
-        data = {} if parameters is None else json.loads(parameters)
-
-        if json_block not in ['show', 'list']:
-            if not json_block.startswith("```"):
-                return await ctx.send(":warning: Please use a code block (`` eg. ```json ``)")
-
-            json_block = json_block.replace("```json", "").replace("```", "")
-
-            try:
-                data = json.loads(json_block)
-                await self.config.guild(ctx.guild).parameters.set(json.dumps(data))
-            except json.JSONDecodeError:
-                return await ctx.channel.send("Invalid JSON format!")
-        for key, value in data.items():
-            embed.add_field(name=key, value=f"```{json.dumps(value, indent=4)}```", inline=False)
         return await ctx.send(embed=embed)

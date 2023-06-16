@@ -9,10 +9,6 @@ OPENAI_MODEL_TOKEN_LIMIT = {
     "gpt-3.5-turbo-16k": 15000,
     "gpt-3.5-turbo-0613": 3000
 }
-DEFAULT_BLOCKLIST = [
-    "openai",
-    "language model"
-]
 DEFAULT_REMOVELIST = [
     r'^As an AI language model,'
 ]

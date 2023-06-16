@@ -36,11 +36,7 @@ class Base_LLM_Response():
             return
 
         await self.remove_patterns_from_response()
-        if await self.check_if_response_blocked():
-            logger.debug(
-                f"Blocked response replying to \"{self.ctx.message.content}\" in {self.ctx.message.guild}: \n{self.response}")
-            await self.ctx.react_quietly("😶")
-            return
+
         should_direct_reply = not self.ctx.interaction and await self.is_reply()
 
         if should_direct_reply:
@@ -70,14 +66,6 @@ class Base_LLM_Response():
             if response.count('"') == 1:
                 response = response.replace('"', '')
         self.response = response
-
-    async def check_if_response_blocked(self):
-        patterns = await self.config.guild(self.ctx.guild).blocklist_regexes()
-        response = self.response.lower()
-        for pattern in patterns:
-            if re.search(pattern, response):
-                return True
-        return False
 
     async def is_reply(self):
         message = self.ctx.message

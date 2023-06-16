@@ -11,7 +11,7 @@ from redbot.core.bot import Red
 
 from ai_user.abc import CompositeMetaClass
 from ai_user.common.cache import Cache
-from ai_user.common.constants import (AI_HORDE_MODE, DEFAULT_BLOCKLIST,
+from ai_user.common.constants import (AI_HORDE_MODE,
                                       DEFAULT_REMOVELIST,
                                       DEFAULT_REPLY_PERCENT,
                                       MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
@@ -54,9 +54,9 @@ class AI_User(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClas
             "channels_whitelist": [],
             "public_forget": False,
             "ignore_regex": None,
-            "blocklist_regexes": DEFAULT_BLOCKLIST,
             "removelist_regexes": DEFAULT_REMOVELIST,
             "parameters": None,
+            "weights": None,
         }
         default_member = {
             "custom_text_prompt": None,
