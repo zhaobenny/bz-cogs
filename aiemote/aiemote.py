@@ -265,7 +265,8 @@ class aiemote(commands.Cog):
     async def remove_emoji(self, ctx: commands.Context, emoji_list, emoji):
         index = next((i for i, item in enumerate(emoji_list) if item["emoji"] == str(emoji)), -1)
         if index == -1:
-            return await ctx.send("Emoji not in list")
+            await ctx.send("Emoji not in list")
+            return False
 
         del emoji_list[index]
         return True
@@ -281,13 +282,14 @@ class aiemote(commands.Cog):
         """
         if not await self.check_valid_emoji(ctx, emoji):
             return
-
         emojis = await self.config.global_emojis()
+        if not emojis:
+            emojis = []
         if await self.add_emoji(ctx, emojis, emoji, description):
             await self.config.global_emojis.set(emojis)
             await ctx.tick()
 
-    @aiemote_admin.command(name="remove")
+    @aiemote_admin.command(name="remove", aliases=["rm"])
     @checks.is_owner()
     async def remove_global_emoji(self, ctx: commands.Context, emoji):
         """ Remove a emoji from the global list
@@ -303,6 +305,16 @@ class aiemote(commands.Cog):
             await self.config.global_emojis.set(emojis)
             await ctx.tick()
 
+    async def create_emoji_embed(self, ctx, title: str, emojis) -> discord.Embed:
+        embed = discord.Embed(title=title, color=await ctx.embed_color())
+        if len(emojis) == 0:
+            embed.description = "None"
+        for item in emojis:
+            partial_emoji = discord.PartialEmoji.from_str(item["emoji"])
+            emoji = str(partial_emoji)
+            embed.add_field(name=emoji, value=item["description"], inline=False)
+        return embed
+
     @aiemote_admin.command(name="config", aliases=["settings", "list", "conf"])
     @checks.is_owner()
     async def list_all_emoji(self, ctx: commands.Context):
@@ -310,21 +322,11 @@ class aiemote(commands.Cog):
         """
         emojis = await self.config.global_emojis()
         globalembed = discord.Embed(title="Global Emojis", color=await ctx.embed_color())
-        if len(emojis) == 0:
-            globalembed.description = "None"
-        for item in emojis:
-            partial_emoji = discord.PartialEmoji.from_str(item["emoji"])
-            emoji = str(partial_emoji)
-            globalembed.add_field(name=emoji, value=item["description"], inline=False)
+        emojis = await self.config.global_emojis()
+        globalembed = await self.create_emoji_embed(ctx, "Global Emojis", emojis)
         emojis = await self.config.guild(ctx.guild).server_emojis()
-        serverembed = discord.Embed(title="Current Server-specific Emojis", color=await ctx.embed_color())
-        if len(emojis) == 0:
-            serverembed.description = "None"
-        for item in emojis:
-            partial_emoji = discord.PartialEmoji.from_str(item["emoji"])
-            emoji = str(partial_emoji)
-            globalembed.add_field(name=emoji, value=item["description"])
-        settingsembed = discord.Embed(title="Global Settings", color=await ctx.embed_color())
+        serverembed = await self.create_emoji_embed(ctx, "Current Server-specific Emojis", emojis)
+        settingsembed = discord.Embed(title="Main Settings", color=await ctx.embed_color())
         settingsembed.add_field(name="Percent Chance", value=f"{self.percent}%", inline=False)
         settingsembed.add_field(name="Additonal Instruction", value=await self.config.extra_instruction() or "None", inline=False)
         await ctx.send(embed=settingsembed)
@@ -342,13 +344,14 @@ class aiemote(commands.Cog):
         """
         if not await self.check_valid_emoji(ctx, emoji):
             return
-
-        emojis = await self.config.server_emojis()
+        emojis = await self.config.guild(ctx.guild).server_emojis()
+        if not emojis:
+            emojis = []
         if await self.add_emoji(ctx, emojis, emoji, description):
-            await self.config.server_emojis.set(emojis)
+            await self.config.guild(ctx.guild).server_emojis.set(emojis)
             await ctx.tick()
 
-    @aiemote_admin.command(name="sremove")
+    @aiemote_admin.command(name="sremove", aliases=["srm"])
     @checks.is_owner()
     async def remove_server_emoji(self, ctx: commands.Context, emoji):
         """ Remove a emoji from this current server list
