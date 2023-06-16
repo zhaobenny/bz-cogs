@@ -16,6 +16,5 @@
         "chatgpt",
         "react"
     ],
-    "min_bot_version": "3.5.0",
-    "hidden": true
+    "min_bot_version": "3.5.0"
 }

@@ -1,5 +1,6 @@
 import logging
 import random
+from typing import Optional
 
 import discord
 import openai
@@ -28,7 +29,8 @@ class aiemote(commands.Cog):
                     "description": "A sad face",
                     "emoji": "😢",
                 },
-            ]
+            ],
+            "extra_instruction": "",
         }
 
         default_guild = {
@@ -76,18 +78,28 @@ class aiemote(commands.Cog):
         for index, value in enumerate(emojis):
             options += f"{index}. {value['description']}\n"
 
-        logit_bias = {(self.encoding.encode(str(i)))[0]: 100 for i in range(len(emojis))}
-        system_prompt = f"You are in a chat room. You will pick an emoji for the following message. Here are your options: {options} Your answer will be a int between 0 and {len(emojis)-1}."
+        logit_bias = {}
+        for i in range(len(emojis)):
+            encoded_value = self.encoding.encode(str(i))
+            if len(encoded_value) == 1:
+                logit_bias[encoded_value[0]] = 100
+
+        system_prompt = f"You are in a chat room. You will pick an emoji for the following message. {await self.config.extra_instruction()} Here are your options: {options} Your answer will be a int between 0 and {len(emojis)-1}."
+        print(system_prompt)
         content = self.stringify_any_mentions(message)
-        response = await openai.ChatCompletion.acreate(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": content}
-            ],
-            max_tokens=1,
-            logit_bias=logit_bias,
-        )
+        try:
+            response = await openai.ChatCompletion.acreate(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": content}
+                ],
+                max_tokens=1,
+                logit_bias=logit_bias,
+            )
+        except:
+            logger.error("Failed to get response from OpenAI", exc_info=True)
+            return None
         response = response["choices"][0]["message"]["content"]
         if response.isnumeric():
             index = int(response)
@@ -96,7 +108,8 @@ class aiemote(commands.Cog):
             partial_emoji = discord.PartialEmoji.from_str(emojis[index]["emoji"])
             return partial_emoji
         else:
-            logger.error(f"Non-numeric response: {response}.")
+            logger.warning(
+                f" Skipping react! Non-numeric response from OpenAI: {response}. (Please report to dev if this occurs often)")
             return None
 
     async def is_valid_to_react(self, ctx: commands.Context):
@@ -126,7 +139,8 @@ class aiemote(commands.Cog):
             return False
 
         # skipping long / short messages
-        if len(ctx.message.content) > 1000 or len(ctx.message.content) < 10:
+        if len(ctx.message.content) > 1500 or len(ctx.message.content) < 10:
+            logger.debug(f"Skipping message in {ctx.guild.name} with length {len(ctx.message.content)}")
             return False
 
         return True
@@ -174,7 +188,7 @@ class aiemote(commands.Cog):
         embed.add_field(name="Channels", value="\n".join([channel.mention for channel in channels]))
         await ctx.send(embed=embed)
 
-    @aiemote.command(name="allow")
+    @aiemote.command(name="allow", aliases=["add"])
     async def whitelist_add(self, ctx: commands.Context, channel: discord.TextChannel):
         """ Add a channel to the whitelist
 
@@ -189,7 +203,7 @@ class aiemote(commands.Cog):
         await self.config.guild(ctx.guild).whitelist.set(whitelist)
         return await ctx.tick()
 
-    @aiemote.command(name="remove")
+    @aiemote.command(name="remove", aliases=["rm"])
     async def whitelist_remove(self, ctx: commands.Context, channel: discord.TextChannel):
         """ Remove a channel from the whitelist
 
@@ -210,6 +224,20 @@ class aiemote(commands.Cog):
         """ Owner only commands for aiemote
         """
         pass
+
+    @aiemote_admin.command(name="instruction", aliases=["extra_instruction", "extra"])
+    @checks.is_owner()
+    async def set_extra_instruction(self, ctx: commands.Context, *, instruction: Optional[str]):
+        """ Add additonal instruction for the OpenAI when picking an emoji
+
+            *Arguments*
+            - `<instruction>` The extra instruction to use
+        """
+        if not instruction:
+            await self.config.extra_instruction.set("")
+        else:
+            await self.config.extra_instruction.set(instruction)
+        return await ctx.tick()
 
     @aiemote_admin.command(name="add")
     @checks.is_owner()
@@ -250,7 +278,7 @@ class aiemote(commands.Cog):
         await self.config.global_emojis.set(emojis)
         return await ctx.tick()
 
-    @aiemote_admin.command(name="list")
+    @aiemote_admin.command(name="config", aliases=["settings", "list", "conf"])
     @checks.is_owner()
     async def list_all_emoji(self, ctx: commands.Context):
         """ List all emojis in the global list (and current server list)
@@ -271,6 +299,10 @@ class aiemote(commands.Cog):
             partial_emoji = discord.PartialEmoji.from_str(item["emoji"], inline=False)
             emoji = str(partial_emoji)
             globalembed.add_field(name=emoji, value=item["description"])
+        settingsembed = discord.Embed(title="Global Settings", color=await ctx.embed_color())
+        settingsembed.add_field(name="Percent Chance", value=f"{self.percent}%", inline=False)
+        settingsembed.add_field(name="Additonal Instruction", value=await self.config.extra_instruction() or "None", inline=False)
+        await ctx.send(embed=settingsembed)
         await ctx.send(embed=globalembed)
         await ctx.send(embed=serverembed)
 
