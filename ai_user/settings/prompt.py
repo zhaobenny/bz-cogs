@@ -4,8 +4,8 @@ from typing import Optional, Union
 import discord
 import tiktoken
 from redbot.core import checks, commands
-from redbot.core.utils.menus import SimpleMenu
-
+from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
+from redbot.core.utils.predicates import ReactionPredicate
 
 from ai_user.abc import MixinMeta, ai_user
 from ai_user.prompts.presets import DEFAULT_PROMPT, PRESETS
@@ -28,14 +28,24 @@ class PromptSettings(MixinMeta):
     @checks.is_owner()
     async def prompt_reset(self, ctx: commands.Context):
         """ Reset ALL prompts in this guild to default (inc. channels and members) """
-        self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
-        await self.config.guild(ctx.guild).custom_text_prompt.set(None)
-        for member in ctx.guild.members:
-            await self.config.member(member).custom_text_prompt.set(None)
-        for channel in ctx.guild.channels:
-            await self.config.channel(channel).custom_text_prompt.set(None)
-        embed = discord.Embed(title="All prompts have been reset.", color=await ctx.embed_color())
-        return await ctx.send(embed=embed)
+        embed = discord.Embed(
+            title="Are you sure?",
+            description="This will reset *ALL* prompts in this guild to default (including per channels and per member)",
+            color=await ctx.embed_color())
+        confirm = await ctx.send(embed=embed)
+        start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
+        pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
+        await ctx.bot.wait_for("reaction_add", timeout=10.0, check=pred)
+        if pred.result is False:
+            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+        else:
+            self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
+            await self.config.guild(ctx.guild).custom_text_prompt.set(None)
+            for member in ctx.guild.members:
+                await self.config.member(member).custom_text_prompt.set(None)
+            for channel in ctx.guild.channels:
+                await self.config.channel(channel).custom_text_prompt.set(None)
+            return await confirm.edit(embed=discord.Embed(title="All prompts have been reset to default.", color=await ctx.embed_color()))
 
     @prompt.group(name="show", invoke_without_command=True)
     async def prompt_show(self, ctx, mention: Optional[Union[discord.Member, discord.TextChannel]]):

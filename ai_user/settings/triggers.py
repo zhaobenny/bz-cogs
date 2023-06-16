@@ -35,7 +35,7 @@ class TriggerSettings(MixinMeta):
             color=await ctx.embed_color())
         await ctx.send(embed=embed)
 
-    @trigger.command(name="force_reply_to_mentions", aliases=["mentions_replies"])
+    @trigger.command(name="reply_to_mentions", aliases=["mentions_replies"])
     @checks.is_owner()
     async def force_reply_to_mentions(self, ctx: commands.Context):
         """ Toggles if the bot will always reply to mentions/replies """
