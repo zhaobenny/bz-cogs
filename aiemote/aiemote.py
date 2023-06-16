@@ -85,7 +85,6 @@ class aiemote(commands.Cog):
                 logit_bias[encoded_value[0]] = 100
 
         system_prompt = f"You are in a chat room. You will pick an emoji for the following message. {await self.config.extra_instruction()} Here are your options: {options} Your answer will be a int between 0 and {len(emojis)-1}."
-        print(system_prompt)
         content = self.stringify_any_mentions(message)
         try:
             response = await openai.ChatCompletion.acreate(
@@ -98,7 +97,7 @@ class aiemote(commands.Cog):
                 logit_bias=logit_bias,
             )
         except:
-            logger.error("Failed to get response from OpenAI", exc_info=True)
+            logger.warning("Skipping react! Failed to get response from OpenAI")
             return None
         response = response["choices"][0]["message"]["content"]
         if response.isnumeric():
@@ -109,7 +108,7 @@ class aiemote(commands.Cog):
             return partial_emoji
         else:
             logger.warning(
-                f" Skipping react! Non-numeric response from OpenAI: {response}. (Please report to dev if this occurs often)")
+                f"Skipping react! Non-numeric response from OpenAI: {response}. (Please report to dev if this occurs often)")
             return None
 
     async def is_valid_to_react(self, ctx: commands.Context):
