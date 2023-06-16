@@ -296,7 +296,7 @@ class aiemote(commands.Cog):
         if len(emojis) == 0:
             serverembed.description = "None"
         for item in emojis:
-            partial_emoji = discord.PartialEmoji.from_str(item["emoji"], inline=False)
+            partial_emoji = discord.PartialEmoji.from_str(item["emoji"])
             emoji = str(partial_emoji)
             globalembed.add_field(name=emoji, value=item["description"])
         settingsembed = discord.Embed(title="Global Settings", color=await ctx.embed_color())
