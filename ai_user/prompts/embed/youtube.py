@@ -24,6 +24,8 @@ class YoutubeLinkPrompt(Prompt):
             return None
 
         video_title, channel_title, description = await self._get_video_details(video_id)
+        if not video_title or not channel_title or not description:
+            return None
 
         remaining_message = self.remove_youtube_links(self.message.content)
 
@@ -52,6 +54,7 @@ class YoutubeLinkPrompt(Prompt):
                     return (video_title, channel_title, description)
                 else:
                     logger.warning("Request to Youtube API failed with status code:", response.status)
+                    return (None, None, None)
 
     async def _get_video_id(self, url):
         pattern = r"(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/|v\/|t\/\S*?\/?)([a-zA-Z0-9_-]{11})"

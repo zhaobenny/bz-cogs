@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Optional, Union
 
@@ -35,7 +36,10 @@ class PromptSettings(MixinMeta):
         confirm = await ctx.send(embed=embed)
         start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
         pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
-        await ctx.bot.wait_for("reaction_add", timeout=10.0, check=pred)
+        try:
+            await ctx.bot.wait_for("reaction_add", timeout=10.0, check=pred)
+        except asyncio.TimeoutError:
+            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
         if pred.result is False:
             return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
         else:
@@ -249,7 +253,7 @@ class PromptSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     async def get_tokens(self, ctx: commands.Context, prompt: str) -> int:
-        prompt = f"You are {ctx.guild.me.name}. {prompt}"
+        prompt = f"You are {ctx.guild.me.nick or ctx.guild.me.name}. {prompt}"
         try:
             encoding = tiktoken.encoding_for_model(await self.config.guild(ctx.guild).model())
         except KeyError:

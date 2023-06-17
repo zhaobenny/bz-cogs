@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import re
@@ -112,6 +113,9 @@ class ResponseSettings(MixinMeta):
                 color=await ctx.embed_color())
             pages.append(page)
 
+        if len(pages) == 1:
+            return await ctx.send(embed=pages[0])
+
         for i, page in enumerate(pages):
             page.set_footer(text=f"Page {i+1} of {len(pages)}")
 
@@ -121,8 +125,22 @@ class ResponseSettings(MixinMeta):
     @checks.admin_or_permissions(manage_guild=True)
     async def removelist_reset(self, ctx: commands.Context):
         """Reset the removelist to default """
-        await self.config.guild(ctx.guild).removelist_regexes.set(DEFAULT_REMOVELIST)
-        await ctx.send("The message removelist has been reset.")
+        embed = discord.Embed(
+            title="Are you sure?",
+            description="This will reset this server's removelist to default.",
+            color=await ctx.embed_color())
+        confirm = await ctx.send(embed=embed)
+        start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
+        pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
+        try:
+            await ctx.bot.wait_for("reaction_add", timeout=10.0, check=pred)
+        except asyncio.TimeoutError:
+            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+        if pred.result is False:
+            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+        else:
+            await self.config.guild(ctx.guild).removelist_regexes.set(DEFAULT_REMOVELIST)
+            return await confirm.edit(embed=discord.Embed(title="Removelist reset.", color=await ctx.embed_color()))
 
     @response.group(name="weights", aliases=["logit_bias", "bias"])
     async def weights(self, _):
@@ -231,15 +249,12 @@ class ResponseSettings(MixinMeta):
         weights = await self.config.guild(ctx.guild).weights()
         weights = {} if weights is None else json.loads(weights)
 
-        # inital check to see if word is in weights
         token = encoding.encode(word)
         if len(token) == 1:
             if str(token[0]) not in weights.keys():
-                print(token[0])
-                print(weights.keys())
                 return await ctx.send(":warning: Word not found in weights.")
         else:
-            return await ctx.send(":warning: Word is multiple tokens. Please remove each token separately.")
+            return await ctx.send(":warning: Word is multiple tokens? Please check [p]ai_user response weights list")
 
         tokens = await self.get_all_tokens(word, encoding)
         for token in tokens:
@@ -291,14 +306,8 @@ class ResponseSettings(MixinMeta):
             return await ctx.send("Parameters reset to default")
 
         embed = discord.Embed(title="Custom Parameters", color=await ctx.embed_color())
-        embed.add_field(
-            name=":warning: Warning :warning:",
-            value="No checks were done to see if parameters were compatible\n----------------------------------------",
-            inline=False
-        )
-
         parameters = await self.config.guild(ctx.guild).parameters()
-        data = {"NA": "NA"} if parameters is None else json.loads(parameters)
+        data = json.loads(parameters)
 
         if json_block not in ['show', 'list']:
             if not json_block.startswith("```"):
@@ -320,20 +329,33 @@ class ResponseSettings(MixinMeta):
 
             if data.get("logit_bias") and await self.config(ctx.guild).weights():
                 embed = discord.Embed(
-                    title="Logit bias already set. Please remove logit bias from custom parameters first."
+                    title="Existing logit bias found!",
+                    description="Wipe existing logit bias (from [p]ai_user response weights)?",
                 )
                 confirm = await ctx.send(embed=embed)
                 start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
                 pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
-                await ctx.bot.wait_for("reaction_add", check=pred, timeout=30)
+                try:
+                    await ctx.bot.wait_for("reaction_add", check=pred, timeout=30)
+                except asyncio.TimeoutError:
+                    return await confirm.edit(content="Canceled.")
                 if pred.result is True:
+                    await confirm.edit(content="Overwritten existing weights.")
                     await self.config.guild(ctx.guild).weights.set(None)
                 else:
-                    return await confirm.edit(content="Canceled")
+                    return await confirm.edit(content="Canceled.")
 
             await self.config.guild(ctx.guild).parameters.set(json.dumps(data))
 
-        for key, value in data.items():
-            embed.add_field(name=key, value=f"```{json.dumps(value, indent=4)}```", inline=False)
+        if not data:
+            embed.description = "No custom parameters set."
+        else:
+            embed.add_field(
+                name=":warning: Warning :warning:",
+                value="No checks were done to see if parameters were compatible\n----------------------------------------",
+                inline=False
+            )
+            for key, value in data.items():
+                embed.add_field(name=key, value=f"```{json.dumps(value, indent=4)}```", inline=False)
 
         await ctx.send(embed=embed)

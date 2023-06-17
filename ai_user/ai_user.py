@@ -35,7 +35,7 @@ class AI_User(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClas
         self.reply_percent: dict[int, float] = {}
         self.ignore_regex: dict[int, re.Pattern] = {}
         self.override_prompt_start_time: dict[int, datetime] = {}
-        self.cached_messages: Cache[int, MessagesItem] = Cache(limit=50)
+        self.cached_messages: Cache[int, MessagesItem] = Cache(limit=100)
 
         default_global = {
             "custom_openai_endpoint": None,
@@ -85,6 +85,8 @@ class AI_User(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClas
             member = guild.get_member(user_id)
             if member:
                 await self.config.member(member).clear()
+                # TODO: remove user messages from cache instead of clearing the whole cache
+                self.cached_messages = Cache(limit=100)
 
     @app_commands.command(name="chat")
     @app_commands.describe(text="The prompt you want to send to the AI.")
