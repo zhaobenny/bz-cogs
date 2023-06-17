@@ -1,5 +1,7 @@
+import asyncio
 import logging
 import random
+import re
 from typing import Optional
 
 import discord
@@ -8,11 +10,16 @@ import tiktoken
 from emoji import EMOJI_DATA
 from redbot.core import Config, checks, commands
 from redbot.core.bot import Red
+from redbot.core.utils.menus import start_adding_reactions
+from redbot.core.utils.predicates import ReactionPredicate
+from redbot.core.utils.views import SimpleMenu
 
 logger = logging.getLogger("red.bz_cogs.aiemote")
 
 
 class aiemote(commands.Cog):
+    MATCH_DISCORD_EMOJI_REGEX = r"<a?:[A-Za-z0-9]+:[0-9]+>"
+
     def __init__(self, bot):
         super().__init__()
         self.bot: Red = bot
@@ -240,15 +247,16 @@ class aiemote(commands.Cog):
         return await ctx.tick()
 
     async def check_valid_emoji(self, ctx: commands.Context, emoji):
-        if not emoji.startswith("<") and emoji.endswith(">") and emoji not in EMOJI_DATA.keys():
+        if emoji in EMOJI_DATA.keys():
+            return True
+        if (not bool(re.fullmatch(self.MATCH_DISCORD_EMOJI_REGEX, emoji))):
             await ctx.send("Invalid emoji!")
             return False
-        else:
-            try:
-                discord.PartialEmoji.from_str(emoji)
-            except:
-                await ctx.send("Invalid emoji! Custom emojis must be usable by the bot itself")
-                return False
+        emoji = discord.PartialEmoji.from_str(emoji)
+        isBotEmoji = bool(discord.utils.get(self.bot.emojis, name=emoji.name, id=emoji.id))
+        if not isBotEmoji:
+            await ctx.send("Invalid emoji! Custom emojis must be usable by the bot itself")
+            return False
         return True
 
     async def add_emoji(self, ctx: commands.Context, emoji_list, emoji, description):
@@ -305,15 +313,31 @@ class aiemote(commands.Cog):
             await self.config.global_emojis.set(emojis)
             await ctx.tick()
 
-    async def create_emoji_embed(self, ctx, title: str, emojis) -> discord.Embed:
-        embed = discord.Embed(title=title, color=await ctx.embed_color())
+    async def create_emoji_embed(self, ctx, title: str, emojis: list):
+        embeds = []
+        chunk_size = 8
+
         if len(emojis) == 0:
-            embed.description = "None"
-        for item in emojis:
-            partial_emoji = discord.PartialEmoji.from_str(item["emoji"])
-            emoji = str(partial_emoji)
-            embed.add_field(name=emoji, value=item["description"], inline=False)
-        return embed
+            embed = discord.Embed(title=title, description="None", color=await ctx.embed_color())
+            embeds.append(embed)
+            return embeds
+
+        for i in range(0, len(emojis), chunk_size):
+            embed = discord.Embed(title=title, color=await ctx.embed_color())
+
+            chunk = emojis[i: i + chunk_size]
+            for item in chunk:
+                partial_emoji = discord.PartialEmoji.from_str(item["emoji"])
+                emoji = str(partial_emoji)
+                embed.add_field(name=emoji, value=item["description"], inline=False)
+
+            embeds.append(embed)
+
+        if len(embeds) > 1:
+            for i, page in enumerate(embeds):
+                page.set_footer(text=f"Page {i+1} of {len(embeds)}")
+
+        return embeds
 
     @aiemote_admin.command(name="config", aliases=["settings", "list", "conf"])
     @checks.is_owner()
@@ -321,17 +345,47 @@ class aiemote(commands.Cog):
         """ List all emojis in the global list (and current server list)
         """
         emojis = await self.config.global_emojis()
-        globalembed = discord.Embed(title="Global Emojis", color=await ctx.embed_color())
-        emojis = await self.config.global_emojis()
-        globalembed = await self.create_emoji_embed(ctx, "Global Emojis", emojis)
+        globalembeds = await self.create_emoji_embed(ctx, "Global Emojis", emojis)
         emojis = await self.config.guild(ctx.guild).server_emojis()
-        serverembed = await self.create_emoji_embed(ctx, "Current Server-specific Emojis", emojis)
+        serverembeds = await self.create_emoji_embed(ctx, "Current Server-specific Emojis", emojis)
         settingsembed = discord.Embed(title="Main Settings", color=await ctx.embed_color())
         settingsembed.add_field(name="Percent Chance", value=f"{self.percent}%", inline=False)
         settingsembed.add_field(name="Additonal Instruction", value=await self.config.extra_instruction() or "None", inline=False)
         await ctx.send(embed=settingsembed)
-        await ctx.send(embed=globalembed)
-        await ctx.send(embed=serverembed)
+        if len(globalembeds) > 1:
+            await (SimpleMenu(globalembeds)).start(ctx)
+        else:
+            await ctx.send(embed=globalembeds[0])
+        if len(serverembeds) > 1:
+            await (SimpleMenu(serverembeds)).start(ctx)
+        else:
+            await ctx.send(embed=serverembeds[0])
+
+    @aiemote_admin.command(name="reset")
+    @checks.is_owner()
+    async def reset_all_settings(self, ctx: commands.Context):
+        """
+        Reset *all* settings
+        """
+        embed = discord.Embed(
+            title="Are you sure?",
+            description="This will reset all settings to default! (Including per server lists)",
+            color=await ctx.embed_color())
+        confirm = await ctx.send(embed=embed)
+        start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
+        pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
+        try:
+            await ctx.bot.wait_for("reaction_add", timeout=10.0, check=pred)
+        except asyncio.TimeoutError:
+            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+        if pred.result is False:
+            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+        else:
+            await self.config.clear_all_guilds()
+            await self.config.clear_all_globals()
+            self.whitelist = {}
+            self.percent = 50
+            return await confirm.edit(embed=discord.Embed(title="Cleared.", color=await ctx.embed_color()))
 
     @aiemote_admin.command(name="sadd")
     @checks.is_owner()
