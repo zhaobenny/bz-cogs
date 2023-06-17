@@ -58,14 +58,15 @@ Compared to local captioning mode:
 3. No load on machine, that Redbot is running on
 
 #### Cons
-1. Images will be uploaded to a **third party** (a volunteer worker machine)
+1. Privacy issues, images will be uploaded to a **third party** (a random volunteer worker machine)
 2. May be a queue if there are no workers available (faster if you have an [API key](https://stablehorde.net/register) and [kudos](https://dbzer0.com/blog/the-kudos-based-economy-for-the-koboldai-horde/))
 3. No OCR, only image captioning
 
 
 ### Local Image Scanning Mode
 
-Local image scanning mode will be very CPU intensive. (Not recommended for busy servers/channel)
+Local image scanning mode will be **very CPU intensive**. *(Not recommended for busy servers/channel)*
+
 First, images will be OCR'ed for text to use. If the OCR is not of significant confidence, it will be captioned instead using [BLIP](https://huggingface.co/Salesforce/blip-image-captioning-base).
 
 See below for instructions on installing the necessary dependencies. *(x86 only)*
@@ -98,13 +99,17 @@ First time scanning an image will take longer due to the need to download the pr
 
 ⚠️ For advanced users! ⚠️
 
-OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. gpt4all or text-generation-webui)
+OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. gpt4all or text-generation-webui, for a local and more private alternative to OpenAI)
 
-This can be set using:
+This can be set globally using:
 ```
 [p]ai_user response custom_openai <ENDPOINT>
 ```
-Third party models may have undesirable results! Models will also need changing per server.
+
+Models will also need **changing** per server.
+
+
+Third party models may have undesirable results! (I tested this [one](https://huggingface.co/mindrage/Manticore-13B-Chat-Pyg-Guanaco-GGML) and the results are decent-ish )
 
 You may also want to set custom parameters (per server). See:
 ```

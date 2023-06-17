@@ -7,6 +7,7 @@ from redbot.core import checks, commands
 from ai_user.abc import MixinMeta, ai_user
 from ai_user.common.constants import (AI_HORDE_MODE, LOCAL_MODE,
                                       SCAN_IMAGE_MODES)
+
 logger = logging.getLogger("red.bz_cogs.ai_user")
 
 
@@ -63,7 +64,7 @@ class ImageSettings(MixinMeta):
                 importlib.import_module("transformers")
                 await self.config.guild(ctx.guild).scan_images_mode.set(mode)
                 embed = discord.Embed(title="Scanning Images for this server now set to", color=await ctx.embed_color())
-                embed.add_field(name=":warning: WILL CAUSE HEAVY CPU LOAD :warning:", value=mode, inline=False)
+                embed.add_field(name=":warning: __WILL CAUSE HEAVY CPU LOAD__ :warning:", value=mode, inline=False)
                 return await ctx.send(embed=embed)
             except:
                 logger.error("Image processing dependencies import failed. ", exc_info=True)
@@ -72,6 +73,10 @@ class ImageSettings(MixinMeta):
         elif mode == AI_HORDE_MODE:
             await self.config.guild(ctx.guild).scan_images_mode.set(AI_HORDE_MODE)
             embed = discord.Embed(title="Scanning Images for this server now set to", description=mode, color=await ctx.embed_color())
+            embed.add_field(
+                name=":warning: __PRIVACY WARNING__ :warning:",
+                value="This will send images to a random volunteer machine for processing! \n Please inform users or use local mode for privacy.",
+                inline=False)
             if (await self.bot.get_shared_api_tokens('ai-horde')).get("api_key"):
                 key_description = "Key set."
             else:
