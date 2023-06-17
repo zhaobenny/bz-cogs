@@ -240,7 +240,7 @@ class aiemote(commands.Cog):
         return await ctx.tick()
 
     async def check_valid_emoji(self, ctx: commands.Context, emoji):
-        if not emoji.startswith("<:") and emoji not in EMOJI_DATA.keys():
+        if not emoji.startswith("<") and emoji.endswith(">") and emoji not in EMOJI_DATA.keys():
             await ctx.send("Invalid emoji!")
             return False
         else:
