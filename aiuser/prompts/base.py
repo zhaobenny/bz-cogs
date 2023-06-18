@@ -23,7 +23,7 @@ class Prompt:
         self.cog_data_path = cog_data_path(cog)
         start_time = cog.override_prompt_start_time.get(self.message.guild.id)
         self.context_options = ContextOptions(
-            start_time=start_time, ignore_regex=cog.ignore_regex[self.message.guild.id], cached_messages=self.cached_messages)
+            start_time=start_time, ignore_regex=cog.ignore_regex.get(self.message.guild.id), cached_messages=self.cached_messages)
 
     async def _handle_message(self) -> Optional[MessageThread]:
         raise NotImplementedError("_handle_message() must be implemented in subclasses")
