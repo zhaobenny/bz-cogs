@@ -4,30 +4,30 @@ The bot will only reply in whitelisted channels.
 Please add a channel to a server's whitelist using:
 
 ```
-[p]ai_user add <#CHANNEL_MENTION>
+[p]aiuser add <#CHANNEL_MENTION>
 ```
 
 Change the percentage of eligible messages to reply to (defaults to 50% per server):
 
 ```
-[p]ai_user percent <PERCENT>
+[p]aiuser percent <PERCENT>
 ```
 
 See custom prompt settings in:
 ```
-[p]ai_user prompt
+[p]aiuser prompt
 ```
 
 Optionally, enable slash (/chat) command using:
 ```
-[p]slash enablecog ai_user
+[p]slash enablecog aiuser
 [p]slash sync
 ```
 
 See other settings using:
 
 ```
-[p]ai_user
+[p]aiuser
 ```
 
 ### Have fun. 🎉
@@ -42,7 +42,7 @@ See other settings using:
 
 See settings here:
 ```
-[p]ai_user image
+[p]aiuser image
 ```
 
 ### AI Horde Image Scanning Mode
@@ -103,7 +103,7 @@ OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (
 
 This can be set globally using:
 ```
-[p]ai_user response custom_openai <ENDPOINT>
+[p]aiuser response custom_openai <ENDPOINT>
 ```
 
 Models will also need **changing** per server.
@@ -113,5 +113,5 @@ Third party models may have undesirable results! (I tested this [one](https://hu
 
 You may also want to set custom parameters (per server). See:
 ```
-[p]ai_user response parameters
+[p]aiuser response parameters
 ```

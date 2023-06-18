@@ -8,7 +8,7 @@ cog install bz-cogs <cog>
 
 | Name | Description
 | --- | --- |
-ai_user | Human-like user behavior powered by OpenAI. [See here for more info.](https://github.com/zhaobenny/bz-cogs/tree/main/ai_user)
+aiuser | Human-like user behavior powered by OpenAI. [See here for more info.](https://github.com/zhaobenny/bz-cogs/tree/main/aiuser)
 aiemote | Reacts powered by OpenAI.
 oneletteronly | Set nicknames to be initals for new users.
 lifx_light | Controls a singular smart lifx lightblub.

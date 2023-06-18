@@ -8,15 +8,15 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
-from ai_user.abc import MixinMeta, ai_user
-from ai_user.prompts.presets import DEFAULT_PROMPT, PRESETS
+from aiuser.abc import MixinMeta, aiuser
+from aiuser.prompts.presets import DEFAULT_PROMPT, PRESETS
 
-logger = logging.getLogger("red.bz_cogs.ai_user")
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class PromptSettings(MixinMeta):
 
-    @ai_user.group()
+    @aiuser.group()
     @checks.admin_or_permissions(manage_guild=True)
     async def prompt(self, _):
         """ Change the prompt settings for the current server
@@ -134,7 +134,7 @@ class PromptSettings(MixinMeta):
     async def prompt_preset(self, ctx: commands.Context, *, preset: str):
         """ Set/list preset prompts
 
-            Use [p]ai_user prompt preset list to see available presets.
+            Use [p]aiuser prompt preset list to see available presets.
 
             **Arguments**
                 - `preset` The preset to use
@@ -142,7 +142,7 @@ class PromptSettings(MixinMeta):
         if preset == 'list':
             embed = discord.Embed(
                 title="Presets",
-                description=f"Use `{ctx.clean_prefix}ai_user prompt preset <preset>` to set a preset.",
+                description=f"Use `{ctx.clean_prefix}aiuser prompt preset <preset>` to set a preset.",
                 color=await ctx.embed_color())
             embed.add_field(name="Available presets",
                             value="\n".join(PRESETS.keys()), inline=False)

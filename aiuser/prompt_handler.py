@@ -4,15 +4,15 @@ import re
 import discord
 from redbot.core import commands
 
-from ai_user.abc import MixinMeta
-from ai_user.common.constants import AI_HORDE_MODE, LOCAL_MODE
-from ai_user.prompts.embed.generic import GenericEmbedPrompt
-from ai_user.prompts.embed.youtube import YoutubeLinkPrompt
-from ai_user.prompts.image.ai_horde import AIHordeImagePrompt
-from ai_user.prompts.sticker_prompt import StickerPrompt
-from ai_user.prompts.text_prompt import TextPrompt
+from aiuser.abc import MixinMeta
+from aiuser.common.constants import AI_HORDE_MODE, LOCAL_MODE
+from aiuser.prompts.embed.generic import GenericEmbedPrompt
+from aiuser.prompts.embed.youtube import YoutubeLinkPrompt
+from aiuser.prompts.image.ai_horde import AIHordeImagePrompt
+from aiuser.prompts.sticker_prompt import StickerPrompt
+from aiuser.prompts.text_prompt import TextPrompt
 
-logger = logging.getLogger("red.bz_cogs.ai_user")
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class PromptHandler(MixinMeta):
@@ -33,7 +33,7 @@ class PromptHandler(MixinMeta):
         async with message.channel.typing():
             if await self.config.guild(message.guild).scan_images_mode() == LOCAL_MODE:
                 try:
-                    from ai_user.prompts.image.local import LocalImagePrompt
+                    from aiuser.prompts.image.local import LocalImagePrompt
                     return LocalImagePrompt(self, message)
                 except ImportError:
                     logger.error(

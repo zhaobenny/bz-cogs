@@ -6,10 +6,10 @@ from datetime import datetime, timezone
 
 from redbot.core import Config, commands
 
-from ai_user.prompts.common.messages_list import MessagesList
+from aiuser.prompts.common.messages_list import MessagesList
 
 
-logger = logging.getLogger("red.bz_cogs.ai_user")
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class Base_LLM_Response():

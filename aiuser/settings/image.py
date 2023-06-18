@@ -4,20 +4,20 @@ import logging
 import discord
 from redbot.core import checks, commands
 
-from ai_user.abc import MixinMeta, ai_user
-from ai_user.common.constants import (AI_HORDE_MODE, LOCAL_MODE,
+from aiuser.abc import MixinMeta, aiuser
+from aiuser.common.constants import (AI_HORDE_MODE, LOCAL_MODE,
                                       SCAN_IMAGE_MODES)
 
-logger = logging.getLogger("red.bz_cogs.ai_user")
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class ImageSettings(MixinMeta):
-    @ai_user.group()
+    @aiuser.group()
     @checks.is_owner()
     async def image(self, _):
         """ Change the image scan setting
 
-            Go [here](https://github.com/zhaobenny/bz-cogs/tree/main/ai_user#image-scanning-%EF%B8%8F) for more info.
+            Go [here](https://github.com/zhaobenny/bz-cogs/tree/main/aiuser#image-scanning-%EF%B8%8F) for more info.
 
             (All subcommands are per server)
         """
@@ -52,8 +52,8 @@ class ImageSettings(MixinMeta):
         """ Set method for scanning images
 
             The following modes are available, please see links for more details:
-            - [local](https://github.com/zhaobenny/bz-cogs/tree/main/ai_user#local-image-scanning-mode)
-            - [ai-horde](https://github.com/zhaobenny/bz-cogs/tree/main/ai_user#ai-horde-image-scanning-mode)
+            - [local](https://github.com/zhaobenny/bz-cogs/tree/main/aiuser#local-image-scanning-mode)
+            - [ai-horde](https://github.com/zhaobenny/bz-cogs/tree/main/aiuser#ai-horde-image-scanning-mode)
         """
         if mode not in SCAN_IMAGE_MODES:
             await ctx.send(f"Invalid mode. Choose from: {', '.join(SCAN_IMAGE_MODES)}")

@@ -5,29 +5,29 @@ import discord
 import openai
 from redbot.core import checks, commands
 
-from ai_user.abc import MixinMeta
-from ai_user.settings.image import ImageSettings
-from ai_user.settings.prompt import PromptSettings
-from ai_user.settings.response import ResponseSettings
-from ai_user.settings.triggers import TriggerSettings
+from aiuser.abc import MixinMeta
+from aiuser.settings.image import ImageSettings
+from aiuser.settings.prompt import PromptSettings
+from aiuser.settings.response import ResponseSettings
+from aiuser.settings.triggers import TriggerSettings
 
-logger = logging.getLogger("red.bz_cogs.ai_user")
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings, MixinMeta):
 
-    @commands.group()
+    @commands.group(aliases=["ai_user"])
     @commands.guild_only()
-    async def ai_user(self, _):
+    async def aiuser(self, _):
         """ Utilize OpenAI to reply to messages and images in approved channels"""
         pass
 
-    @ai_user.command(aliases=["lobotomize"])
+    @aiuser.command(aliases=["lobotomize"])
     async def forget(self, ctx: commands.Context):
         """ Forces the bot to forget the current conversation up to this point
 
             This is useful if the LLM is stuck doing unwanted behaviour or giving undesirable results.
-            See `[p]ai_user triggers public_forget` to allow non-admins to use this command.
+            See `[p]aiuser triggers public_forget` to allow non-admins to use this command.
         """
         if not ctx.channel.permissions_for(ctx.author).manage_messages\
                 and not await self.config.guild(ctx.guild).public_forget():
@@ -36,7 +36,7 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
         self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
         await ctx.react_quietly("✅")
 
-    @ai_user.command(aliases=["settings", "showsettings"])
+    @aiuser.command(aliases=["settings", "showsettings"])
     async def config(self, ctx: commands.Context):
         """ Returns current config
 
@@ -94,7 +94,7 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
             await ctx.send(embed=embed)
         return
 
-    @ai_user.command()
+    @aiuser.command()
     @checks.is_owner()
     async def percent(self, ctx: commands.Context, percent: float):
         """ Change the bot's response chance
@@ -111,7 +111,7 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
-    @ai_user.command()
+    @aiuser.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def add(self, ctx: commands.Context, channel: discord.TextChannel):
         """ Adds a channel to the whitelist
@@ -132,7 +132,7 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
         embed.description = "\n".join(channels) if channels else "None"
         return await ctx.send(embed=embed)
 
-    @ai_user.command()
+    @aiuser.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def remove(self, ctx: commands.Context, channel: discord.TextChannel):
         """ Remove a channel from the whitelist
@@ -153,12 +153,12 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
         embed.description = "\n".join(channels) if channels else "None"
         return await ctx.send(embed=embed)
 
-    @ai_user.command()
+    @aiuser.command()
     @checks.is_owner()
     async def model(self, ctx: commands.Context, model: str):
         """ Changes chat completion model
 
-             To see a list of available models, use `[p]ai_user model list`
+             To see a list of available models, use `[p]aiuser model list`
              (Setting is per server)
 
             **Arguments**

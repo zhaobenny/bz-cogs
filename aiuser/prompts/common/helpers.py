@@ -1,7 +1,7 @@
 from discord import Message
 import logging
 
-logger = logging.getLogger("red.bz_cogs.ai_user")
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 def format_text_content(message: Message):

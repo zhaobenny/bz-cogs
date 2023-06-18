@@ -9,21 +9,21 @@ import openai
 from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
-from ai_user.abc import CompositeMetaClass
-from ai_user.common.cache import Cache
-from ai_user.common.constants import (AI_HORDE_MODE,
+from aiuser.abc import CompositeMetaClass
+from aiuser.common.cache import Cache
+from aiuser.common.constants import (AI_HORDE_MODE,
                                       DEFAULT_REMOVELIST,
                                       DEFAULT_REPLY_PERCENT,
                                       MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
-from ai_user.model.openai import OpenAI_LLM_Response
-from ai_user.prompt_handler import PromptHandler
-from ai_user.prompts.common.messages_item import MessagesItem
-from ai_user.settings.base import Settings
+from aiuser.model.openai import OpenAI_LLM_Response
+from aiuser.prompt_handler import PromptHandler
+from aiuser.prompts.common.messages_item import MessagesItem
+from aiuser.settings.base import Settings
 
-logger = logging.getLogger("red.bz_cogs.ai_user")
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class AI_User(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClass):
+class AIUser(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClass):
     """ Utilize OpenAI to reply to messages and images in approved channels. """
 
     def __init__(self, bot):
@@ -196,5 +196,5 @@ class AI_User(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClas
         openai.api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
         if not openai.api_key:
             await ctx.send(
-                f"OpenAI API key not set for `ai_user`. "
+                f"OpenAI API key not set for `aiuser`. "
                 f"Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")

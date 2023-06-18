@@ -1,0 +1,21 @@
+{
+    "author": [
+        "zhaobenny"
+    ],
+    "description": "Utilize OpenAI to reply to messages and images in approved channels.",
+    "install_msg": "See cog README for additional setup. Set OpenAI key using [p]set api openai api_key,INSERT_API_KEY and [p]aiuser add CHANNEL_NAME to whitelist channels for the bot to start replying",
+    "short": "Human-like user behavior powered by OpenAI.",
+    "requirements": [
+        "openai",
+        "tenacity",
+        "tiktoken",
+        "Pillow"
+    ],
+    "end_user_data_statement": "This cog does not persistently store data or metadata about users, but chat messages may be sent to OpenAI to generate responses. Please refer to: <https://openai.com/policies/privacy-policy>. Images, if enabled for scanning, may be sent to ai-horde. Please refer to: <https://stablehorde.net/privacy>",
+    "tags": [
+        "openai",
+        "chatgpt",
+        "chatbot"
+    ],
+    "min_bot_version": "3.5.0"
+}

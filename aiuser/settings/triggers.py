@@ -5,13 +5,13 @@ from typing import Optional
 import discord
 
 from redbot.core import checks, commands
-from ai_user.abc import MixinMeta, ai_user
+from aiuser.abc import MixinMeta, aiuser
 
-logger = logging.getLogger("red.bz_cogs.ai_user")
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class TriggerSettings(MixinMeta):
-    @ai_user.group()
+    @aiuser.group()
     async def trigger(self, _):
         """ Configure trigger settings for the bot to respond to """
         pass

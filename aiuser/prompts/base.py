@@ -5,12 +5,12 @@ from redbot.core import Config
 from redbot.core.bot import Red
 from redbot.core.data_manager import cog_data_path
 
-from ai_user.abc import MixinMeta
-from ai_user.common.constants import MAX_HISTORY_MESSAGE_LENGTH
-from ai_user.common.types import ContextOptions
-from ai_user.prompts.common.helpers import format_text_content
-from ai_user.prompts.common.messages_list import MessagesList
-from ai_user.prompts.presets import DEFAULT_PROMPT
+from aiuser.abc import MixinMeta
+from aiuser.common.constants import MAX_HISTORY_MESSAGE_LENGTH
+from aiuser.common.types import ContextOptions
+from aiuser.prompts.common.helpers import format_text_content
+from aiuser.prompts.common.messages_list import MessagesList
+from aiuser.prompts.presets import DEFAULT_PROMPT
 
 
 class Prompt:

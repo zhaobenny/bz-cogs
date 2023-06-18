@@ -7,11 +7,11 @@ import pytesseract
 from PIL import Image
 from transformers import BlipForConditionalGeneration, BlipProcessor
 
-from ai_user.common.constants import IMAGE_RESOLUTION
-from ai_user.prompts.common.messages_list import MessagesList
-from ai_user.prompts.image.base import BaseImagePrompt
+from aiuser.common.constants import IMAGE_RESOLUTION
+from aiuser.prompts.common.messages_list import MessagesList
+from aiuser.prompts.image.base import BaseImagePrompt
 
-logger = logging.getLogger("red.bz_cogs.ai_user")
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 def to_thread(func: Callable) -> Coroutine:

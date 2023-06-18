@@ -12,15 +12,15 @@ from redbot.core.utils.chat_formatting import box, pagify
 from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
-from ai_user.abc import MixinMeta, ai_user
-from ai_user.common.constants import DEFAULT_REMOVELIST
+from aiuser.abc import MixinMeta, aiuser
+from aiuser.common.constants import DEFAULT_REMOVELIST
 
-logger = logging.getLogger("red.bz_cogs.ai_user")
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class ResponseSettings(MixinMeta):
 
-    @ai_user.group(name="response")
+    @aiuser.group(name="response")
     @checks.admin_or_permissions(manage_guild=True)
     async def response(self, _):
         """ Change bot response settings
@@ -34,7 +34,7 @@ class ResponseSettings(MixinMeta):
     async def endpoint(self, ctx: commands.Context, url: Optional[str]):
         """ Sets the OpenAI endpoint to a custom one (must be OpenAI API compatible)
 
-            Reset to official OpenAI endpoint with `[p]ai_user response endpoint clear`
+            Reset to official OpenAI endpoint with `[p]aiuser response endpoint clear`
         """
         if not url or url in ["clear", "reset"]:
             openai.api_base = "https://api.openai.com/v1"
@@ -254,7 +254,7 @@ class ResponseSettings(MixinMeta):
             if str(token[0]) not in weights.keys():
                 return await ctx.send(":warning: Word not found in weights.")
         else:
-            return await ctx.send(":warning: Word is multiple tokens? Please check [p]ai_user response weights list")
+            return await ctx.send(":warning: Word is multiple tokens? Please check [p]aiuser response weights list")
 
         tokens = await self.get_all_tokens(word, encoding)
         for token in tokens:
@@ -292,11 +292,11 @@ class ResponseSettings(MixinMeta):
     async def set_custom_parameters(self, ctx: commands.Context, *, json_block: str):
         """ Set custom parameters for an endpoint using a JSON code block
 
-            To reset parameters to default, use `[p]ai_user response parameters reset`
-            To show current parameters, use `[p]ai_user response parameters show`
+            To reset parameters to default, use `[p]aiuser response parameters reset`
+            To show current parameters, use `[p]aiuser response parameters show`
 
             Example command:
-            `[p]ai_user parameters ```{"frequency_penalty": 2.0, "max_tokens": 200}``` `
+            `[p]aiuser parameters ```{"frequency_penalty": 2.0, "max_tokens": 200}``` `
 
             See [here](https://platform.openai.com/docs/api-reference/chat/create) for possible parameters
             Some parameters are blocked.
@@ -330,7 +330,7 @@ class ResponseSettings(MixinMeta):
             if data.get("logit_bias") and await self.config(ctx.guild).weights():
                 embed = discord.Embed(
                     title="Existing logit bias found!",
-                    description="Wipe existing logit bias (from [p]ai_user response weights)?",
+                    description="Wipe existing logit bias (from [p]aiuser response weights)?",
                 )
                 confirm = await ctx.send(embed=embed)
                 start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)

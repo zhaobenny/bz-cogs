@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from ai_user.common.types import RoleType
+from aiuser.common.types import RoleType
 
 
 @dataclass(frozen=True)

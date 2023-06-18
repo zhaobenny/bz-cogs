@@ -1,11 +1,11 @@
 import logging
 from typing import Optional
 
-from ai_user.prompts.base import Prompt
-from ai_user.prompts.common.helpers import format_sticker_content
-from ai_user.prompts.common.messages_list import MessagesList
+from aiuser.prompts.base import Prompt
+from aiuser.prompts.common.helpers import format_sticker_content
+from aiuser.prompts.common.messages_list import MessagesList
 
-logger = logging.getLogger("red.bz_cogs.ai_user")
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class StickerPrompt(Prompt):

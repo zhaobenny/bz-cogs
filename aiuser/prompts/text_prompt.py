@@ -4,12 +4,12 @@ from typing import Optional
 
 from discord import Message
 
-from ai_user.common.constants import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
-from ai_user.prompts.base import Prompt
-from ai_user.prompts.common.helpers import format_text_content
-from ai_user.prompts.common.messages_list import MessagesList
+from aiuser.common.constants import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
+from aiuser.prompts.base import Prompt
+from aiuser.prompts.common.helpers import format_text_content
+from aiuser.prompts.common.messages_list import MessagesList
 
-logger = logging.getLogger("red.bz_cogs.ai_user")
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class TextPrompt(Prompt):
