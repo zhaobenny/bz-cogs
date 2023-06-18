@@ -7,7 +7,7 @@ from discord import Message
 from aiuser.common.constants import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH
 from aiuser.prompts.base import Prompt
 from aiuser.prompts.common.helpers import format_text_content
-from aiuser.prompts.common.messages_list import MessagesList
+from aiuser.prompts.common.messagethread import MessageThread
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -40,7 +40,7 @@ class TextPrompt(Prompt):
 
         return True
 
-    async def _handle_message(self) -> Optional[MessagesList]:
+    async def _handle_message(self) -> Optional[MessageThread]:
         if not self._is_acceptable_message(self.message):
             return None
 

@@ -9,7 +9,7 @@ import aiohttp
 from PIL import Image
 
 from aiuser.common.constants import IMAGE_RESOLUTION, IMAGE_TIMEOUT
-from aiuser.prompts.common.messages_list import MessagesList
+from aiuser.prompts.common.messagethread import MessageThread
 from aiuser.prompts.image.base import BaseImagePrompt
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -19,7 +19,7 @@ class AIHordeImagePrompt(BaseImagePrompt):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    async def _process_image(self, image: Image) -> Optional[MessagesList]:
+    async def _process_image(self, image: Image) -> Optional[MessageThread]:
         apikey = (await self.bot.get_shared_api_tokens("ai-horde")).get("api_key") or "0000000000"
         image = self.scale_image(image, IMAGE_RESOLUTION ** 2)
         image_bytes = BytesIO()

@@ -10,13 +10,13 @@ from redbot.core import Config
 from aiuser.common.constants import OPENAI_MODEL_TOKEN_LIMIT
 from aiuser.common.types import ContextOptions, RoleType
 from aiuser.prompts.common.helpers import format_embed_content, format_sticker_content, format_text_content, is_embed_valid
-from aiuser.prompts.common.messages_item import MessagesItem
+from aiuser.prompts.common.messageentry import MessageEntry
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 @dataclass()
-class MessagesList:
+class MessageThread:
     bot: Union[User, Member]
     config: Config
     initial_message: Message
@@ -35,7 +35,7 @@ class MessagesList:
 
         # noinspection PyTypeChecker
         role: RoleType = "user" if message.author.id != self.bot.id else "assistant"
-        messages_item = MessagesItem(role, content)
+        messages_item = MessageEntry(role, content)
 
         insertion_index = self._get_insertion_index(prepend)
         self.messages.insert(insertion_index, messages_item)
@@ -43,7 +43,7 @@ class MessagesList:
         await self._add_tokens(content)
 
     async def add_system(self, content: str, prepend: bool = False):
-        messages_item = MessagesItem("system", content)
+        messages_item = MessageEntry("system", content)
         insertion_index = self._get_insertion_index(prepend)
         self.messages.insert(insertion_index, messages_item)
         await self._add_tokens(content)

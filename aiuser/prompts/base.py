@@ -9,7 +9,7 @@ from aiuser.abc import MixinMeta
 from aiuser.common.constants import MAX_HISTORY_MESSAGE_LENGTH
 from aiuser.common.types import ContextOptions
 from aiuser.prompts.common.helpers import format_text_content
-from aiuser.prompts.common.messages_list import MessagesList
+from aiuser.prompts.common.messagethread import MessageThread
 from aiuser.prompts.presets import DEFAULT_PROMPT
 
 
@@ -19,16 +19,16 @@ class Prompt:
         self.bot: Red = cog.bot
         self.message: Message = message
         self.cached_messages = cog.cached_messages
-        self.messages: Optional[MessagesList] = None
+        self.messages: Optional[MessageThread] = None
         self.cog_data_path = cog_data_path(cog)
         start_time = cog.override_prompt_start_time.get(self.message.guild.id)
         self.context_options = ContextOptions(
             start_time=start_time, ignore_regex=cog.ignore_regex[self.message.guild.id], cached_messages=self.cached_messages)
 
-    async def _handle_message(self) -> Optional[MessagesList]:
+    async def _handle_message(self) -> Optional[MessageThread]:
         raise NotImplementedError("_handle_message() must be implemented in subclasses")
 
-    async def get_list(self) -> Optional[MessagesList]:
+    async def get_list(self) -> Optional[MessageThread]:
         """
             Returns a list of messages to be used as the prompt for the OpenAI API
         """
@@ -38,7 +38,7 @@ class Prompt:
             or await self.config.guild(self.message.guild).custom_text_prompt() \
             or DEFAULT_PROMPT
 
-        self.messages = MessagesList(self.bot.user, self.config, self.message)
+        self.messages = MessageThread(self.bot.user, self.config, self.message)
 
         await self.messages.add_system(f"You are {self.message.guild.me.nick or self.bot.user.display_name}. {bot_prompt}")
 

@@ -17,7 +17,7 @@ from aiuser.common.constants import (AI_HORDE_MODE,
                                       MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
 from aiuser.model.openai import OpenAI_LLM_Response
 from aiuser.prompt_handler import PromptHandler
-from aiuser.prompts.common.messages_item import MessagesItem
+from aiuser.prompts.common.messageentry import MessageEntry
 from aiuser.settings.base import Settings
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -35,7 +35,7 @@ class AIUser(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClass
         self.reply_percent: dict[int, float] = {}
         self.ignore_regex: dict[int, re.Pattern] = {}
         self.override_prompt_start_time: dict[int, datetime] = {}
-        self.cached_messages: Cache[int, MessagesItem] = Cache(limit=100)
+        self.cached_messages: Cache[int, MessageEntry] = Cache(limit=100)
 
         default_global = {
             "custom_openai_endpoint": None,

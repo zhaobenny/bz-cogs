@@ -6,7 +6,7 @@ from redbot.core import Config, commands
 from redbot.core.bot import Red
 
 from aiuser.common.cache import Cache
-from aiuser.prompts.common.messages_item import MessagesItem
+from aiuser.prompts.common.messageentry import MessageEntry
 
 
 # for other mixins to use
@@ -25,5 +25,5 @@ class MixinMeta(ABC):
         self.config: Config
         self.cached_options: dict
         self.override_prompt_start_time: dict[int, datetime]
-        self.cached_messages: Cache[int, MessagesItem]
+        self.cached_messages: Cache[int, MessageEntry]
         self.ignore_regex: dict[int, re.Pattern]

@@ -4,6 +4,6 @@ from aiuser.common.types import RoleType
 
 
 @dataclass(frozen=True)
-class MessagesItem:
+class MessageEntry:
     role: RoleType
     content: str

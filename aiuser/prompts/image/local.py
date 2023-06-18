@@ -8,7 +8,7 @@ from PIL import Image
 from transformers import BlipForConditionalGeneration, BlipProcessor
 
 from aiuser.common.constants import IMAGE_RESOLUTION
-from aiuser.prompts.common.messages_list import MessagesList
+from aiuser.prompts.common.messagethread import MessageThread
 from aiuser.prompts.image.base import BaseImagePrompt
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -26,7 +26,7 @@ class LocalImagePrompt(BaseImagePrompt):
     def __init__(self, *args,**kwargs):
         super().__init__(*args, **kwargs)
 
-    async def _process_image(self, image: Image) -> Optional[MessagesList]:
+    async def _process_image(self, image: Image) -> Optional[MessageThread]:
         image = self.scale_image(image, IMAGE_RESOLUTION ** 2)
         scanned_text = await self._extract_text_from_image(image)
         author = self.message.author.nick or self.message.author.name

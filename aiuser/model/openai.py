@@ -5,14 +5,14 @@ import openai.error
 from redbot.core import commands, Config
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_random_exponential
 from aiuser.model.base import Base_LLM_Response
-from aiuser.prompts.common.messages_list import MessagesList
+from aiuser.prompts.common.messagethread import MessageThread
 
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class OpenAI_LLM_Response(Base_LLM_Response):
-    def __init__(self, ctx: commands.Context, config: Config, prompt: MessagesList):
+    def __init__(self, ctx: commands.Context, config: Config, prompt: MessageThread):
         super().__init__(ctx, config, prompt)
 
     @retry(

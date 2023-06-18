@@ -6,7 +6,7 @@ from typing import Optional
 import aiohttp
 
 from aiuser.prompts.base import Prompt
-from aiuser.prompts.common.messages_list import MessagesList
+from aiuser.prompts.common.messagethread import MessageThread
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -15,7 +15,7 @@ class YoutubeLinkPrompt(Prompt):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    async def _handle_message(self) -> Optional[MessagesList]:
+    async def _handle_message(self) -> Optional[MessageThread]:
         self.api_key = (await self.bot.get_shared_api_tokens("youtube")).get("api_key")
         video_id = await self._get_video_id(self.message.content)
         author = self.message.author.nick or self.message.author.name

@@ -6,7 +6,7 @@ from PIL import Image
 from aiuser.common.constants import MAX_MESSAGE_LENGTH
 from aiuser.prompts.base import Prompt
 from aiuser.prompts.common.helpers import format_text_content
-from aiuser.prompts.common.messages_list import MessagesList
+from aiuser.prompts.common.messagethread import MessageThread
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -15,7 +15,7 @@ class BaseImagePrompt(Prompt):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    async def _handle_message(self) -> Optional[MessagesList]:
+    async def _handle_message(self) -> Optional[MessageThread]:
         image = self.message.attachments[0] if self.message.attachments else None
 
         if not image or not image.content_type.startswith('image/'):
@@ -38,7 +38,7 @@ class BaseImagePrompt(Prompt):
 
         return self.messages
 
-    async def _process_image(self, image: Image) -> Optional[MessagesList]:
+    async def _process_image(self, image: Image) -> Optional[MessageThread]:
         raise NotImplementedError("_process_image() must be implemented in subclasses")
 
     @staticmethod
