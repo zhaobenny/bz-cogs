@@ -19,7 +19,7 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
     @commands.group(aliases=["ai_user"])
     @commands.guild_only()
     async def aiuser(self, _):
-        """ Utilize OpenAI to reply to messages and images in approved channels"""
+        """ Utilize OpenAI to reply to messages and images in approved channels and by opt-in users"""
         pass
 
     @aiuser.command(aliases=["lobotomize"])
@@ -189,5 +189,61 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
         embed = discord.Embed(
             title="This server's chat model is now set to:",
             description=model,
+            color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
+
+    @aiuser.command()
+    async def optin(self, ctx: commands.Context):
+        """ Opt in of sending your messages to OpenAI or another endpoint (bot-wide)
+
+            This will allow the bot to reply to your messages or using your messages.
+        """
+        optin = await self.config.optin()
+        if ctx.author.id in await self.config.optin():
+            return await ctx.send("You are already opted in.")
+        optout = await self.config.optout()
+        if ctx.author.id in optout:
+            optout.remove(ctx.author.id)
+            await self.config.optout.set(optout)
+            self.optout_users.remove(ctx.author.id)
+        optin.append(ctx.author.id)
+        self.optin_users.append(ctx.author.id)
+        await self.config.optin.set(optin)
+        await ctx.send("You are now opted in bot-wide")
+
+    @aiuser.command()
+    async def optout(self, ctx: commands.Context):
+        """ Opt out of sending your messages to OpenAI or another endpoint (bot-wide)
+
+            This will prevent the bot from replying to your messages or using your messages.
+        """
+        optout = await self.config.optout()
+        if ctx.author.id in optout:
+            return await ctx.send("You are already opted out.")
+        optin = await self.config.optin()
+        if ctx.author.id in optin:
+            optin.remove(ctx.author.id)
+            await self.config.optin.set(optin)
+            self.optin_users.remove(ctx.author.id)
+        optout.append(ctx.author.id)
+        await self.config.optout.set(optout)
+        self.optout_users.append(ctx.author.id)
+        await ctx.send("You are now opted out bot-wide")
+
+    @aiuser.command(name="optinbydefault", alias=["optindefault"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def optin_by_default(self, ctx: commands.Context):
+        """ Toggles whether users are opted in by default in this server
+
+            This command is disabled for servers with more than 150 members.
+        """
+        if len(ctx.guild.members) > 150:
+            return await ctx.send("You cannot enable this setting for servers with more than 150 members.")
+        value = not await self.config.guild(ctx.guild).optin_by_default()
+        self.optindefault[ctx.guild.id] = value
+        await self.config.guild(ctx.guild).optin_by_default.set(value)
+        embed = discord.Embed(
+            title="Users are now opted in by default in this server:",
+            description=f"{value}",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)

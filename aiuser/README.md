@@ -13,6 +13,11 @@ Change the percentage of eligible messages to reply to (defaults to 50% per serv
 [p]aiuser percent <PERCENT>
 ```
 
+Users will also have to opt-in (bot-wide) into having their messages used:
+```
+[p]aiuser optin
+```
+
 See custom prompt settings in:
 ```
 [p]aiuser prompt

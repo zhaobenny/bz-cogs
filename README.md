@@ -14,7 +14,8 @@ oneletteronly | Set nicknames to be initals for new users.
 lifx_light | Controls a singular smart lifx lightblub.
 
 
-### Support / suggestions? Go here: [bz-cogs Discord](https://discord.gg/GwT2yHPqzN)
+### Support / suggestions? Go to [bz-cogs Discord](https://discord.gg/GwT2yHPqzN)
+or ping @Define on the #support_othercogs in the Red - Cog Support server.
 
 ## Contributors 🎉
 <a href="https://github.com/zhaobenny/bz-cogs/graphs/contributors">

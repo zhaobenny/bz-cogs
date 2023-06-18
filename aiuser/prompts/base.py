@@ -38,7 +38,7 @@ class Prompt:
             or await self.config.guild(self.message.guild).custom_text_prompt() \
             or DEFAULT_PROMPT
 
-        self.messages = MessageThread(self.bot.user, self.config, self.message)
+        self.messages = MessageThread(self.bot, self.config, self.message)
 
         await self.messages.add_system(f"You are {self.message.guild.me.nick or self.bot.user.display_name}. {bot_prompt}")
 

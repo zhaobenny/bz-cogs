@@ -31,6 +31,9 @@ class AIUser(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClass
         self.bot: Red = bot
         self.config = Config.get_conf(self, identifier=754070)
         # cached options
+        self.optin_users: list[int] = []
+        self.optout_users: list[int] = []
+        self.optindefault: dict[int, bool] = {}
         self.channels_whitelist: dict[int, list[int]] = {}
         self.reply_percent: dict[int, float] = {}
         self.ignore_regex: dict[int, re.Pattern] = {}
@@ -39,9 +42,12 @@ class AIUser(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClass
 
         default_global = {
             "custom_openai_endpoint": None,
+            "optout": [],
+            "optin": []
         }
 
         default_guild = {
+            "optin_by_default": False,
             "reply_percent": DEFAULT_REPLY_PERCENT,
             "messages_backread": 10,
             "messages_backread_seconds": 60 * 120,
@@ -73,8 +79,11 @@ class AIUser(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClass
     async def cog_load(self):
         if await self.config.custom_openai_endpoint():
             openai.api_base = await self.config.custom_openai_endpoint()
+        self.optin_users = await self.config.optin()
+        self.optout_users = await self.config.optout()
         all_config = await self.config.all_guilds()
         for guild_id, config in all_config.items():
+            self.optindefault[guild_id] = config["optin_by_default"]
             self.channels_whitelist[guild_id] = config["channels_whitelist"]
             self.reply_percent[guild_id] = config["reply_percent"]
             pattern = config["ignore_regex"]
@@ -158,7 +167,15 @@ class AIUser(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClass
 
     async def is_common_valid_reply(self, ctx: commands.Context) -> bool:
         """ Run some common checks to see if a message is valid for the bot to reply to """
-        if not ctx.guild or ctx.author.bot or not self.channels_whitelist.get(ctx.guild.id, []):
+        if not ctx.guild:
+            return False
+        if await self.bot.cog_disabled_in_guild(self, ctx.guild):
+            return False
+        if not await self.bot.ignored_channel_or_guild(ctx):
+            return False
+        if not await self.bot.allowed_by_whitelist_blacklist(ctx.author):
+            return False
+        if ctx.author.bot or not self.channels_whitelist.get(ctx.guild.id, []):
             return False
         if not ctx.interaction and (
             isinstance(
@@ -166,13 +183,11 @@ class AIUser(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClass
             or ctx.channel.id not in self.channels_whitelist[ctx.guild.id]
         ):
             return False
+        if ctx.author.id in self.optout_users:
+            return False
+        if not self.optindefault.get(ctx.guild.id) and ctx.author.id not in self.optin_users:
+            return False
         if self.ignore_regex.get(ctx.guild.id) and self.ignore_regex[ctx.guild.id].search(ctx.message.content):
-            return False
-        if await self.bot.cog_disabled_in_guild(self, ctx.guild):
-            return False
-        if not await self.bot.ignored_channel_or_guild(ctx):
-            return False
-        if not await self.bot.allowed_by_whitelist_blacklist(ctx.author):
             return False
 
         if not openai.api_key:

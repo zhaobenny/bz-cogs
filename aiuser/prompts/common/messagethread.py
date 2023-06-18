@@ -1,15 +1,20 @@
 import logging
-import tiktoken
 import re
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
-from typing import List, Union
-from discord import Message, User, Member
+from typing import List
+
+import discord
+import tiktoken
+from discord import Message
 from redbot.core import Config
+from redbot.core.bot import Red
 
 from aiuser.common.constants import OPENAI_MODEL_TOKEN_LIMIT
 from aiuser.common.types import ContextOptions, RoleType
-from aiuser.prompts.common.helpers import format_embed_content, format_sticker_content, format_text_content, is_embed_valid
+from aiuser.prompts.common.helpers import (format_embed_content,
+                                           format_sticker_content,
+                                           format_text_content, is_embed_valid)
 from aiuser.prompts.common.messageentry import MessageEntry
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -17,7 +22,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 @dataclass()
 class MessageThread:
-    bot: Union[User, Member]
+    bot: Red
     config: Config
     initial_message: Message
     messages: list = field(default_factory=list)
@@ -33,8 +38,15 @@ class MessageThread:
             logger.debug(f"Skipping duplicate message in {message.guild.name} when creating context")
             return
 
+        if not await self.bot.allowed_by_whitelist_blacklist(message.author):
+            return
+        if message.author.id in await self.config.optout():
+            return
+        if not message.author.id in await self.config.optin() and not await self.config.guild(message.guild).optin_by_default():
+            return
+
         # noinspection PyTypeChecker
-        role: RoleType = "user" if message.author.id != self.bot.id else "assistant"
+        role: RoleType = "user" if message.author.id != self.bot.user.id else "assistant"
         messages_item = MessageEntry(role, content)
 
         insertion_index = self._get_insertion_index(prepend)
@@ -87,6 +99,16 @@ class MessageThread:
 
         if past_messages and abs((past_messages[0].created_at - self.initial_message.created_at).total_seconds()) > max_seconds_gap:
             return
+
+        for message in past_messages:
+            if await self.config.guild(message.guild).optin_by_default():
+                break
+            if (not message.author.bot) and (message.author.id not in await self.config.optin()) and (message.author.id not in await self.config.optout()):
+                prefix = (await self.bot.get_prefix(message))[0]
+                embed = discord.Embed(title=":information_source: AI User Opt-In / Opt-Out", color=await self.bot.get_embed_color(message))
+                embed.description = f"Hey there! Looks like some user(s) has not opted in or out of AI User! \n Please use `{prefix}aiuser optin` or `{prefix}aiuser optout` to opt in or out of sending messages to OpenAI or an external endpoint. \n This embed will stop showing up if all users chatting have opted in or out."
+                await message.channel.send(embed=embed)
+                break
 
         for i in range(len(past_messages)-1):
             if self.model.startswith("gpt-") and self.tokens > OPENAI_MODEL_TOKEN_LIMIT.get(self.model, 3000):
