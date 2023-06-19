@@ -171,17 +171,17 @@ class AIUser(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClass
             return False
         if await self.bot.cog_disabled_in_guild(self, ctx.guild):
             return False
-        if not await self.bot.ignored_channel_or_guild(ctx):
-            return False
         if ctx.author.bot or not self.channels_whitelist.get(ctx.guild.id, []):
-            return False
-        if not await self.bot.allowed_by_whitelist_blacklist(ctx.author):
             return False
         if not ctx.interaction and (
             isinstance(
                 ctx.channel, discord.Thread) and ctx.channel.parent.id not in self.channels_whitelist[ctx.guild.id]
             or ctx.channel.id not in self.channels_whitelist[ctx.guild.id]
         ):
+            return False
+        if not await self.bot.ignored_channel_or_guild(ctx):
+            return False
+        if not await self.bot.allowed_by_whitelist_blacklist(ctx.author):
             return False
         if ctx.author.id in self.optout_users:
             return False

@@ -43,6 +43,7 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
             (Current config per server)
         """
         config = await self.config.guild(ctx.guild).get_raw()
+        glob_config = await self.config.get_raw()
         whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
         embeds = []
@@ -51,6 +52,8 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
 
         main_embed.add_field(name="Model", inline=True, value=config['model'])
         main_embed.add_field(name="Reply Percent", inline=True, value=f"{config['reply_percent'] * 100:.2f}%")
+        if config['optin_by_default']:
+            main_embed.add_field(name="Opt In By Default", inline=True, value=config['optin_by_default'])
         main_embed.add_field(name="Scan Images", inline=True, value=config['scan_images'])
         main_embed.add_field(name="Scan Image Mode", inline=True, value=config['scan_images_mode'])
         main_embed.add_field(name="Scan Image Max Size", inline=True,
@@ -62,23 +65,18 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
         main_embed.add_field(name="Public Forget Command", inline=True, value=config['public_forget'])
         main_embed.add_field(name="Whitelisted Channels", inline=False,
                              value=' '.join(channels) if channels else "None")
+        if glob_config['custom_openai_endpoint']:
+            endpoint_text = "Using an custom endpoint"
+        else:
+            endpoint_text = "Using offical OpenAI endpoint"
+        main_embed.add_field(name="LLM Endpoint",
+                             inline=False, value=endpoint_text)
         embeds.append(main_embed)
 
         regex_embed = discord.Embed(title="AI User Regex Settings", color=await ctx.embed_color())
         removelist_regexes = config['removelist_regexes']
-        if isinstance(config['removelist_regexes'], list):
-            total_length = 0
-            removelist_regexes = []
-
-            for item in config['removelist_regexes']:
-                if total_length + len(item) <= 1000:
-                    removelist_regexes.append(item)
-                    total_length += len(item)
-                else:
-                    removelist_regexes.append("More regexes not shown...")
-                    break
-
-        regex_embed.add_field(name="Remove list", value=f"`{removelist_regexes}`")
+        if removelist_regexes is not None:
+            regex_embed.add_field(name="Remove list", value=f"{len(removelist_regexes)} regexes set")
         regex_embed.add_field(name="Ignore Regex", value=f"`{config['ignore_regex']}`")
         embeds.append(regex_embed)
 
