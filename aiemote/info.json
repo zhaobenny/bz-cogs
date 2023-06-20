@@ -3,7 +3,7 @@
         "zhaobenny"
     ],
     "description": "Utilize OpenAI to select the 'best' react for a message",
-    "install_msg": "[p]aiemoteadmin to see owner cmds, add a whitelisted channel as server admin using [p]aiemote allow <#channel>",
+    "install_msg": "[p]aiemoteadmin to see owner cmds, add a whitelisted channel as server admin using [p]aiemote allow <#channel>, then have users optin using [p]aiemote optin",
     "short": "OpenAI-powered reacts",
     "requirements": [
         "openai",

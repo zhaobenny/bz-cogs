@@ -39,11 +39,12 @@ class aiemote(commands.Cog):
                 },
             ],
             "extra_instruction": "",
+            "optin": []
         }
 
         default_guild = {
             "server_emojis": [],
-            "whitelist": []
+            "whitelist": [],
         }
 
         self.config.register_guild(**default_guild)
@@ -53,6 +54,7 @@ class aiemote(commands.Cog):
         self.whitelist = {}
         all_config = await self.config.all_guilds()
         self.percent = await self.config.percent()
+        self.optin_users = await self.config.optin()
         for guild_id, config in all_config.items():
             self.whitelist[guild_id] = config["whitelist"]
 
@@ -93,7 +95,7 @@ class aiemote(commands.Cog):
                 logit_bias[encoded_value[0]] = 100
 
         system_prompt = f"You are in a chat room. You will pick an emoji for the following message. {await self.config.extra_instruction()} Here are your options: {options} Your answer will be a int between 0 and {len(emojis)-1}."
-        content = self.stringify_any_mentions(message)
+        content = f"{message.author.display_name} : {self.stringify_any_mentions(message)}"
         try:
             response = await openai.ChatCompletion.acreate(
                 model="gpt-3.5-turbo",
@@ -126,14 +128,17 @@ class aiemote(commands.Cog):
         whitelist = self.whitelist.get(ctx.guild.id, [])
         if await self.bot.cog_disabled_in_guild(self, ctx.guild):
             return False
-        if not await self.bot.ignored_channel_or_guild(ctx):
-            return False
-        if not await self.bot.allowed_by_whitelist_blacklist(ctx.author):
-            return False
 
         if (not isinstance(ctx.channel, discord.Thread) and (ctx.channel.id not in whitelist)):
             return False
         if (isinstance(ctx.channel, discord.Thread) and (ctx.channel.parent_id not in whitelist)):
+            return False
+
+        if not await self.bot.ignored_channel_or_guild(ctx):
+            return False
+        if not await self.bot.allowed_by_whitelist_blacklist(ctx.author):
+            return False
+        if not ctx.author.id in self.optin_users:
             return False
 
         if not openai.api_key:
@@ -185,6 +190,7 @@ class aiemote(commands.Cog):
         pass
 
     @aiemote.command(name="whitelist")
+    @checks.admin_or_permissions(manage_guild=True)
     async def whitelist_list(self, ctx: commands.Context):
         """ List all channels in the whitelist """
         whitelist = self.whitelist.get(ctx.guild.id, [])
@@ -196,6 +202,7 @@ class aiemote(commands.Cog):
         await ctx.send(embed=embed)
 
     @aiemote.command(name="allow", aliases=["add"])
+    @checks.admin_or_permissions(manage_guild=True)
     async def whitelist_add(self, ctx: commands.Context, channel: discord.TextChannel):
         """ Add a channel to the whitelist
 
@@ -211,6 +218,7 @@ class aiemote(commands.Cog):
         return await ctx.tick()
 
     @aiemote.command(name="remove", aliases=["rm"])
+    @checks.admin_or_permissions(manage_guild=True)
     async def whitelist_remove(self, ctx: commands.Context, channel: discord.TextChannel):
         """ Remove a channel from the whitelist
 
@@ -224,6 +232,34 @@ class aiemote(commands.Cog):
         self.whitelist[ctx.guild.id] = whitelist
         await self.config.guild(ctx.guild).whitelist.set(whitelist)
         return await ctx.tick()
+
+    @aiemote.command(name="optin")
+    async def optin_user(self, ctx: commands.Context):
+        """ Opt in of sending your message to OpenAI (bot-wide)
+
+            This will allow the bot to react to your messages
+        """
+        optin = await self.config.optin()
+        if ctx.author.id in await self.config.optin():
+            return await ctx.send("You are already opted in bot-wide")
+        optin.append(ctx.author.id)
+        self.optin_users.append(ctx.author.id)
+        await self.config.optin.set(optin)
+        await ctx.send("You are now opted in bot-wide")
+
+    @aiemote.command(name="optout")
+    async def optout_user(self, ctx: commands.Context):
+        """ Opt out of sending your message to OpenAI (bot-wide)
+
+            The bot will no longer react to your messages
+        """
+        optin = await self.config.optin()
+        if not ctx.author.id in await self.config.optin():
+            return await ctx.send("You are already opted out")
+        optin.remove(ctx.author.id)
+        self.optin_users.remove(ctx.author.id)
+        await self.config.optin.set(optin)
+        await ctx.send("You are now opted out bot-wide")
 
     @commands.group(name="aiemoteadmin", alias=["ai_emote_admin"])
     @checks.is_owner()
