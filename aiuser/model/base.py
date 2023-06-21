@@ -22,12 +22,16 @@ class Base_LLM_Response():
     async def generate_response(self):
         raise NotImplementedError
 
-    async def sent_response(self):
+    async def sent_response(self, standalone=False):
         message = self.ctx.message
 
-        debug_content = f'"{message.content}"' if message.content else ""
-        logger.debug(
-            f"Replying to message {debug_content} in {message.guild.name} with prompt: \n{json.dumps(self.prompt.get_messages(), indent=4)}")
+        if not standalone:
+            debug_content = f'"{message.content}"' if message.content else ""
+            logger.debug(
+                f"Replying to message {debug_content} in {message.guild.name} with prompt: \n{json.dumps(self.prompt.get_messages(), indent=4)}")
+        else:
+            logger.debug(
+                f"Generating message with prompt: \n{json.dumps(self.prompt.get_messages(), indent=4)}")
 
         async with self.ctx.typing():
             self.response = await self.generate_response()
@@ -39,7 +43,7 @@ class Base_LLM_Response():
 
         should_direct_reply = not self.ctx.interaction and await self.is_reply()
 
-        if should_direct_reply:
+        if should_direct_reply and not standalone:
             return await message.reply(self.response, mention_author=False)
         else:
             return await self.ctx.send(self.response)

@@ -11,19 +11,19 @@ from redbot.core.bot import Red
 
 from aiuser.abc import CompositeMetaClass
 from aiuser.common.cache import Cache
-from aiuser.common.constants import (AI_HORDE_MODE,
-                                     DEFAULT_REMOVELIST,
-                                     DEFAULT_REPLY_PERCENT,
-                                     MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
+from aiuser.common.constants import (AI_HORDE_MODE, DEFAULT_REMOVELIST,
+                                     DEFAULT_REPLY_PERCENT, MAX_MESSAGE_LENGTH,
+                                     MIN_MESSAGE_LENGTH)
 from aiuser.model.openai import OpenAI_LLM_Response
 from aiuser.prompt_handler import PromptHandler
 from aiuser.prompts.common.messageentry import MessageEntry
+from aiuser.random_message_task import RandomMessageTask
 from aiuser.settings.base import Settings
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class AIUser(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClass):
+class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass=CompositeMetaClass):
     """ Utilize OpenAI to reply to messages and images in approved channels. """
 
     def __init__(self, bot):
@@ -63,6 +63,8 @@ class AIUser(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClass
             "removelist_regexes": DEFAULT_REMOVELIST,
             "parameters": None,
             "weights": None,
+            "random_messages_enabled": False,
+            "random_messages_percent": 0.012,
         }
         default_member = {
             "custom_text_prompt": None,
@@ -79,15 +81,22 @@ class AIUser(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClass
     async def cog_load(self):
         if await self.config.custom_openai_endpoint():
             openai.api_base = await self.config.custom_openai_endpoint()
+        openai.api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
         self.optin_users = await self.config.optin()
         self.optout_users = await self.config.optout()
         all_config = await self.config.all_guilds()
+
         for guild_id, config in all_config.items():
             self.optindefault[guild_id] = config["optin_by_default"]
             self.channels_whitelist[guild_id] = config["channels_whitelist"]
             self.reply_percent[guild_id] = config["reply_percent"]
             pattern = config["ignore_regex"]
             self.ignore_regex[guild_id] = re.compile(pattern) if pattern else None
+
+        self.random_message_trigger.start()
+
+    async def cog_unload(self):
+        self.random_message_trigger.cancel()
 
     async def red_delete_data_for_user(self, *, requester, user_id: int):
         for guild in self.bot.guilds:
@@ -124,6 +133,7 @@ class AIUser(Settings, PromptHandler, commands.Cog, metaclass=CompositeMetaClass
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
         ctx: commands.Context = await self.bot.get_context(message)
+
         if not await self.is_common_valid_reply(ctx):
             return
 

@@ -29,3 +29,4 @@ class MixinMeta(ABC):
         self.override_prompt_start_time: dict[int, datetime]
         self.cached_messages: Cache[int, MessageEntry]
         self.ignore_regex: dict[int, re.Pattern]
+        self.channels_whitelist: dict[int, list[int]]
