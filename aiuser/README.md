@@ -114,7 +114,7 @@ This can be set globally using:
 Models will also need **changing** per server.
 
 
-Third party models may have undesirable results! (I tested this [one](https://huggingface.co/mindrage/Manticore-13B-Chat-Pyg-Guanaco-GGML) and the results are decent-ish )
+Third party models may have undesirable results! (I tested this [one](https://huggingface.co/mindrage/Manticore-13B-Chat-Pyg-Guanaco-GGML) and the results are decent-ish)
 
 You may also want to set custom parameters (per server). See:
 ```

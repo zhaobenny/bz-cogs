@@ -63,7 +63,8 @@ class AIHordeImagePrompt(BaseImagePrompt):
                     await asyncio.sleep(1)
 
                 caption = response["forms"][0]["result"]["caption"]
-                logger.info(f"AI Horde image caption result: {caption}")
+                logger.info(
+                    f"AI Horde image caption result for message {self.message.id} in {self.message.guild.name}: {caption}")
         except:
             logger.error(f"Failed scanning image using AI Horde", exc_info=True)
             return None

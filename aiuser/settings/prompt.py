@@ -9,7 +9,7 @@ from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.abc import MixinMeta, aiuser
-from aiuser.prompts.presets import DEFAULT_PROMPT, PRESETS
+from aiuser.prompts.common.presets import DEFAULT_PROMPT, PRESETS
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

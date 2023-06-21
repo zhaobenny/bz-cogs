@@ -10,12 +10,12 @@ OPENAI_MODEL_TOKEN_LIMIT = {
     "gpt-3.5-turbo-0613": 3000
 }
 DEFAULT_REMOVELIST = [
-    r'^As an AI language model,'
+    r'^As an AI language model,?'
+    r'^(User)?\s?\"([^"]+)\"\s?(said)?:',
 ]
 DEFAULT_REPLY_PERCENT = 0.5
 MIN_MESSAGE_LENGTH = 5
-MAX_MESSAGE_LENGTH = 400
-MAX_HISTORY_MESSAGE_LENGTH = 1000
+MAX_MESSAGE_LENGTH = 1000  # in words
 IMAGE_RESOLUTION = 1024
 IMAGE_TIMEOUT = 60
 LOCAL_MODE = "local"

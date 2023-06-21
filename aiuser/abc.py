@@ -9,15 +9,17 @@ from aiuser.common.cache import Cache
 from aiuser.prompts.common.messageentry import MessageEntry
 
 
-# for other mixins to use
+# for other settings to use
 @commands.group(aliases=["ai_user"])
 @commands.guild_only()
 async def aiuser(self, _):
     """ Utilize OpenAI to reply to messages and images in approved channels"""
     pass
 
+
 class CompositeMetaClass(type(commands.Cog), type(ABC)):
     pass
+
 
 class MixinMeta(ABC):
     def __init__(self, *args):

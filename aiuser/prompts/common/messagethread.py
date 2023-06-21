@@ -2,7 +2,7 @@ import logging
 import re
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 
 import discord
 import tiktoken
@@ -10,8 +10,7 @@ from discord import Message
 from redbot.core import Config
 from redbot.core.bot import Red
 
-from aiuser.common.constants import OPENAI_MODEL_TOKEN_LIMIT
-from aiuser.common.types import ContextOptions, RoleType
+from aiuser.common.constants import MAX_MESSAGE_LENGTH, OPENAI_MODEL_TOKEN_LIMIT
 from aiuser.prompts.common.helpers import (format_embed_content,
                                            format_sticker_content,
                                            format_text_content, is_embed_valid)
@@ -25,19 +24,22 @@ class MessageThread:
     bot: Red
     config: Config
     initial_message: Message
+    cached_messages: dict
+    ignore_regex: re.Pattern
+    start_time: Optional[datetime]
     messages: list = field(default_factory=list)
     messages_ids: set = field(default_factory=set)
     tokens: int = 0
     _encoding: tiktoken.Encoding = None
     model: str = None
-    ignore_regex: re.Pattern = None,
-    cached_messages = None
 
     async def add_msg(self, content: str, message: Message, prepend: bool = False, force: bool = False):
         if message.id in self.messages_ids and not force:
             logger.debug(f"Skipping duplicate message in {message.guild.name} when creating context")
             return
 
+        if self.ignore_regex and self.ignore_regex.search(message.content):
+            return
         if not await self.bot.allowed_by_whitelist_blacklist(message.author):
             return
         if message.author.id in await self.config.optout():
@@ -45,8 +47,7 @@ class MessageThread:
         if not message.author.id in await self.config.optin() and not await self.config.guild(message.guild).optin_by_default():
             return
 
-        # noinspection PyTypeChecker
-        role: RoleType = "user" if message.author.id != self.bot.user.id else "assistant"
+        role = "user" if message.author.id != self.bot.user.id else "assistant"
         messages_item = MessageEntry(role, content)
 
         insertion_index = self._get_insertion_index(prepend)
@@ -82,13 +83,11 @@ class MessageThread:
             result.append(asdict(message))
         return result
 
-    async def create_context(self, context_options: ContextOptions):
+    async def create_context(self):
         limit = await self.config.guild(self.initial_message.guild).messages_backread()
         max_seconds_gap = await self.config.guild(self.initial_message.guild).messages_backread_seconds()
-        start_time: datetime = context_options.start_time + \
-            timedelta(seconds=1) if context_options.start_time else None
-        self.ignore_regex = context_options.ignore_regex
-        self.cached_messages = context_options.cached_messages
+        start_time: datetime = self.start_time + \
+            timedelta(seconds=1) if self.start_time else None
         if not self.model:
             self.model = (await self.config.guild(self.initial_message.guild).model())
 
@@ -106,17 +105,17 @@ class MessageThread:
             if (not message.author.bot) and (message.author.id not in await self.config.optin()) and (message.author.id not in await self.config.optout()):
                 prefix = (await self.bot.get_prefix(message))[0]
                 embed = discord.Embed(title=":information_source: AI User Opt-In / Opt-Out", color=await self.bot.get_embed_color(message))
-                embed.description = f"Hey there! Looks like some user(s) has not opted in or out of AI User! \n Please use `{prefix}aiuser optin` or `{prefix}aiuser optout` to opt in or out of sending messages to OpenAI or an external endpoint. \n This embed will stop showing up if all users chatting have opted in or out."
+                embed.description = f"Hey there! Looks like some user(s) has not opted in or out of AI User! \n Please use `{prefix}aiuser optin` or `{prefix}aiuser optout` to opt in or out of sending messages / images to OpenAI or an external endpoint. \n This embed will stop showing up if all users chatting have opted in or out."
                 await message.channel.send(embed=embed)
                 break
 
         for i in range(len(past_messages)-1):
             if self.model.startswith("gpt-") and self.tokens > OPENAI_MODEL_TOKEN_LIMIT.get(self.model, 3000):
-                return logger.debug(f"{self.tokens} tokens used - nearing limit, stopping context creation for {self.initial_message.id}")
+                return logger.debug(f"{self.tokens} tokens used - nearing limit, stopping context creation for message {self.initial_message.id}")
             if await self._valid_time_between_messages(past_messages, i, max_seconds_gap):
-                await self._add_contextual_message(past_messages[i])
+                await self.add_contextual_message(past_messages[i])
             else:
-                await self._add_contextual_message(past_messages[i])
+                await self.add_contextual_message(past_messages[i])
                 break
 
     @staticmethod
@@ -126,10 +125,7 @@ class MessageThread:
             return False
         return True
 
-    async def _add_contextual_message(self, message: Message):
-        if self.ignore_regex and self.ignore_regex.search(message.content):
-            return
-
+    async def add_contextual_message(self, message: Message):
         if message.reference:
             # TODO: handle references
             pass
@@ -137,7 +133,7 @@ class MessageThread:
         if message.stickers:
             return await self.add_msg(await format_sticker_content(message), message, prepend=True)
 
-        if message.id in self.cached_messages:
+        if message.attachments and message.id in self.cached_messages:
             await self.add_msg(self.cached_messages[message.id], message, prepend=True)
             if message.content:
                 await self.add_msg(format_text_content(message), message, prepend=True, force=True)
@@ -147,5 +143,5 @@ class MessageThread:
         if len(message.embeds) > 0 and is_embed_valid(message):
             return await self.add_msg(format_embed_content(message), message, prepend=True)
 
-        if message.content:
+        if message.content and not len(message.content.split()) > MAX_MESSAGE_LENGTH:
             await self.add_msg(format_text_content(message), message, prepend=True)

@@ -110,7 +110,7 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
         return await ctx.send(embed=embed)
 
     @aiuser.command()
-    @checks.admin_or_permissions(manage_guild=True)
+    @checks.is_owner()
     async def add(self, ctx: commands.Context, channel: discord.TextChannel):
         """ Adds a channel to the whitelist
 
@@ -192,7 +192,7 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
 
     @aiuser.command()
     async def optin(self, ctx: commands.Context):
-        """ Opt in of sending your messages to OpenAI or another endpoint (bot-wide)
+        """ Opt in of sending your messages / images to OpenAI or another endpoint (bot-wide)
 
             This will allow the bot to reply to your messages or using your messages.
         """
@@ -211,7 +211,7 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
 
     @aiuser.command()
     async def optout(self, ctx: commands.Context):
-        """ Opt out of sending your messages to OpenAI or another endpoint (bot-wide)
+        """ Opt out of sending your messages / images to OpenAI or another endpoint (bot-wide)
 
             This will prevent the bot from replying to your messages or using your messages.
         """

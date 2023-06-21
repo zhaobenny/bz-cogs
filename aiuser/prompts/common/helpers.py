@@ -48,7 +48,7 @@ async def format_sticker_content(message: Message):
 
 
 def is_embed_valid(message: Message):
-    if not message.embeds[0].title or not message.embeds[0].description:
-        logger.debug(f"Skipping unloaded / unsupported embed in {message.guild.name}")
+    if (len(message.embeds) == 0) or (not message.embeds[0].title) or (not message.embeds[0].description):
+        logger.debug(f"Skipping unloaded / unsupported embed in message {message.id} in {message.guild.name}")
         return False
     return True

@@ -1,9 +1,7 @@
 from dataclasses import dataclass
-
-from aiuser.common.types import RoleType
-
+from typing import Literal
 
 @dataclass(frozen=True)
 class MessageEntry:
-    role: RoleType
+    role: Literal['user', 'assistant', 'system']
     content: str

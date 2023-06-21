@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 from aiuser.prompts.base import Prompt
-from aiuser.prompts.common.helpers import format_embed_content
+from aiuser.prompts.common.helpers import format_embed_content, is_embed_valid
 from aiuser.prompts.common.messagethread import MessageThread
 
 logger = logging.getLogger("red.bz_cogs.ai_user")
@@ -13,9 +13,7 @@ class GenericEmbedPrompt(Prompt):
         super().__init__(*args, **kwargs)
 
     async def _handle_message(self) -> Optional[MessageThread]:
-        if len(self.message.embeds) == 0 or not self.message.embeds[0].title or not self.message.embeds[0].description:
-            logger.debug(
-                f"Skipping unloaded / unsupported embed in {self.message.guild.name}")
+        if not is_embed_valid(self.message):
             return None
 
         await self.messages.add_msg(format_embed_content(self.message), self.message)

@@ -184,8 +184,8 @@ class ResponseSettings(MixinMeta):
             See [https://platform.openai.com/tokenizer](https://platform.openai.com/tokenizer) for detailed text to token conversion.
 
             *Arguments*
-                - `word` The word to set weight for
-                - `weight` The weight to set ( -100 to 100 )
+            - `word` The word to set weight for
+            - `weight` The weight to set (`-100` to `100`)
         """
 
         custom_parameters = await self.config.guild(ctx.guild).parameters()
