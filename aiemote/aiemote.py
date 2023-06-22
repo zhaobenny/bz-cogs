@@ -147,7 +147,7 @@ class aiemote(commands.Cog):
                 return False
 
         # skipping images / embeds
-        if not ctx.message.content or (ctx.message.attachments and ctx.message.attachments.count() > 0):
+        if not ctx.message.content or (ctx.message.attachments and len(ctx.message.attachments) > 0):
             return False
 
         # skipping long / short messages

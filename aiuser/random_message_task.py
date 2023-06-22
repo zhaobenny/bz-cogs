@@ -1,4 +1,5 @@
 import datetime
+import logging
 import random
 
 import openai
@@ -7,6 +8,8 @@ from discord.ext import tasks
 from aiuser.abc import MixinMeta
 from aiuser.model.openai import OpenAI_LLM_Response
 from aiuser.prompts.random.base import RandomEventPrompt
+
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class RandomMessageTask(MixinMeta):
@@ -41,7 +44,7 @@ class RandomMessageTask(MixinMeta):
 
             last_created = last.created_at.replace(tzinfo=datetime.timezone.utc)
 
-            if abs((datetime.datetime.now(datetime.timezone.utc) - last_created).total_seconds()) > 3600:
+            if (abs((datetime.datetime.now(datetime.timezone.utc) - last_created).total_seconds())) < 3600:
                 # only sent to channels with 1 hour since last message
                 continue
 
@@ -50,5 +53,6 @@ class RandomMessageTask(MixinMeta):
             if not await self.bot.ignored_channel_or_guild(ctx):
                 continue
 
+            logger.debug(f"Sending random message to #{channel.name} at {guild.name}")
             random_prompt = await RandomEventPrompt(self, ctx.message).get_list()
             await OpenAI_LLM_Response(ctx, self.config, random_prompt).sent_response(standalone=True)
