@@ -23,22 +23,8 @@ class RandomEventPrompt(Prompt):
         return self.messages
 
     async def _handle_message(self) -> Optional[MessageThread]:
-        # TODO: make user configurable and maybe pull from external apis for more variety
-        topics = [
-            "video games",
-            "tech",
-            "music",
-            "art",
-            "a movie",
-            "a tv show",
-            "anime",
-            "manga"
-            "sports",
-            "books",
-            "fitness and health",
-            "politics",
-            "science",
-            "cooking",
-        ]
+        # TODO: pull topics from apis (news? tv show feeds?) for more variety
+
+        topics = await self.config.guild(self.message.guild).random_messages_topics() or ["nothing"]
         await self.messages.add_system(f"You are not responding to a message. Pretend you thought about {topics[random.randint(0, len(topics) - 1)]} and will sent a standalone conversation starter in the chatroom. Do not greet anyone.")
         return self.messages
