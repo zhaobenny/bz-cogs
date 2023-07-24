@@ -43,10 +43,14 @@ class Base_LLM_Response():
 
         should_direct_reply = not self.ctx.interaction and await self.is_reply()
 
-        if should_direct_reply and not standalone:
-            return await message.reply(self.response, mention_author=False)
+        if len(self.response) >= 2000:
+            chunks = [self.response[i:i+2000] for i in range(0, len(self.response), 2000)]
+            for chunk in chunks:
+                await self.ctx.send(chunk)
+        elif should_direct_reply and not standalone:
+            await message.reply(self.response, mention_author=False)
         else:
-            return await self.ctx.send(self.response)
+            await self.ctx.send(self.response)
 
     async def remove_patterns_from_response(self) -> str:
         bot_member = self.ctx.message.guild.me
