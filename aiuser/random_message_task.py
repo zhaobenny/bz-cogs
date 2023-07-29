@@ -37,7 +37,11 @@ class RandomMessageTask(MixinMeta):
             if not channel:
                 continue
 
-            last = await channel.fetch_message(channel.last_message_id)
+            try:
+                last = await channel.fetch_message(channel.last_message_id)
+            except Exception:
+                continue
+
             if last.author.id == guild.me.id:
                 # skip spamming channel with random event messages
                 continue
