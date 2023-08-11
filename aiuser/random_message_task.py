@@ -19,44 +19,46 @@ class RandomMessageTask(MixinMeta):
             return
         if not self.bot.is_ready():
             return
-        for guild_id, channels in self.channels_whitelist.items():
+        try:
+            for guild_id, channels in self.channels_whitelist.items():
+                guild = self.bot.get_guild(guild_id)
+                if not guild or await self.bot.cog_disabled_in_guild(self, guild):
+                    continue
+                if not await self.config.guild(guild).random_messages_enabled():
+                    continue
+                if random.random() > await self.config.guild(guild).random_messages_percent():
+                    continue
 
-            guild = self.bot.get_guild(guild_id)
-            if not guild or await self.bot.cog_disabled_in_guild(self, guild):
-                continue
-            if not await self.config.guild(guild).random_messages_enabled():
-                continue
-            if random.random() > await self.config.guild(guild).random_messages_percent():
-                continue
+                if not channels:
+                    continue
 
-            if not channels:
-                continue
+                channel = guild.get_channel(channels[random.randint(0, len(channels) - 1)])
 
-            channel = guild.get_channel(channels[random.randint(0, len(channels) - 1)])
+                if not channel:
+                    continue
 
-            if not channel:
-                continue
+                try:
+                    last = await channel.fetch_message(channel.last_message_id)
+                except Exception:
+                    continue
 
-            try:
-                last = await channel.fetch_message(channel.last_message_id)
-            except Exception:
-                continue
+                if last.author.id == guild.me.id:
+                    # skip spamming channel with random event messages
+                    continue
 
-            if last.author.id == guild.me.id:
-                # skip spamming channel with random event messages
-                continue
+                last_created = last.created_at.replace(tzinfo=datetime.timezone.utc)
 
-            last_created = last.created_at.replace(tzinfo=datetime.timezone.utc)
+                if (abs((datetime.datetime.now(datetime.timezone.utc) - last_created).total_seconds())) < 3600:
+                    # only sent to channels with 1 hour since last message
+                    continue
 
-            if (abs((datetime.datetime.now(datetime.timezone.utc) - last_created).total_seconds())) < 3600:
-                # only sent to channels with 1 hour since last message
-                continue
+                ctx = await self.bot.get_context(last)
 
-            ctx = await self.bot.get_context(last)
+                if not (await self.bot.ignored_channel_or_guild(last)):
+                    continue
 
-            if not await self.bot.ignored_channel_or_guild(ctx):
-                continue
-
-            logger.debug(f"Sending random message to #{channel.name} at {guild.name}")
-            random_prompt = await RandomEventPrompt(self, ctx.message).get_list()
-            await OpenAI_LLM_Response(ctx, self.config, random_prompt).sent_response(standalone=True)
+                logger.debug(f"Sending random message to #{channel.name} at {guild.name}")
+                random_prompt = await RandomEventPrompt(self, last).get_list()
+                await OpenAI_LLM_Response(ctx, self.config, random_prompt).sent_response(standalone=True)
+        except Exception as e:
+            logger.error(f"Could not trigger a random message, the exception was:\n {e}")

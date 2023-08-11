@@ -70,6 +70,7 @@ class TriggerSettings(MixinMeta):
         """ Configure the random trigger
 
             Every 33 minutes, a RNG roll will determine if a random message will be sent using a list of topics as a prompt.
+            The chosen channel must have a hour pass without a message sent in it for a random message to be sent.
 
             (All subcommands per server)
         """
