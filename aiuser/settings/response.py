@@ -307,7 +307,7 @@ class ResponseSettings(MixinMeta):
 
         embed = discord.Embed(title="Custom Parameters", color=await ctx.embed_color())
         parameters = await self.config.guild(ctx.guild).parameters()
-        data = json.loads(parameters)
+        data = {} if parameters is None else json.loads(parameters)
 
         if json_block not in ['show', 'list']:
             if not json_block.startswith("```"):
