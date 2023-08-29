@@ -17,6 +17,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings, MixinMeta):
 
     @commands.group(aliases=["ai_user"])
+    @commands.bot_has_permissions(embed_links=True)
     @commands.guild_only()
     async def aiuser(self, _):
         """ Utilize OpenAI to reply to messages and images in approved channels and by opt-in users"""
