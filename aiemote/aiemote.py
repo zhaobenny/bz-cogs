@@ -271,7 +271,7 @@ class aiemote(commands.Cog):
     @aiemote_admin.command(name="instruction", aliases=["extra_instruction", "extra"])
     @checks.is_owner()
     async def set_extra_instruction(self, ctx: commands.Context, *, instruction: Optional[str]):
-        """ Add additonal instruction for the OpenAI when picking an emoji
+        """ Add additonal (prompting) instruction for the langauge model when picking an emoji
 
             *Arguments*
             - `<instruction>` The extra instruction to use
@@ -405,7 +405,7 @@ class aiemote(commands.Cog):
         """
         embed = discord.Embed(
             title="Are you sure?",
-            description="This will reset all settings to default! (Including per server lists)",
+            description="This will reset all settings to default! (Including ALL per server lists)",
             color=await ctx.embed_color())
         confirm = await ctx.send(embed=embed)
         start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
