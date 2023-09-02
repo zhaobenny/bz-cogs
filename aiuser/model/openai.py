@@ -1,12 +1,17 @@
 import json
 import logging
+import random
+from datetime import datetime, timedelta
+
+import aiohttp
 import openai
 import openai.error
-from redbot.core import commands, Config
-from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_random_exponential
+from redbot.core import Config, commands
+from tenacity import (retry, retry_if_exception_type, stop_after_delay,
+                      wait_random)
+
 from aiuser.model.base import Base_LLM_Response
 from aiuser.prompts.common.messagethread import MessageThread
-
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -15,9 +20,62 @@ class OpenAI_LLM_Response(Base_LLM_Response):
     def __init__(self, ctx: commands.Context, config: Config, prompt: MessageThread):
         super().__init__(ctx, config, prompt)
 
+    def _extract_time_delta(self, time_str):
+        """ for openai's ratelimit time format """
+
+        days, hours, minutes, seconds = 0, 0, 0, 0
+
+        if time_str[-2:] == "ms":
+            time_str = time_str[:-2]
+            seconds += 1
+
+        components = time_str.split('d')
+        if len(components) > 1:
+            days = float(components[0])
+            time_str = components[1]
+
+        components = time_str.split('h')
+        if len(components) > 1:
+            hours = float(components[0])
+            time_str = components[1]
+
+        components = time_str.split('m')
+        if len(components) > 1:
+            minutes = float(components[0])
+            time_str = components[1]
+
+        components = time_str.split('s')
+        if len(components) > 1:
+            seconds = float(components[0])
+            time_str = components[1]
+
+        return timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds + random.randint(2, 5))
+
+    # temp workaround adapted from here: https://github.com/openai/openai-python/issues/416#issuecomment-1679551808
+    async def _update_ratelimit_time(self, _, _1, params: aiohttp.TraceRequestEndParams):
+        if not str(params.url).startswith("https://api.openai.com/v1/"):
+            return
+        response_headers = params.response.headers
+        remaining_requests = response_headers.get("x-ratelimit-remaining-requests") or 1
+        remaining_tokens = response_headers.get("x-ratelimit-remaining-tokens") or 1
+
+        timestamp = datetime.now()
+
+        if remaining_requests == 0:
+            # x-ratelimit-reset-requests uses per day instead of per minute for free accounts
+            request_reset_time = self._extract_time_delta(response_headers.get("x-ratelimit-reset-requests"))
+            timestamp = max(timestamp, datetime.now() + request_reset_time)
+        elif remaining_tokens == 0:
+            tokens_reset_time = self._extract_time_delta(response_headers.get("x-ratelimit-reset-tokens"))
+            timestamp = max(timestamp, datetime.now() + tokens_reset_time)
+
+        if remaining_requests == 0 or remaining_tokens == 0:
+            await self.config.ratelimit_reset.set(timestamp.strftime('%Y-%m-%d %H:%M:%S'))
+
     @retry(
-        retry=(retry_if_exception_type((openai.error.Timeout, openai.error.APIConnectionError, openai.error.RateLimitError))),
-        wait=wait_random_exponential(min=1, max=5), stop=stop_after_delay(12),
+        retry=(retry_if_exception_type((openai.error.Timeout,
+               openai.error.APIConnectionError, openai.error.ServiceUnavailableError))),
+        wait=wait_random(min=1, max=3), stop=stop_after_delay(10),
         reraise=True
     )
     async def request_openai(self, model):
@@ -32,11 +90,16 @@ class OpenAI_LLM_Response(Base_LLM_Response):
             logit_bias = json.loads(await self.config.guild(self.ctx.guild).weights() or "{}")
             kwargs["logit_bias"] = logit_bias
 
-        response = await openai.ChatCompletion.acreate(
-            model=model,
-            messages=self.prompt.get_messages(),
-            **kwargs
-        )
+        trace_config = aiohttp.TraceConfig()
+        trace_config.on_request_end.append(self._update_ratelimit_time)
+
+        async with aiohttp.ClientSession(trace_configs=[trace_config]) as session:
+            openai.aiosession.set(session)
+            response = await openai.ChatCompletion.acreate(
+                model=model,
+                messages=self.prompt.get_messages(),
+                **kwargs
+            )
 
         response = response["choices"][0]["message"]["content"]
         return response
@@ -46,10 +109,13 @@ class OpenAI_LLM_Response(Base_LLM_Response):
         try:
             response = await self.request_openai(model)
             return response
-        except openai.error.RateLimitError as e:
-            trys = self.request_openai.retry.statistics["attempt_number"]
+        except openai.error.RateLimitError:
+            timestamp = datetime.now() + timedelta(seconds=random.randint(62, 65))
+            last_reset = datetime.strptime(await self.config.ratelimit_reset(), '%Y-%m-%d %H:%M:%S')
+            if last_reset < timestamp:
+                await self.config.ratelimit_reset.set(timestamp.strftime('%Y-%m-%d %H:%M:%S'))
             logger.warning(
-                f"Failed {trys} API request to OpenAI. You may be ratelimited! Reduce percent chance of reply? See exception from Openai: {e}")
+                f"Failed API request to OpenAI. You are being ratelimited! Recommend adding payment method or to reduce reply percentage. Next reset: {await self.config.ratelimit_reset()}")
             await self.ctx.react_quietly("💤")
         except:
             trys = self.request_openai.retry.statistics["attempt_number"] or 1

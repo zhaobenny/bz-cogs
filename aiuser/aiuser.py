@@ -43,7 +43,8 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
         default_global = {
             "custom_openai_endpoint": None,
             "optout": [],
-            "optin": []
+            "optin": [],
+            "ratelimit_reset": datetime(1990, 1, 1, 0, 1).strftime('%Y-%m-%d %H:%M:%S'),
         }
 
         default_guild = {
@@ -119,6 +120,10 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
         if not await self.is_common_valid_reply(ctx):
             return await ctx.send("You're not allowed to use this command here.", ephemeral=True)
 
+        rate_limit_reset = datetime.strptime(await self.config.ratelimit_reset(), '%Y-%m-%d %H:%M:%S')
+        if rate_limit_reset > datetime.now():
+            return await ctx.send("The command is currently being ratelimited!", ephemeral=True)
+
         prompt_instance = await self.create_prompt_instance(ctx)
         prompt = await prompt_instance.get_list()
         if prompt is None:
@@ -143,6 +148,14 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
         elif random.random() > self.reply_percent.get(message.guild.id, DEFAULT_REPLY_PERCENT):
             return
 
+        rate_limit_reset = datetime.strptime(await self.config.ratelimit_reset(), '%Y-%m-%d %H:%M:%S')
+        if rate_limit_reset > datetime.now():
+            logger.debug(
+                f"Want to respond but ratelimited until {rate_limit_reset.strftime('%Y-%m-%d %H:%M:%S')}")
+            if await self.is_bot_mentioned_or_replied(message) or self.reply_percent.get(message.guild.id, DEFAULT_REPLY_PERCENT) == 1.0:
+                await ctx.react_quietly("💤")
+            return
+
         prompt_instance = await self.create_prompt_instance(ctx)
         prompt = await prompt_instance.get_list()
         if prompt is None:
@@ -162,6 +175,10 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
             return
 
         if random.random() > self.reply_percent.get(before.guild.id, DEFAULT_REPLY_PERCENT):
+            return
+
+        rate_limit_reset = datetime.strptime(await self.config.ratelimit_reset(), '%Y-%m-%d %H:%M:%S')
+        if rate_limit_reset > datetime.now():
             return
 
         if self.contains_youtube_link(after.content):  # should be handled the first time

@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import re
+from datetime import datetime
 from typing import Optional
 
 import discord
@@ -40,6 +41,7 @@ class ResponseSettings(MixinMeta):
             openai.api_base = "https://api.openai.com/v1"
             await self.config.custom_openai_endpoint.set(None)
         else:
+            await self.config.ratelimit_reset.set(datetime(1990, 1, 1, 0, 1).strftime('%Y-%m-%d %H:%M:%S'))
             await self.config.custom_openai_endpoint.set(url)
             openai.api_base = url
 
@@ -56,7 +58,6 @@ class ResponseSettings(MixinMeta):
                     \n If you don't know what you're doing, don't use it",  inline=False)
         else:
             embed.description = "Endpoint reset back to offical OpenAI endpoint."
-
         await ctx.send(embed=embed)
 
     @response.group(name="removelist")
@@ -296,7 +297,7 @@ class ResponseSettings(MixinMeta):
             To show current parameters, use `[p]aiuser response parameters show`
 
             Example command:
-            `[p]aiuser parameters ```{"frequency_penalty": 2.0, "max_tokens": 200}``` `
+            `[p]aiuser response parameters ```{"frequency_penalty": 2.0, "max_tokens": 200}``` `
 
             See [here](https://platform.openai.com/docs/api-reference/chat/create) for possible parameters
             Some parameters are blocked.

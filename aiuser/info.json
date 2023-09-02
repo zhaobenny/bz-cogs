@@ -3,7 +3,7 @@
         "zhaobenny"
     ],
     "description": "Utilize OpenAI to reply to messages and images in approved channels.",
-    "install_msg": "See cog README for additional setup. \n Quick startup guide: \n 1. Set OpenAI key using [p]set api openai api_key,INSERT_API_KEY \n 2. [p]aiuser add <#CHANNEL_NAME> \n 3. [p]aiuser optin to enable responses for yourself",
+    "install_msg": "See cog README for additional setup. \n Quick startup guide: \n 1. Set (preferably paid account) OpenAI key using [p]set api openai api_key,INSERT_API_KEY \n 2. [p]aiuser add <#CHANNEL_NAME> \n 3. [p]aiuser optin to opt yourself into getting messages used (other users will need to do the same)",
     "short": "Human-like user behavior powered by OpenAI.",
     "requirements": [
         "openai",
