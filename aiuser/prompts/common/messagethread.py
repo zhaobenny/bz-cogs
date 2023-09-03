@@ -10,7 +10,7 @@ from discord import Message
 from redbot.core import Config
 from redbot.core.bot import Red
 
-from aiuser.common.constants import MAX_MESSAGE_LENGTH, OPENAI_MODEL_TOKEN_LIMIT
+from aiuser.common.constants import MAX_MESSAGE_LENGTH
 from aiuser.prompts.common.helpers import (format_embed_content,
                                            format_sticker_content,
                                            format_text_content, is_embed_valid)
@@ -110,13 +110,28 @@ class MessageThread:
                 break
 
         for i in range(len(past_messages)-1):
-            if self.model.startswith("gpt-") and self.tokens > OPENAI_MODEL_TOKEN_LIMIT.get(self.model, 3000):
+            if self.tokens > self._get_token_limit(self.model):
                 return logger.debug(f"{self.tokens} tokens used - nearing limit, stopping context creation for message {self.initial_message.id}")
             if await self._valid_time_between_messages(past_messages, i, max_seconds_gap):
                 await self.add_contextual_message(past_messages[i])
             else:
                 await self.add_contextual_message(past_messages[i])
                 break
+
+    @staticmethod
+    def _get_token_limit(model):
+        limit = 3000
+        if not "gpt" in model:
+            limit = 31000
+        if "gpt-3.5" in model:
+            limit = 3000
+        if "gpt-4" in model:
+            limit = 7000
+        if "32k" in model:
+            limit = 31000
+        if "16k" in model:
+            limit = 15000
+        return limit
 
     @staticmethod
     async def _valid_time_between_messages(past_messages: List[Message], index, max_gap) -> bool:

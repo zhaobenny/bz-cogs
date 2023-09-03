@@ -169,7 +169,7 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
         models_list = openai.Model.list()
 
         if openai.api_base.startswith("https://api.openai.com/"):
-            gpt_models = [model.id for model in models_list['data'] if model.id.startswith('gpt')]
+            gpt_models = [model.id for model in models_list['data'] if "gpt" in model.id]
         else:
             gpt_models = [model.id for model in models_list['data']]
 
