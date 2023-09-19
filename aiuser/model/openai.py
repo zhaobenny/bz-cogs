@@ -98,7 +98,7 @@ class OpenAI_LLM_Response(Base_LLM_Response):
 
             if 'instruct' in model:
                 prompt = "\n".join(message['content'] for message in self.prompt.get_messages())
-                response = await openai.Completion.create(
+                response = openai.Completion.create(
                     engine=model,
                     prompt=prompt,
                     **kwargs
