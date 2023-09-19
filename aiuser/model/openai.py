@@ -104,7 +104,7 @@ class OpenAI_LLM_Response(Base_LLM_Response):
                     **kwargs
                 )
                 response = response['choices'][0]['text']
-            else:
+            elif 'gpt-3-turbo' in model or 'gpt-4' in model or ('gpt-3.5-turbo' in model and 'instruct' not in model):
                 response = await openai.ChatCompletion.create(
                     model=model,
                     messages=self.prompt.get_messages(),
