@@ -97,9 +97,10 @@ class OpenAI_LLM_Response(Base_LLM_Response):
             openai.aiosession.set(session)
 
             if 'instruct' in model:
+                prompt = "\n".join(self.prompt.get_messages())
                 response = await openai.Completion.create(
                     engine=model,
-                    prompt=self.prompt.get_messages(),
+                    prompt=prompt,
                     **kwargs
                 )
                 response = response['choices'][0]['text']
