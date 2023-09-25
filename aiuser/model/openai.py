@@ -95,13 +95,23 @@ class OpenAI_LLM_Response(Base_LLM_Response):
 
         async with aiohttp.ClientSession(trace_configs=[trace_config]) as session:
             openai.aiosession.set(session)
-            response = await openai.ChatCompletion.acreate(
-                model=model,
-                messages=self.prompt.get_messages(),
-                **kwargs
-            )
 
-        response = response["choices"][0]["message"]["content"]
+            if 'gpt-3.5-turbo-instruct' in model:
+                prompt = "\n".join(message['content'] for message in self.prompt.get_messages())
+                response = openai.Completion.create(
+                    engine=model,
+                    prompt=prompt,
+                    **kwargs
+                )
+                response = response['choices'][0]['text']
+            else:
+                response = openai.ChatCompletion.create(
+                    model=model,
+                    messages=self.prompt.get_messages(),
+                    **kwargs
+                )
+                response = response["choices"][0]["message"]["content"]
+
         return response
 
     async def generate_response(self):
