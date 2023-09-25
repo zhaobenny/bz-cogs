@@ -96,7 +96,7 @@ class OpenAI_LLM_Response(Base_LLM_Response):
         async with aiohttp.ClientSession(trace_configs=[trace_config]) as session:
             openai.aiosession.set(session)
 
-            if 'instruct' in model:
+            if 'gpt-3.5-turbo-instruct' in model:
                 prompt = "\n".join(message['content'] for message in self.prompt.get_messages())
                 response = openai.Completion.create(
                     engine=model,
@@ -104,7 +104,7 @@ class OpenAI_LLM_Response(Base_LLM_Response):
                     **kwargs
                 )
                 response = response['choices'][0]['text']
-            elif 'gpt-3-turbo' in model or 'gpt-4' in model or ('gpt-3.5-turbo' in model and 'instruct' not in model):
+            else:
                 response = openai.ChatCompletion.create(
                     model=model,
                     messages=self.prompt.get_messages(),
