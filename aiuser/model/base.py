@@ -8,7 +8,6 @@ from redbot.core import Config, commands
 
 from aiuser.prompts.common.messagethread import MessageThread
 
-
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
@@ -18,6 +17,13 @@ class Base_LLM_Response():
         self.config = config
         self.prompt = prompt
         self.response = None
+
+    async def _is_message_exists(self, id):
+        try:
+            await self.ctx.fetch_message(id)
+            return True
+        except:
+            return False
 
     async def generate_response(self):
         raise NotImplementedError
@@ -47,7 +53,7 @@ class Base_LLM_Response():
             chunks = [self.response[i:i+2000] for i in range(0, len(self.response), 2000)]
             for chunk in chunks:
                 await self.ctx.send(chunk)
-        elif should_direct_reply and not standalone:
+        elif should_direct_reply and not standalone and await self._is_message_exists(message.id):
             await message.reply(self.response, mention_author=False)
         else:
             await self.ctx.send(self.response)
