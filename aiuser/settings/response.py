@@ -2,11 +2,8 @@ import asyncio
 import json
 import logging
 import re
-from datetime import datetime
-from typing import Optional
 
 import discord
-import openai
 import tiktoken
 from redbot.core import checks, commands
 from redbot.core.utils.chat_formatting import box, pagify
@@ -29,36 +26,6 @@ class ResponseSettings(MixinMeta):
             (All subcommands are per server)
         """
         pass
-
-    @response.command()
-    @checks.is_owner()
-    async def endpoint(self, ctx: commands.Context, url: Optional[str]):
-        """ Sets the OpenAI endpoint to a custom one (must be OpenAI API compatible)
-
-            Reset to official OpenAI endpoint with `[p]aiuser response endpoint clear`
-        """
-        if not url or url in ["clear", "reset"]:
-            openai.api_base = "https://api.openai.com/v1"
-            await self.config.custom_openai_endpoint.set(None)
-        else:
-            await self.config.ratelimit_reset.set(datetime(1990, 1, 1, 0, 1).strftime('%Y-%m-%d %H:%M:%S'))
-            await self.config.custom_openai_endpoint.set(url)
-            openai.api_base = url
-
-        embed = discord.Embed(title="Bot Custom OpenAI endpoint", color=await ctx.embed_color())
-        embed.add_field(
-            name=":warning: Warning :warning:", value="All model/parameters selections for each server may need changing.", inline=False)
-
-        if url:
-            embed.description = f"Endpoint set to {url}."
-            embed.add_field(
-                name="Models", value="Third party models may have undesirable results, compared to OpenAI.", inline=False)
-            embed.add_field(
-                name="Note", value="This is an advanced feature. \
-                    \n If you don't know what you're doing, don't use it",  inline=False)
-        else:
-            embed.description = "Endpoint reset back to offical OpenAI endpoint."
-        await ctx.send(embed=embed)
 
     @response.group(name="removelist")
     @checks.admin_or_permissions(manage_guild=True)

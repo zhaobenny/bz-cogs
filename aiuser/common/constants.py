@@ -13,7 +13,7 @@ DEFAULT_TOPICS = [
     "manga",
     "sports",
     "books",
-    "fitness and health,",
+    "fitness and health",
     "politics",
     "science",
     "cooking",
