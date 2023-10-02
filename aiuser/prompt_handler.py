@@ -24,7 +24,7 @@ class PromptHandler(MixinMeta):
             return StickerPrompt(self, message)
         elif message.attachments and await self.config.guild(message.guild).scan_images():
             return await self.handle_image_prompt(message)
-        elif contains_url:
+        elif contains_url and not ctx.interaction:
             return await self.handle_embed_prompt(message)
         else:
             return TextPrompt(self, message)
