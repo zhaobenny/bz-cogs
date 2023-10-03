@@ -7,6 +7,7 @@ from redbot.core import checks, commands
 
 from aiuser.abc import MixinMeta
 from aiuser.settings.image import ImageSettings
+from aiuser.settings.owner import OwnerSettings
 from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.response import ResponseSettings
 from aiuser.settings.triggers import TriggerSettings
@@ -14,7 +15,7 @@ from aiuser.settings.triggers import TriggerSettings
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings, MixinMeta):
+class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings, OwnerSettings, MixinMeta):
 
     @commands.group(aliases=["ai_user"])
     @commands.bot_has_permissions(embed_links=True)

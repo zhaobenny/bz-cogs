@@ -13,6 +13,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class TriggerSettings(MixinMeta):
+    @checks.admin_or_permissions(manage_guild=True)
     @aiuser.group()
     async def trigger(self, _):
         """ Configure trigger settings for the bot to respond to
@@ -22,7 +23,6 @@ class TriggerSettings(MixinMeta):
         pass
 
     @trigger.command(name="ignore", aliases=["ignoreregex"])
-    @checks.admin_or_permissions(manage_guild=True)
     async def ignore(self, ctx: commands.Context, *, regex_pattern: Optional[str]):
         """ Messages matching this regex won't be replied to or seen, by the bot """
         if not regex_pattern:
@@ -53,7 +53,6 @@ class TriggerSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @trigger.command()
-    @checks.admin_or_permissions(manage_guild=True)
     async def public_forget(self, ctx: commands.Context):
         """ Toggles whether anyone can use the forget command, or only moderators """
         value = not await self.config.guild(ctx.guild).public_forget()
@@ -65,7 +64,6 @@ class TriggerSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @trigger.group()
-    @checks.admin_or_permissions(manage_guild=True)
     async def random(self, _):
         """ Configure the random trigger
 
@@ -104,13 +102,11 @@ class TriggerSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @random.group(name="topics")
-    @checks.admin_or_permissions(manage_guild=True)
     async def random_topics(self, _):
         """ Manage topics to be used in random messages for current server """
         pass
 
     @random_topics.command(name="show", aliases=["list"])
-    @checks.admin_or_permissions(manage_guild=True)
     async def show_random_topics(self, ctx: commands.Context):
         """ Lists topics to used in random messages """
         topics = await self.config.guild(ctx.guild).random_messages_topics()
@@ -136,14 +132,13 @@ class TriggerSettings(MixinMeta):
         return await SimpleMenu(pages).start(ctx)
 
     @random_topics.command(name="add", aliases=["a"])
-    @checks.admin_or_permissions(manage_guild=True)
     async def add_random_topics(self, ctx: commands.Context, *, topic: str):
         """ Add a new topic """
         topics = await self.config.guild(ctx.guild).random_messages_topics()
         if topic in topics:
             return await ctx.send("That topic is already in the list.")
-        if len(topic) > 300:
-            return await ctx.send("That topic is too long.")
+        if topic and len(topic) > await self.config.max_topic_length() and not await ctx.bot.is_owner(ctx.author):
+            return await ctx.send(f"Topic too long. Max length is {await self.config.max_topic_length()} characters.")
         topics.append(topic)
         await self.config.guild(ctx.guild).random_messages_topics.set(topics)
         embed = discord.Embed(
@@ -153,7 +148,6 @@ class TriggerSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @random_topics.command(name="remove", aliases=["rm", "delete"])
-    @checks.admin_or_permissions(manage_guild=True)
     async def remove_random_topics(self, ctx: commands.Context, *, number: int):
         """ Removes a topic (by number) from the list"""
         topics = await self.config.guild(ctx.guild).random_messages_topics()

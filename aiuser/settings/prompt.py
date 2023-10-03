@@ -26,7 +26,6 @@ class PromptSettings(MixinMeta):
         pass
 
     @prompt.command(name="reset")
-    @checks.is_owner()
     async def prompt_reset(self, ctx: commands.Context):
         """ Reset ALL prompts in this guild to default (inc. channels and members) """
         embed = discord.Embed(
@@ -130,7 +129,6 @@ class PromptSettings(MixinMeta):
         await SimpleMenu(pages).start(ctx)
 
     @prompt.command(name="preset")
-    @checks.admin_or_permissions(manage_guild=True)
     async def prompt_preset(self, ctx: commands.Context, *, preset: str):
         """ Set/list preset prompts
 
@@ -158,7 +156,6 @@ class PromptSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @prompt.command(name="set", aliases=["custom", "customize"])
-    @checks.is_owner()
     async def prompt_custom(self, ctx, mention: Optional[Union[discord.Member, discord.TextChannel]], *, prompt: Optional[str]):
         """ Set a custom prompt for the server (or provided mention)
 
@@ -167,6 +164,8 @@ class PromptSettings(MixinMeta):
         """
         if not prompt:
             prompt = None
+        if prompt and len(prompt) > await self.config.max_prompt_length() and not await ctx.bot.is_owner(ctx.author):
+            return await ctx.send(f"Prompt too long. Max length is {await self.config.max_prompt_length()} characters.")
         if isinstance(mention, discord.Member):
             await self.set_user_prompt(ctx, mention, prompt)
         elif isinstance(mention, discord.TextChannel):

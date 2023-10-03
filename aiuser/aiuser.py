@@ -45,6 +45,8 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
             "optout": [],
             "optin": [],
             "ratelimit_reset": datetime(1990, 1, 1, 0, 1).strftime('%Y-%m-%d %H:%M:%S'),
+            "max_topic_length": 200,
+            "max_prompt_length": 200,
         }
 
         default_guild = {
