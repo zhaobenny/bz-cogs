@@ -64,6 +64,7 @@ class TriggerSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @trigger.group()
+    @checks.is_owner()
     async def random(self, _):
         """ Configure the random trigger
 
@@ -75,7 +76,6 @@ class TriggerSettings(MixinMeta):
         pass
 
     @random.command(name="toggle")
-    @checks.is_owner()
     async def random_toggle(self, ctx: commands.Context):
         """ Toggles random message trigger """
         value = not await self.config.guild(ctx.guild).random_messages_enabled()
@@ -87,7 +87,6 @@ class TriggerSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @random.command(name="percent", aliases=["set", "chance"])
-    @checks.is_owner()
     async def set_random_rng(self, ctx: commands.Context, percent: float):
         """ Sets the chance that a random message will be sent every 33 minutes
 

@@ -21,7 +21,7 @@ class ResponseSettings(MixinMeta):
     @aiuser.group(name="response")
     @checks.admin_or_permissions(manage_guild=True)
     async def response(self, _):
-        """ Change bot response settings
+        """ Change settings used for generated responses
 
             (All subcommands are per server)
         """
