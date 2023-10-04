@@ -18,7 +18,7 @@ cog install bz-cogs <cog>
 | --- | --- |
 [aiuser](https://github.com/zhaobenny/bz-cogs/tree/main/aiuser) | Human-like Discord interactions powered by OpenAI for messages (and images).
 [aiemote](https://github.com/zhaobenny/bz-cogs/tree/main/aiemote) | Human-like Discord reacts to messages powered by OpenAI.
-oneletteronly | Set nicknames to be initals for new users.
+oneletteronly | Set nicknames to be initials for new users.
 
 
 ## Support / suggestions?
