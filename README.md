@@ -3,6 +3,7 @@
 <a href="https://discord.gg/z6Nhqc5"><img src="https://discordapp.com/api/guilds/744802856074346556/embed.png"></a>
 <a href="https://github.com/Cog-Creators/Red-DiscordBot/"><img src="https://img.shields.io/static/v1?label=Red-DiscordBot&message=3.5&color=red&style=flat"></a>
 <a href="https://github.com/Rapptz/discord.py"><img src="https://img.shields.io/static/v1?label=Discord&message=py&color=blue&style=flat&logo=discord"></a>
+<a href="https://makeapullrequest.com"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat"></a>
 
 <p align="center">
 A collection of niche/random cogs for Red-Discordbot. 
