@@ -2,11 +2,8 @@ import asyncio
 import json
 import logging
 import re
-from datetime import datetime
-from typing import Optional
 
 import discord
-import openai
 import tiktoken
 from redbot.core import checks, commands
 from redbot.core.utils.chat_formatting import box, pagify
@@ -24,41 +21,11 @@ class ResponseSettings(MixinMeta):
     @aiuser.group(name="response")
     @checks.admin_or_permissions(manage_guild=True)
     async def response(self, _):
-        """ Change bot response settings
+        """ Change settings used for generated responses
 
             (All subcommands are per server)
         """
         pass
-
-    @response.command()
-    @checks.is_owner()
-    async def endpoint(self, ctx: commands.Context, url: Optional[str]):
-        """ Sets the OpenAI endpoint to a custom one (must be OpenAI API compatible)
-
-            Reset to official OpenAI endpoint with `[p]aiuser response endpoint clear`
-        """
-        if not url or url in ["clear", "reset"]:
-            openai.api_base = "https://api.openai.com/v1"
-            await self.config.custom_openai_endpoint.set(None)
-        else:
-            await self.config.ratelimit_reset.set(datetime(1990, 1, 1, 0, 1).strftime('%Y-%m-%d %H:%M:%S'))
-            await self.config.custom_openai_endpoint.set(url)
-            openai.api_base = url
-
-        embed = discord.Embed(title="Bot Custom OpenAI endpoint", color=await ctx.embed_color())
-        embed.add_field(
-            name=":warning: Warning :warning:", value="All model/parameters selections for each server may need changing.", inline=False)
-
-        if url:
-            embed.description = f"Endpoint set to {url}."
-            embed.add_field(
-                name="Models", value="Third party models may have undesirable results, compared to OpenAI.", inline=False)
-            embed.add_field(
-                name="Note", value="This is an advanced feature. \
-                    \n If you don't know what you're doing, don't use it",  inline=False)
-        else:
-            embed.description = "Endpoint reset back to offical OpenAI endpoint."
-        await ctx.send(embed=embed)
 
     @response.group(name="removelist")
     @checks.admin_or_permissions(manage_guild=True)
@@ -142,6 +109,44 @@ class ResponseSettings(MixinMeta):
         else:
             await self.config.guild(ctx.guild).removelist_regexes.set(DEFAULT_REMOVELIST)
             return await confirm.edit(embed=discord.Embed(title="Removelist reset.", color=await ctx.embed_color()))
+
+
+    @response.group()
+    @checks.is_owner()
+    async def history(self, _):
+        """ Change the prompt context settings for the current server
+
+            The most recent messages that are within the time gap and message limits are used to create context.
+            Context is used to help the LLM generate a response.
+        """
+        pass
+
+    @history.command(name="backread", aliases=["messages", "size"])
+    @checks.is_owner()
+    async def history_backread(self, ctx: commands.Context, new_value: int):
+        """ Set max amount of messages to be used """
+        await self.config.guild(ctx.guild).messages_backread.set(new_value)
+        embed = discord.Embed(
+            title="The number of previous messages used for context on this server is now:",
+            description=f"{new_value}",
+            color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
+
+    @history.command(name="time", aliases=["gap"])
+    @checks.is_owner()
+    async def history_time(self, ctx: commands.Context, new_value: int):
+        """ Set max time (s) allowed between messages to be used
+
+            eg. if set to 60, once messsages are more than 60 seconds apart, more messages will not be added.
+
+            Helpful to prevent the LLM from mixing up context from different conversations.
+        """
+        await self.config.guild(ctx.guild).messages_backread_seconds.set(new_value)
+        embed = discord.Embed(
+            title="The max time (s) allowed between messages for context on this server is now:",
+            description=f"{new_value}",
+            color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
 
     @response.group(name="weights", aliases=["logit_bias", "bias"])
     async def weights(self, _):

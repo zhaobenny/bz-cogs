@@ -2,9 +2,8 @@
     "author": [
         "zhaobenny"
     ],
-    "install_msg": "hi there, go here https://discord.gg/GwT2yHPqzN if you have any problems/questions",
+    "install_msg": "Hey there, go here https://discord.gg/GwT2yHPqzN if you have any problems/questions",
     "name": "bz-cogs",
-    "short": "random niche cogs",
-    "description": "random, niche, non-user friendly, and duct taped together cogs"
+    "short": "Random niche cogs",
+    "description": "Random, niche, and duct taped together cogs"
 }
-

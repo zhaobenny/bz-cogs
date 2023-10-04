@@ -1,15 +1,17 @@
 import asyncio
+import json
 import logging
 from typing import Optional, Union
 
 import discord
 import tiktoken
 from redbot.core import checks, commands
+from redbot.core.utils.chat_formatting import box, pagify
 from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.abc import MixinMeta, aiuser
-from aiuser.prompts.common.presets import DEFAULT_PROMPT, PRESETS
+from aiuser.common.constants import DEFAULT_PROMPT
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -26,7 +28,6 @@ class PromptSettings(MixinMeta):
         pass
 
     @prompt.command(name="reset")
-    @checks.is_owner()
     async def prompt_reset(self, ctx: commands.Context):
         """ Reset ALL prompts in this guild to default (inc. channels and members) """
         embed = discord.Embed(
@@ -129,44 +130,96 @@ class PromptSettings(MixinMeta):
             page.set_footer(text=f"Page {i+1} of {len(pages)}")
         await SimpleMenu(pages).start(ctx)
 
-    @prompt.command(name="preset")
-    @checks.admin_or_permissions(manage_guild=True)
-    async def prompt_preset(self, ctx: commands.Context, *, preset: str):
-        """ Set/list preset prompts
+    @prompt.group(name="preset")
+    async def prompt_preset(self, ctx: commands.Context):
+        """ Manage presets for the current server
+        """
+        pass
 
-            Use [p]aiuser prompt preset list to see available presets.
+    @prompt_preset.command(name="show", aliases=["list"])
+    async def show_presets(self, ctx: commands.Context):
+        """ Show all presets for the current server """
+        presets = json.loads(await self.config.guild(ctx.guild).presets())
+        if not presets:
+            return await ctx.send("No presets set for this server")
+        pages = []
+        for preset, prompt in presets.items():
+            page = discord.Embed(
+                title=f"Preset `{preset}`",
+                description=self._truncate_prompt(prompt),
+                color=await ctx.embed_color())
+            page.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+            pages.append(page)
+        if len(pages) == 1:
+            return await ctx.send(embed=pages[0])
+        for i, page in enumerate(pages):
+            page.set_footer(text=f"Page {i+1} of {len(pages)}")
+        await SimpleMenu(pages).start(ctx)
+
+    @prompt_preset.command(name="add", aliases=["a"])
+    async def add_preset(self, ctx: commands.Context, prompt: str):
+        """ Add a new preset to the presets list
 
             **Arguments**
-                - `preset` The preset to use
+                - `prompt` The prompt to set. Use `|` to separate the preset name from the prompt at the start. eg. `preset_name|prompt_text`
         """
-        if preset == 'list':
-            embed = discord.Embed(
-                title="Presets",
-                description=f"Use `{ctx.clean_prefix}aiuser prompt preset <preset>` to set a preset.",
-                color=await ctx.embed_color())
-            embed.add_field(name="Available presets",
-                            value="\n".join(PRESETS.keys()), inline=False)
-            return await ctx.send(embed=embed)
-        if preset not in PRESETS:
-            return await ctx.send("Invalid preset. Use `list` to see available presets.")
-        await self.config.guild(ctx.guild).custom_text_prompt.set(PRESETS[preset])
+        presets = json.loads(await self.config.guild(ctx.guild).presets())
+        split = prompt.split("|", 1)
+        if not len(split) == 2:
+            return await ctx.send("Invalid format. Use `|` to separate the preset name from the prompt at the start. eg. `preset_name|prompt text`")
+        preset, prompt = split
+        for channel in ctx.guild.channels:
+            if channel.name.lower() == preset.lower():
+                return await ctx.send(f"Cannot use `{preset}` as a preset name as it conflicts with the channel name <#{channel.id}>")
+        if preset in presets:
+            return await ctx.send("That preset name already exists.")
+        if len(prompt) > await self.config.max_prompt_length() and not await ctx.bot.is_owner(ctx.author):
+            return await ctx.send(f"Prompt too long. Max length is {await self.config.max_prompt_length()} characters.")
+        presets[preset] = prompt
+        await self.config.guild(ctx.guild).presets.set(json.dumps(presets))
         embed = discord.Embed(
-            title="The prompt for this server is now changed to:",
-            description=f"{self._truncate_prompt(PRESETS[preset])}",
+            title=f"Added preset `{preset}`",
+            description=self._truncate_prompt(prompt),
             color=await ctx.embed_color())
-        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, PRESETS[preset]))
+        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+        return await ctx.send(embed=embed)
+
+    @prompt_preset.command(name="remove", aliases=["rm", "delete"])
+    async def remove_preset(self, ctx: commands.Context, preset: str):
+        """
+            Remove a preset by its name from the presets list
+
+            **Arguments**
+                - `preset` The name of the preset to remove
+        """
+        presets = json.loads(await self.config.guild(ctx.guild).presets())
+        if preset not in presets:
+            return await ctx.send("That preset name does not exist.")
+        if preset == "cynical":
+            return await ctx.send("Cannot remove the default preset.")
+        prompt = presets.pop(preset)
+        await self.config.guild(ctx.guild).presets.set(json.dumps(presets))
+        embed = discord.Embed(
+            title=f"Removed preset `{preset}`",
+            description=self._truncate_prompt(prompt),
+            color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
     @prompt.command(name="set", aliases=["custom", "customize"])
-    @checks.is_owner()
     async def prompt_custom(self, ctx, mention: Optional[Union[discord.Member, discord.TextChannel]], *, prompt: Optional[str]):
-        """ Set a custom prompt for the server (or provided mention)
+        """ Set a custom prompt or preset for the server (or provided mention)
 
             **Arguments**
                 - `mention` *(Optional)* Mention of a specific user or channel
+                - `prompt` *(Optional)* The prompt (or name of a preset) to set. If blank, will remove current prompt.
         """
         if not prompt:
             prompt = None
+        if prompt and len(prompt) > await self.config.max_prompt_length() and not await ctx.bot.is_owner(ctx.author):
+            return await ctx.send(f"Prompt too long. Max length is {await self.config.max_prompt_length()} characters.")
+        presets = json.loads(await self.config.guild(ctx.guild).presets())
+        if prompt and prompt in presets:
+            prompt = presets[prompt]
         if isinstance(mention, discord.Member):
             await self.set_user_prompt(ctx, mention, prompt)
         elif isinstance(mention, discord.TextChannel):
@@ -215,40 +268,65 @@ class PromptSettings(MixinMeta):
         embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
         return await ctx.send(embed=embed)
 
-    @prompt.group()
-    @checks.is_owner()
-    async def history(self, _):
-        """ Change the prompt context settings for the current server
-
-            The most recent messages that are within the time gap and message limits are used to create context.
-            Context is used to help the LLM generate a response.
-        """
+    @prompt.group(name="topics")
+    async def random_topics(self, _):
+        """ Manage topics to be used in random messages for current server (if enabled for server by bot owner) """
         pass
 
-    @history.command(name="backread", aliases=["messages", "size"])
-    @checks.is_owner()
-    async def history_backread(self, ctx: commands.Context, new_value: int):
-        """ Set max amount of messages to be used """
-        await self.config.guild(ctx.guild).messages_backread.set(new_value)
+    @random_topics.command(name="show", aliases=["list"])
+    async def show_random_topics(self, ctx: commands.Context):
+        """ Lists topics to used in random messages """
+        topics = await self.config.guild(ctx.guild).random_messages_topics()
+
+        if not topics:
+            return await ctx.send("The topic list is empty.")
+
+        formatted_list = "\n".join(f"{index+1}. {topic}" for index, topic in enumerate(topics))
+        pages = []
+        for text in pagify(formatted_list, page_length=888):
+            page = discord.Embed(
+                title=f"List of random message topics in {ctx.guild.name}",
+                description=box(text),
+                color=await ctx.embed_color())
+            pages.append(page)
+
+        if len(pages) == 1:
+            return await ctx.send(embed=pages[0])
+
+        for i, page in enumerate(pages):
+            page.set_footer(text=f"Page {i+1} of {len(pages)}")
+
+        return await SimpleMenu(pages).start(ctx)
+
+    @random_topics.command(name="add", aliases=["a"])
+    async def add_random_topics(self, ctx: commands.Context, *, topic: str):
+        """ Add a new topic """
+        topics = await self.config.guild(ctx.guild).random_messages_topics()
+        if topic in topics:
+            return await ctx.send("That topic is already in the list.")
+        if topic and len(topic) > await self.config.max_topic_length() and not await ctx.bot.is_owner(ctx.author):
+            return await ctx.send(f"Topic too long. Max length is {await self.config.max_topic_length()} characters.")
+        topics.append(topic)
+        await self.config.guild(ctx.guild).random_messages_topics.set(topics)
         embed = discord.Embed(
-            title="The number of previous messages used for context on this server is now:",
-            description=f"{new_value}",
+            title="Added topic to random message topics:",
+            description=f"{topic}",
             color=await ctx.embed_color())
+        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, topic))
         return await ctx.send(embed=embed)
 
-    @history.command(name="time", aliases=["gap"])
-    @checks.is_owner()
-    async def history_time(self, ctx: commands.Context, new_value: int):
-        """ Set max time (s) allowed between messages to be used
-
-            eg. if set to 60, once messsages are more than 60 seconds apart, more messages will not be added.
-
-            Helpful to prevent the LLM from mixing up context from different conversations.
-        """
-        await self.config.guild(ctx.guild).messages_backread_seconds.set(new_value)
+    @random_topics.command(name="remove", aliases=["rm", "delete"])
+    async def remove_random_topics(self, ctx: commands.Context, *, number: int):
+        """ Removes a topic (by number) from the list"""
+        topics = await self.config.guild(ctx.guild).random_messages_topics()
+        if not (1 <= number <= len(topics)):
+            return await ctx.send("Invalid topic number.")
+        topic = topics[number - 1]
+        topics.remove(topic)
+        await self.config.guild(ctx.guild).random_messages_topics.set(topics)
         embed = discord.Embed(
-            title="The max time (s) allowed between messages for context on this server is now:",
-            description=f"{new_value}",
+            title="Removed topic from random message topics:",
+            description=f"{topic}",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 

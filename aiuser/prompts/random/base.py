@@ -2,7 +2,7 @@ import random
 from typing import Optional
 from aiuser.prompts.base import Prompt
 from aiuser.prompts.common.messagethread import MessageThread
-from aiuser.prompts.common.presets import DEFAULT_PROMPT
+from aiuser.common.constants import DEFAULT_PROMPT
 
 
 class RandomEventPrompt(Prompt):

@@ -17,7 +17,7 @@ from redbot.core.utils.views import SimpleMenu
 logger = logging.getLogger("red.bz_cogs.aiemote")
 
 
-class aiemote(commands.Cog):
+class AIEmote(commands.Cog):
     MATCH_DISCORD_EMOJI_REGEX = r"<a?:[A-Za-z0-9]+:[0-9]+>"
 
     def __init__(self, bot):
@@ -39,12 +39,14 @@ class aiemote(commands.Cog):
                 },
             ],
             "extra_instruction": "",
-            "optin": []
+            "optin": [],
+            "optout": []
         }
 
         default_guild = {
             "server_emojis": [],
             "whitelist": [],
+            "optin_by_default": False
         }
 
         self.config.register_guild(**default_guild)
@@ -55,6 +57,7 @@ class aiemote(commands.Cog):
         all_config = await self.config.all_guilds()
         self.percent = await self.config.percent()
         self.optin_users = await self.config.optin()
+        self.optout_users = await self.config.optout()
         for guild_id, config in all_config.items():
             self.whitelist[guild_id] = config["whitelist"]
 
@@ -138,7 +141,9 @@ class aiemote(commands.Cog):
             return False
         if not await self.bot.allowed_by_whitelist_blacklist(ctx.author):
             return False
-        if not ctx.author.id in self.optin_users:
+        if ctx.author.id in self.optout_users:
+            return False
+        if (not ctx.author.id in self.optin_users) and (not (await self.config.guild(ctx.guild).optin_by_default())):
             return False
 
         if not openai.api_key:
@@ -182,7 +187,7 @@ class aiemote(commands.Cog):
     async def aiemote(self, _):
         """ Totally not glorified sentiment analysis™
 
-            Picks a reaction for a message using ChatGPT
+            Picks a reaction for a message using gpt-3.5-turbo
 
             To get started, please add a channel to the whitelist with:
             `[p]aiemote allow <#channel>`
@@ -233,6 +238,27 @@ class aiemote(commands.Cog):
         await self.config.guild(ctx.guild).whitelist.set(whitelist)
         return await ctx.tick()
 
+    @aiemote.command(name="optinbydefault", alias=["optindefault"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def optin_by_default(self, ctx: commands.Context):
+        """ Toggles whether users are opted in by default in this server
+
+            This command is disabled for servers with more than 150 members.
+        """
+        if len(ctx.guild.members) > 150:
+            # if you STILL want to enable this for a server with more than 150 members
+            # add the line below to the specific guild in the cog's settings.json:
+            # "optin_by_default": true
+            # insert concern about user privacy and getting user consent here
+            return await ctx.send("You cannot enable this setting for servers with more than 150 members.")
+        value = not await self.config.guild(ctx.guild).optin_by_default()
+        await self.config.guild(ctx.guild).optin_by_default.set(value)
+        embed = discord.Embed(
+            title="Users are now opted in by default in this server:",
+            description=f"{value}",
+            color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
+
     @aiemote.command(name="optin")
     async def optin_user(self, ctx: commands.Context):
         """ Opt in of sending your message to OpenAI (bot-wide)
@@ -240,11 +266,20 @@ class aiemote(commands.Cog):
             This will allow the bot to react to your messages
         """
         optin = await self.config.optin()
-        if ctx.author.id in await self.config.optin():
+        optout = await self.config.optout()
+
+        if ctx.author.id in await self.config.optin() and ctx.author.id not in self.optout_users:
             return await ctx.send("You are already opted in bot-wide")
+
         optin.append(ctx.author.id)
         self.optin_users.append(ctx.author.id)
         await self.config.optin.set(optin)
+
+        if ctx.author.id in optout:
+            optout.remove(ctx.author.id)
+            self.optout_users.remove(ctx.author.id)
+            await self.config.optout.set(optout)
+
         await ctx.send("You are now opted in bot-wide")
 
     @aiemote.command(name="optout")
@@ -254,21 +289,30 @@ class aiemote(commands.Cog):
             The bot will no longer react to your messages
         """
         optin = await self.config.optin()
-        if not ctx.author.id in await self.config.optin():
+        optout = await self.config.optout()
+
+        if not ctx.author.id in await self.config.optin() and ctx.author.id in self.optout_users:
             return await ctx.send("You are already opted out")
-        optin.remove(ctx.author.id)
-        self.optin_users.remove(ctx.author.id)
-        await self.config.optin.set(optin)
+
+        if ctx.author.id in optin:
+            optin.remove(ctx.author.id)
+            self.optin_users.remove(ctx.author.id)
+            await self.config.optin.set(optin)
+
+        optout.append(ctx.author.id)
+        self.optout_users.append(ctx.author.id)
+        await self.config.optout.set(optout)
+
         await ctx.send("You are now opted out bot-wide")
 
-    @commands.group(name="aiemoteadmin", alias=["ai_emote_admin"])
+    @commands.group(name="aiemoteowner", alias=["ai_emote_admin"])
     @checks.is_owner()
-    async def aiemote_admin(self, _):
+    async def aiemote_owner(self, _):
         """ Owner only commands for aiemote
         """
         pass
 
-    @aiemote_admin.command(name="instruction", aliases=["extra_instruction", "extra"])
+    @aiemote_owner.command(name="instruction", aliases=["extra_instruction", "extra"])
     @checks.is_owner()
     async def set_extra_instruction(self, ctx: commands.Context, *, instruction: Optional[str]):
         """ Add additonal (prompting) instruction for the langauge model when picking an emoji
@@ -315,10 +359,10 @@ class aiemote(commands.Cog):
         del emoji_list[index]
         return True
 
-    @aiemote_admin.command(name="add")
+    @aiemote_owner.command(name="add")
     @checks.is_owner()
     async def add_global_emoji(self, ctx: commands.Context, emoji, *, description: str):
-        """ Add a emoji to the global list
+        """ Add an emoji to the global list
 
             *Arguments*
             - `<emoji>` The emoji to add
@@ -333,10 +377,10 @@ class aiemote(commands.Cog):
             await self.config.global_emojis.set(emojis)
             await ctx.tick()
 
-    @aiemote_admin.command(name="remove", aliases=["rm"])
+    @aiemote_owner.command(name="remove", aliases=["rm"])
     @checks.is_owner()
     async def remove_global_emoji(self, ctx: commands.Context, emoji):
-        """ Remove a emoji from the global list
+        """ Remove an emoji from the global list
 
             *Arguments*
             - `<emoji>` The emoji to remove
@@ -375,7 +419,7 @@ class aiemote(commands.Cog):
 
         return embeds
 
-    @aiemote_admin.command(name="config", aliases=["settings", "list", "conf"])
+    @aiemote_owner.command(name="config", aliases=["settings", "list", "conf"])
     @checks.is_owner()
     async def list_all_emoji(self, ctx: commands.Context):
         """ List all emojis in the global list (and current server list)
@@ -397,7 +441,7 @@ class aiemote(commands.Cog):
         else:
             await ctx.send(embed=serverembeds[0])
 
-    @aiemote_admin.command(name="reset")
+    @aiemote_owner.command(name="reset")
     @checks.is_owner()
     async def reset_all_settings(self, ctx: commands.Context):
         """
@@ -423,10 +467,10 @@ class aiemote(commands.Cog):
             self.percent = 50
             return await confirm.edit(embed=discord.Embed(title="Cleared.", color=await ctx.embed_color()))
 
-    @aiemote_admin.command(name="sadd")
+    @aiemote_owner.command(name="sadd")
     @checks.is_owner()
     async def add_server_emoji(self, ctx: commands.Context, emoji, *, description: str):
-        """ Add a emoji to this current server list
+        """ Add an emoji to this current server list
 
             *Arguments*
             - `<emoji>` The emoji to add
@@ -441,10 +485,10 @@ class aiemote(commands.Cog):
             await self.config.guild(ctx.guild).server_emojis.set(emojis)
             await ctx.tick()
 
-    @aiemote_admin.command(name="sremove", aliases=["srm"])
+    @aiemote_owner.command(name="sremove", aliases=["srm"])
     @checks.is_owner()
     async def remove_server_emoji(self, ctx: commands.Context, emoji):
-        """ Remove a emoji from this current server list
+        """ Remove an emoji from this current server list
 
             *Arguments*
             - `<emoji>` The emoji to remove
@@ -457,7 +501,7 @@ class aiemote(commands.Cog):
             await self.config.guild(ctx.guild).server_emojis.set(emojis)
             await ctx.tick()
 
-    @aiemote_admin.command(name="percent")
+    @aiemote_owner.command(name="percent")
     @checks.is_owner()
     async def set_percent(self, ctx: commands.Context, percent: int):
         """ Set the chance that the bot will react to a message (for all servers bot is in)

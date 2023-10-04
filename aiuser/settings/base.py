@@ -7,6 +7,7 @@ from redbot.core import checks, commands
 
 from aiuser.abc import MixinMeta
 from aiuser.settings.image import ImageSettings
+from aiuser.settings.owner import OwnerSettings
 from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.response import ResponseSettings
 from aiuser.settings.triggers import TriggerSettings
@@ -14,7 +15,7 @@ from aiuser.settings.triggers import TriggerSettings
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings, MixinMeta):
+class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings, OwnerSettings, MixinMeta):
 
     @commands.group(aliases=["ai_user"])
     @commands.bot_has_permissions(embed_links=True)
@@ -237,6 +238,10 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
             This command is disabled for servers with more than 150 members.
         """
         if len(ctx.guild.members) > 150:
+            # if you STILL want to enable this for a server with more than 150 members
+            # add the line below to the specific guild in the cog's settings.json:
+            # "optin_by_default": true
+            # insert concern about user privacy and getting user consent here
             return await ctx.send("You cannot enable this setting for servers with more than 150 members.")
         value = not await self.config.guild(ctx.guild).optin_by_default()
         self.optindefault[ctx.guild.id] = value

@@ -1,14 +1,11 @@
 # How to use 🛠️
 
-The bot will only reply in whitelisted channels.
-Please add a channel to a server's whitelist using:
-
+The bot will generate responses in whitelisted channels. Bot owners can add a channel to a server's whitelist using:
 ```
 [p]aiuser add <#CHANNEL_MENTION>
 ```
 
-Change the percentage of eligible messages to reply to (defaults to 50% per server):
-
+Bot owners can change the percentage of eligible messages (per server) to reply to:
 ```
 [p]aiuser percent <PERCENT>
 ```
@@ -18,7 +15,7 @@ Users will also have to opt-in (bot-wide) into having their messages used:
 [p]aiuser optin
 ```
 
-See custom prompt settings in:
+Admins can modify prompt settings in:
 ```
 [p]aiuser prompt
 ```
@@ -29,10 +26,11 @@ Optionally, enable slash (/chat) command using:
 [p]slash sync
 ```
 
+Some additional settings are restricted to bot owner only.
 See other settings using:
-
 ```
 [p]aiuser
+[p]aiuserowner
 ```
 
 ### Have fun. 🎉
@@ -45,7 +43,7 @@ See other settings using:
 ![image_seeing](https://github.com/zhaobenny/bz-cogs/assets/46238123/8b0019f3-8b38-4578-b511-a350e10fce2d)
 
 
-See settings here:
+Bot owners can see settings here:
 ```
 [p]aiuser image
 ```
@@ -100,15 +98,35 @@ First time scanning an image will take longer due to the need to download the pr
 
 ---
 
+## Random Messages 🎲
+
+Dead chat? No problem. Let the bot send random messages!
+
+Every 33 minutes, a RNG roll will determine if a random message will be sent using a list of topics as a prompt.
+
+Whitelisted channels must have a hour pass without a message sent in it for a random message to be sent, and the last sent message must be sent by a user.
+
+Bot owners see settings here:
+```
+[p]aiuser triggers random
+```
+
+Admins manage topics here:
+```
+[p]aiuser prompt topics
+```
+
+---
+
 ### Custom OpenAI endpoint
 
 ⚠️ For advanced users! ⚠️
 
 OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. gpt4all or text-generation-webui, for a local and more private alternative to OpenAI)
 
-This can be set globally using:
+Bot owners can set this globally using:
 ```
-[p]aiuser response custom_openai <ENDPOINT>
+[p]aiuser endpoint <ENDPOINT>
 ```
 
 Models will also need **changing** per server.
@@ -116,7 +134,7 @@ Models will also need **changing** per server.
 
 Third party models may have undesirable results! (I tested this [one](https://huggingface.co/mindrage/Manticore-13B-Chat-Pyg-Guanaco-GGML) and the results are decent-ish)
 
-You may also want to set custom parameters (per server). See:
+Bot owners may also want to set custom parameters (per server). See:
 ```
 [p]aiuser response parameters
 ```
