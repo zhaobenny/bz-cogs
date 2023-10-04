@@ -7,7 +7,7 @@ from redbot.core.data_manager import cog_data_path
 
 from aiuser.abc import MixinMeta
 from aiuser.prompts.common.messagethread import MessageThread
-from aiuser.prompts.common.presets import DEFAULT_PROMPT
+from aiuser.common.constants import DEFAULT_PROMPT
 
 
 class Prompt:

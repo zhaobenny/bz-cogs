@@ -1,4 +1,5 @@
 
+import json
 import logging
 import random
 import re
@@ -11,9 +12,10 @@ from redbot.core.bot import Red
 
 from aiuser.abc import CompositeMetaClass
 from aiuser.common.cache import Cache
-from aiuser.common.constants import (AI_HORDE_MODE, DEFAULT_REMOVELIST,
-                                     DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS,
-                                     MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
+from aiuser.common.constants import (AI_HORDE_MODE, DEFAULT_PRESETS,
+                                     DEFAULT_REMOVELIST, DEFAULT_REPLY_PERCENT,
+                                     DEFAULT_TOPICS, MAX_MESSAGE_LENGTH,
+                                     MIN_MESSAGE_LENGTH)
 from aiuser.model.openai import OpenAI_LLM_Response
 from aiuser.prompt_handler import PromptHandler
 from aiuser.prompts.common.messageentry import MessageEntry
@@ -69,6 +71,7 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
             "random_messages_enabled": False,
             "random_messages_percent": 0.012,
             "random_messages_topics": DEFAULT_TOPICS,
+            "presets": json.dumps(DEFAULT_PRESETS)
         }
         default_member = {
             "custom_text_prompt": None,
