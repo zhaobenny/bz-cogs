@@ -182,7 +182,7 @@ class aiemote(commands.Cog):
     async def aiemote(self, _):
         """ Totally not glorified sentiment analysis™
 
-            Picks a reaction for a message using ChatGPT
+            Picks a reaction for a message using gpt-3.5-turbo
 
             To get started, please add a channel to the whitelist with:
             `[p]aiemote allow <#channel>`
@@ -261,14 +261,14 @@ class aiemote(commands.Cog):
         await self.config.optin.set(optin)
         await ctx.send("You are now opted out bot-wide")
 
-    @commands.group(name="aiemoteadmin", alias=["ai_emote_admin"])
+    @commands.group(name="aiemoteowner", alias=["ai_emote_admin"])
     @checks.is_owner()
-    async def aiemote_admin(self, _):
+    async def aiemote_owner(self, _):
         """ Owner only commands for aiemote
         """
         pass
 
-    @aiemote_admin.command(name="instruction", aliases=["extra_instruction", "extra"])
+    @aiemote_owner.command(name="instruction", aliases=["extra_instruction", "extra"])
     @checks.is_owner()
     async def set_extra_instruction(self, ctx: commands.Context, *, instruction: Optional[str]):
         """ Add additonal (prompting) instruction for the langauge model when picking an emoji
@@ -315,10 +315,10 @@ class aiemote(commands.Cog):
         del emoji_list[index]
         return True
 
-    @aiemote_admin.command(name="add")
+    @aiemote_owner.command(name="add")
     @checks.is_owner()
     async def add_global_emoji(self, ctx: commands.Context, emoji, *, description: str):
-        """ Add a emoji to the global list
+        """ Add an emoji to the global list
 
             *Arguments*
             - `<emoji>` The emoji to add
@@ -333,10 +333,10 @@ class aiemote(commands.Cog):
             await self.config.global_emojis.set(emojis)
             await ctx.tick()
 
-    @aiemote_admin.command(name="remove", aliases=["rm"])
+    @aiemote_owner.command(name="remove", aliases=["rm"])
     @checks.is_owner()
     async def remove_global_emoji(self, ctx: commands.Context, emoji):
-        """ Remove a emoji from the global list
+        """ Remove an emoji from the global list
 
             *Arguments*
             - `<emoji>` The emoji to remove
@@ -375,7 +375,7 @@ class aiemote(commands.Cog):
 
         return embeds
 
-    @aiemote_admin.command(name="config", aliases=["settings", "list", "conf"])
+    @aiemote_owner.command(name="config", aliases=["settings", "list", "conf"])
     @checks.is_owner()
     async def list_all_emoji(self, ctx: commands.Context):
         """ List all emojis in the global list (and current server list)
@@ -397,7 +397,7 @@ class aiemote(commands.Cog):
         else:
             await ctx.send(embed=serverembeds[0])
 
-    @aiemote_admin.command(name="reset")
+    @aiemote_owner.command(name="reset")
     @checks.is_owner()
     async def reset_all_settings(self, ctx: commands.Context):
         """
@@ -423,10 +423,10 @@ class aiemote(commands.Cog):
             self.percent = 50
             return await confirm.edit(embed=discord.Embed(title="Cleared.", color=await ctx.embed_color()))
 
-    @aiemote_admin.command(name="sadd")
+    @aiemote_owner.command(name="sadd")
     @checks.is_owner()
     async def add_server_emoji(self, ctx: commands.Context, emoji, *, description: str):
-        """ Add a emoji to this current server list
+        """ Add an emoji to this current server list
 
             *Arguments*
             - `<emoji>` The emoji to add
@@ -441,10 +441,10 @@ class aiemote(commands.Cog):
             await self.config.guild(ctx.guild).server_emojis.set(emojis)
             await ctx.tick()
 
-    @aiemote_admin.command(name="sremove", aliases=["srm"])
+    @aiemote_owner.command(name="sremove", aliases=["srm"])
     @checks.is_owner()
     async def remove_server_emoji(self, ctx: commands.Context, emoji):
-        """ Remove a emoji from this current server list
+        """ Remove an emoji from this current server list
 
             *Arguments*
             - `<emoji>` The emoji to remove
@@ -457,7 +457,7 @@ class aiemote(commands.Cog):
             await self.config.guild(ctx.guild).server_emojis.set(emojis)
             await ctx.tick()
 
-    @aiemote_admin.command(name="percent")
+    @aiemote_owner.command(name="percent")
     @checks.is_owner()
     async def set_percent(self, ctx: commands.Context, percent: int):
         """ Set the chance that the bot will react to a message (for all servers bot is in)

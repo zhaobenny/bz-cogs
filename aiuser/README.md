@@ -5,7 +5,7 @@ The bot will generate responses in whitelisted channels. Bot owners can add a ch
 [p]aiuser add <#CHANNEL_MENTION>
 ```
 
-Bot owners can change the percentage of eligible messages to reply to:
+Bot owners can change the percentage of eligible messages (per server) to reply to:
 ```
 [p]aiuser percent <PERCENT>
 ```
@@ -104,7 +104,7 @@ Dead chat? No problem. Let the bot send random messages!
 
 Every 33 minutes, a RNG roll will determine if a random message will be sent using a list of topics as a prompt.
 
-Whitelisted channels must have a hour pass without a message sent in it for a random message to be sent.
+Whitelisted channels must have a hour pass without a message sent in it for a random message to be sent, and the last sent message must be sent by a user.
 
 Bot owners see settings here:
 ```

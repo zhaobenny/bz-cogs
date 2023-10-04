@@ -2,16 +2,20 @@
     "author": [
         "zhaobenny"
     ],
-    "description": "Utilize OpenAI to reply to messages and images in approved channels.",
+    "description": "Human-like Discord interactions powered by OpenAI for messages (and images)",
     "install_msg": "See cog README for additional setup. \n Quick startup guide: \n 1. Set (preferably paid account) OpenAI key using [p]set api openai api_key,INSERT_API_KEY \n 2. [p]aiuser add <#CHANNEL_NAME> \n 3. [p]aiuser optin to opt yourself into getting messages used (other users will need to do the same)",
     "short": "Human-like user behavior powered by OpenAI.",
+    "permissions": [
+        "read_messages",
+        "embed_links"
+    ],
     "requirements": [
         "openai",
         "tenacity",
         "tiktoken",
         "Pillow"
     ],
-    "end_user_data_statement": "This cog does not persistently store data or metadata about users, but chat messages may be sent to OpenAI to generate responses. Please refer to: <https://openai.com/policies/privacy-policy>. Images, if enabled for scanning, may be sent to ai-horde. Please refer to: <https://stablehorde.net/privacy>",
+    "end_user_data_statement": "This cog does not persistently store data or metadata about users, but chat messages may be sent to OpenAI to generate responses. Please refer to: <https://openai.com/policies/privacy-policy>. Images (if enabled) may be sent to ai-horde. Please refer to: <https://stablehorde.net/privacy>",
     "tags": [
         "openai",
         "chatgpt",
