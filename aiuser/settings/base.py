@@ -238,6 +238,10 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
             This command is disabled for servers with more than 150 members.
         """
         if len(ctx.guild.members) > 150:
+            # if you STILL want to enable this for a server with more than 150 members
+            # add the line below to the specific guild in the cog's settings.json:
+            # "optin_by_default": true
+            # insert concern about user privacy and getting user consent here
             return await ctx.send("You cannot enable this setting for servers with more than 150 members.")
         value = not await self.config.guild(ctx.guild).optin_by_default()
         self.optindefault[ctx.guild.id] = value
