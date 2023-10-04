@@ -39,12 +39,14 @@ class AIEmote(commands.Cog):
                 },
             ],
             "extra_instruction": "",
-            "optin": []
+            "optin": [],
+            "optout": []
         }
 
         default_guild = {
             "server_emojis": [],
             "whitelist": [],
+            "optin_by_default": False
         }
 
         self.config.register_guild(**default_guild)
@@ -55,6 +57,7 @@ class AIEmote(commands.Cog):
         all_config = await self.config.all_guilds()
         self.percent = await self.config.percent()
         self.optin_users = await self.config.optin()
+        self.optout_users = await self.config.optout()
         for guild_id, config in all_config.items():
             self.whitelist[guild_id] = config["whitelist"]
 
@@ -138,7 +141,9 @@ class AIEmote(commands.Cog):
             return False
         if not await self.bot.allowed_by_whitelist_blacklist(ctx.author):
             return False
-        if not ctx.author.id in self.optin_users:
+        if ctx.author.id in self.optout_users:
+            return False
+        if (not ctx.author.id in self.optin_users) and (not (await self.config.guild(ctx.guild).optin_by_default())):
             return False
 
         if not openai.api_key:
@@ -233,6 +238,27 @@ class AIEmote(commands.Cog):
         await self.config.guild(ctx.guild).whitelist.set(whitelist)
         return await ctx.tick()
 
+    @aiemote.command(name="optinbydefault", alias=["optindefault"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def optin_by_default(self, ctx: commands.Context):
+        """ Toggles whether users are opted in by default in this server
+
+            This command is disabled for servers with more than 150 members.
+        """
+        if len(ctx.guild.members) > 150:
+            # if you STILL want to enable this for a server with more than 150 members
+            # add the line below to the specific guild in the cog's settings.json:
+            # "optin_by_default": true
+            # insert concern about user privacy and getting user consent here
+            return await ctx.send("You cannot enable this setting for servers with more than 150 members.")
+        value = not await self.config.guild(ctx.guild).optin_by_default()
+        await self.config.guild(ctx.guild).optin_by_default.set(value)
+        embed = discord.Embed(
+            title="Users are now opted in by default in this server:",
+            description=f"{value}",
+            color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
+
     @aiemote.command(name="optin")
     async def optin_user(self, ctx: commands.Context):
         """ Opt in of sending your message to OpenAI (bot-wide)
@@ -240,11 +266,20 @@ class AIEmote(commands.Cog):
             This will allow the bot to react to your messages
         """
         optin = await self.config.optin()
-        if ctx.author.id in await self.config.optin():
+        optout = await self.config.optout()
+
+        if ctx.author.id in await self.config.optin() and ctx.author.id not in self.optout_users:
             return await ctx.send("You are already opted in bot-wide")
+
         optin.append(ctx.author.id)
         self.optin_users.append(ctx.author.id)
         await self.config.optin.set(optin)
+
+        if ctx.author.id in optout:
+            optout.remove(ctx.author.id)
+            self.optout_users.remove(ctx.author.id)
+            await self.config.optout.set(optout)
+
         await ctx.send("You are now opted in bot-wide")
 
     @aiemote.command(name="optout")
@@ -254,11 +289,20 @@ class AIEmote(commands.Cog):
             The bot will no longer react to your messages
         """
         optin = await self.config.optin()
-        if not ctx.author.id in await self.config.optin():
+        optout = await self.config.optout()
+
+        if not ctx.author.id in await self.config.optin() and ctx.author.id in self.optout_users:
             return await ctx.send("You are already opted out")
-        optin.remove(ctx.author.id)
-        self.optin_users.remove(ctx.author.id)
-        await self.config.optin.set(optin)
+
+        if ctx.author.id in optin:
+            optin.remove(ctx.author.id)
+            self.optin_users.remove(ctx.author.id)
+            await self.config.optin.set(optin)
+
+        optout.append(ctx.author.id)
+        self.optout_users.append(ctx.author.id)
+        await self.config.optout.set(optout)
+
         await ctx.send("You are now opted out bot-wide")
 
     @commands.group(name="aiemoteowner", alias=["ai_emote_admin"])
