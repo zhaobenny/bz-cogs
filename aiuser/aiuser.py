@@ -163,13 +163,27 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
                 await ctx.react_quietly("💤")
             return
 
+        # prototype
+        import aiuser.model.stablediffusion
+        replyimage = await aiuser.model.stablediffusion.choice(message.content)
+        if replyimage == "True":
+            replyimage = True
+        elif replyimage == "False":
+            replyimage = False
+        else:
+            message.channel.send(replyimage)
+        if replyimage:
+            caption = await aiuser.model.stablediffusion.extract_image_caption(message.content)
+            await message.channel.send(f"Caption: {caption}")
+            image = await aiuser.model.stablediffusion.generate_image(caption)
+            await message.channel.send(file=discord.File(image, filename="me.png"))
+            return
         prompt_instance = await self.create_prompt_instance(ctx)
-        if not prompt_instance:
+        if prompt_instance is None:
             return
         prompt = await prompt_instance.get_list()
         if prompt is None:
             return
-
         await OpenAI_LLM_Response(ctx, self.config, prompt).sent_response()
 
     @commands.Cog.listener()

@@ -116,8 +116,9 @@ class OpenAI_LLM_Response(Base_LLM_Response):
 
     async def generate_response(self):
         model = await self.config.guild(self.ctx.guild).model()
+        response = f" insert normal openai response here"
         try:
-            response = await self.request_openai(model)
+            # response =  await self.request_openai(model)
             return response
         except openai.error.RateLimitError:
             timestamp = datetime.now() + timedelta(seconds=random.randint(62, 65))
