@@ -13,9 +13,5 @@ class StickerPrompt(Prompt):
         super().__init__(*args, **kwargs)
 
     async def _handle_message(self) -> Optional[MessageThread]:
-        if not self.message.stickers:
-            return
-
         await self.messages.add_msg((await format_sticker_content(self.message)), self.message)
-
         return self.messages

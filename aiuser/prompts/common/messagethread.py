@@ -99,15 +99,19 @@ class MessageThread:
         if past_messages and abs((past_messages[0].created_at - self.initial_message.created_at).total_seconds()) > max_seconds_gap:
             return
 
+        users = []
         for message in past_messages:
             if await self.config.guild(message.guild).optin_by_default():
                 break
             if (not message.author.bot) and (message.author.id not in await self.config.optin()) and (message.author.id not in await self.config.optout()):
-                prefix = (await self.bot.get_prefix(message))[0]
-                embed = discord.Embed(title=":information_source: AI User Opt-In / Opt-Out", color=await self.bot.get_embed_color(message))
-                embed.description = f"Hey there! Looks like some user(s) has not opted in or out of AI User! \n Please use `{prefix}aiuser optin` or `{prefix}aiuser optout` to opt in or out of sending messages / images to OpenAI or an external endpoint. \n This embed will stop showing up if all users chatting have opted in or out."
-                await message.channel.send(embed=embed)
-                break
+                users.append(message.author)
+
+        if users:
+            prefix = (await self.bot.get_prefix(message))[0]
+            users = ", ".join([user.mention for user in users])
+            embed = discord.Embed(title=":information_source: AI User Opt-In / Opt-Out", color=await self.bot.get_embed_color(message))
+            embed.description = f"Hey there! Looks like {users} have not opted in or out of AI User! \n Please use `{prefix}aiuser optin` or `{prefix}aiuser optout` to opt in or out of sending messages / images to OpenAI or an external endpoint. \n This embed will stop showing up if all users chatting have opted in or out."
+            await message.channel.send(embed=embed)
 
         for i in range(len(past_messages)-1):
             if self.tokens > self._get_token_limit(self.model):
@@ -151,7 +155,7 @@ class MessageThread:
         if message.attachments and message.id in self.cached_messages:
             await self.add_msg(self.cached_messages[message.id], message, prepend=True)
             if message.content:
-                await self.add_msg(format_text_content(message), message, prepend=True, force=True)
+                return await self.add_msg(format_text_content(message), message, prepend=True, force=True)
         elif message.attachments:
             return await self.add_system("A message was skipped", prepend=True)
 
@@ -159,4 +163,4 @@ class MessageThread:
             return await self.add_msg(format_embed_content(message), message, prepend=True)
 
         if message.content and not len(message.content.split()) > MAX_MESSAGE_LENGTH:
-            await self.add_msg(format_text_content(message), message, prepend=True)
+            return await self.add_msg(format_text_content(message), message, prepend=True)
