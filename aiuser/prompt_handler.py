@@ -26,7 +26,7 @@ class PromptHandler(MixinMeta):
             return await self.handle_embed_prompt(message)
         elif message.stickers:
             return StickerPrompt(self, message)
-        elif self.is_good_text_message(message):
+        elif self.is_good_text_message(message) or ctx.interaction:
             return TextPrompt(self, message)
         return None
 

@@ -130,6 +130,8 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
             return await ctx.send("The command is currently being ratelimited!", ephemeral=True)
 
         prompt_instance = await self.create_prompt_instance(ctx)
+        if not prompt_instance:
+            return await ctx.send("Error: Invalid message", ephemeral=True)
         prompt = await prompt_instance.get_list()
         if prompt is None:
             return await ctx.send("Error: No prompt set.", ephemeral=True)
@@ -162,6 +164,8 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
             return
 
         prompt_instance = await self.create_prompt_instance(ctx)
+        if not prompt_instance:
+            return
         prompt = await prompt_instance.get_list()
         if prompt is None:
             return
