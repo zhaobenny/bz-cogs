@@ -26,13 +26,20 @@ It is ok to omit one of the other formula parts. I will give you a [Subject], yo
 
 Here is a sample of how it should be output: "Beautiful woman, contemplative and reflective, sitting on a bench, cozy sweater, autumn park with colorful leaves, soft overcast light, muted color photography style, 4K quality."
 
-Use the below message as a prompt to generate a Stable Diffusion Art Prompt.  The prompt should be a full sentence, no second person references, no line breaks, no delimiters, and keep it as concise as possible while still conveying a full scene.
- """
+Convert the below message to a Stable Diffusion Art Prompt.  The prompt should be a full sentence, no second person references, no line breaks, no delimiters, and keep it as concise as possible while still conveying a full scene.
+"""
 
 
-async def extract_image_caption(message):
+async def create_image_caption(message):
 
-    message = message.replace("yourself", 'girl')
+    # message = message.replace("yourself", '')
+
+    # response = openai.Completion.create(
+    #     engine="gpt-3.5-turbo-instruct",
+    #     prompt=system.format(message),
+    #     max_tokens=100,
+    # )
+    # return "katsuragi misato, " + response['choices'][0]['text']
 
     response = await openai.ChatCompletion.acreate(
         model="gpt-3.5-turbo",
@@ -41,7 +48,7 @@ async def extract_image_caption(message):
             {"role": "user", "content": message}
         ],
     )
-    return "katsuragi misato, " + response["choices"][0]["message"]["content"]
+    return "katsuragi misato, " + response["choices"][0]["message"]["content"].lower()
 
 
 async def generate_image(caption):

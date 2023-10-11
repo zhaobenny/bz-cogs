@@ -58,7 +58,7 @@ class RandomMessageTask(MixinMeta):
                     continue
 
                 logger.debug(f"Sending random message to #{channel.name} at {guild.name}")
-                random_prompt = await RandomEventPrompt(self, last).get_list()
+                random_prompt = await RandomEventPrompt(self, ctx).get_list()
                 await OpenAI_LLM_Response(ctx, self.config, random_prompt).sent_response(standalone=True)
         except Exception as e:
             logger.error(f"Could not trigger a random message, the exception was:\n {e}")

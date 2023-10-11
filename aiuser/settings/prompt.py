@@ -12,6 +12,7 @@ from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.abc import MixinMeta, aiuser
 from aiuser.common.constants import DEFAULT_PROMPT
+from aiuser.common.utilities import format_variables
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -53,21 +54,24 @@ class PromptSettings(MixinMeta):
             return await confirm.edit(embed=discord.Embed(title="All prompts have been reset to default.", color=await ctx.embed_color()))
 
     @prompt.group(name="show", invoke_without_command=True)
-    async def prompt_show(self, ctx, mention: Optional[Union[discord.Member, discord.TextChannel]]):
-        """ Show the prompt for the server (or provided mention)
+    async def prompt_show(self, ctx: commands.Context, mention: Optional[Union[discord.Member, discord.TextChannel, discord.VoiceChannel, discord.StageChannel]]):
+        """ Show the prompt for the server (or provided user/channel)
             **Arguments**
-                - `mention` *(Optional)* Mention of user or channel
+                - `mention` *(Optional)* User or channel
         """
         if mention and isinstance(mention, discord.Member):
             prompt = await self.config.member(mention).custom_text_prompt()
-            title = f"The prompt for this user ({mention.display_name}) is:"
-        elif mention and isinstance(mention, discord.TextChannel):
+            title = f"The prompt for the user {mention.display_name} is:"
+        elif mention and isinstance(mention, discord.TextChannel) or isinstance(mention, discord.VoiceChannel) or isinstance(mention, discord.StageChannel):
             prompt = await self.config.channel(mention).custom_text_prompt()
-            title = f"The prompt for this channel ({mention.name}) is:"
+            title = f"The prompt for {mention.mention} is:"
         else:
             channel_prompt = await self.config.channel(ctx.channel).custom_text_prompt()
-            prompt = channel_prompt or await self.config.guild(ctx.guild).custom_text_prompt() or DEFAULT_PROMPT
-            title = f"The prompt for this {'channel' if channel_prompt else 'server'} is:"
+            prompt = channel_prompt or await self.config.guild(ctx.guild).custom_text_prompt()
+            title = f"The prompt for {ctx.channel.mention if channel_prompt else 'this server'} is:"
+
+        if not prompt:
+            prompt = DEFAULT_PROMPT
 
         embed = discord.Embed(
             title=title,
@@ -117,7 +121,7 @@ class PromptSettings(MixinMeta):
             prompt = await self.config.channel(channel).custom_text_prompt()
             if prompt:
                 page = discord.Embed(
-                    title=f"The prompt for channel #{channel.name} is:",
+                    title=f"The prompt for {channel.mention} is:",
                     description=self._truncate_prompt(prompt),
                     color=await ctx.embed_color())
                 page.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
@@ -206,11 +210,11 @@ class PromptSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @prompt.command(name="set", aliases=["custom", "customize"])
-    async def prompt_custom(self, ctx, mention: Optional[Union[discord.Member, discord.TextChannel]], *, prompt: Optional[str]):
-        """ Set a custom prompt or preset for the server (or provided mention)
+    async def prompt_custom(self, ctx, mention: Optional[Union[discord.Member, discord.TextChannel, discord.VoiceChannel, discord.StageChannel]], *, prompt: Optional[str]):
+        """ Set a custom prompt or preset for the server (or provided channel/user)
 
             **Arguments**
-                - `mention` *(Optional)* Mention of a specific user or channel
+                - `mention` *(Optional)* A specific user or channel
                 - `prompt` *(Optional)* The prompt (or name of a preset) to set. If blank, will remove current prompt.
         """
         if not prompt:
@@ -222,7 +226,7 @@ class PromptSettings(MixinMeta):
             prompt = presets[prompt]
         if isinstance(mention, discord.Member):
             await self.set_user_prompt(ctx, mention, prompt)
-        elif isinstance(mention, discord.TextChannel):
+        elif isinstance(mention, discord.TextChannel) or isinstance(mention, discord.VoiceChannel) or isinstance(mention, discord.StageChannel):
             await self.set_channel_prompt(ctx, mention, prompt)
         else:
             await self.set_server_prompt(ctx, prompt)
@@ -254,15 +258,14 @@ class PromptSettings(MixinMeta):
         embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
         return await ctx.send(embed=embed)
 
-    async def set_channel_prompt(self, ctx: commands.Context, mention: discord.TextChannel, prompt: Optional[str]):
+    async def set_channel_prompt(self, ctx: commands.Context, channel: Union[discord.TextChannel, discord.VoiceChannel, discord.StageChannel], prompt: Optional[str]):
         """ Set custom prompt for the current channel, overrides the server prompt """
-        channel = mention or ctx.channel
         if not prompt:
             await self.config.channel(channel).custom_text_prompt.set(None)
             return await ctx.send(f"The prompt for {channel.mention} is now reset to default server prompt.")
         await self.config.channel(channel).custom_text_prompt.set(prompt)
         embed = discord.Embed(
-            title=f"The prompt for channel #{ctx.channel.name} is now changed to:",
+            title=f"The prompt for channel {channel.mention} is now changed to:",
             description=f"{self._truncate_prompt(prompt)}",
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
@@ -331,7 +334,7 @@ class PromptSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     async def get_tokens(self, ctx: commands.Context, prompt: str) -> int:
-        prompt = f"You are {ctx.guild.me.nick or ctx.guild.me.name}. {prompt}"
+        prompt = format_variables(ctx, prompt)  # to provide a better estimate
         try:
             encoding = tiktoken.encoding_for_model(await self.config.guild(ctx.guild).model())
         except KeyError:

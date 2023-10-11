@@ -2,7 +2,7 @@
 
 The bot will generate responses in whitelisted channels. Bot owners can add a channel to a server's whitelist using:
 ```
-[p]aiuser add <#CHANNEL_MENTION>
+[p]aiuser add <CHANNEL>
 ```
 
 Bot owners can change the percentage of eligible messages (per server) to reply to:
@@ -115,9 +115,23 @@ Admins manage topics here:
 ```
 [p]aiuser prompt topics
 ```
-
 ---
 
+## Prompt/Topics Variables  📝
+
+Prompts and topics can include certain variables by including one of the following strings:
+
+- `{botname}` - the bot's current nickname or username
+- `{authorname}` - the author of the message the bot is activated on
+- `{servername}` - the server name
+- `{channelname}` - the channel name
+- `{currentdate}` - the current date eg. 2023/08/31
+- `{currentweekday}` - the current weekday eg. Monday
+- `{currenttime}` - the current 24-hour time eg. 21:59
+
+Remove list regex patterns only support `{authorname}` (will use authors of last 10 messages) and `{botname}` strings.
+
+---
 ### Custom OpenAI endpoint
 
 ⚠️ For advanced users! ⚠️

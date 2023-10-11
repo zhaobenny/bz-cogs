@@ -11,7 +11,7 @@ from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.abc import MixinMeta, aiuser
-from aiuser.common.constants import DEFAULT_REMOVELIST
+from aiuser.common.constants import DEFAULT_REMOVE_PATTERNS
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -30,12 +30,13 @@ class ResponseSettings(MixinMeta):
     @response.group(name="removelist")
     @checks.admin_or_permissions(manage_guild=True)
     async def removelist(self, _):
-        """ Any string in a generated response matching these regex patterns will be removed """
+        """ Manage the list of regex patterns to remove from responses
+        """
 
     @removelist.command(name="add")
     @checks.admin_or_permissions(manage_guild=True)
     async def removelist_add(self, ctx: commands.Context, *, regex_pattern: str):
-        """Add a regex pattern to the removelist"""
+        """Add a regex pattern to the list of patterns to remove from responses"""
         try:
             re.compile(regex_pattern)
         except re.error:
@@ -46,37 +47,36 @@ class ResponseSettings(MixinMeta):
         if regex_pattern not in removelist_regexes:
             removelist_regexes.append(regex_pattern)
             await self.config.guild(ctx.guild).removelist_regexes.set(removelist_regexes)
-            await ctx.send(f"The regex pattern `{regex_pattern}` has been added to the removelist.")
+            await ctx.send(f"The regex pattern `{regex_pattern}` has been added to the list.")
         else:
-            await ctx.send(f"The regex pattern `{regex_pattern}` is already in the removelist.")
+            await ctx.send(f"The regex pattern `{regex_pattern}` is already in the list of regex patterns.")
 
     @removelist.command(name="remove")
     @checks.admin_or_permissions(manage_guild=True)
-    async def removelist_remove(self, ctx: commands.Context, *, regex_pattern: str):
-        """Remove a regex pattern from the removelist"""
+    async def removelist_remove(self, ctx: commands.Context, *, number: int):
+        """Remove a regex pattern (by number) from the list"""
         removelist_regexes = await self.config.guild(ctx.guild).removelist_regexes()
-
-        if regex_pattern in removelist_regexes:
-            removelist_regexes.remove(regex_pattern)
-            await self.config.guild(ctx.guild).removelist_regexes.set(removelist_regexes)
-            await ctx.send(f"The regex pattern `{regex_pattern}` has been removed from the removelist.")
-        else:
-            await ctx.send(f"The regex pattern `{regex_pattern}` is not in the removelist.")
+        if not (1 <= number <= len(removelist_regexes)):
+            return await ctx.send("Invalid number.")
+        removed_regex = removelist_regexes.pop(number - 1)
+        await self.config.guild(ctx.guild).removelist_regexes.set(removelist_regexes)
+        await ctx.send(f"The regex pattern `{removed_regex}` has been removed from the list.")
 
     @removelist.command(name="show")
     @checks.admin_or_permissions(manage_guild=True)
     async def removelist_show(self, ctx: commands.Context):
-        """Show the current regex patterns in the removelist"""
+        """Show the current regex patterns of strings to removed from responses """
         removelist_regexes = await self.config.guild(ctx.guild).removelist_regexes()
         if not removelist_regexes:
-            return await ctx.send("The removelist is empty.")
+            return await ctx.send("The list of regex patterns is empty.")
 
         pages = []
 
-        formatted_list = "\n".join(removelist_regexes)
+        formatted_list = [f"{i+1}. {pattern}" for i, pattern in enumerate(removelist_regexes)]
+        formatted_list = "\n".join(formatted_list)
         for text in pagify(formatted_list, page_length=888):
             page = discord.Embed(
-                title=f"List of regexs to remove for bot messages in {ctx.guild.name}",
+                title=f"List of regexes patterns to remove in bot responses in {ctx.guild.name}",
                 description=box(text),
                 color=await ctx.embed_color())
             pages.append(page)
@@ -92,7 +92,7 @@ class ResponseSettings(MixinMeta):
     @removelist.command(name="reset")
     @checks.admin_or_permissions(manage_guild=True)
     async def removelist_reset(self, ctx: commands.Context):
-        """Reset the removelist to default """
+        """Reset the list of regexes to default """
         embed = discord.Embed(
             title="Are you sure?",
             description="This will reset this server's removelist to default.",
@@ -107,9 +107,8 @@ class ResponseSettings(MixinMeta):
         if pred.result is False:
             return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
         else:
-            await self.config.guild(ctx.guild).removelist_regexes.set(DEFAULT_REMOVELIST)
+            await self.config.guild(ctx.guild).removelist_regexes.set(DEFAULT_REMOVE_PATTERNS)
             return await confirm.edit(embed=discord.Embed(title="Removelist reset.", color=await ctx.embed_color()))
-
 
     @response.group()
     @checks.is_owner()

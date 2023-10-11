@@ -98,20 +98,20 @@ class OpenAI_LLM_Response(Base_LLM_Response):
 
             if 'gpt-3.5-turbo-instruct' in model:
                 prompt = "\n".join(message['content'] for message in self.prompt.get_messages())
-                response = openai.Completion.create(
+                response = await openai.Completion.acreate(
                     engine=model,
                     prompt=prompt,
                     **kwargs
                 )
                 response = response['choices'][0]['text']
             else:
-                response = openai.ChatCompletion.create(
+                response = await openai.ChatCompletion.acreate(
                     model=model,
                     messages=self.prompt.get_messages(),
                     **kwargs
                 )
                 response = response["choices"][0]["message"]["content"]
-
+        logger.debug(f"Generated the following raw response using OpenAI in {self.ctx.guild.name}:\n \"{response}\"")
         return response
 
     async def generate_response(self):
