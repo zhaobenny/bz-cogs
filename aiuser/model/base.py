@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import random
@@ -59,6 +60,16 @@ class Base_LLM_Response():
             await self.ctx.send(self.response)
 
     async def remove_patterns_from_response(self) -> str:
+        async def sub_with_timeout(pattern, response):
+            try:
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(lambda: re.sub(pattern, '', response).strip(' \n":')),
+                    timeout=5
+                )
+                return result
+            except asyncio.TimeoutError:
+                logger.error(f"Timed out while applying regex pattern: {pattern}")
+                return response
         bot_member = self.ctx.message.guild.me
 
         patterns = [
@@ -74,9 +85,10 @@ class Base_LLM_Response():
             rf'^{bot_member.nick}:',
         ]
         patterns += await self.config.guild(self.ctx.guild).removelist_regexes()
+
         response = self.response.strip(' "')
         for pattern in patterns:
-            response = re.sub(pattern, '', response).strip(' \n":')
+            response = await sub_with_timeout(pattern, response)
             if response.count('"') == 1:
                 response = response.replace('"', '')
         self.response = response
