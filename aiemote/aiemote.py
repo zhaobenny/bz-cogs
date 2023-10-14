@@ -222,7 +222,7 @@ class AIEmote(commands.Cog):
         await self.config.guild(ctx.guild).whitelist.set(whitelist)
         return await ctx.tick()
 
-    @aiemote.command(name="allowvoice", aliases=["addvoice"])
+    @aiemote.command(name="allow_voice", aliases=["add_voice"])
     @checks.admin_or_permissions(manage_guild=True)
     async def whitelist_add_voice(self, ctx: commands.Context, channel: discord.VoiceChannel):
         """ Add a channel to the whitelist
@@ -254,7 +254,7 @@ class AIEmote(commands.Cog):
         await self.config.guild(ctx.guild).whitelist.set(whitelist)
         return await ctx.tick()
 
-    @aiemote.command(name="removevoice", aliases=["rmvoice"])
+    @aiemote.command(name="remove_voice", aliases=["rm_voice"])
     @checks.admin_or_permissions(manage_guild=True)
     async def whitelist_remove_voice(self, ctx: commands.Context, channel: discord.VoiceChannel):
         """ Remove a channel from the whitelist
