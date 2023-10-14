@@ -2,7 +2,7 @@
 
 The bot will generate responses in whitelisted channels. Bot owners can add a channel to a server's whitelist using:
 ```
-[p]aiuser add <#CHANNEL_MENTION>
+[p]aiuser add <CHANNEL>
 ```
 
 Bot owners can change the percentage of eligible messages (per server) to reply to:

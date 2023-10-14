@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Union
 
 import discord
 import openai
@@ -113,14 +114,14 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
 
     @aiuser.command()
     @checks.is_owner()
-    async def add(self, ctx: commands.Context, channel: discord.TextChannel):
+    async def add(self, ctx: commands.Context, channel: Union[discord.TextChannel, discord.VoiceChannel, discord.StageChannel]):
         """ Adds a channel to the whitelist
 
         **Arguments**
             - `channel` A mention of the channel
         """
         if not channel:
-            return await ctx.send("Invalid channel mention, use #channel")
+            return await ctx.send("Invalid channel")
         new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         if channel.id in new_whitelist:
             return await ctx.send("Channel already in whitelist")
@@ -134,14 +135,14 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
 
     @aiuser.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def remove(self, ctx: commands.Context, channel: discord.TextChannel):
+    async def remove(self, ctx: commands.Context, channel: Union[discord.TextChannel, discord.VoiceChannel, discord.StageChannel]):
         """ Remove a channel from the whitelist
 
         **Arguments**
             - `channel` A mention of the channel
         """
         if not channel:
-            return await ctx.send("Invalid channel mention, use #channel")
+            return await ctx.send("Invalid channel")
         new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         if channel.id not in new_whitelist:
             return await ctx.send("Channel not in whitelist")
