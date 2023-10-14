@@ -222,6 +222,22 @@ class AIEmote(commands.Cog):
         await self.config.guild(ctx.guild).whitelist.set(whitelist)
         return await ctx.tick()
 
+    @aiemote.command(name="allowvoice", aliases=["addvoice"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def whitelist_add_voice(self, ctx: commands.Context, channel: discord.VoiceChannel):
+        """ Add a channel to the whitelist
+
+            *Arguments*
+            - `<channel>` The mention of channel
+        """
+        whitelist = self.whitelist.get(ctx.guild.id, [])
+        if channel.id in whitelist:
+            return await ctx.send("Channel already in whitelist")
+        whitelist.append(channel.id)
+        self.whitelist[ctx.guild.id] = whitelist
+        await self.config.guild(ctx.guild).whitelist.set(whitelist)
+        return await ctx.tick()
+
     @aiemote.command(name="remove", aliases=["rm"])
     @checks.admin_or_permissions(manage_guild=True)
     async def whitelist_remove(self, ctx: commands.Context, channel: discord.TextChannel):
@@ -237,6 +253,23 @@ class AIEmote(commands.Cog):
         self.whitelist[ctx.guild.id] = whitelist
         await self.config.guild(ctx.guild).whitelist.set(whitelist)
         return await ctx.tick()
+
+    @aiemote.command(name="removevoice", aliases=["rmvoice"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def whitelist_remove_voice(self, ctx: commands.Context, channel: discord.VoiceChannel):
+        """ Remove a channel from the whitelist
+
+            *Arguments*
+            - `<channel>` The mention of channel
+        """
+        whitelist = self.whitelist.get(ctx.guild.id, [])
+        if channel.id not in whitelist:
+            return await ctx.send("Channel not in whitelist")
+        whitelist.remove(channel.id)
+        self.whitelist[ctx.guild.id] = whitelist
+        await self.config.guild(ctx.guild).whitelist.set(whitelist)
+        return await ctx.tick()
+
 
     @aiemote.command(name="optinbydefault", alias=["optindefault"])
     @checks.admin_or_permissions(manage_guild=True)
