@@ -133,8 +133,50 @@ class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings,
         return await ctx.send(embed=embed)
 
     @aiuser.command()
+    @checks.is_owner()
+    async def add_voice(self, ctx: commands.Context, channel: discord.VoiceChannel):
+        """ Adds a channel to the whitelist
+
+        **Arguments**
+            - `channel` A mention of the channel
+        """
+        if not channel:
+            return await ctx.send("Invalid channel mention, use #channel")
+        new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
+        if channel.id in new_whitelist:
+            return await ctx.send("Channel already in whitelist")
+        new_whitelist.append(channel.id)
+        await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
+        self.channels_whitelist[ctx.guild.id] = new_whitelist
+        embed = discord.Embed(title="The server whitelist is now:", color=await ctx.embed_color())
+        channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
+        embed.description = "\n".join(channels) if channels else "None"
+        return await ctx.send(embed=embed)
+
+    @aiuser.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def remove(self, ctx: commands.Context, channel: discord.TextChannel):
+        """ Remove a channel from the whitelist
+
+        **Arguments**
+            - `channel` A mention of the channel
+        """
+        if not channel:
+            return await ctx.send("Invalid channel mention, use #channel")
+        new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
+        if channel.id not in new_whitelist:
+            return await ctx.send("Channel not in whitelist")
+        new_whitelist.remove(channel.id)
+        await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
+        self.channels_whitelist[ctx.guild.id] = new_whitelist
+        embed = discord.Embed(title="The server whitelist is now:", color=await ctx.embed_color())
+        channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
+        embed.description = "\n".join(channels) if channels else "None"
+        return await ctx.send(embed=embed)
+
+    @aiuser.command(aliases=["rm_voice"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def remove_voice(self, ctx: commands.Context, channel: discord.VoiceChannel):
         """ Remove a channel from the whitelist
 
         **Arguments**
