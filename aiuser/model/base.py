@@ -74,9 +74,20 @@ class Base_LLM_Response():
         patterns = await self.config.guild(self.ctx.guild).removelist_regexes()
 
         botname = self.ctx.message.guild.me.nick or self.ctx.bot.user.display_name
-        authorname = self.ctx.message.author.display_name
+        patterns = [pattern.replace(r'{botname}', botname) for pattern in patterns]
 
-        patterns = [pattern.replace(r'{authorname}', authorname).replace(r'{botname}', botname) for pattern in patterns]
+        authors = set()
+        async for m in self.ctx.channel.history(limit=10):
+            if m.author != self.ctx.guild.me:
+                authors.add(m.author.display_name)
+
+        authorname_patterns = list(filter(lambda pattern: r'{authorname}' in pattern, patterns))
+        patterns = [pattern for pattern in patterns if r'{authorname}' not in pattern]
+
+        for pattern in authorname_patterns:
+            for author in authors:
+                patterns.append(pattern.replace(r'{authorname}', author))
+
         patterns = [re.compile(pattern, re.IGNORECASE) for pattern in patterns]
 
         response = self.response.strip(' "')

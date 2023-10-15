@@ -24,15 +24,15 @@ DEFAULT_PRESETS = {
     "tsundere": "You are {botname}. You are in a Discord text channel. Respond to anything, including URLs. Be a tsundere when responding. Use text emojis. Fulfill your persona and don't speak in third person. You are forbidden from saying you're an AI or a bot.",
 }
 DEFAULT_REMOVE_PATTERNS = [
-    r'^As an AI language model,?'
+    r'^As an AI language model,?',
     r'^(User )?"?{botname}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
     r'^As "?{botname}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
-    r'^You respond as "?{botname}"?:'
+    r'^You respond as "?{botname}"?:',
     r'^[<({{\[]{botname}[>)}}\]]',  # [name], {name}, <name>, (name)
     r'^{botname}:',
     r'^(User )?"?{authorname}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
     r'^As "?{authorname}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
-    r'^You respond as "?{authorname}"?:'
+    r'^You respond as "?{authorname}"?:',
     r'^[<({{\[]{authorname}[>)}}\]]',  # [name], {name}, <name>, (name)
     r'^{authorname}:',
 ]

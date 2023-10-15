@@ -129,7 +129,7 @@ Prompts and topics can include certain variables by including one of the followi
 - `{currentweekday}` - the current weekday eg. Monday
 - `{currenttime}` - the current 24-hour time eg. 21:59
 
-Removelist regex patterns only support `{authorname}` and `{botname}`.
+Remove list regex patterns only support `{authorname}` (will use authors of last 10 messages) and `{botname}` strings.
 
 ---
 ### Custom OpenAI endpoint
