@@ -76,6 +76,7 @@ class Base_LLM_Response():
         botname = self.ctx.message.guild.me.nick or self.ctx.bot.user.display_name
         patterns = [pattern.replace(r'{botname}', botname) for pattern in patterns]
 
+        # get last 10 authors and applies regex patterns with display name
         authors = set()
         async for m in self.ctx.channel.history(limit=10):
             if m.author != self.ctx.guild.me:
