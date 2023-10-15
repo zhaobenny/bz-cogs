@@ -130,6 +130,7 @@ Prompts and topics can include certain variables by including one of the followi
 - `{currenttime}` - the current 24-hour time eg. 21:59
 
 Removelist regex patterns only support `{authorname}` and `{botname}`.
+
 ---
 ### Custom OpenAI endpoint
 
