@@ -60,31 +60,25 @@ class Base_LLM_Response():
             await self.ctx.send(self.response)
 
     async def remove_patterns_from_response(self) -> str:
-        async def sub_with_timeout(pattern, response):
+        async def sub_with_timeout(pattern: re.Pattern, response):
             try:
                 result = await asyncio.wait_for(
-                    asyncio.to_thread(lambda: re.sub(pattern, '', response).strip(' \n":')),
+                    asyncio.to_thread(lambda: pattern.sub('', response).strip(' \n":')),
                     timeout=5
                 )
                 return result
             except asyncio.TimeoutError:
-                logger.error(f"Timed out while applying regex pattern: {pattern}")
+                logger.error(f"Timed out while applying regex pattern: {pattern.pattern}")
                 return response
-        bot_member = self.ctx.message.guild.me
 
-        patterns = [
-            rf'^(User )?"?{bot_member.name}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
-            rf'^As "?{bot_member.name}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
-            rf'^You respond as "?{bot_member.name}"?:'
-            rf'^[<({{\[]{bot_member.name}[>)}}\]]',  # [name], {name}, <name>, (name)
-            rf'^{bot_member.name}:',
-            rf'^(User )?"?{bot_member.nick}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
-            rf'^As "?{bot_member.nick}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
-            rf'^You respond as "?{bot_member.nick}"?:'
-            rf'^[<({{\[]{bot_member.nick}[>)}}\]]',  # [name], {name}, <name>, (name)
-            rf'^{bot_member.nick}:',
-        ]
-        patterns += await self.config.guild(self.ctx.guild).removelist_regexes()
+        patterns = await self.config.guild(self.ctx.guild).removelist_regexes()
+
+        botname = self.ctx.message.guild.me.nick or self.ctx.bot.user.display_name
+        authorname = self.ctx.message.author.display_name
+
+        patterns = [pattern.replace(r'{authorname}', authorname).replace(r'{botname}', botname) for pattern in patterns]
+        print(patterns)
+        patterns = [re.compile(pattern, re.IGNORECASE) for pattern in patterns]
 
         response = self.response.strip(' "')
         for pattern in patterns:

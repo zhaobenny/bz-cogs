@@ -11,7 +11,7 @@ from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.abc import MixinMeta, aiuser
-from aiuser.common.constants import DEFAULT_REMOVELIST
+from aiuser.common.constants import DEFAULT_REMOVE_PATTERNS
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -107,9 +107,8 @@ class ResponseSettings(MixinMeta):
         if pred.result is False:
             return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
         else:
-            await self.config.guild(ctx.guild).removelist_regexes.set(DEFAULT_REMOVELIST)
+            await self.config.guild(ctx.guild).removelist_regexes.set(DEFAULT_REMOVE_PATTERNS)
             return await confirm.edit(embed=discord.Embed(title="Removelist reset.", color=await ctx.embed_color()))
-
 
     @response.group()
     @checks.is_owner()
