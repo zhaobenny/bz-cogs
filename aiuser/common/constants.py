@@ -25,14 +25,13 @@ DEFAULT_PRESETS = {
 }
 DEFAULT_REMOVE_PATTERNS = [
     r'^As an AI language model,?'
-    r'^(User)?\s?\"([^"]+)\"\s?(said)?:',
     r'^(User )?"?{botname}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
     r'^As "?{botname}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
     r'^You respond as "?{botname}"?:'
     r'^[<({{\[]{botname}[>)}}\]]',  # [name], {name}, <name>, (name)
     r'^{botname}:',
     r'^(User )?"?{authorname}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
-    r'^As "?{}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
+    r'^As "?{authorname}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
     r'^You respond as "?{authorname}"?:'
     r'^[<({{\[]{authorname}[>)}}\]]',  # [name], {name}, <name>, (name)
     r'^{authorname}:',

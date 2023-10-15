@@ -77,7 +77,6 @@ class Base_LLM_Response():
         authorname = self.ctx.message.author.display_name
 
         patterns = [pattern.replace(r'{authorname}', authorname).replace(r'{botname}', botname) for pattern in patterns]
-        print(patterns)
         patterns = [re.compile(pattern, re.IGNORECASE) for pattern in patterns]
 
         response = self.response.strip(' "')
