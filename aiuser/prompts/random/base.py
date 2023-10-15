@@ -28,6 +28,6 @@ class RandomEventPrompt(Prompt):
         # TODO: pull topics from apis (news? tv show feeds?) for more variety
 
         topics = await self.config.guild(self.message.guild).random_messages_topics() or ["nothing"]
-        topic = format_variables(topics[random.randint(0, len(topics) - 1)])
-        await self.messages.add_system(f"You are not responding to a message. Do not greet anyone. Sent a standalone conversation starter about the following: {topic}")
+        topic = format_variables(self.ctx, topics[random.randint(0, len(topics) - 1)])
+        await self.messages.add_system(f"You are not responding to a message. Do not greet anyone. You are to start a conversation about the following: {topic}")
         return self.messages
