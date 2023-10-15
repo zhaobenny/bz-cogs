@@ -122,13 +122,14 @@ Admins manage topics here:
 Prompts and topics can include certain variables by including one of the following strings:
 
 - `{botname}` - the bot's current nickname or username
-- `{authorname}` - the author of the message the bot is activated on 
+- `{authorname}` - the author of the message the bot is activated on
 - `{servername}` - the server name
 - `{channelname}` - the channel name
 - `{currentdate}` - the current date eg. 2023/08/31
 - `{currentweekday}` - the current weekday eg. Monday
 - `{currenttime}` - the current 24-hour time eg. 21:59
 
+Removelist regex patterns only support `{authorname}` and `{botname}`.
 ---
 ### Custom OpenAI endpoint
 
