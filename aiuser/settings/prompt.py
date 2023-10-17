@@ -12,6 +12,7 @@ from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.abc import MixinMeta, aiuser
 from aiuser.common.constants import DEFAULT_PROMPT
+from aiuser.common.utilities import format_variables
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -333,7 +334,7 @@ class PromptSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     async def get_tokens(self, ctx: commands.Context, prompt: str) -> int:
-        prompt = f"You are {ctx.guild.me.nick or ctx.guild.me.name}. {prompt}"
+        prompt = format_variables(ctx, prompt)  # to provide a better estimate
         try:
             encoding = tiktoken.encoding_for_model(await self.config.guild(ctx.guild).model())
         except KeyError:

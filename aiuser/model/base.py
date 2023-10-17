@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import random
@@ -34,7 +35,7 @@ class Base_LLM_Response():
         if not standalone:
             debug_content = f'"{message.content}"' if message.content else ""
             logger.debug(
-                f"Replying to message {debug_content} in {message.guild.name} with prompt: \n{json.dumps(self.prompt.get_messages(), indent=4)}")
+                f"Generating response to message {debug_content} in {message.guild.name} with prompt: \n{json.dumps(self.prompt.get_messages(), indent=4)}")
         else:
             logger.debug(
                 f"Generating message with prompt: \n{json.dumps(self.prompt.get_messages(), indent=4)}")
@@ -59,24 +60,40 @@ class Base_LLM_Response():
             await self.ctx.send(self.response)
 
     async def remove_patterns_from_response(self) -> str:
-        bot_member = self.ctx.message.guild.me
+        async def sub_with_timeout(pattern: re.Pattern, response):
+            try:
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(lambda: pattern.sub('', response).strip(' \n":')),
+                    timeout=5
+                )
+                return result
+            except asyncio.TimeoutError:
+                logger.error(f"Timed out while applying regex pattern: {pattern.pattern}")
+                return response
 
-        patterns = [
-            rf'^(User )?"?{bot_member.name}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
-            rf'^As "?{bot_member.name}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
-            rf'^You respond as "?{bot_member.name}"?:'
-            rf'^[<({{\[]{bot_member.name}[>)}}\]]',  # [name], {name}, <name>, (name)
-            rf'^{bot_member.name}:',
-            rf'^(User )?"?{bot_member.nick}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
-            rf'^As "?{bot_member.nick}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
-            rf'^You respond as "?{bot_member.nick}"?:'
-            rf'^[<({{\[]{bot_member.nick}[>)}}\]]',  # [name], {name}, <name>, (name)
-            rf'^{bot_member.nick}:',
-        ]
-        patterns += await self.config.guild(self.ctx.guild).removelist_regexes()
+        patterns = await self.config.guild(self.ctx.guild).removelist_regexes()
+
+        botname = self.ctx.message.guild.me.nick or self.ctx.bot.user.display_name
+        patterns = [pattern.replace(r'{botname}', botname) for pattern in patterns]
+
+        # get last 10 authors and applies regex patterns with display name
+        authors = set()
+        async for m in self.ctx.channel.history(limit=10):
+            if m.author != self.ctx.guild.me:
+                authors.add(m.author.display_name)
+
+        authorname_patterns = list(filter(lambda pattern: r'{authorname}' in pattern, patterns))
+        patterns = [pattern for pattern in patterns if r'{authorname}' not in pattern]
+
+        for pattern in authorname_patterns:
+            for author in authors:
+                patterns.append(pattern.replace(r'{authorname}', author))
+
+        patterns = [re.compile(pattern, re.IGNORECASE) for pattern in patterns]
+
         response = self.response.strip(' "')
         for pattern in patterns:
-            response = re.sub(pattern, '', response).strip(' \n":')
+            response = await sub_with_timeout(pattern, response)
             if response.count('"') == 1:
                 response = response.replace('"', '')
         self.response = response

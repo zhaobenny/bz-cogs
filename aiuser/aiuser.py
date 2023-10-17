@@ -12,8 +12,8 @@ from redbot.core.bot import Red
 
 from aiuser.abc import CompositeMetaClass
 from aiuser.common.cache import Cache
-from aiuser.common.constants import (AI_HORDE_MODE, DEFAULT_PRESETS,
-                                     DEFAULT_REMOVELIST, DEFAULT_REPLY_PERCENT,
+from aiuser.common.constants import (AI_HORDE_MODE, DEFAULT_PRESETS, DEFAULT_REMOVE_PATTERNS,
+                                     DEFAULT_REPLY_PERCENT,
                                      DEFAULT_TOPICS, MAX_MESSAGE_LENGTH,
                                      MIN_MESSAGE_LENGTH)
 from aiuser.model.openai import OpenAI_LLM_Response
@@ -65,7 +65,7 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
             "channels_whitelist": [],
             "public_forget": False,
             "ignore_regex": None,
-            "removelist_regexes": DEFAULT_REMOVELIST,
+            "removelist_regexes": DEFAULT_REMOVE_PATTERNS,
             "parameters": None,
             "weights": None,
             "random_messages_enabled": False,

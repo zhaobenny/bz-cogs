@@ -1,8 +1,10 @@
 import random
 from typing import Optional
+
+from aiuser.common.constants import DEFAULT_PROMPT
+from aiuser.common.utilities import format_variables
 from aiuser.prompts.base import Prompt
 from aiuser.prompts.common.messagethread import MessageThread
-from aiuser.common.constants import DEFAULT_PROMPT
 
 
 class RandomEventPrompt(Prompt):
@@ -16,7 +18,7 @@ class RandomEventPrompt(Prompt):
             or await self.config.guild(self.message.guild).custom_text_prompt() \
             or DEFAULT_PROMPT
 
-        await self.messages.add_system(f"You are {self.message.guild.me.nick or self.bot.user.display_name}. {bot_prompt}")
+        await self.messages.add_system(format_variables(self.ctx, bot_prompt))
 
         self.messages = await self._handle_message()
 
@@ -26,5 +28,6 @@ class RandomEventPrompt(Prompt):
         # TODO: pull topics from apis (news? tv show feeds?) for more variety
 
         topics = await self.config.guild(self.message.guild).random_messages_topics() or ["nothing"]
-        await self.messages.add_system(f"You are not responding to a message. Pretend you thought about {topics[random.randint(0, len(topics) - 1)]} and will sent a standalone conversation starter in the chatroom. Do not greet anyone.")
+        topic = format_variables(self.ctx, topics[random.randint(0, len(topics) - 1)])
+        await self.messages.add_system(f"You are not responding to a message. Do not greet anyone. You are to start a conversation about the following: {topic}")
         return self.messages

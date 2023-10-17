@@ -111,7 +111,7 @@ class OpenAI_LLM_Response(Base_LLM_Response):
                     **kwargs
                 )
                 response = response["choices"][0]["message"]["content"]
-
+        logger.debug(f"Generated the following raw response using OpenAI in {self.ctx.guild.name}:\n \"{response}\"")
         return response
 
     async def generate_response(self):

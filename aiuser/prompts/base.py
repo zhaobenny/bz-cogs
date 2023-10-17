@@ -1,20 +1,22 @@
 from typing import Optional
 
 from discord import Message
-from redbot.core import Config
+from redbot.core import Config, commands
 from redbot.core.bot import Red
 from redbot.core.data_manager import cog_data_path
 
 from aiuser.abc import MixinMeta
-from aiuser.prompts.common.messagethread import MessageThread
 from aiuser.common.constants import DEFAULT_PROMPT
+from aiuser.common.utilities import format_variables
+from aiuser.prompts.common.messagethread import MessageThread
 
 
 class Prompt:
-    def __init__(self, cog: MixinMeta, message):
+    def __init__(self, cog: MixinMeta, ctx: commands.Context):
         self.config: Config = cog.config
         self.bot: Red = cog.bot
-        self.message: Message = message
+        self.ctx: commands.Context = ctx
+        self.message: Message = ctx.message
         self.cog_data_path = cog_data_path(cog)
         start_time = cog.override_prompt_start_time.get(self.message.guild.id)
         self.cached_messages = cog.cached_messages
@@ -34,7 +36,7 @@ class Prompt:
             or await self.config.guild(self.message.guild).custom_text_prompt() \
             or DEFAULT_PROMPT
 
-        await self.messages.add_system(f"You are {self.message.guild.me.nick or self.bot.user.display_name}. {bot_prompt}")
+        await self.messages.add_system(format_variables(self.ctx, bot_prompt))
 
         if self.message.reference:
             try:

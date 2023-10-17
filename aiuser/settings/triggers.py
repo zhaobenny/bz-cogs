@@ -4,8 +4,6 @@ from typing import Optional
 
 import discord
 from redbot.core import checks, commands
-from redbot.core.utils.chat_formatting import box, pagify
-from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.abc import MixinMeta, aiuser
 
