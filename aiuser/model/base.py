@@ -35,7 +35,7 @@ class Base_LLM_Response():
         if not standalone:
             debug_content = f'"{message.content}"' if message.content else ""
             logger.debug(
-                f"Replying to message {debug_content} in {message.guild.name} with prompt: \n{json.dumps(self.prompt.get_messages(), indent=4)}")
+                f"Generating response to message {debug_content} in {message.guild.name} with prompt: \n{json.dumps(self.prompt.get_messages(), indent=4)}")
         else:
             logger.debug(
                 f"Generating message with prompt: \n{json.dumps(self.prompt.get_messages(), indent=4)}")
