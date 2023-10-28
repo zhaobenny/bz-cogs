@@ -7,16 +7,17 @@ import openai
 from redbot.core import checks, commands
 
 from aiuser.abc import MixinMeta
-from aiuser.settings.image import ImageSettings
+from aiuser.settings.image_scan import ImageScanSettings
 from aiuser.settings.owner import OwnerSettings
 from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.response import ResponseSettings
+from aiuser.settings.stable_diffusion import StableDiffusionSettings
 from aiuser.settings.triggers import TriggerSettings
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class Settings(PromptSettings, ImageSettings, ResponseSettings, TriggerSettings, OwnerSettings, MixinMeta):
+class Settings(PromptSettings, ImageScanSettings, StableDiffusionSettings, ResponseSettings, TriggerSettings, OwnerSettings, MixinMeta):
 
     @commands.group(aliases=["ai_user"])
     @commands.bot_has_permissions(embed_links=True)

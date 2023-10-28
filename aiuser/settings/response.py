@@ -330,7 +330,7 @@ class ResponseSettings(MixinMeta):
             invalid_keys = [key for key in data.keys() if key in blacklist]
             if invalid_keys:
                 invalid_keys_str = ", ".join([f"`{key}`" for key in invalid_keys])
-                return await ctx.send(f":warning: Invalid JSON! Please remove {invalid_keys_str} from your JSON.")
+                return await ctx.send(f":warning: Invalid JSON! Please remove \"{invalid_keys_str}\" key from your JSON.")
 
             if data.get("logit_bias") and await self.config(ctx.guild).weights():
                 embed = discord.Embed(

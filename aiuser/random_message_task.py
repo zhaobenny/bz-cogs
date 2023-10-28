@@ -6,7 +6,7 @@ import openai
 from discord.ext import tasks
 
 from aiuser.abc import MixinMeta
-from aiuser.agents.chat.openai import OpenAI_Response
+from aiuser.generators.chat.openai import OpenAI_Response
 from aiuser.prompts.random.base import RandomEventPrompt
 
 logger = logging.getLogger("red.bz_cogs.aiuser")

@@ -10,7 +10,7 @@ from redbot.core import Config, commands
 from tenacity import (retry, retry_if_exception_type, stop_after_delay,
                       wait_random)
 
-from aiuser.agents.chat.base import ChatResponse
+from aiuser.generators.chat.base import ChatResponse
 from aiuser.prompts.common.messagethread import MessageThread
 
 logger = logging.getLogger("red.bz_cogs.aiuser")

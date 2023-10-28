@@ -11,13 +11,13 @@ from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
 from aiuser.abc import CompositeMetaClass
-from aiuser.agents.chat.openai import OpenAI_Response
+from aiuser.generators.chat.openai import OpenAI_Response
 from aiuser.common.cache import Cache
 from aiuser.common.constants import (AI_HORDE_MODE, DEFAULT_PRESETS,
                                      DEFAULT_REMOVE_PATTERNS,
                                      DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS,
                                      MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
-from aiuser.prompt_handler import PromptHandler
+from aiuser.message_handler import MessageHandler
 from aiuser.prompts.common.messageentry import MessageEntry
 from aiuser.random_message_task import RandomMessageTask
 from aiuser.settings.base import Settings
@@ -25,7 +25,7 @@ from aiuser.settings.base import Settings
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass=CompositeMetaClass):
+class AIUser(Settings, MessageHandler, RandomMessageTask, commands.Cog, metaclass=CompositeMetaClass):
     """ Utilize OpenAI to reply to messages and images in approved channels. """
 
     def __init__(self, bot):
@@ -71,7 +71,10 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
             "random_messages_enabled": False,
             "random_messages_percent": 0.012,
             "random_messages_topics": DEFAULT_TOPICS,
-            "presets": json.dumps(DEFAULT_PRESETS)
+            "presets": json.dumps(DEFAULT_PRESETS),
+            "SD_requests": False,
+            "SD_endpoint": None,
+            "SD_parameters": None,
         }
         default_member = {
             "custom_text_prompt": None,
@@ -129,7 +132,7 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
         if rate_limit_reset > datetime.now():
             return await ctx.send("The command is currently being ratelimited!", ephemeral=True)
 
-        prompt_instance = await self.create_prompt_instance(ctx)
+        prompt_instance = await self.handle_message(ctx)
         if not prompt_instance:
             return await ctx.send("Error: Invalid message", ephemeral=True)
         prompt = await prompt_instance.get_list()
@@ -161,9 +164,9 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
                 f"Want to respond but ratelimited until {rate_limit_reset.strftime('%Y-%m-%d %H:%M:%S')}")
             if await self.is_bot_mentioned_or_replied(message) or self.reply_percent.get(message.guild.id, DEFAULT_REPLY_PERCENT) == 1.0:
                 await ctx.react_quietly("💤")
-            return 
+            return
 
-        prompt_instance = await self.create_prompt_instance(ctx)
+        prompt_instance = await self.handle_message(ctx)
         if prompt_instance is None:
             return
         prompt = await prompt_instance.get_list()
@@ -194,7 +197,7 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
 
         prompt = None
         if len(before.embeds) != len(after.embeds):
-            prompt_instance = await self.create_prompt_instance(ctx)
+            prompt_instance = await self.handle_message(ctx)
             prompt = await prompt_instance.get_list()
         if prompt is None:
             return
