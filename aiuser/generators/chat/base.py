@@ -12,7 +12,7 @@ from aiuser.prompts.common.messagethread import MessageThread
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class Base_LLM_Response():
+class ChatResponse():
     def __init__(self, ctx: commands.Context, config: Config, prompt: MessageThread):
         self.ctx = ctx
         self.config = config

@@ -5,16 +5,15 @@ import discord
 from redbot.core import checks, commands
 
 from aiuser.abc import MixinMeta, aiuser
-from aiuser.common.constants import (AI_HORDE_MODE, LOCAL_MODE,
-                                      SCAN_IMAGE_MODES)
+from aiuser.common.constants import AI_HORDE_MODE, LOCAL_MODE, SCAN_IMAGE_MODES
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class ImageSettings(MixinMeta):
+class ImageScanSettings(MixinMeta):
     @aiuser.group()
     @checks.is_owner()
-    async def image(self, _):
+    async def imagescan(self, _):
         """ Change the image scan setting
 
             Go [here](https://github.com/zhaobenny/bz-cogs/tree/main/aiuser#image-scanning-%EF%B8%8F) for more info.
@@ -23,8 +22,7 @@ class ImageSettings(MixinMeta):
         """
         pass
 
-    @image.command(name="scan")
-    @checks.is_owner()
+    @imagescan.command(name="toggle")
     async def image_scanning(self, ctx: commands.Context):
         """ Toggle image scanning """
         value = not (await self.config.guild(ctx.guild).scan_images())
@@ -35,8 +33,7 @@ class ImageSettings(MixinMeta):
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
-    @image.command(name="maxsize")
-    @checks.is_owner()
+    @imagescan.command(name="maxsize")
     async def image_maxsize(self, ctx: commands.Context, size: float):
         """ Set max download size in Megabytes for image scanning """
         await self.config.guild(ctx.guild).max_image_size.set(size * 1024 * 1024)
@@ -46,8 +43,7 @@ class ImageSettings(MixinMeta):
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
-    @image.command(name="mode")
-    @checks.is_owner()
+    @imagescan.command(name="mode")
     async def image_mode(self, ctx: commands.Context, mode: str):
         """ Set method for scanning images
 

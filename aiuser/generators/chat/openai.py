@@ -10,13 +10,13 @@ from redbot.core import Config, commands
 from tenacity import (retry, retry_if_exception_type, stop_after_delay,
                       wait_random)
 
-from aiuser.model.base import Base_LLM_Response
+from aiuser.generators.chat.base import ChatResponse
 from aiuser.prompts.common.messagethread import MessageThread
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class OpenAI_LLM_Response(Base_LLM_Response):
+class OpenAI_Response(ChatResponse):
     def __init__(self, ctx: commands.Context, config: Config, prompt: MessageThread):
         super().__init__(ctx, config, prompt)
 

@@ -6,7 +6,7 @@ import openai
 from discord.ext import tasks
 
 from aiuser.abc import MixinMeta
-from aiuser.model.openai import OpenAI_LLM_Response
+from aiuser.generators.chat.openai import OpenAI_Response
 from aiuser.prompts.random.base import RandomEventPrompt
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -59,6 +59,6 @@ class RandomMessageTask(MixinMeta):
 
                 logger.debug(f"Sending random message to #{channel.name} at {guild.name}")
                 random_prompt = await RandomEventPrompt(self, ctx).get_list()
-                await OpenAI_LLM_Response(ctx, self.config, random_prompt).sent_response(standalone=True)
+                await OpenAI_Response(ctx, self.config, random_prompt).sent_response(standalone=True)
         except Exception as e:
             logger.error(f"Could not trigger a random message, the exception was:\n {e}")

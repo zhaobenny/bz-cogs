@@ -12,12 +12,12 @@ from redbot.core.bot import Red
 
 from aiuser.abc import CompositeMetaClass
 from aiuser.common.cache import Cache
-from aiuser.common.constants import (AI_HORDE_MODE, DEFAULT_PRESETS, DEFAULT_REMOVE_PATTERNS,
-                                     DEFAULT_REPLY_PERCENT,
-                                     DEFAULT_TOPICS, MAX_MESSAGE_LENGTH,
-                                     MIN_MESSAGE_LENGTH)
-from aiuser.model.openai import OpenAI_LLM_Response
-from aiuser.prompt_handler import PromptHandler
+from aiuser.common.constants import (AI_HORDE_MODE, DEFAULT_PRESETS,
+                                     DEFAULT_REMOVE_PATTERNS,
+                                     DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS,
+                                     MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
+from aiuser.generators.chat.openai import OpenAI_Response
+from aiuser.message_handler import MessageHandler
 from aiuser.prompts.common.messageentry import MessageEntry
 from aiuser.random_message_task import RandomMessageTask
 from aiuser.settings.base import Settings
@@ -25,7 +25,7 @@ from aiuser.settings.base import Settings
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass=CompositeMetaClass):
+class AIUser(Settings, MessageHandler, RandomMessageTask, commands.Cog, metaclass=CompositeMetaClass):
     """ Utilize OpenAI to reply to messages and images in approved channels. """
 
     def __init__(self, bot):
@@ -71,7 +71,12 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
             "random_messages_enabled": False,
             "random_messages_percent": 0.012,
             "random_messages_topics": DEFAULT_TOPICS,
-            "presets": json.dumps(DEFAULT_PRESETS)
+            "presets": json.dumps(DEFAULT_PRESETS),
+            "SD_requests": False,
+            "SD_endpoint": None,
+            "SD_parameters": None,
+            "SD_preprompt": "",
+            "SD_subject": "man",
         }
         default_member = {
             "custom_text_prompt": None,
@@ -129,14 +134,14 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
         if rate_limit_reset > datetime.now():
             return await ctx.send("The command is currently being ratelimited!", ephemeral=True)
 
-        prompt_instance = await self.create_prompt_instance(ctx)
+        prompt_instance = await self.handle_message(ctx)
         if not prompt_instance:
             return await ctx.send("Error: Invalid message", ephemeral=True)
         prompt = await prompt_instance.get_list()
         if prompt is None:
             return await ctx.send("Error: No prompt set.", ephemeral=True)
 
-        await OpenAI_LLM_Response(ctx, self.config, prompt).sent_response()
+        await OpenAI_Response(ctx, self.config, prompt).sent_response()
 
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, api_tokens):
@@ -163,14 +168,13 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
                 await ctx.react_quietly("💤")
             return
 
-        prompt_instance = await self.create_prompt_instance(ctx)
-        if not prompt_instance:
+        prompt_instance = await self.handle_message(ctx)
+        if prompt_instance is None:
             return
         prompt = await prompt_instance.get_list()
         if prompt is None:
             return
-
-        await OpenAI_LLM_Response(ctx, self.config, prompt).sent_response()
+        await OpenAI_Response(ctx, self.config, prompt).sent_response()
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
@@ -195,12 +199,12 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
 
         prompt = None
         if len(before.embeds) != len(after.embeds):
-            prompt_instance = await self.create_prompt_instance(ctx)
+            prompt_instance = await self.handle_message(ctx)
             prompt = await prompt_instance.get_list()
         if prompt is None:
             return
 
-        await OpenAI_LLM_Response(ctx, self.config, prompt).sent_response()
+        await OpenAI_Response(ctx, self.config, prompt).sent_response()
 
     async def is_common_valid_reply(self, ctx: commands.Context) -> bool:
         """ Run some common checks to see if a message is valid for the bot to reply to """
