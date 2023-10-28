@@ -10,13 +10,13 @@ from redbot.core import Config, commands
 from tenacity import (retry, retry_if_exception_type, stop_after_delay,
                       wait_random)
 
-from aiuser.model.base import Base_LLM_Response
+from aiuser.agents.chat.base import ChatResponse
 from aiuser.prompts.common.messagethread import MessageThread
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class OpenAI_LLM_Response(Base_LLM_Response):
+class OpenAI_Response(ChatResponse):
     def __init__(self, ctx: commands.Context, config: Config, prompt: MessageThread):
         super().__init__(ctx, config, prompt)
 
@@ -116,9 +116,9 @@ class OpenAI_LLM_Response(Base_LLM_Response):
 
     async def generate_response(self):
         model = await self.config.guild(self.ctx.guild).model()
-        response = f" insert normal openai response here"
+        response = f" insert normal openai response here"  # REMOVE THIS
         try:
-            # response =  await self.request_openai(model)
+            # response =  await self.request_openai(model) # REMOVE THIS
             return response
         except openai.error.RateLimitError:
             timestamp = datetime.now() + timedelta(seconds=random.randint(62, 65))

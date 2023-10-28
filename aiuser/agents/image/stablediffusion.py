@@ -1,23 +1,36 @@
 import base64
 import io
+
 import aiohttp
+import discord
 import openai
 
-# prototype
 
-
-async def choice(message):
+async def is_image_request(message: discord.Message):
+    botname = message.guild.me.nick or message.guild.me.display_name
     response = await openai.ChatCompletion.acreate(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system",
-                "content": "Is the following a sentence asking for a picture, image, or portrait of yourself? Answer with True/False"},
-            {"role": "user", "content": message}
+                "content": f"Think step by step. Youa are {botname}. Is the following a full message asking for a picture, image, or picture of yourself? Answer with True/False"},
+            {"role": "user", "content": message.content}
         ],
         max_tokens=1,
     )
     bool_response = response["choices"][0]["message"]["content"]
-    return bool_response
+    return bool_response == "True"
+
+
+async def send_image(message):
+    caption = await create_image_caption(message)
+    await message.channel.send(f"Caption: {caption}")
+    if caption is None:
+        return False
+
+    image = await generate_image(caption)
+    await message.channel.send(file=discord.File(image, filename="me.png"))
+    return True
+
 
 # https://www.reddit.com/r/StableDiffusion/comments/11g9zul/using_chatgpt_as_a_prompt_generator_wexample/
 system = """
@@ -30,25 +43,21 @@ Convert the below message to a Stable Diffusion Art Prompt.  The prompt should b
 """
 
 
-async def create_image_caption(message):
-
-    # message = message.replace("yourself", '')
-
-    # response = openai.Completion.create(
-    #     engine="gpt-3.5-turbo-instruct",
-    #     prompt=system.format(message),
-    #     max_tokens=100,
-    # )
-    # return "katsuragi misato, " + response['choices'][0]['text']
+async def create_image_caption(message: discord.Message):
+    request = message.content.replace("yourself", "katsuragi misato")
+    request = request.replace("you", "katsuragi misato")
 
     response = await openai.ChatCompletion.acreate(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": system},
-            {"role": "user", "content": message}
+            {"role": "user", "content": request}
         ],
     )
-    return "katsuragi misato, " + response["choices"][0]["message"]["content"].lower()
+    prompt = response["choices"][0]["message"]["content"].lower()
+    if "sorry" in prompt:
+        return None
+    return prompt
 
 
 async def generate_image(caption):

@@ -11,12 +11,12 @@ from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
 from aiuser.abc import CompositeMetaClass
+from aiuser.agents.chat.openai import OpenAI_Response
 from aiuser.common.cache import Cache
-from aiuser.common.constants import (AI_HORDE_MODE, DEFAULT_PRESETS, DEFAULT_REMOVE_PATTERNS,
-                                     DEFAULT_REPLY_PERCENT,
-                                     DEFAULT_TOPICS, MAX_MESSAGE_LENGTH,
-                                     MIN_MESSAGE_LENGTH)
-from aiuser.model.openai import OpenAI_LLM_Response
+from aiuser.common.constants import (AI_HORDE_MODE, DEFAULT_PRESETS,
+                                     DEFAULT_REMOVE_PATTERNS,
+                                     DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS,
+                                     MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
 from aiuser.prompt_handler import PromptHandler
 from aiuser.prompts.common.messageentry import MessageEntry
 from aiuser.random_message_task import RandomMessageTask
@@ -136,7 +136,7 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
         if prompt is None:
             return await ctx.send("Error: No prompt set.", ephemeral=True)
 
-        await OpenAI_LLM_Response(ctx, self.config, prompt).sent_response()
+        await OpenAI_Response(ctx, self.config, prompt).sent_response()
 
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, api_tokens):
@@ -161,31 +161,15 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
                 f"Want to respond but ratelimited until {rate_limit_reset.strftime('%Y-%m-%d %H:%M:%S')}")
             if await self.is_bot_mentioned_or_replied(message) or self.reply_percent.get(message.guild.id, DEFAULT_REPLY_PERCENT) == 1.0:
                 await ctx.react_quietly("💤")
-            return
+            return 
 
-        # prototype
-        import aiuser.model.stablediffusion
-        replyimage = await aiuser.model.stablediffusion.choice(message.content)
-        if replyimage == "True":
-            replyimage = True
-        elif replyimage == "False":
-            replyimage = False
-        else:
-            message.channel.send(replyimage)
-        if replyimage:
-            caption = await aiuser.model.stablediffusion.create_image_caption(message.content)
-            await message.channel.send(f"Caption: {caption}")
-            return
-            image = await aiuser.model.stablediffusion.generate_image(caption)
-            await message.channel.send(file=discord.File(image, filename="me.png"))
-            return
         prompt_instance = await self.create_prompt_instance(ctx)
         if prompt_instance is None:
             return
         prompt = await prompt_instance.get_list()
         if prompt is None:
             return
-        await OpenAI_LLM_Response(ctx, self.config, prompt).sent_response()
+        await OpenAI_Response(ctx, self.config, prompt).sent_response()
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
@@ -215,7 +199,7 @@ class AIUser(Settings, PromptHandler, RandomMessageTask, commands.Cog, metaclass
         if prompt is None:
             return
 
-        await OpenAI_LLM_Response(ctx, self.config, prompt).sent_response()
+        await OpenAI_Response(ctx, self.config, prompt).sent_response()
 
     async def is_common_valid_reply(self, ctx: commands.Context) -> bool:
         """ Run some common checks to see if a message is valid for the bot to reply to """
