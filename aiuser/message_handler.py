@@ -59,13 +59,12 @@ class MessageHandler(MixinMeta):
                 return YoutubeLinkPrompt(self, ctx)
         return GenericEmbedPrompt(self, ctx)
 
+
     async def handle_image_gen(self, ctx: commands.Context):
         request = StableDiffusionRequest(ctx, self.config)
         if await request.sent_image():
             return True
         return False
-
-
     async def is_image_gen_request(self, message) -> bool:
         if not await self.config.guild(message.guild).SD_requests():
             return False

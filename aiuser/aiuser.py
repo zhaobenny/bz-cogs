@@ -11,12 +11,12 @@ from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
 from aiuser.abc import CompositeMetaClass
-from aiuser.generators.chat.openai import OpenAI_Response
 from aiuser.common.cache import Cache
 from aiuser.common.constants import (AI_HORDE_MODE, DEFAULT_PRESETS,
                                      DEFAULT_REMOVE_PATTERNS,
                                      DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS,
                                      MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
+from aiuser.generators.chat.openai import OpenAI_Response
 from aiuser.message_handler import MessageHandler
 from aiuser.prompts.common.messageentry import MessageEntry
 from aiuser.random_message_task import RandomMessageTask
