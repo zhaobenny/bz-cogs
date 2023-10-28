@@ -31,7 +31,6 @@ class MessageHandler(MixinMeta):
         elif await self.is_image_gen_request(message):
             if await self.handle_image_gen(ctx):
                 return None
-        return None  # REMOVE THIS
         if self.is_good_text_message(message) or ctx.interaction:
             return TextPrompt(self, ctx)
         return None

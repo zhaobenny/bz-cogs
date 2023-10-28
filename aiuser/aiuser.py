@@ -75,6 +75,8 @@ class AIUser(Settings, MessageHandler, RandomMessageTask, commands.Cog, metaclas
             "SD_requests": False,
             "SD_endpoint": None,
             "SD_parameters": None,
+            "SD_preprompt": "",
+            "SD_subject": "man",
         }
         default_member = {
             "custom_text_prompt": None,

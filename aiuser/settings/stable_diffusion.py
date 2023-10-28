@@ -10,11 +10,44 @@ class StableDiffusionSettings(MixinMeta):
     @aiuser.group()
     @checks.is_owner()
     async def stablediffusion(self, _):
-        """ Settings to generate images using stable-diffusion-webui (A1111) when requested to (based on rudimentary checks / OpenAI decision)
+        """
+            Settings to generate images using stable-diffusion-webui (A1111) when requested to (based on rudimentary checks / OpenAI decision)
+
+            :warning: Trial OpenAI keys are not recommended! :warning:
 
             (All subcommands are per server)
         """
         pass
+
+
+    @stablediffusion.command(name="preprompt")
+    async def stable_diffusion_preprompt(self, ctx: commands.Context, *, preprompt: str):
+        """ This text will always be sent as part of the prompt in stable-diffusion-webui requests
+
+            Set LORAs here eg. `<lora: name: weight>`
+
+        """
+        await self.config.guild(ctx.guild).SD_preprompt.set(preprompt)
+        embed = discord.Embed(
+            title=" stable-diffusion-webui preprompt now set to:",
+            description=f"{preprompt}",
+            color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
+
+    @stablediffusion.command(name="subject")
+    async def stable_diffusion_subject(self, ctx: commands.Context, *, subject: str):
+        """
+            The subject in stable-diffusion-webui requests (needed to better hint SD prompt generation by OpenAI)
+
+            If the subject is well known in the SD model, use it here eg. `katsuragi misato`
+            Else use a generic subject eg. `man` or `woman`
+        """
+        await self.config.guild(ctx.guild).SD_subject.set(subject)
+        embed = discord.Embed(
+            title=" stable-diffusion-webui subject now set to:",
+            description=f"{subject}",
+            color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
 
     @stablediffusion.command(name="toggle")
     async def stable_diffusion_toggle(self, ctx: commands.Context):
