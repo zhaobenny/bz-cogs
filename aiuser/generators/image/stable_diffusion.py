@@ -1,5 +1,6 @@
 import base64
 import io
+import json
 import logging
 import re
 
@@ -26,13 +27,12 @@ async def is_image_request(message: discord.Message):
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system",
-                    "content": f"Your task is to classify messages. You are {botname}. Is the following a message asking for a picture, image, or picture that includes yourself or {botname}?  Answer with True/False."},
+                    "content": f"Your task is to classify messages. You are {botname}. Is the following a message asking for a picture, image, or photo that includes yourself or {botname}?  Answer with True/False."},
                 {"role": "user", "content": text}
             ],
-            max_tokens=500,
+            max_tokens=1,
         )
         bool_response = response["choices"][0]["message"]["content"]
-        return bool_response
     except:
         logger.error(f"Error while checking message if is a Stable Diffusion request")
     return bool_response == "True"
@@ -58,8 +58,7 @@ class StableDiffusionRequest():
             return False
 
     async def _create_image_caption(self):
-        config = self.config.guild(self.ctx.guild)
-        subject = await config.SD_subject()
+        subject = await self.config.guild(self.ctx.guild).SD_subject()
 
         botname = self.message.guild.me.nick or self.message.guild.me.display_name
         request = self.message.content
@@ -88,15 +87,14 @@ class StableDiffusionRequest():
 
     async def _generate_image(self, caption):
         url = await self.config.guild(self.ctx.guild).SD_endpoint()
+        parameters = await self.config.guild(self.ctx.guild).SD_parameters()
+        payload = {}
 
-        payload = await self.config.guild(self.ctx.guild).SD_parameters() or {
-            "negative_prompt": "worst quality, low quality",
-            "sampler_name": "Euler a",
-            "steps": 20,
-        }
+        if parameters is not None:
+            payload = json.loads(parameters)
 
         payload["prompt"] = await self.config.guild(self.ctx.guild).SD_preprompt() + " " + caption
-
+        logger.debug(f"Sending SD request with payload: {json.dumps(payload, indent=4)}")
         async with aiohttp.ClientSession() as session:
             async with session.post(url=f'{url}/sdapi/v1/txt2img', json=payload) as response:
                 r = await response.json()
