@@ -1,13 +1,19 @@
 import logging
 import re
 
+import discord
+import openai
 from redbot.core import commands
 
 from aiuser.abc import MixinMeta
-from aiuser.generators.image.stable_diffusion import StableDiffusionRequest, is_image_request
-from aiuser.common.constants import (AI_HORDE_MODE, LOCAL_MODE,
-                                     MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH,
-                                     RELATED_IMAGE_WORDS, SECOND_PERSON_WORDS)
+from aiuser.common.constants import (AI_HORDE_MODE, IMAGE_CHECK_REQUEST_PROMPT,
+                                     LOCAL_MODE, MAX_MESSAGE_LENGTH,
+                                     MIN_MESSAGE_LENGTH, RELATED_IMAGE_WORDS,
+                                     SECOND_PERSON_WORDS)
+from aiuser.generators.image.create.generic_generator import \
+    GenericStableDiffusionGenerator
+from aiuser.generators.image.create.image_request import ImageRequest
+from aiuser.generators.image.create.nemusona_generator import NemusonaGenerator
 from aiuser.prompts.embed.generic import GenericEmbedPrompt
 from aiuser.prompts.embed.youtube import YoutubeLinkPrompt
 from aiuser.prompts.image.ai_horde import AIHordeImagePrompt
@@ -28,8 +34,8 @@ class MessageHandler(MixinMeta):
             return await self.handle_embed_prompt(ctx)
         elif message.stickers:
             return StickerPrompt(self, ctx)
-        elif await self.is_image_gen_request(message):
-            if await self.handle_image_gen(ctx):
+        elif not ctx.interaction and await self.is_image_request(message):
+            if await self.handle_image_generation(ctx):
                 return None
         if self.is_good_text_message(message) or ctx.interaction:
             return TextPrompt(self, ctx)
@@ -58,18 +64,32 @@ class MessageHandler(MixinMeta):
                 return YoutubeLinkPrompt(self, ctx)
         return GenericEmbedPrompt(self, ctx)
 
+    async def handle_image_generation(self, ctx: commands.Context):
 
-    async def handle_image_gen(self, ctx: commands.Context):
-        request = StableDiffusionRequest(ctx, self.config)
-        if await request.sent_image():
-            return True
+        sd_endpoint = await self.config.guild(ctx.guild).image_requests_endpoint()
+
+        if sd_endpoint is None:
+            logger.error(
+                f"Stable Diffusion endpoint not set for {ctx.guild.name}, disabling Stable Diffusion requests for this server...")
+            await self.config.guild(ctx.guild).image_requests.set(False)
+            return False
+        elif sd_endpoint.startswith("https://waifus-api.nemusona.com/"):
+            image_generator = NemusonaGenerator(ctx, self.config)
+        else:
+            image_generator = GenericStableDiffusionGenerator(ctx, self.config)
+
+        async with ctx.message.channel.typing():
+            request = ImageRequest(ctx, self.config, image_generator)
+            if await request.sent_image():
+                return True
         return False
-    async def is_image_gen_request(self, message) -> bool:
-        if not await self.config.guild(message.guild).SD_requests():
+
+    async def is_image_request(self, message) -> bool:
+        if not await self.config.guild(message.guild).image_requests():
             return False
 
         if await self.config.custom_openai_endpoint() != None:
-            await self.config.guild(message.guild).SD_requests.set(False)
+            await self.config.guild(message.guild).image_requests.set(False)
             logger.warning(
                 f"Custom OpenAI endpoint detected, disabling stable-diffusion-webui requests for {message.guild.name}...")
             return False
@@ -82,7 +102,33 @@ class MessageHandler(MixinMeta):
         mentioned_me = displayname in message_content or message.guild.me.id in message.raw_mentions
         replied_to_me = message.reference and message.reference.resolved.author.id == message.guild.me.id
 
-        return (contains_image_words and contains_second_person and (mentioned_me or replied_to_me)) and await is_image_request(message)
+        skip_llm_check = await self.config.guild(message.guild).image_requests_reduced_llm_calls()
+
+        return (contains_image_words and contains_second_person and (mentioned_me or replied_to_me)) and (skip_llm_check or await self.is_image_request_by_llm(message))
+
+    # TODO: find a better place maybe?
+    async def is_image_request_by_llm(self, message: discord.Message):
+        bool_response = False
+        botname = message.guild.me.nick or message.guild.me.display_name
+        text = message.content
+        for m in message.mentions:
+            text = text.replace(m.mention, m.display_name)
+        if message.reference:
+            text = await message.reference.resolved.content + "\n " + text  # TODO: find a better way to do this
+        try:
+            response = await openai.ChatCompletion.acreate(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system",
+                        "content": IMAGE_CHECK_REQUEST_PROMPT.format(botname=botname)},
+                    {"role": "user", "content": text}
+                ],
+                max_tokens=1,
+            )
+            bool_response = response["choices"][0]["message"]["content"]
+        except:
+            logger.error(f"Error while checking message if is a Stable Diffusion request")
+        return bool_response == "True"
 
     @staticmethod
     def is_good_text_message(message) -> bool:

@@ -45,7 +45,8 @@ IMAGE_TIMEOUT = 60
 # for rudimentary SD request checks
 RELATED_IMAGE_WORDS = ["image", "images", "picture", "pictures", "photo", "photos", "photograph", "photographes"]
 SECOND_PERSON_WORDS = ["yourself", "you"]
-SD_GENERATION_PROMPT = """
+IMAGE_CHECK_REQUEST_PROMPT = "Your task is to classify messages. You are {botname}. Is the following a message asking for a picture, image, or photo that includes yourself or {botname}?  Answer with True/False."
+IMAGE_GENERATION_PROMPT = """
 I want you to act as a Stable Diffusion Art Prompt Generator. The formula for a prompt is made of parts, the parts are indicated by brackets. The [Subject] is the person place or thing the image is focused on. [Emotions] is the emotional look the subject or scene might have. [Verb] is What the subject is doing, such as standing, jumping, working and other varied that match the subject. [Adjectives] like beautiful, rendered, realistic, tiny, colorful and other varied that match the subject. The [Environment] in which the subject is in, [Lighting] of the scene like moody, ambient, sunny, foggy and others that match the Environment and compliment the subject. [Photography type] like Polaroid, long exposure, monochrome, GoPro, fisheye, bokeh and others. And [Quality] like High definition, 4K, 8K, 64K UHD, SDR and other. The subject and environment should match and have the most emphasis.
 It is ok to omit one of the other formula parts. I will give you a [Subject], you will respond with a full prompt. Present the result as one full sentence, no line breaks, no delimiters, and keep it as concise as possible while still conveying a full scene.
 

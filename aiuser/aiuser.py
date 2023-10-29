@@ -72,11 +72,12 @@ class AIUser(Settings, MessageHandler, RandomMessageTask, commands.Cog, metaclas
             "random_messages_percent": 0.012,
             "random_messages_topics": DEFAULT_TOPICS,
             "presets": json.dumps(DEFAULT_PRESETS),
-            "SD_requests": False,
-            "SD_endpoint": None,
-            "SD_parameters": None,
-            "SD_preprompt": "",
-            "SD_subject": "man",
+            "image_requests": False,
+            "image_requests_endpoint": None,
+            "image_requests_parameters": None,
+            "image_requests_preprompt": "",
+            "image_requests_subject": "woman",
+            "image_requests_reduced_llm_calls": False
         }
         default_member = {
             "custom_text_prompt": None,
