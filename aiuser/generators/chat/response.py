@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import random
 import re
@@ -7,54 +6,34 @@ from datetime import datetime, timezone
 
 from redbot.core import Config, commands
 
-from aiuser.prompts.common.messagethread import MessageThread
+from aiuser.generators.chat.generator import Chat_Generator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class ChatResponse():
-    def __init__(self, ctx: commands.Context, config: Config, prompt: MessageThread):
+    def __init__(self, ctx: commands.Context, config: Config, chat: Chat_Generator):
         self.ctx = ctx
         self.config = config
-        self.prompt = prompt
         self.response = None
+        self.chat = chat
 
-    async def _is_message_exists(self, id):
-        try:
-            await self.ctx.fetch_message(id)
-            return True
-        except:
-            return False
-
-    async def generate_response(self):
-        raise NotImplementedError
-
-    async def sent_response(self, standalone=False):
+    async def send(self, standalone=False):
         message = self.ctx.message
 
-        if not standalone:
-            debug_content = f'"{message.content}"' if message.content else ""
-            logger.debug(
-                f"Generating response to message {debug_content} in {message.guild.name} with prompt: \n{json.dumps(self.prompt.get_messages(), indent=4)}")
-        else:
-            logger.debug(
-                f"Generating message with prompt: \n{json.dumps(self.prompt.get_messages(), indent=4)}")
-
         async with self.ctx.typing():
-            self.response = await self.generate_response()
+            self.response = await self.chat.generate_message()
 
         if not self.response:
             return
 
         await self.remove_patterns_from_response()
 
-        should_direct_reply = not self.ctx.interaction and await self.is_reply()
-
         if len(self.response) >= 2000:
             chunks = [self.response[i:i+2000] for i in range(0, len(self.response), 2000)]
             for chunk in chunks:
                 await self.ctx.send(chunk)
-        elif should_direct_reply and not standalone and await self._is_message_exists(message.id):
+        elif not standalone and await self.is_reply():
             await message.reply(self.response, mention_author=False)
         else:
             await self.ctx.send(self.response)
@@ -99,16 +78,25 @@ class ChatResponse():
         self.response = response
 
     async def is_reply(self):
+        if self.ctx.interaction:
+            return False
+
         message = self.ctx.message
-        time_diff = datetime.now(timezone.utc) - message.created_at
-        if time_diff.total_seconds() > 8:
-            return True
-        if random.random() < 0.25:
-            return True
         try:
-            last_message = [m async for m in message.channel.history(limit=1)]
-            if last_message[0].author == message.guild.me:
-                return True
+            await self.ctx.fetch_message(message.id)
+        except:
+            return False
+
+        time_diff = datetime.now(timezone.utc) - message.created_at
+
+        if time_diff.total_seconds() > 8 or random.random() < 0.25:
+            return True
+
+        try:
+            async for last_message in message.channel.history(limit=1):
+                if last_message.author == message.guild.me:
+                    return True
         except:
             pass
+
         return False

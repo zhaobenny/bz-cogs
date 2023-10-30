@@ -1,12 +1,13 @@
 import datetime
 import logging
 import random
-
 import openai
+
 from discord.ext import tasks
 
 from aiuser.abc import MixinMeta
-from aiuser.generators.chat.openai import OpenAI_Response
+from aiuser.generators.chat.openai import OpenAI_Chat_Generator
+from aiuser.generators.chat.response import ChatResponse
 from aiuser.prompts.random.base import RandomEventPrompt
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -58,7 +59,10 @@ class RandomMessageTask(MixinMeta):
                     continue
 
                 logger.debug(f"Sending random message to #{channel.name} at {guild.name}")
-                random_prompt = await RandomEventPrompt(self, ctx).get_list()
-                await OpenAI_Response(ctx, self.config, random_prompt).sent_response(standalone=True)
+
+                thread = await RandomEventPrompt(self, ctx).get_list()
+                generator = OpenAI_Chat_Generator(ctx, self.config, thread)
+                return await ChatResponse(ctx, self.config, generator).send()
+
         except Exception as e:
             logger.error(f"Could not trigger a random message, the exception was:\n {e}")

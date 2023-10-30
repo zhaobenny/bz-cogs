@@ -16,7 +16,8 @@ from aiuser.common.constants import (AI_HORDE_MODE, DEFAULT_PRESETS,
                                      DEFAULT_REMOVE_PATTERNS,
                                      DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS,
                                      MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
-from aiuser.generators.chat.openai import OpenAI_Response
+from aiuser.generators.chat.openai import OpenAI_Chat_Generator
+from aiuser.generators.chat.response import ChatResponse
 from aiuser.message_handler import MessageHandler
 from aiuser.prompts.common.messageentry import MessageEntry
 from aiuser.random_message_task import RandomMessageTask
@@ -119,6 +120,11 @@ class AIUser(Settings, MessageHandler, RandomMessageTask, commands.Cog, metaclas
                 # TODO: remove user messages from cache instead of clearing the whole cache
                 self.cached_messages = Cache(limit=100)
 
+    @commands.Cog.listener()
+    async def on_red_api_tokens_update(self, service_name, api_tokens):
+        if service_name == "openai":
+            openai.api_key = api_tokens.get("api_key")
+
     @app_commands.command(name="chat")
     @app_commands.describe(text="The prompt you want to send to the AI.")
     @app_commands.checks.cooldown(1, 30)
@@ -135,19 +141,15 @@ class AIUser(Settings, MessageHandler, RandomMessageTask, commands.Cog, metaclas
         if rate_limit_reset > datetime.now():
             return await ctx.send("The command is currently being ratelimited!", ephemeral=True)
 
-        prompt_instance = await self.handle_message(ctx)
-        if not prompt_instance:
+        thread_instance = await self.handle_message(ctx)
+        if not thread_instance:
             return await ctx.send("Error: Invalid message", ephemeral=True)
-        prompt = await prompt_instance.get_list()
-        if prompt is None:
+        thread = await thread_instance.get_list()
+        if thread is None:
             return await ctx.send("Error: No prompt set.", ephemeral=True)
 
-        await OpenAI_Response(ctx, self.config, prompt).sent_response()
-
-    @commands.Cog.listener()
-    async def on_red_api_tokens_update(self, service_name, api_tokens):
-        if service_name == "openai":
-            openai.api_key = api_tokens.get("api_key")
+        openai = OpenAI_Chat_Generator(ctx, self.config, thread)
+        return await ChatResponse(ctx, self.config, openai).send()
 
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
@@ -169,13 +171,15 @@ class AIUser(Settings, MessageHandler, RandomMessageTask, commands.Cog, metaclas
                 await ctx.react_quietly("💤")
             return
 
-        prompt_instance = await self.handle_message(ctx)
-        if prompt_instance is None:
+        thread_instance = await self.handle_message(ctx)
+        if thread_instance is None:
             return
-        prompt = await prompt_instance.get_list()
-        if prompt is None:
+        thread = await thread_instance.get_list()
+        if thread is None:
             return
-        await OpenAI_Response(ctx, self.config, prompt).sent_response()
+
+        openai = OpenAI_Chat_Generator(ctx, self.config, thread)
+        return await ChatResponse(ctx, self.config, openai).send()
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
@@ -198,14 +202,15 @@ class AIUser(Settings, MessageHandler, RandomMessageTask, commands.Cog, metaclas
         if self.contains_youtube_link(after.content):  # should be handled the first time
             return
 
-        prompt = None
+        thread = None
         if len(before.embeds) != len(after.embeds):
-            prompt_instance = await self.handle_message(ctx)
-            prompt = await prompt_instance.get_list()
-        if prompt is None:
+            thread_instance = await self.handle_message(ctx)
+            thread = await thread_instance.get_list()
+        if thread is None:
             return
 
-        await OpenAI_Response(ctx, self.config, prompt).sent_response()
+        openai = OpenAI_Chat_Generator(ctx, self.config, thread)
+        return await ChatResponse(ctx, self.config, openai).send()
 
     async def is_common_valid_reply(self, ctx: commands.Context) -> bool:
         """ Run some common checks to see if a message is valid for the bot to reply to """

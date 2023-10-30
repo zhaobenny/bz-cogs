@@ -5,8 +5,9 @@ import logging
 
 import aiohttp
 from redbot.core import Config, commands
+from tenacity import retry, stop_after_attempt, wait_random
 
-from aiuser.generators.image.create.image_generator import ImageGenerator
+from aiuser.generators.image.request.generator import ImageGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -15,6 +16,10 @@ class GenericStableDiffusionGenerator(ImageGenerator):
     def __init__(self, ctx: commands.Context, config: Config):
         super().__init__(ctx, config)
 
+    @retry(
+        wait=wait_random(min=2, max=5), stop=(stop_after_attempt(4)),
+        reraise=True
+    )
     async def generate_image(self, caption):
         url = await self.config.guild(self.ctx.guild).image_requests_endpoint()
         parameters = await self.config.guild(self.ctx.guild).image_requests_parameters()

@@ -7,8 +7,9 @@ import random
 
 import aiohttp
 from redbot.core import Config, commands
+from tenacity import retry, stop_after_attempt, wait_random
 
-from aiuser.generators.image.create.image_generator import ImageGenerator
+from aiuser.generators.image.request.generator import ImageGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -47,6 +48,10 @@ class NemusonaGenerator(ImageGenerator):
         image = (io.BytesIO(base64.b64decode(r["base64"])))
         return image
 
+    @retry(
+        wait=wait_random(min=3, max=5), stop=(stop_after_attempt(4)),
+        reraise=True
+    )
     async def poll_status(self, session):
         start_time = asyncio.get_event_loop().time()
 

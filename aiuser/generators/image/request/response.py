@@ -7,19 +7,19 @@ from redbot.core import Config, commands
 
 from aiuser.common.constants import (IMAGE_GENERATION_PROMPT,
                                      SECOND_PERSON_WORDS)
-from aiuser.generators.image.create.image_generator import ImageGenerator
+from aiuser.generators.image.request.generator import ImageGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class ImageRequest():
+class ImageRequestResponse():
     def __init__(self, ctx: commands.Context, config: Config, image_generator: ImageGenerator):
         self.ctx = ctx
         self.config = config
         self.message = ctx.message
         self.image_generator = image_generator
 
-    async def sent_image(self):
+    async def send(self):
         try:
             caption = await self._create_image_caption()
             if caption is None:
@@ -45,7 +45,7 @@ class ImageRequest():
             request = request.replace(m.mention, m.display_name)
 
         for w in SECOND_PERSON_WORDS:
-            pattern = r'\b{}\b'.format(re.escape(w))  # \b denotes a word boundary
+            pattern = r'\b{}\b'.format(re.escape(w))  
             request = re.sub(pattern, subject, request, flags=re.IGNORECASE)
 
         pattern = r'\b{}\b'.format(re.escape(botname))

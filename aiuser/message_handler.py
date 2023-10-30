@@ -10,10 +10,10 @@ from aiuser.common.constants import (AI_HORDE_MODE, IMAGE_CHECK_REQUEST_PROMPT,
                                      LOCAL_MODE, MAX_MESSAGE_LENGTH,
                                      MIN_MESSAGE_LENGTH, RELATED_IMAGE_WORDS,
                                      SECOND_PERSON_WORDS)
-from aiuser.generators.image.create.generic_generator import \
+from aiuser.generators.image.request.generic import \
     GenericStableDiffusionGenerator
-from aiuser.generators.image.create.image_request import ImageRequest
-from aiuser.generators.image.create.nemusona_generator import NemusonaGenerator
+from aiuser.generators.image.request.response import ImageRequestResponse
+from aiuser.generators.image.request.nemusona import NemusonaGenerator
 from aiuser.prompts.embed.generic import GenericEmbedPrompt
 from aiuser.prompts.embed.youtube import YoutubeLinkPrompt
 from aiuser.prompts.image.ai_horde import AIHordeImagePrompt
@@ -79,8 +79,8 @@ class MessageHandler(MixinMeta):
             image_generator = GenericStableDiffusionGenerator(ctx, self.config)
 
         async with ctx.message.channel.typing():
-            request = ImageRequest(ctx, self.config, image_generator)
-            if await request.sent_image():
+            request = ImageRequestResponse(ctx, self.config, image_generator)
+            if await request.send():
                 return True
         return False
 
