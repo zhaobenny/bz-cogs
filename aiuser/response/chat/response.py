@@ -6,7 +6,8 @@ from datetime import datetime, timezone
 
 from redbot.core import Config, commands
 
-from aiuser.generators.chat.generator import Chat_Generator
+from aiuser.common.utilities import to_thread
+from aiuser.response.chat.generator import Chat_Generator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -21,8 +22,7 @@ class ChatResponse():
     async def send(self, standalone=False):
         message = self.ctx.message
 
-        async with self.ctx.typing():
-            self.response = await self.chat.generate_message()
+        self.response = await self.chat.generate_message()
 
         if not self.response:
             return
@@ -39,16 +39,11 @@ class ChatResponse():
             await self.ctx.send(self.response)
 
     async def remove_patterns_from_response(self) -> str:
-        async def sub_with_timeout(pattern: re.Pattern, response):
-            try:
-                result = await asyncio.wait_for(
-                    asyncio.to_thread(lambda: pattern.sub('', response).strip(' \n":')),
-                    timeout=5
-                )
-                return result
-            except asyncio.TimeoutError:
-                logger.error(f"Timed out while applying regex pattern: {pattern.pattern}")
-                return response
+
+        @to_thread(timeout=5)
+        def substitute(pattern: re.Pattern, response):
+            pattern.sub('', response).strip(' \n":')
+            return response
 
         patterns = await self.config.guild(self.ctx.guild).removelist_regexes()
 
@@ -72,7 +67,12 @@ class ChatResponse():
 
         response = self.response.strip(' "')
         for pattern in patterns:
-            response = await sub_with_timeout(pattern, response)
+            try:
+                response = await substitute(pattern, response)
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"Timed out after {5} seconds while applying regex pattern \"{pattern.pattern}\" in response \"{self.response}\" \
+                        Please check the regex pattern for catastrophic backtracking. Continuing...")
             if response.count('"') == 1:
                 response = response.replace('"', '')
         self.response = response

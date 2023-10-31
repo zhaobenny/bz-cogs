@@ -41,7 +41,6 @@ MIN_MESSAGE_LENGTH = 5
 MAX_MESSAGE_LENGTH = 1000  # in words
 # image captioning
 IMAGE_RESOLUTION = 1024
-IMAGE_TIMEOUT = 60
 # for rudimentary SD request checks
 RELATED_IMAGE_WORDS = ["image", "images", "picture", "pictures", "photo", "photos", "photograph", "photographes"]
 SECOND_PERSON_WORDS = ["yourself", "you"]

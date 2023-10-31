@@ -6,10 +6,9 @@ import logging
 import random
 
 import aiohttp
-from redbot.core import Config, commands
 from tenacity import retry, stop_after_attempt, wait_random
-
-from aiuser.generators.image.request.generator import ImageGenerator
+from redbot.core import Config, commands
+from aiuser.response.image.generator import ImageGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -36,13 +35,13 @@ class NemusonaGenerator(ImageGenerator):
             async with session.post(url=f'{url}', json=payload) as response:
                 self.id = await response.text()
                 if response.status != 201:
-                    raise Exception(f"Failed to create job {response.status}")
+                    response.raise_for_status()
 
             await self.poll_status(session)
 
             async with session.get(f"https://waifus-api.nemusona.com/job/result/{self.model}/{self.id}") as response:
                 if response.status != 200:
-                    raise Exception(f"Failed to get job result {response.status}")
+                    response.raise_for_status()
                 r = await response.json()
 
         image = (io.BytesIO(base64.b64decode(r["base64"])))
@@ -52,17 +51,13 @@ class NemusonaGenerator(ImageGenerator):
         wait=wait_random(min=3, max=5), stop=(stop_after_attempt(4)),
         reraise=True
     )
-    async def poll_status(self, session):
+    async def poll_status(self, session: aiohttp.ClientSession):
         start_time = asyncio.get_event_loop().time()
 
         while True:
             async with session.get(f"https://waifus-api.nemusona.com/job/status/{self.model}/{self.id}") as response:
-
-                if response.status == 429:
-                    raise Exception("Rate limited")
-
                 if response.status != 200:
-                    raise Exception(f"Failed to get job status {response.status}")
+                    response.raise_for_status()
 
                 status = await response.text()
 

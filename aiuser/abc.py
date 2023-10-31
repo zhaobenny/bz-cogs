@@ -6,7 +6,7 @@ from redbot.core import Config, commands
 from redbot.core.bot import Red
 
 from aiuser.common.cache import Cache
-from aiuser.prompts.common.messageentry import MessageEntry
+from aiuser.messages_list.entry import MessageEntry
 
 
 # for other settings to use

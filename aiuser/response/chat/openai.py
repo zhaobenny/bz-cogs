@@ -9,16 +9,16 @@ import openai.error
 from redbot.core import Config, commands
 from tenacity import (retry, retry_if_exception_type, stop_after_delay,
                       wait_random)
-from aiuser.generators.chat.generator import Chat_Generator
 
-from aiuser.prompts.common.messagethread import MessageThread
+from aiuser.messages_list.messages import MessagesList
+from aiuser.response.chat.generator import Chat_Generator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class OpenAI_Chat_Generator(Chat_Generator):
-    def __init__(self, ctx: commands.Context, config: Config, thread: MessageThread):
-        super().__init__(ctx, config, thread)
+    def __init__(self, ctx: commands.Context, config: Config, messages: MessagesList):
+        super().__init__(ctx, config, messages)
 
     @retry(
         retry=(retry_if_exception_type((openai.error.Timeout,
@@ -55,17 +55,18 @@ class OpenAI_Chat_Generator(Chat_Generator):
             else:
                 response = await openai.ChatCompletion.acreate(
                     model=model,
-                    messages=self.thread.get_messages(),
+                    messages=self.messages,
                     **kwargs
                 )
                 response = response["choices"][0]["message"]["content"]
-        logger.debug(f"Generated the following raw response using OpenAI in {self.ctx.guild.name}:\n \"{response}\"")
+        logger.debug(f"Generated the following raw response using OpenAI in {self.ctx.guild.name}: \"{response}\"")
         return response
 
     async def generate_message(self):
         model = await self.config.guild(self.ctx.guild).model()
+
         try:
-            logger.debug(f"Generating message with prompt: \n{json.dumps(self.thread.get_messages(), indent=4)}")
+            logger.debug(f"Generating message with prompt: \n{json.dumps(self.messages, indent=4)}")
             response = await self.request_openai(model)
             return response
         except openai.error.RateLimitError:

@@ -6,66 +6,36 @@ import openai
 from redbot.core import commands
 
 from aiuser.abc import MixinMeta
-from aiuser.common.constants import (AI_HORDE_MODE, IMAGE_CHECK_REQUEST_PROMPT,
-                                     LOCAL_MODE, MAX_MESSAGE_LENGTH,
-                                     MIN_MESSAGE_LENGTH, RELATED_IMAGE_WORDS,
-                                     SECOND_PERSON_WORDS)
-from aiuser.generators.image.request.generic import \
-    GenericStableDiffusionGenerator
-from aiuser.generators.image.request.response import ImageRequestResponse
-from aiuser.generators.image.request.nemusona import NemusonaGenerator
-from aiuser.prompts.embed.generic import GenericEmbedPrompt
-from aiuser.prompts.embed.youtube import YoutubeLinkPrompt
-from aiuser.prompts.image.ai_horde import AIHordeImagePrompt
-from aiuser.prompts.sticker_prompt import StickerPrompt
-from aiuser.prompts.text_prompt import TextPrompt
+from aiuser.common.constants import (IMAGE_CHECK_REQUEST_PROMPT,
+                                     MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH,
+                                     RELATED_IMAGE_WORDS, SECOND_PERSON_WORDS)
+from aiuser.messages_list.messages import create_messages_list
+from aiuser.response.chat.openai import OpenAI_Chat_Generator
+from aiuser.response.chat.response import ChatResponse
+from aiuser.response.image.generic import GenericStableDiffusionGenerator
+from aiuser.response.image.nemusona import NemusonaGenerator
+from aiuser.response.image.response import ImageResponse
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class MessageHandler(MixinMeta):
-    async def handle_message(self, ctx: commands.Context):
-        message = ctx.message
-        url_pattern = re.compile(r"(https?://\S+)")
-        contains_url = url_pattern.search(message.content)
-        if message.attachments and await self.config.guild(message.guild).scan_images():
-            return await self.handle_image_prompt(ctx)
-        elif contains_url and not ctx.interaction:
-            return await self.handle_embed_prompt(ctx)
-        elif message.stickers:
-            return StickerPrompt(self, ctx)
-        elif not ctx.interaction and await self.is_image_request(message):
-            if await self.handle_image_generation(ctx):
-                return None
-        if self.is_good_text_message(message) or ctx.interaction:
-            return TextPrompt(self, ctx)
-        return None
+class ResponseHandler(MixinMeta):
+    async def send_response(self, ctx: commands.Context):
+        if not ctx.interaction and await self.is_image_request(ctx.message):
+            if await self.send_image(ctx):
+                return
+        if self.is_good_text_message(ctx.message) or ctx.interaction:
+            await self.send_message(ctx)
 
-    async def handle_image_prompt(self, ctx: commands.Context):
-        message = ctx.message
-        async with message.channel.typing():
-            if await self.config.guild(message.guild).scan_images_mode() == LOCAL_MODE:
-                try:
-                    from aiuser.prompts.image.local import LocalImagePrompt
-                    return LocalImagePrompt(self, ctx)
-                except ImportError:
-                    logger.error(
-                        f"Unable to load image scanning dependencies, disabling image scanning for this server f{message.guild.name}...")
-                    await self.config.guild(message.guild).scan_images.set(False)
-                    raise
-            elif await self.config.guild(message.guild).scan_images_mode() == AI_HORDE_MODE:
-                return AIHordeImagePrompt(self, ctx)
+    async def send_message(self, ctx: commands.Context):
+        message_list = await create_messages_list(self, ctx)
+        async with ctx.message.channel.typing():
+            await message_list.add_history()
+            chat = OpenAI_Chat_Generator(ctx, self.config, message_list)
+            response = ChatResponse(ctx, self.config, chat)
+            await response.send()
 
-    async def handle_embed_prompt(self, ctx: commands.Context):
-        message = ctx.message
-        if self.contains_youtube_link(message.content):
-            youtube_api = (await self.bot.get_shared_api_tokens("youtube")).get("api_key")
-            if youtube_api:
-                return YoutubeLinkPrompt(self, ctx)
-        return GenericEmbedPrompt(self, ctx)
-
-    async def handle_image_generation(self, ctx: commands.Context):
-
+    async def send_image(self, ctx: commands.Context):
         sd_endpoint = await self.config.guild(ctx.guild).image_requests_endpoint()
 
         if sd_endpoint is None:
@@ -79,8 +49,8 @@ class MessageHandler(MixinMeta):
             image_generator = GenericStableDiffusionGenerator(ctx, self.config)
 
         async with ctx.message.channel.typing():
-            request = ImageRequestResponse(ctx, self.config, image_generator)
-            if await request.send():
+            response = ImageResponse(ctx, self.config, image_generator)
+            if await response.send():
                 return True
         return False
 
@@ -134,15 +104,11 @@ class MessageHandler(MixinMeta):
     def is_good_text_message(message) -> bool:
         mention_pattern = re.compile(r'^<@!?&?(\d+)>$')
 
-        if not message.content:
-            logger.debug(f"Skipping empty message {message.id} in {message.guild.name}")
-            return False
-
         if mention_pattern.match(message.content):
             logger.debug(f"Skipping singular mention message {message.id} in {message.guild.name}")
             return False
 
-        if len(message.content) < MIN_MESSAGE_LENGTH:
+        if 1 <= len(message.content) < MIN_MESSAGE_LENGTH:
             logger.debug(
                 f"Skipping short message {message.id} in {message.guild.name}")
             return False
@@ -153,9 +119,3 @@ class MessageHandler(MixinMeta):
             return False
 
         return True
-
-    @staticmethod
-    def contains_youtube_link(link):
-        youtube_regex = r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?(.+)'
-        match = re.search(youtube_regex, link)
-        return bool(match)

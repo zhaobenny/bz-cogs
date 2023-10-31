@@ -1,14 +1,15 @@
 import datetime
 import logging
 import random
-import openai
 
+import openai
 from discord.ext import tasks
 
 from aiuser.abc import MixinMeta
-from aiuser.generators.chat.openai import OpenAI_Chat_Generator
-from aiuser.generators.chat.response import ChatResponse
-from aiuser.prompts.random.base import RandomEventPrompt
+from aiuser.common.utilities import format_variables
+from aiuser.messages_list.messages import create_messages_list
+from aiuser.response.chat.openai import OpenAI_Chat_Generator
+from aiuser.response.chat.response import ChatResponse
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -40,7 +41,7 @@ class RandomMessageTask(MixinMeta):
 
                 try:
                     last = await channel.fetch_message(channel.last_message_id)
-                except Exception:
+                except:
                     continue
 
                 if last.author.id == guild.me.id:
@@ -59,10 +60,13 @@ class RandomMessageTask(MixinMeta):
                     continue
 
                 logger.debug(f"Sending random message to #{channel.name} at {guild.name}")
+                message_list = await create_messages_list(self, ctx)
+                topics = await self.config.guild(guild).random_messages_topics() or ["nothing"]
+                topic = format_variables(ctx, topics[random.randint(0, len(topics) - 1)])
+                await message_list.add_system(f"You are not responding to a message. Do not greet anyone. You are to start a conversation about the following: {topic}")
+                chat = OpenAI_Chat_Generator(ctx, self.config, message_list)
+                response = ChatResponse(ctx, self.config, chat)
+                return await response.send(standalone=True)
 
-                thread = await RandomEventPrompt(self, ctx).get_list()
-                generator = OpenAI_Chat_Generator(ctx, self.config, thread)
-                return await ChatResponse(ctx, self.config, generator).send()
-
-        except Exception as e:
-            logger.error(f"Could not trigger a random message, the exception was:\n {e}")
+        except:
+            logger.error(f"Exception in random message task", exc_info=True)

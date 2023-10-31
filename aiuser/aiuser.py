@@ -1,9 +1,10 @@
 
+import asyncio
 import json
 import logging
 import random
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 
 import discord
 import openai
@@ -16,17 +17,16 @@ from aiuser.common.constants import (AI_HORDE_MODE, DEFAULT_PRESETS,
                                      DEFAULT_REMOVE_PATTERNS,
                                      DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS,
                                      MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
-from aiuser.generators.chat.openai import OpenAI_Chat_Generator
-from aiuser.generators.chat.response import ChatResponse
-from aiuser.message_handler import MessageHandler
-from aiuser.prompts.common.messageentry import MessageEntry
+from aiuser.common.utilities import is_embed_valid
+from aiuser.messages_list.entry import MessageEntry
 from aiuser.random_message_task import RandomMessageTask
+from aiuser.response.response_handler import ResponseHandler
 from aiuser.settings.base import Settings
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class AIUser(Settings, MessageHandler, RandomMessageTask, commands.Cog, metaclass=CompositeMetaClass):
+class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metaclass=CompositeMetaClass):
     """ Utilize OpenAI to reply to messages and images in approved channels. """
 
     def __init__(self, bot):
@@ -42,6 +42,7 @@ class AIUser(Settings, MessageHandler, RandomMessageTask, commands.Cog, metaclas
         self.ignore_regex: dict[int, re.Pattern] = {}
         self.override_prompt_start_time: dict[int, datetime] = {}
         self.cached_messages: Cache[int, MessageEntry] = Cache(limit=100)
+        self.url_pattern = re.compile(r"(https?://\S+)")
 
         default_global = {
             "custom_openai_endpoint": None,
@@ -141,15 +142,10 @@ class AIUser(Settings, MessageHandler, RandomMessageTask, commands.Cog, metaclas
         if rate_limit_reset > datetime.now():
             return await ctx.send("The command is currently being ratelimited!", ephemeral=True)
 
-        thread_instance = await self.handle_message(ctx)
-        if not thread_instance:
-            return await ctx.send("Error: Invalid message", ephemeral=True)
-        thread = await thread_instance.get_list()
-        if thread is None:
-            return await ctx.send("Error: No prompt set.", ephemeral=True)
-
-        openai = OpenAI_Chat_Generator(ctx, self.config, thread)
-        return await ChatResponse(ctx, self.config, openai).send()
+        try:
+            await self.send_response(ctx)
+        except:
+            await ctx.send(":warning: Error in generating response!", ephemeral=True)
 
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
@@ -171,46 +167,21 @@ class AIUser(Settings, MessageHandler, RandomMessageTask, commands.Cog, metaclas
                 await ctx.react_quietly("💤")
             return
 
-        thread_instance = await self.handle_message(ctx)
-        if thread_instance is None:
-            return
-        thread = await thread_instance.get_list()
-        if thread is None:
-            return
+        contains_url = self.url_pattern.search(ctx.message.content)
+        if contains_url:
+            ctx = await self.wait_for_embed(ctx)
 
-        openai = OpenAI_Chat_Generator(ctx, self.config, thread)
-        return await ChatResponse(ctx, self.config, openai).send()
+        await self.send_response(ctx)
 
-    @commands.Cog.listener()
-    async def on_message_edit(self, before: discord.Message, after: discord.Message):
-        """ Catch embeds loading """
-        ctx: commands.Context = await self.bot.get_context(after)
-        if not await self.is_common_valid_reply(ctx):
-            return
-
-        time_diff = datetime.now(timezone.utc) - after.created_at
-        if not (time_diff.total_seconds() <= 10):
-            return
-
-        if random.random() > self.reply_percent.get(before.guild.id, DEFAULT_REPLY_PERCENT):
-            return
-
-        rate_limit_reset = datetime.strptime(await self.config.ratelimit_reset(), '%Y-%m-%d %H:%M:%S')
-        if rate_limit_reset > datetime.now():
-            return
-
-        if self.contains_youtube_link(after.content):  # should be handled the first time
-            return
-
-        thread = None
-        if len(before.embeds) != len(after.embeds):
-            thread_instance = await self.handle_message(ctx)
-            thread = await thread_instance.get_list()
-        if thread is None:
-            return
-
-        openai = OpenAI_Chat_Generator(ctx, self.config, thread)
-        return await ChatResponse(ctx, self.config, openai).send()
+    async def wait_for_embed(self, ctx: commands.Context):
+        """ Wait for possible embed to be valid """
+        start_time = asyncio.get_event_loop().time()
+        while not is_embed_valid(ctx.message):
+            ctx.message = await ctx.channel.fetch_message(ctx.message.id)
+            if asyncio.get_event_loop().time() - start_time >= 3:
+                break
+            await asyncio.sleep(1)
+        return ctx
 
     async def is_common_valid_reply(self, ctx: commands.Context) -> bool:
         """ Run some common checks to see if a message is valid for the bot to reply to """
