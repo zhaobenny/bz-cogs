@@ -49,7 +49,7 @@ class ResponseHandler(MixinMeta):
             image_generator = GenericStableDiffusionGenerator(ctx, self.config)
 
         async with ctx.message.channel.typing():
-            response = ImageResponse(ctx, self.config, image_generator)
+            response = ImageResponse(self, ctx, image_generator)
             if await response.send():
                 return True
         return False
