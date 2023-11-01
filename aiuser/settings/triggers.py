@@ -61,39 +61,3 @@ class TriggerSettings(MixinMeta):
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
-    @trigger.group()
-    @checks.is_owner()
-    async def random(self, _):
-        """ Configure the random trigger
-
-            Every 33 minutes, a RNG roll will determine if a random message will be sent using a list of topics as a prompt.
-            The chosen channel must have a hour pass without a message sent in it for a random message to be sent.
-
-            (All subcommands per server)
-        """
-        pass
-
-    @random.command(name="toggle")
-    async def random_toggle(self, ctx: commands.Context):
-        """ Toggles random message trigger """
-        value = not await self.config.guild(ctx.guild).random_messages_enabled()
-        await self.config.guild(ctx.guild).random_messages_enabled.set(value)
-        embed = discord.Embed(
-            title="Senting of random messages:",
-            description=f"{value}",
-            color=await ctx.embed_color())
-        return await ctx.send(embed=embed)
-
-    @random.command(name="percent", aliases=["set", "chance"])
-    async def set_random_rng(self, ctx: commands.Context, percent: float):
-        """ Sets the chance that a random message will be sent every 33 minutes
-
-            **Arguments**
-                - `percent` A number between 0 and 100
-        """
-        await self.config.guild(ctx.guild).random_messages_percent.set(percent / 100)
-        embed = discord.Embed(
-            title="The chance that a random message will be sent is:",
-            description=f"{percent:.2f}%",
-            color=await ctx.embed_color())
-        return await ctx.send(embed=embed)

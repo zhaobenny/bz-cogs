@@ -11,7 +11,7 @@ class ImageRequestSettings(MixinMeta):
     @checks.is_owner()
     async def imagerequest(self, _):
         """
-            Settings to generate images using an Stable Diffusion api when requested to (based on rudimentary checks / LLM decision)
+            Change settings to generate images using an Stable Diffusion api when requested to (based on rudimentary checks / LLM decision)
 
             eg. "hey @botname, can you show me a picture of a yourself?"
 
@@ -132,3 +132,30 @@ class ImageRequestSettings(MixinMeta):
                 embed.add_field(name=key, value=f"```{json.dumps(value, indent=4)}```", inline=False)
 
         await ctx.send(embed=embed)
+
+    @imagerequest.command(name="config")
+    async def image_request_config(self, ctx: commands.Context):
+        """ Show current settings """
+        config = await self.config.guild(ctx.guild).get_raw()
+        embeds = []
+
+        embed = discord.Embed(title="Image Request Settings", color=await ctx.embed_color())
+        embed.add_field(name="Enabled", value=config["image_requests"], inline=True)
+        embed.add_field(name="Reduced LLM calls mode", value=config["image_requests_reduced_llm_calls"], inline=True)
+        embed.add_field(name="SD API Endpoint", value=config["image_requests_endpoint"], inline=False)
+        embed.add_field(name="Default prompt added", value=config["image_requests_preprompt"], inline=False)
+        embed.add_field(name="Subject to replace second person", value=config["image_requests_subject"])
+
+        embeds.append(embed)
+
+        parameters = config["image_requests_parameters"]
+        if parameters is not None:
+            parameters = json.loads(parameters)
+            parameters_embed = discord.Embed(title="Custom Parameters to Endpoint", color=await ctx.embed_color())
+            for key, value in parameters.items():
+                parameters_embed.add_field(name=key, value=f"```{json.dumps(value, indent=4)}```", inline=False)
+
+        embeds.append(parameters_embed)
+
+        for embed in embeds:
+            await ctx.send(embed=embed)

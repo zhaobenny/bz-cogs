@@ -60,8 +60,8 @@ class RandomMessageTask(MixinMeta):
                     continue
 
                 logger.debug(f"Sending random message to #{channel.name} at {guild.name}")
-                message_list = await create_messages_list(self, ctx, prompt=await self.config.channel(last.channel).custom_text_prompt()
-                                                          or await self.config.guild(last.guild).custom_text_prompt())
+                prompt = await self.config.channel(last.channel).custom_text_prompt() or await self.config.guild(last.guild).custom_text_prompt()
+                message_list = await create_messages_list(self, ctx, prompt=prompt)
                 topics = await self.config.guild(guild).random_messages_topics() or ["nothing"]
                 topic = format_variables(ctx, topics[random.randint(0, len(topics) - 1)])
                 await message_list.add_system(f"You are not responding to a message. Do not greet anyone. You are to start a conversation about the following: {topic}", index=len(message_list) + 1)

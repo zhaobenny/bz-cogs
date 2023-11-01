@@ -22,7 +22,6 @@ def to_thread(timeout=300):
     return decorator
 
 
-
 def format_variables(ctx: commands.Context, text: str):
     """
         Insert supported variables into string if they are present
@@ -35,15 +34,20 @@ def format_variables(ctx: commands.Context, text: str):
     currentweekday = datetime.today().strftime("%A")
     currenttime = datetime.today().strftime("%H:%M")
 
-    return text.format(
-        botname=botname,
-        authorname=authorname,
-        servername=servername,
-        channelname=channelname,
-        currentdate=currentdate,
-        currentweekday=currentweekday,
-        currenttime=currenttime,
-    )
+    try:
+        res = text.format(
+            botname=botname,
+            authorname=authorname,
+            servername=servername,
+            channelname=channelname,
+            currentdate=currentdate,
+            currentweekday=currentweekday,
+            currenttime=currenttime,
+        )
+        return res
+    except KeyError:
+        logger.exception("Invalid key in message", exc_info=True)
+        return text
 
 
 def is_embed_valid(message: Message):

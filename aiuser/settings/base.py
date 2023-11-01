@@ -11,13 +11,14 @@ from aiuser.settings.image_request import ImageRequestSettings
 from aiuser.settings.image_scan import ImageScanSettings
 from aiuser.settings.owner import OwnerSettings
 from aiuser.settings.prompt import PromptSettings
+from aiuser.settings.random_message import RandomMessageSettings
 from aiuser.settings.response import ResponseSettings
 from aiuser.settings.triggers import TriggerSettings
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class Settings(PromptSettings, ImageScanSettings, ImageRequestSettings, ResponseSettings, TriggerSettings, OwnerSettings, MixinMeta):
+class Settings(PromptSettings, ImageScanSettings, ImageRequestSettings, ResponseSettings, TriggerSettings, OwnerSettings, RandomMessageSettings, MixinMeta):
 
     @commands.group(aliases=["ai_user"])
     @commands.bot_has_permissions(embed_links=True)
