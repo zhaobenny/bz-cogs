@@ -1,3 +1,4 @@
+import json
 import logging
 from dataclasses import asdict
 from datetime import datetime, timedelta
@@ -16,10 +17,10 @@ from aiuser.messages_list.entry import MessageEntry
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-async def create_messages_list(cog: MixinMeta, ctx: commands.Context):
+async def create_messages_list(cog: MixinMeta, ctx: commands.Context, prompt: str = None):
     """ to manage messages in ChatML format """
     thread = MessagesList(cog, ctx)
-    await thread._init()
+    await thread._init(prompt)
     return thread
 
 
@@ -41,14 +42,20 @@ class MessagesList:
         self.messages_ids = set()
         self.tokens = 0
 
-    async def _init(self):
+    def __len__(self):
+        return len(self.messages)
+
+    def __repr__(self) -> str:
+        return json.dumps(self.get_json(), indent=4)
+
+    async def _init(self, prompt=None):
         model = (await self.config.guild(self.guild).model())
         self.token_limit = self._get_token_limit(model)
         try:
             self._encoding = tiktoken.encoding_for_model(model)
         except KeyError:
             self._encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
-        bot_prompt = await self.config.member(self.init_message.author).custom_text_prompt() \
+        bot_prompt = prompt or await self.config.member(self.init_message.author).custom_text_prompt() \
             or await self.config.channel(self.init_message.channel).custom_text_prompt() \
             or await self.config.guild(self.guild).custom_text_prompt() \
             or DEFAULT_PROMPT
@@ -82,6 +89,10 @@ class MessagesList:
             self.messages.insert(index or 0, entry)
             self.messages_ids.add(message.id)
             await self._add_tokens(entry.content)
+
+        # TODO: proper chaining
+        if message.reference and type(message.reference.resolved) == discord.Message and message.author.id != self.bot.user.id:
+            await self.add_msg(message.reference.resolved, index=0)
 
     async def add_system(self, content: str, index: int = None):
         entry = MessageEntry("system", content)

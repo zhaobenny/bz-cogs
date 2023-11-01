@@ -26,6 +26,11 @@ def format_embed_text_content(message: Message):
         return f'{content}'
     return f'User "{message.author.display_name}" said: {content}'
 
+def format_generic_image(message : Message):
+    if message.author.id == message.guild.me.id:
+        return f'[Image: "{message.attachments[0].filename}"]'
+    return f'User "{message.author.display_name}" sent: [Image: "{message.attachments[0].filename}"]'
+
 
 async def format_sticker_content(message: Message):
     try:

@@ -8,6 +8,7 @@ from aiuser.common.constants import MAX_MESSAGE_LENGTH
 from aiuser.common.utilities import contains_youtube_link, is_embed_valid
 from aiuser.messages_list.converter.embed.formatter import format_embed_content
 from aiuser.messages_list.converter.helpers import (format_embed_text_content,
+                                                    format_generic_image,
                                                     format_sticker_content,
                                                     format_text_content)
 from aiuser.messages_list.converter.image.caption import transcribe_image
@@ -47,16 +48,16 @@ class MessageConverter():
             content = f'User "{message.author.display_name}" sent: [Attachment: "{message.attachments[0].filename}"]'
             await self.add_entry(content, res, role)
         elif message.attachments[0].size > await self.config.guild(message.guild).max_image_size():
-            content = f'User "{message.author.display_name}" sent: [Image: "{message.attachments[0].filename}"]'
+            content = format_generic_image(message)
             await self.add_entry(content, res, role)
         # scan only the triggering image
         elif self.init_msg_id == message.id and not self.ctx.interaction and await self.config.guild(message.guild).scan_images():
-            content = await transcribe_image(self.cog, message) or f'User "{message.author.display_name}" sent: [Image: "{message.attachments[0].filename}"]'
+            content = await transcribe_image(self.cog, message) or format_generic_image(message)
             await self.add_entry(content, res, role)
         elif message.id in self.message_cache:
             await self.add_entry(self.message_cache[message.id], res, role)
         else:
-            content = f'User "{message.author.display_name}" sent: [Image: "{message.attachments[0].filename}"]'
+            content = format_generic_image(message)
             await self.add_entry(content, res, role)
 
         content = format_text_content(message)

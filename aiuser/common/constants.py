@@ -35,6 +35,7 @@ DEFAULT_REMOVE_PATTERNS = [
     r'^You respond as "?{authorname}"?:',
     r'^[<({{\[]{authorname}[>)}}\]]',  # [name], {name}, <name>, (name)
     r'^{authorname}:',
+    r'\n*\[Image[^\]]+\]'
 ]
 DEFAULT_REPLY_PERCENT = 0.5
 MIN_MESSAGE_LENGTH = 5
