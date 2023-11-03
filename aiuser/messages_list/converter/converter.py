@@ -33,7 +33,7 @@ class MessageConverter():
         if message.attachments:
             await self.handle_attachment(message, res, role)
         elif message.stickers:
-            content = format_sticker_content(message)
+            content = await format_sticker_content(message)
             await self.add_entry(content, res, role)
         elif (len(message.embeds) > 0 and is_embed_valid(message)) or contains_youtube_link(message.content):
             await self.handle_embed(message, res, role)
