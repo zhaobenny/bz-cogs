@@ -34,9 +34,12 @@ class ChatResponse():
             for chunk in chunks:
                 await self.ctx.send(chunk)
         elif not standalone and await self.is_reply():
-            await message.reply(self.response, mention_author=False)
+            return await message.reply(self.response, mention_author=False)
+        elif self.ctx.interaction:
+            return await self.ctx.interaction.followup.send(self.response)
         else:
-            await self.ctx.send(self.response)
+            return await self.ctx.send(self.response)
+
 
     async def remove_patterns_from_response(self) -> str:
 

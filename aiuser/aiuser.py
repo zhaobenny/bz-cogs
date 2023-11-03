@@ -133,6 +133,8 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
     async def slash_command(self, inter: discord.Interaction, *,
                             text: app_commands.Range[str, MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH]):
         """ Talk directly to this bot's AI. Ask it anything you want! """
+        await inter.response.defer()
+
         ctx = await commands.Context.from_interaction(inter)
         ctx.message.content = text
         if not await self.is_common_valid_reply(ctx):
