@@ -42,7 +42,7 @@ class ChatResponse():
 
         @to_thread(timeout=5)
         def substitute(pattern: re.Pattern, response):
-            pattern.sub('', response).strip(' \n":')
+            response = (pattern.sub('', response).strip(' \n":'))
             return response
 
         patterns = await self.config.guild(self.ctx.guild).removelist_regexes()
