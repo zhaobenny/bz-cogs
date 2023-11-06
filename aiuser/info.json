@@ -10,7 +10,7 @@
         "embed_links"
     ],
     "requirements": [
-        "openai",
+        "openai==0.28.1",
         "tenacity",
         "tiktoken",
         "Pillow"
