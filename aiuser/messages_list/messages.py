@@ -145,11 +145,12 @@ class MessagesList:
     async def _add_tokens(self, content):
         if not self._encoding:
             await self._initialize_encoding()
+        content = str(content)
         tokens = self._encoding.encode(content, disallowed_special=())
         self.tokens += len(tokens)
 
     @staticmethod
-    def _get_token_limit(model):
+    def _get_token_limit(model) -> int:
         limit = 3000
         if "gpt" in model:
             limit = 31000
@@ -160,7 +161,7 @@ class MessagesList:
         if "32k" in model:
             limit = 31000
         if "gpt-4-1106-preview" in model or "gpt-4-vision-preview" in model:
-            limit = 124,000
+            limit = 124000
         if "16k" in model or "gpt-3.5-turbo-1106" in model: # TODO: remove 1106 after Dec 11, 2023:
             limit = 15000
         return limit

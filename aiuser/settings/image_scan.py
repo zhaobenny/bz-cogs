@@ -5,7 +5,7 @@ import discord
 from redbot.core import checks, commands
 
 from aiuser.abc import MixinMeta, aiuser
-from aiuser.common.constants import AI_HORDE_MODE, LOCAL_MODE, SCAN_IMAGE_MODES
+from aiuser.common.enums import ScanImageMode
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -44,31 +44,28 @@ class ImageScanSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @imagescan.command(name="mode")
-    async def image_mode(self, ctx: commands.Context, mode: str):
-        """ Set method for scanning images
-
-            The following modes are available, please see links for more details:
-            - [local](https://github.com/zhaobenny/bz-cogs/tree/main/aiuser#local-image-scanning-mode)
-            - [ai-horde](https://github.com/zhaobenny/bz-cogs/tree/main/aiuser#ai-horde-image-scanning-mode)
-        """
-        if mode not in SCAN_IMAGE_MODES:
-            await ctx.send(f"Invalid mode. Choose from: {', '.join(SCAN_IMAGE_MODES)}")
-        elif mode == LOCAL_MODE:
+    async def image_mode(self, ctx: commands.Context, mode: str):  # Modify the parameter type
+        """ Set method for scanning images """
+        values = [m.value for m in ScanImageMode]
+        if mode not in values:
+            return await ctx.send(f"Invalid mode. Choose from: {', '.join(values)}")
+        mode = ScanImageMode(mode)
+        if mode == ScanImageMode.LOCAL:
             try:
                 importlib.import_module("pytesseract")
                 importlib.import_module("torch")
                 importlib.import_module("transformers")
-                await self.config.guild(ctx.guild).scan_images_mode.set(mode)
+                await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.LOCAL.value)
                 embed = discord.Embed(title="Scanning Images for this server now set to", color=await ctx.embed_color())
-                embed.add_field(name=":warning: __WILL CAUSE HEAVY CPU LOAD__ :warning:", value=mode, inline=False)
+                embed.add_field(name=":warning: __WILL CAUSE HEAVY CPU LOAD__ :warning:", value=mode.value, inline=False)
                 return await ctx.send(embed=embed)
-            except:
+            except Exception as e:
                 logger.error("Image processing dependencies import failed. ", exc_info=True)
-                await self.config.guild(ctx.guild).scan_images_mode.set(AI_HORDE_MODE)
+                await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.AI_HORDE.value)
                 return await ctx.send(":warning: Local image processing dependencies not available. Please install them (see cog README.md) to use this feature locally.")
-        elif mode == AI_HORDE_MODE:
-            await self.config.guild(ctx.guild).scan_images_mode.set(AI_HORDE_MODE)
-            embed = discord.Embed(title="Scanning Images for this server now set to", description=mode, color=await ctx.embed_color())
+        elif mode == ScanImageMode.AI_HORDE:
+            await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.AI_HORDE.value)
+            embed = discord.Embed(title="Scanning Images for this server now set to", description=mode.value, color=await ctx.embed_color())
             embed.add_field(
                 name=":warning: __PRIVACY WARNING__ :warning:",
                 value="This will send images to a random volunteer machine for processing! \n Please inform users or use local mode for privacy.",
@@ -77,8 +74,8 @@ class ImageScanSettings(MixinMeta):
                 key_description = "Key set."
             else:
                 key_description = f"No key set. \n Request will be lower priority.\n  \
-                                   Create one [here](https://stablehorde.net/#:~:text=0%20alchemy%20forms.-,Usage,-First%20Register%20an)\
-                                   and set it with `{ctx.clean_prefix}set api ai-horde api_key,API_KEY`"
+                                Create one [here](https://stablehorde.net/#:~:text=0%20alchemy%20forms.-,Usage,-First%20Register%20an)\
+                                and set it with `{ctx.clean_prefix}set api ai-horde api_key,API_KEY`"
             embed.add_field(
                 name="AI Horde API key:",
                 value=key_description,
@@ -86,5 +83,15 @@ class ImageScanSettings(MixinMeta):
             embed.add_field(
                 name="Reminder",
                 value="AI Horde is a crowdsourced volunteer service. \n Please contribute back if heavily used. See [here](https://stablehorde.net/)",
+                inline=False)
+            return await ctx.send(embed=embed)
+        elif mode == ScanImageMode.GPT4:
+            await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.GPT4.value)
+            embed = discord.Embed(title="Scanning Images for this server now set to", description=mode.value, color=await ctx.embed_color())
+            embed.add_field(name="__Model switch__", value="This will set the model to gpt-4-vision-preview", inline=False)
+            await self.config.guild(ctx.guild).model.set("gpt-4-vision-preview")
+            embed.add_field(
+                name=":warning: __PRIVACY WARNING__ :warning:",
+                value="This will send images to OpenAI for processing! \n Please inform users or use local mode for privacy.",
                 inline=False)
             return await ctx.send(embed=embed)

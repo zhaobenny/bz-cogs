@@ -6,6 +6,7 @@ import discord
 from redbot.core import checks, commands
 
 from aiuser.abc import MixinMeta
+from aiuser.common.enums import ScanImageMode
 from aiuser.settings.image_request import ImageRequestSettings
 from aiuser.settings.image_scan import ImageScanSettings
 from aiuser.settings.owner import OwnerSettings
@@ -188,6 +189,11 @@ class Settings(PromptSettings, ImageScanSettings, ImageRequestSettings, Response
             embed = discord.Embed(title="Available Models", color=await ctx.embed_color())
             embed.description = '\n'.join([f"`{model}`" for model in gpt_models])
             return await ctx.send(embed=embed)
+
+        mode = ScanImageMode(await self.config.guild(ctx.guild).scan_images_mode())
+        if mode == ScanImageMode.GPT4:
+            return await ctx.send(":warning: Can not swap models when set to scan images using gpt-4-vision-preview :warning:")
+
 
         await self.config.guild(ctx.guild).model.set(model)
         embed = discord.Embed(

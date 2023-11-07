@@ -54,6 +54,8 @@ class MessageConverter():
         elif self.init_msg_id == message.id and not self.ctx.interaction and await self.config.guild(message.guild).scan_images():
             content = await transcribe_image(self.cog, message) or format_generic_image(message)
             await self.add_entry(content, res, role)
+            if isinstance(content, list):
+                return
         elif message.id in self.message_cache:
             await self.add_entry(self.message_cache[message.id], res, role)
         else:
@@ -76,7 +78,7 @@ class MessageConverter():
     async def add_entry(self, content, res, role):
         if not content:
             return
-        if (len(content.split())) > MAX_MESSAGE_LENGTH:
+        if (type(content) == str and len(content.split())) > MAX_MESSAGE_LENGTH:
             role = "system"
             content = "A overly long message was omitted"
         res.append(MessageEntry(role, content))

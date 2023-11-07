@@ -13,10 +13,11 @@ from redbot.core.bot import Red
 
 from aiuser.abc import CompositeMetaClass
 from aiuser.common.cache import Cache
-from aiuser.common.constants import (AI_HORDE_MODE, DEFAULT_PRESETS,
+from aiuser.common.constants import  (DEFAULT_PRESETS,
                                      DEFAULT_REMOVE_PATTERNS,
                                      DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS,
                                      MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
+from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import is_embed_valid
 from aiuser.messages_list.entry import MessageEntry
 from aiuser.random_message_task import RandomMessageTask
@@ -61,7 +62,7 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
             "messages_backread_seconds": 60 * 120,
             "reply_to_mentions_replies": False,
             "scan_images": False,
-            "scan_images_mode": AI_HORDE_MODE,
+            "scan_images_mode": ScanImageMode.AI_HORDE.value,
             "max_image_size": 2 * (1024 * 1024),
             "model": "gpt-3.5-turbo",
             "custom_text_prompt": None,

@@ -1,3 +1,4 @@
+import json
 import logging
 from io import BytesIO
 
@@ -5,7 +6,9 @@ from discord import Message
 from PIL import Image
 
 from aiuser.abc import MixinMeta
-from aiuser.common.constants import AI_HORDE_MODE, IMAGE_RESOLUTION, LOCAL_MODE
+from aiuser.common.constants import IMAGE_RESOLUTION
+from aiuser.common.enums import ScanImageMode
+from aiuser.messages_list.converter.helpers import format_text_content
 from aiuser.messages_list.converter.image.AI_horde import \
     process_image_ai_horde
 
@@ -21,11 +24,11 @@ async def transcribe_image(cog: MixinMeta, message: Message):
     image = Image.open(buffer)
     image = scale_image(image, IMAGE_RESOLUTION ** 2)
 
-    mode = await config.guild(message.guild).scan_images_mode()
+    mode = ScanImageMode(await config.guild(message.guild).scan_images_mode())
 
-    if mode == AI_HORDE_MODE:
+    if mode == ScanImageMode.AI_HORDE:
         content = await process_image_ai_horde(cog, message, image)
-    elif mode == LOCAL_MODE:
+    elif mode == ScanImageMode.LOCAL:
         try:
             from aiuser.messages_list.converter.image.local import \
                 process_image_locally
@@ -33,6 +36,10 @@ async def transcribe_image(cog: MixinMeta, message: Message):
         except ImportError:
             logger.error("Local image scanning dependencies not installed, check cog README for instructions", exc_info=True)
             return None
+    elif mode == ScanImageMode.GPT4:
+        content = [{"type": "image", "image_url": message.attachments[0].url}]
+        if message.content != "":
+            content.append({"type": "text", "text":  format_text_content(message)})
 
     if content:
         cog.cached_messages[message.id] = content

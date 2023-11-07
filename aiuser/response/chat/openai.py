@@ -30,6 +30,9 @@ class OpenAI_Chat_Generator(Chat_Generator):
             logit_bias = json.loads(await self.config.guild(self.ctx.guild).weights() or "{}")
             kwargs["logit_bias"] = logit_bias
 
+        if "gpt-4-vision-preview" in model:
+            logger.warning("logit_bias is currently not supported for gpt-4-vision-preview, removing...")
+            del kwargs["logit_bias"]
 
         if 'gpt-3.5-turbo-instruct' in model:
             prompt = "\n".join(message['content'] for message in self.messages)

@@ -54,7 +54,4 @@ Here is a sample of how it should be output: "Beautiful woman, contemplative and
 
 Convert the below message to a Stable Diffusion Art Prompt.  The prompt should be a full sentence, no second person references, no line breaks, no delimiters, and keep it as concise as possible while still conveying a full scene.
 """
-# keep
-LOCAL_MODE = "local"
-AI_HORDE_MODE = "ai-horde"
-SCAN_IMAGE_MODES = [LOCAL_MODE, AI_HORDE_MODE]
+
