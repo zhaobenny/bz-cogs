@@ -65,7 +65,7 @@ class RandomMessageTask(MixinMeta):
                 topics = await self.config.guild(guild).random_messages_topics() or ["nothing"]
                 topic = format_variables(ctx, topics[random.randint(0, len(topics) - 1)])
                 await message_list.add_system(f"You are not responding to a message. Do not greet anyone. You are to start a conversation about the following: {topic}", index=len(message_list) + 1)
-                chat = OpenAI_Chat_Generator(ctx, self.config, message_list)
+                chat = OpenAI_Chat_Generator(self, ctx, message_list)
                 response = ChatResponse(ctx, self.config, chat)
                 return await response.send(standalone=True)
 
