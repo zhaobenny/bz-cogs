@@ -86,6 +86,10 @@ class ImageScanSettings(MixinMeta):
                 inline=False)
             return await ctx.send(embed=embed)
         elif mode == ScanImageMode.GPT4:
+            models = [model.id for model in (await self.openai_client.models.list()).data]
+            if "gpt-4-vision-preview" not in models:
+                return await ctx.send(":warning: Your OpenAI API key does not have access to the gpt-4-vision-preview model.")
+
             await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.GPT4.value)
             embed = discord.Embed(title="Scanning Images for this server now set to", description=mode.value, color=await ctx.embed_color())
             embed.add_field(name="__Model switch__", value="This will set the model to gpt-4-vision-preview", inline=False)

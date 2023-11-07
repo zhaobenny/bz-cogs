@@ -45,75 +45,77 @@ See other settings using:
 
 Bot owners can see settings here:
 ```
-[p]aiuser image
+[p]aiuser imagescan
 ```
 
-### AI Horde Image Scanning Mode
+### gpt-4-vision-preview mode
+
+Utilize OpenAI's gpt-4-vision-preview mode for images, superior to other modes in performance but not in cost.
+
+### AI Horde Mode
 Utilize [AI Horde's](https://stablehorde.net/) Image Alchemy to caption images.
 
+AI Horde is a crowdsourced distributed cluster. Images will be uploaded to a **unknown third party** (a random volunteer worker machine)
 
-AI Horde is a crowdsourced distributed cluster. Please contribute back if heavily used.
-
-Compared to local captioning mode:
-#### Pros
-1. No need to manually install dependencies
-2. Good x86 CPU not needed
-3. No load on machine, that Redbot is running on
-
-#### Cons
-1. Privacy issues, images will be uploaded to a **third party** (a random volunteer worker machine)
-2. May be a queue if there are no workers available (faster if you have an [API key](https://stablehorde.net/register) and [kudos](https://dbzer0.com/blog/the-kudos-based-economy-for-the-koboldai-horde/))
-3. No OCR, only image captioning
+Recommended to set a [API key](https://stablehorde.net/register) (or some [kudos](https://dbzer0.com/blog/the-kudos-based-economy-for-the-koboldai-horde/))
 
 
-### Local Image Scanning Mode
+### Local Image Mode
 
 Local image scanning mode will be **very CPU intensive**. *(Not recommended for busy servers/channel)*
 
 First, images will be OCR'ed for text to use. If the OCR is not of significant confidence, it will be captioned instead using [BLIP](https://huggingface.co/Salesforce/blip-image-captioning-base).
 
-See below for instructions on installing the necessary dependencies. *(x86 only)*
+<details>
+  <summary>Instructions on installing the necessary dependencies (x86 only) </summary>
+
+  #### 1. Install Python Dependencies
+
+  ```
+  source ~/redenv/bin/activate # or however you activate your virtual environment in your OS
+  pip install -U pytesseract transformers[torch]
+  ```
+
+  #### 2. Install Tessaract OCR
+
+  See [here](https://tesseract-ocr.github.io/tessdoc/Installation.html) for instructions on installing TessaractOCR, or alternatively just use the phasecorex/red-discordbot:full image.
 
 
-#### 1. Install Python Dependencies
+  First time scans will require some time to download processing models (~1gb)
 
+</details>
+
+---
+## Image requests 🖼️
+
+Bot owners can see settings here:
 ```
-source ~/redenv/bin/activate # or however you activate your virtual environment in your OS
-pip install -U pytesseract transformers[torch]
+[p]aiuser imagerequest
 ```
 
-OR (less recommended) run this command in Discord
+The bot can generate self-portraits images based on user request.
 
-```
-[p]pipinstall pytesseract transformers[torch]
-```
+Requests are classified by trigger words / LLM decision. (eg. *"hey @botname, can you show me a picture of a yourself?"*)
 
-#### 2. Install Tessaract OCR
-
-See [here](https://tesseract-ocr.github.io/tessdoc/Installation.html) for instructions on installing TessaractOCR, or alternatively just use the phasecorex/red-discordbot:full image.
-
-
-
-First time scanning an image will take longer due to the need to download the pretrained models. (OCR and image captioning models)
-
+A suitable Stable Diffusion endpoint (Automatic1111 in API mode) must be provided and a non-trial OpenAI account is recommended.
 ---
 
 ## Random Messages 🎲
 
-Dead chat? No problem. Let the bot send random messages!
+Have the bot sent random messages into a channel without external triggers.
 
 Every 33 minutes, a RNG roll will determine if a random message will be sent using a list of topics as a prompt.
 
 Whitelisted channels must have a hour pass without a message sent in it for a random message to be sent, and the last sent message must be sent by a user.
 
-Bot owners see settings here:
+Bot owners enable this setting per server here:
 ```
-[p]aiuser triggers random
+[p]aiuser randommessage toggle
 ```
 
-Admins manage topics here:
+Admins also manage topics here:
 ```
-[p]aiuser prompt topics
+[p]aiuser randommessage
 ```
 ---
 

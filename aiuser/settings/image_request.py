@@ -11,9 +11,9 @@ class ImageRequestSettings(MixinMeta):
     @checks.is_owner()
     async def imagerequest(self, _):
         """
-            Change settings to generate images using an Stable Diffusion api when requested to (based on rudimentary checks / LLM decision)
+            Generate self-portraits images based on user request (on trigger words / LLM decision)
 
-            eg. "hey @botname, can you show me a picture of a yourself?"
+            See [here]((https://github.com/zhaobenny/bz-cogs/tree/main/aiuser#image-requests-%EF%B8%8F)
 
             (All subcommands are per server)
         """
@@ -65,7 +65,7 @@ class ImageRequestSettings(MixinMeta):
 
     @imagerequest.command(name="endpoint")
     async def image_request_endpoint(self, ctx: commands.Context, url: str):
-        """ Set compatible endpoint (eg. for A1111 include `/sdapi/v1/txt2img`)
+        """ Set compatible endpoint url (eg. for A1111 include `/sdapi/v1/txt2img`)
         """
         await self.config.guild(ctx.guild).image_requests_endpoint.set(url)
         embed = discord.Embed(
