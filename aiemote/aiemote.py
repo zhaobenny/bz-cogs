@@ -3,11 +3,11 @@ import logging
 import random
 import re
 from typing import Optional
-from openai import AsyncOpenAI
 
 import discord
 import tiktoken
 from emoji import EMOJI_DATA
+from openai import AsyncOpenAI
 from redbot.core import Config, checks, commands
 from redbot.core.bot import Red
 from redbot.core.utils.menus import start_adding_reactions
@@ -106,7 +106,7 @@ class AIEmote(commands.Cog):
         system_prompt = f"You are in a chat room. You will pick an emoji for the following message. {await self.config.extra_instruction()} Here are your options: {options} Your answer will be a int between 0 and {len(emojis)-1}."
         content = f"{message.author.display_name} : {self.stringify_any_mentions(message)}"
         try:
-            response =  await self.aclient.chat.completions.create(
+            response = await self.aclient.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -118,6 +118,7 @@ class AIEmote(commands.Cog):
         except:
             logger.warning("Skipping react! Failed to get response from OpenAI")
             return None
+
         response = response.choices[0].message.content
         if response.isnumeric():
             index = int(response)
