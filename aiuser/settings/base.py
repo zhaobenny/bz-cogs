@@ -3,7 +3,6 @@ import logging
 from typing import Union
 
 import discord
-import openai
 from redbot.core import checks, commands
 
 from aiuser.abc import MixinMeta
@@ -167,15 +166,17 @@ class Settings(PromptSettings, ImageScanSettings, ImageRequestSettings, Response
             **Arguments**
                 - `model` The model to use eg. `gpt-4`
         """
-        if not openai.api_key:
+        if not self.openai_client:
             await self.initalize_openai(ctx)
 
-        models_list = openai.Model.list()
+        models_list = await self.openai_client.models.list()
 
-        if openai.api_base.startswith("https://api.openai.com/"):
-            gpt_models = [model.id for model in models_list['data'] if "gpt" in model.id]
+
+
+        if str(self.openai_client.base_url).startswith("https://api.openai.com/"):
+            gpt_models = [model.id for model in models_list.data if "gpt" in model.id]
         else:
-            gpt_models = [model.id for model in models_list['data']]
+            gpt_models = [model.id for model in models_list.data]
 
         if model == 'list':
             embed = discord.Embed(title="Available Models", color=await ctx.embed_color())

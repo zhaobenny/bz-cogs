@@ -9,7 +9,7 @@
         "read_messages"
     ],
     "requirements": [
-        "openai",
+        "openai>=1.0.0",
         "tenacity",
         "tiktoken",
         "emoji"

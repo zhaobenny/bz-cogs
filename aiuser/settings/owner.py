@@ -48,11 +48,11 @@ class OwnerSettings(MixinMeta):
             Reset to official OpenAI endpoint with `[p]aiuseradmin endpoint clear`
         """
         if not url or url in ["clear", "reset"]:
-            openai.api_base = "https://api.openai.com/v1"
+            self.openai_client.base_url = "https://api.openai.com/v1"
             await self.config.custom_openai_endpoint.set(None)
         else:
             await self.config.custom_openai_endpoint.set(url)
-            openai.api_base = url
+            self.openai_client.base_url = url
 
         embed = discord.Embed(title="Bot Custom OpenAI endpoint", color=await ctx.embed_color())
         embed.add_field(

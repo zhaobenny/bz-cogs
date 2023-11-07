@@ -3,13 +3,10 @@ import logging
 import random
 from datetime import datetime, timedelta
 
-import aiohttp
 import openai
-import openai.error
-from redbot.core import Config, commands
-from tenacity import (retry, retry_if_exception_type, stop_after_delay,
-                      wait_random)
+from redbot.core import commands
 
+from aiuser.abc import MixinMeta
 from aiuser.messages_list.messages import MessagesList
 from aiuser.response.chat.generator import Chat_Generator
 
@@ -17,15 +14,10 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class OpenAI_Chat_Generator(Chat_Generator):
-    def __init__(self, ctx: commands.Context, config: Config, messages: MessagesList):
-        super().__init__(ctx, config, messages)
+    def __init__(self, cog : MixinMeta, ctx: commands.Context, messages: MessagesList):
+        super().__init__(cog, ctx, messages)
 
-    @retry(
-        retry=(retry_if_exception_type((openai.error.Timeout,
-               openai.error.APIConnectionError, openai.error.ServiceUnavailableError))),
-        wait=wait_random(min=1, max=3), stop=stop_after_delay(15),
-        reraise=True
-    )
+
     async def request_openai(self, model):
         custom_parameters = await self.config.guild(self.ctx.guild).parameters()
         kwargs = {}
@@ -38,29 +30,28 @@ class OpenAI_Chat_Generator(Chat_Generator):
             logit_bias = json.loads(await self.config.guild(self.ctx.guild).weights() or "{}")
             kwargs["logit_bias"] = logit_bias
 
-        trace_config = aiohttp.TraceConfig()
-        trace_config.on_request_end.append(self._update_ratelimit_time)
 
-        async with aiohttp.ClientSession(trace_configs=[trace_config]) as session:
-            openai.aiosession.set(session)
+        if 'gpt-3.5-turbo-instruct' in model:
+            prompt = "\n".join(message['content'] for message in self.messages)
+            response = await self.openai_client.completions.with_raw_response.create(
+                model=model,
+                prompt=prompt,
+                **kwargs
+            )
+            completion = response.parse()
+            completion = completion.choices[0].text
+        else:
+            response = await self.openai_client.chat.completions.with_raw_response.create(
+                model=model,
+                messages=self.messages,
+                **kwargs
+            )
+            completion = response.parse()
+            completion = completion.choices[0].message.content
 
-            if 'gpt-3.5-turbo-instruct' in model:
-                prompt = "\n".join(message['content'] for message in self.thread.get_messages())
-                response = await openai.Completion.acreate(
-                    engine=model,
-                    prompt=prompt,
-                    **kwargs
-                )
-                response = response['choices'][0]['text']
-            else:
-                response = await openai.ChatCompletion.acreate(
-                    model=model,
-                    messages=self.messages,
-                    **kwargs
-                )
-                response = response["choices"][0]["message"]["content"]
-        logger.debug(f"Generated the following raw response using OpenAI in {self.ctx.guild.name}: \"{response}\"")
-        return response
+        await self._update_ratelimit_time(response.headers)
+        logger.debug(f"Generated the following raw response using OpenAI in {self.ctx.guild.name}: \"{completion}\"")
+        return completion
 
     async def generate_message(self):
         model = await self.config.guild(self.ctx.guild).model()
@@ -69,8 +60,8 @@ class OpenAI_Chat_Generator(Chat_Generator):
             logger.debug(f"Generating message with prompt: \n{json.dumps(self.messages, indent=4)}")
             response = await self.request_openai(model)
             return response
-        except openai.error.RateLimitError:
-            timestamp = datetime.now() + timedelta(seconds=random.randint(62, 65))
+        except openai.RateLimitError:
+            timestamp = datetime.now() + timedelta(seconds=random.randint(32, 35))
             last_reset = datetime.strptime(await self.config.ratelimit_reset(), '%Y-%m-%d %H:%M:%S')
             if last_reset < timestamp:
                 await self.config.ratelimit_reset.set(timestamp.strftime('%Y-%m-%d %H:%M:%S'))
@@ -78,9 +69,7 @@ class OpenAI_Chat_Generator(Chat_Generator):
                 f"Failed API request to OpenAI. You are being ratelimited! Recommend adding payment method or to reduce reply percentage. Next reset: {await self.config.ratelimit_reset()}")
             await self.ctx.react_quietly("💤")
         except:
-            trys = self.request_openai.retry.statistics["attempt_number"] or 1
-            logger.error(
-                f"Failed {trys} API request(s) to OpenAI. Last exception was:", exc_info=True)
+            logger.error(f"Failed API request(s) to OpenAI. Last exception was:", exc_info=True)
             await self.ctx.react_quietly("⚠️")
         return None
 
@@ -115,11 +104,10 @@ class OpenAI_Chat_Generator(Chat_Generator):
 
         return timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds + random.randint(2, 5))
 
-    # temp workaround adapted from here: https://github.com/openai/openai-python/issues/416#issuecomment-1679551808
-    async def _update_ratelimit_time(self, _, _1, params: aiohttp.TraceRequestEndParams):
-        if not str(params.url).startswith("https://api.openai.com/v1/"):
+    async def _update_ratelimit_time(self, response_headers):
+        if str(self.openai_client.base_url).startswith("https://api.openai.com/"):
             return
-        response_headers = params.response.headers
+
         remaining_requests = response_headers.get("x-ratelimit-remaining-requests") or 1
         remaining_tokens = response_headers.get("x-ratelimit-remaining-tokens") or 1
 

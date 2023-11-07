@@ -17,7 +17,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 class RandomMessageTask(MixinMeta):
     @tasks.loop(minutes=33)
     async def random_message_trigger(self):
-        if not openai.api_key:
+        if not self.openai_client:
             return
         if not self.bot.is_ready():
             return

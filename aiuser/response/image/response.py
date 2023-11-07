@@ -81,14 +81,14 @@ class ImageResponse():
         pattern = r'\b{}\b'.format(re.escape(botname))
         request = re.sub(pattern, subject, request, flags=re.IGNORECASE)
 
-        response = await openai.ChatCompletion.acreate(
+        response = await self.cog.openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": IMAGE_GENERATION_PROMPT},
                 {"role": "user", "content": request}
             ],
         )
-        prompt = response["choices"][0]["message"]["content"].lower()
+        prompt = response.choices[0].message.content.lower()
         if "sorry" in prompt:
             return None
         return prompt

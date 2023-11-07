@@ -31,7 +31,7 @@ class ResponseHandler(MixinMeta):
         message_list = await create_messages_list(self, ctx)
         async with ctx.message.channel.typing():
             await message_list.add_history()
-            chat = OpenAI_Chat_Generator(ctx, self.config, message_list)
+            chat = OpenAI_Chat_Generator(self, ctx, message_list)
             response = ChatResponse(ctx, self.config, chat)
             await response.send()
 
@@ -86,7 +86,7 @@ class ResponseHandler(MixinMeta):
         if message.reference:
             text = await message.reference.resolved.content + "\n " + text  # TODO: find a better way to do this
         try:
-            response = await openai.ChatCompletion.acreate(
+            response = await self.openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system",
@@ -95,7 +95,7 @@ class ResponseHandler(MixinMeta):
                 ],
                 max_tokens=1,
             )
-            bool_response = response["choices"][0]["message"]["content"]
+            bool_response = response.choices[0].message.content
         except:
             logger.error(f"Error while checking message if is a Stable Diffusion request")
         return bool_response == "True"

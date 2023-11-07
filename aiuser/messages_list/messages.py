@@ -159,7 +159,9 @@ class MessagesList:
             limit = 7000
         if "32k" in model:
             limit = 31000
-        if "16k" in model:
+        if "gpt-4-1106-preview" in model or "gpt-4-vision-preview" in model:
+            limit = 124,000
+        if "16k" in model or "gpt-3.5-turbo-1106" in model: # TODO: remove 1106 after Dec 11, 2023:
             limit = 15000
         return limit
 

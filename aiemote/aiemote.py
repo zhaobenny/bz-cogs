@@ -3,9 +3,9 @@ import logging
 import random
 import re
 from typing import Optional
+from openai import AsyncOpenAI
 
 import discord
-import openai
 import tiktoken
 from emoji import EMOJI_DATA
 from redbot.core import Config, checks, commands
@@ -25,6 +25,7 @@ class AIEmote(commands.Cog):
         self.bot: Red = bot
         self.config = Config.get_conf(self, identifier=754069)
         self.encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        self.aclient = None
 
         default_global = {
             "percent": 50,
@@ -64,14 +65,19 @@ class AIEmote(commands.Cog):
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, api_tokens):
         if service_name == "openai":
-            openai.api_key = api_tokens.get("api_key")
+            self.aclient = AsyncOpenAI(
+                api_key=api_tokens.get("api_key")
+            )
 
     async def initalize_openai(self, ctx: commands.Context):
-        openai.api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
-        if not openai.api_key:
-            await ctx.send(
+        key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
+        if not key:
+            return await ctx.send(
                 f"OpenAI API key not set for `aiemote`. "
                 f"Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
+        self.aclient = AsyncOpenAI(
+                api_key=key
+        )
 
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
@@ -100,7 +106,7 @@ class AIEmote(commands.Cog):
         system_prompt = f"You are in a chat room. You will pick an emoji for the following message. {await self.config.extra_instruction()} Here are your options: {options} Your answer will be a int between 0 and {len(emojis)-1}."
         content = f"{message.author.display_name} : {self.stringify_any_mentions(message)}"
         try:
-            response = await openai.ChatCompletion.acreate(
+            response =  await self.aclient.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -112,7 +118,7 @@ class AIEmote(commands.Cog):
         except:
             logger.warning("Skipping react! Failed to get response from OpenAI")
             return None
-        response = response["choices"][0]["message"]["content"]
+        response = response.choices[0].message.content
         if response.isnumeric():
             index = int(response)
             if index < 0 or index >= len(emojis):
@@ -146,9 +152,9 @@ class AIEmote(commands.Cog):
         if (not ctx.author.id in self.optin_users) and (not (await self.config.guild(ctx.guild).optin_by_default())):
             return False
 
-        if not openai.api_key:
+        if not self.aclient:
             await self.initalize_openai(ctx)
-            if not openai.api_key:
+            if not self.aclient:
                 return False
 
         # skipping images / embeds

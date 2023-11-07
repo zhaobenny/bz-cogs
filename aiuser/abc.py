@@ -2,6 +2,7 @@ import re
 from abc import ABC
 from datetime import datetime
 
+from openai import AsyncOpenAI
 from redbot.core import Config, commands
 from redbot.core.bot import Red
 
@@ -30,3 +31,4 @@ class MixinMeta(ABC):
         self.cached_messages: Cache[int, MessageEntry]
         self.ignore_regex: dict[int, re.Pattern]
         self.channels_whitelist: dict[int, list[int]]
+        self.openai_client : AsyncOpenAI

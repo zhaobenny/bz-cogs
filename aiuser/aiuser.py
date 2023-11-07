@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 
 import discord
-import openai
+from openai import AsyncOpenAI
 from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
@@ -33,6 +33,7 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
         super().__init__()
         self.bot: Red = bot
         self.config = Config.get_conf(self, identifier=754070)
+        self.openai_client : AsyncOpenAI = None
         # cached options
         self.optin_users: list[int] = []
         self.optout_users: list[int] = []
@@ -94,9 +95,9 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
         self.config.register_global(**default_global)
 
     async def cog_load(self):
-        if await self.config.custom_openai_endpoint():
-            openai.api_base = await self.config.custom_openai_endpoint()
-        openai.api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
+
+        await self.initialize_openai_client()
+
         self.optin_users = await self.config.optin()
         self.optout_users = await self.config.optout()
         all_config = await self.config.all_guilds()
@@ -123,8 +124,8 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
 
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, api_tokens):
-        if service_name == "openai":
-            openai.api_key = api_tokens.get("api_key")
+        if service_name == "openai" and self.openai_client:
+           self.openai_client.api_key = api_tokens.get("api_key")
 
     @app_commands.command(name="chat")
     @app_commands.describe(text="The prompt you want to send to the AI.")
@@ -210,9 +211,9 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
         if self.ignore_regex.get(ctx.guild.id) and self.ignore_regex[ctx.guild.id].search(ctx.message.content):
             return False
 
-        if not openai.api_key:
+        if not self.openai_client:
             await self.initalize_openai(ctx)
-        if not openai.api_key:
+        if not self.openai_client:
             return False
 
         return True
@@ -227,9 +228,24 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
             return reference_message.author == self.bot.user
         return False
 
-    async def initalize_openai(self, ctx: commands.Context):
-        openai.api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
-        if not openai.api_key:
-            await ctx.send(
+    async def initialize_openai_client(self, ctx : commands.Context =None):
+        api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
+
+        if not api_key and ctx:
+            error_message = (
                 f"OpenAI API key not set for `aiuser`. "
-                f"Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
+                f"Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`"
+            )
+            await ctx.send(error_message)
+            return
+
+        if not api_key:
+            logger.error(F"OpenAI API key not set for `aiuser` yet! Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
+            return
+
+        self.openai_client = AsyncOpenAI(api_key=api_key)
+
+        base_url = await self.config.custom_openai_endpoint()
+
+        if base_url:
+            self.openai_client.base_url = base_url
