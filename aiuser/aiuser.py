@@ -13,8 +13,7 @@ from redbot.core.bot import Red
 
 from aiuser.abc import CompositeMetaClass
 from aiuser.common.cache import Cache
-from aiuser.common.constants import  (DEFAULT_PRESETS,
-                                     DEFAULT_REMOVE_PATTERNS,
+from aiuser.common.constants import (DEFAULT_PRESETS, DEFAULT_REMOVE_PATTERNS,
                                      DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS,
                                      MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
 from aiuser.common.enums import ScanImageMode
@@ -57,6 +56,7 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
 
         default_guild = {
             "optin_by_default": False,
+            "optin_disable_embed": False,
             "reply_percent": DEFAULT_REPLY_PERCENT,
             "messages_backread": 10,
             "messages_backread_seconds": 60 * 120,

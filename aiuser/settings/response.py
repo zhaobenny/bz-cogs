@@ -28,13 +28,11 @@ class ResponseSettings(MixinMeta):
         pass
 
     @response.group(name="removelist")
-    @checks.admin_or_permissions(manage_guild=True)
     async def removelist(self, _):
         """ Manage the list of regex patterns to remove from responses
         """
 
     @removelist.command(name="add")
-    @checks.admin_or_permissions(manage_guild=True)
     async def removelist_add(self, ctx: commands.Context, *, regex_pattern: str):
         """Add a regex pattern to the list of patterns to remove from responses"""
         try:
@@ -52,7 +50,6 @@ class ResponseSettings(MixinMeta):
             await ctx.send(f"The regex pattern `{regex_pattern}` is already in the list of regex patterns.")
 
     @removelist.command(name="remove")
-    @checks.admin_or_permissions(manage_guild=True)
     async def removelist_remove(self, ctx: commands.Context, *, number: int):
         """Remove a regex pattern (by number) from the list"""
         removelist_regexes = await self.config.guild(ctx.guild).removelist_regexes()
@@ -63,7 +60,6 @@ class ResponseSettings(MixinMeta):
         await ctx.send(f"The regex pattern `{removed_regex}` has been removed from the list.")
 
     @removelist.command(name="show")
-    @checks.admin_or_permissions(manage_guild=True)
     async def removelist_show(self, ctx: commands.Context):
         """Show the current regex patterns of strings to removed from responses """
         removelist_regexes = await self.config.guild(ctx.guild).removelist_regexes()
@@ -90,7 +86,6 @@ class ResponseSettings(MixinMeta):
         return await SimpleMenu(pages).start(ctx)
 
     @removelist.command(name="reset")
-    @checks.admin_or_permissions(manage_guild=True)
     async def removelist_reset(self, ctx: commands.Context):
         """Reset the list of regexes to default """
         embed = discord.Embed(
@@ -110,6 +105,24 @@ class ResponseSettings(MixinMeta):
             await self.config.guild(ctx.guild).removelist_regexes.set(DEFAULT_REMOVE_PATTERNS)
             return await confirm.edit(embed=discord.Embed(title="Removelist reset.", color=await ctx.embed_color()))
 
+    @response.command(name="toggleoptinembed")
+    async def toggle_optin_embed(self, ctx):
+        """Toggles warning embed about opt-in on or off"""
+        current = await self.config.guild(ctx.guild).optin_disable_embed()
+        await self.config.guild(ctx.guild).optin_disable_embed.set(not current)
+
+        embed = discord.Embed(title="Senting Opt-in Warning Embed", color=await ctx.embed_color())
+        embed.description = f"{current}"
+        if not current:
+            embed.add_field(
+                name=":warning: Warning :warning:",
+                value="Users not yet opt-in/out will be unaware their messages are not being processed",
+                inline=False
+            )
+
+        await ctx.send(embed=embed)
+
+
     @response.group()
     @checks.is_owner()
     async def history(self, _):
@@ -121,7 +134,6 @@ class ResponseSettings(MixinMeta):
         pass
 
     @history.command(name="backread", aliases=["messages", "size"])
-    @checks.is_owner()
     async def history_backread(self, ctx: commands.Context, new_value: int):
         """ Set max amount of messages to be used """
         await self.config.guild(ctx.guild).messages_backread.set(new_value)
@@ -132,7 +144,6 @@ class ResponseSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @history.command(name="time", aliases=["gap"])
-    @checks.is_owner()
     async def history_time(self, ctx: commands.Context, new_value: int):
         """ Set max time (s) allowed between messages to be used
 
@@ -148,6 +159,7 @@ class ResponseSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @response.group(name="weights", aliases=["logit_bias", "bias"])
+    @checks.admin_or_permissions(manage_guild=True)
     async def weights(self, _):
         """
             Bias the LLM for/against certain words (tokens)
@@ -159,7 +171,6 @@ class ResponseSettings(MixinMeta):
         pass
 
     @weights.command(name="list", aliases=["show"])
-    @checks.admin_or_permissions(manage_guild=True)
     async def show_weight(self, ctx: commands.Context):
         """
             Show weights
@@ -180,7 +191,6 @@ class ResponseSettings(MixinMeta):
         await ctx.send(embed=embed)
 
     @weights.command(name="add")
-    @checks.admin_or_permissions(manage_guild=True)
     async def set_weight(self, ctx: commands.Context, word: str, weight: int):
         """
             Sets weight for a specific word
@@ -239,7 +249,6 @@ class ResponseSettings(MixinMeta):
             return await ctx.send(embed=embed)
 
     @weights.command(name="remove", aliases=["delete"])
-    @checks.admin_or_permissions(manage_guild=True)
     async def remove_weight(self, ctx: commands.Context, word: str):
         """
         Removes weight for a specific word
@@ -364,3 +373,4 @@ class ResponseSettings(MixinMeta):
                 embed.add_field(name=key, value=f"```{json.dumps(value, indent=4)}```", inline=False)
 
         await ctx.send(embed=embed)
+

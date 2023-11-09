@@ -113,12 +113,12 @@ class MessagesList:
         if past_messages and abs((past_messages[0].created_at - self.init_message.created_at).total_seconds()) > max_seconds_gap:
             return
 
-        users = []
+        users = set()
         for message in past_messages:
             if await self.config.guild(self.guild).optin_by_default():
                 break
             if (not message.author.bot) and (message.author.id not in await self.config.optin()) and (message.author.id not in await self.config.optout()):
-                users.append(message.author)
+                users.add(message.author)
 
         for i in range(len(past_messages)-1):
             if self.tokens > self.token_limit:
@@ -129,11 +129,11 @@ class MessagesList:
                 await self.add_msg(past_messages[i])
                 break
 
-        if users:
+        if users and not (await self.config.guild(self.guild).optin_disable_embed()):
             prefix = (await self.bot.get_prefix(message))[0]
             users = ", ".join([user.mention for user in users])
             embed = discord.Embed(title=":information_source: AI User Opt-In / Opt-Out", color=await self.bot.get_embed_color(message))
-            embed.description = f"Hey there! Looks like {users} have not opted in or out of AI User! \n Please use `{prefix}aiuser optin` or `{prefix}aiuser optout` to opt in or out of sending messages / images to OpenAI or an external endpoint. \n This embed will stop showing up if all users chatting have opted in or out."
+            embed.description = f"Hey there! Looks like {users} have not opted in or out of AI User! \n Please use `{prefix}aiuser optin` or `{prefix}aiuser optout` to opt in or out of sending messages / images to OpenAI or an external party. \n This embed will stop showing up if all users chatting have opted in or out."
             await message.channel.send(embed=embed)
 
     def get_json(self):
