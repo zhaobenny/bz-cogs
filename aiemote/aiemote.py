@@ -65,18 +65,21 @@ class AIEmote(commands.Cog):
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, api_tokens):
         if service_name == "openai":
-            self.aclient = AsyncOpenAI(
-                api_key=api_tokens.get("api_key")
-            )
+            self.initalize_openai()
 
-    async def initalize_openai(self, ctx: commands.Context):
+    async def initalize_openai(self, ctx: commands.Context = None):
         key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
-        if not key:
+        if not key and ctx:
             return await ctx.send(
                 f"OpenAI API key not set for `aiemote`. "
                 f"Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
+        if not key:
+            logger.error(F"OpenAI API key not set for `aiemote` yet! Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
+            return
+
         self.aclient = AsyncOpenAI(
-                api_key=key
+                api_key=key,
+                timeout=20.0
         )
 
     @commands.Cog.listener()

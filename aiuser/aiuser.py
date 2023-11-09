@@ -229,7 +229,7 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
             return reference_message.author == self.bot.user
         return False
 
-    async def initialize_openai_client(self, ctx : commands.Context =None):
+    async def initialize_openai_client(self, ctx : commands.Context = None):
         api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
 
         if not api_key and ctx:
@@ -244,7 +244,7 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
             logger.error(F"OpenAI API key not set for `aiuser` yet! Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
             return
 
-        self.openai_client = AsyncOpenAI(api_key=api_key)
+        self.openai_client = AsyncOpenAI(api_key=api_key, timeout=20.0)
 
         base_url = await self.config.custom_openai_endpoint()
 

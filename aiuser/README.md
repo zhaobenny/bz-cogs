@@ -98,6 +98,7 @@ The bot can generate self-portraits images based on user request.
 Requests are classified by trigger words / LLM decision. (eg. *"hey @botname, can you show me a picture of a yourself?"*)
 
 A suitable Stable Diffusion endpoint (Automatic1111 in API mode) must be provided and a non-trial OpenAI account is recommended.
+
 ---
 
 ## Random Messages 🎲
