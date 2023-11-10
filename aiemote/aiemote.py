@@ -79,7 +79,7 @@ class AIEmote(commands.Cog):
 
         self.aclient = AsyncOpenAI(
                 api_key=key,
-                timeout=20.0
+                timeout=50.0
         )
 
     @commands.Cog.listener()

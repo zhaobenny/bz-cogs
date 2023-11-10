@@ -244,7 +244,7 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
             logger.error(F"OpenAI API key not set for `aiuser` yet! Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
             return
 
-        self.openai_client = AsyncOpenAI(api_key=api_key, timeout=20.0)
+        self.openai_client = AsyncOpenAI(api_key=api_key, timeout=50.0)
 
         base_url = await self.config.custom_openai_endpoint()
 
