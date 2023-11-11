@@ -77,7 +77,7 @@ class MessagesList:
             return
         if message.author.id in await self.config.optout():
             return
-        if not message.author.id in await self.config.optin() and not await self.config.guild(self.guild).optin_by_default():
+        if (not message.author.id == self.bot.user.id) and not message.author.id in await self.config.optin() and not await self.config.guild(self.guild).optin_by_default():
             return
 
         converted = await self.converter.convert(message)
