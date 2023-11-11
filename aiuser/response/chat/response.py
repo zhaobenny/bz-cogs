@@ -29,8 +29,12 @@ class ChatResponse():
 
         await self.remove_patterns_from_response()
 
+        if not self.response:
+            return
+
         if len(self.response) >= 2000:
-            chunks = [self.response[i:i+2000] for i in range(0, len(self.response), 2000)]
+            chunks = [self.response[i:i+2000]
+                      for i in range(0, len(self.response), 2000)]
             for chunk in chunks:
                 await self.ctx.send(chunk)
         elif not standalone and await self.is_reply():
@@ -39,7 +43,6 @@ class ChatResponse():
             return await self.ctx.interaction.followup.send(self.response)
         else:
             return await self.ctx.send(self.response)
-
 
     async def remove_patterns_from_response(self) -> str:
 
@@ -51,7 +54,8 @@ class ChatResponse():
         patterns = await self.config.guild(self.ctx.guild).removelist_regexes()
 
         botname = self.ctx.message.guild.me.nick or self.ctx.bot.user.display_name
-        patterns = [pattern.replace(r'{botname}', botname) for pattern in patterns]
+        patterns = [pattern.replace(r'{botname}', botname)
+                    for pattern in patterns]
 
         # get last 10 authors and applies regex patterns with display name
         authors = set()
@@ -59,8 +63,10 @@ class ChatResponse():
             if m.author != self.ctx.guild.me:
                 authors.add(m.author.display_name)
 
-        authorname_patterns = list(filter(lambda pattern: r'{authorname}' in pattern, patterns))
-        patterns = [pattern for pattern in patterns if r'{authorname}' not in pattern]
+        authorname_patterns = list(
+            filter(lambda pattern: r'{authorname}' in pattern, patterns))
+        patterns = [
+            pattern for pattern in patterns if r'{authorname}' not in pattern]
 
         for pattern in authorname_patterns:
             for author in authors:

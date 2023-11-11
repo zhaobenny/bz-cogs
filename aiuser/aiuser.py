@@ -3,31 +3,28 @@ import json
 import logging
 import random
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import discord
+import httpx
 from openai import AsyncOpenAI
 from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
 from aiuser.abc import CompositeMetaClass
 from aiuser.common.cache import Cache
-from aiuser.common.constants import (
-    DEFAULT_PRESETS,
-    DEFAULT_REMOVE_PATTERNS,
-    DEFAULT_REPLY_PERCENT,
-    DEFAULT_TOPICS,
-    MAX_MESSAGE_LENGTH,
-    MIN_MESSAGE_LENGTH,
-)
+from aiuser.common.constants import (DEFAULT_PRESETS, DEFAULT_REMOVE_PATTERNS,
+                                     DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS,
+                                     MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
 from aiuser.common.enums import ScanImageMode
-from aiuser.common.utilities import is_embed_valid
+from aiuser.common.utilities import is_embed_valid, is_using_openai_endpoint
 from aiuser.messages_list.entry import MessageEntry
 from aiuser.random_message_task import RandomMessageTask
 from aiuser.response.response_handler import ResponseHandler
 from aiuser.settings.base import Settings
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 class AIUser(
@@ -117,11 +114,14 @@ class AIUser(
             self.channels_whitelist[guild_id] = config["channels_whitelist"]
             self.reply_percent[guild_id] = config["reply_percent"]
             pattern = config["ignore_regex"]
-            self.ignore_regex[guild_id] = re.compile(pattern) if pattern else None
+            self.ignore_regex[guild_id] = re.compile(
+                pattern) if pattern else None
 
         self.random_message_trigger.start()
 
     async def cog_unload(self):
+        if self.openai_client:
+            await self.openai_client.close()
         self.random_message_trigger.cancel()
 
     async def red_delete_data_for_user(self, *, requester, user_id: int):
@@ -240,9 +240,7 @@ class AIUser(
             and ctx.author.id not in self.optin_users
         ):
             return False
-        if self.ignore_regex.get(ctx.guild.id) and self.ignore_regex[
-            ctx.guild.id
-        ].search(ctx.message.content):
+        if self.ignore_regex.get(ctx.guild.id) and self.ignore_regex[ctx.guild.id].search(ctx.message.content):
             return False
 
         if not self.openai_client:
@@ -296,6 +294,93 @@ class AIUser(
             return
 
         timeout = 60.0 if base_url else 50.0
+
+        client = httpx.AsyncClient(
+            event_hooks={"request": [self._log_request_prompt], "response": [self._update_ratelimit_hook]})
+
         self.openai_client = AsyncOpenAI(
-            api_key=api_key, base_url=base_url, timeout=timeout, default_headers=headers
+            api_key=api_key, base_url=base_url, timeout=timeout, default_headers=headers, http_client=client
+        )
+
+    async def _log_request_prompt(self, request: httpx.Request):
+        if not logger.isEnabledFor(logging.DEBUG):
+            return
+
+        if request.method == "GET":
+            return
+
+        bytes = await request.aread()
+        request = json.loads(bytes.decode('utf-8'))
+        messages = request.get("messages", {})
+        logger.debug(
+            f"Senting request with prompt: \n{json.dumps(messages, indent=4)}"
+        )
+
+    async def _update_ratelimit_hook(self, response: httpx.Response):
+        if not is_using_openai_endpoint(self.openai_client):
+            return
+
+        headers = response.headers
+
+        remaining_requests = headers.get(
+            "x-ratelimit-remaining-requests") or 1
+        remaining_tokens = headers.get(
+            "x-ratelimit-remaining-tokens") or 1
+
+        timestamp = datetime.now()
+
+        if remaining_requests == 0:
+            # x-ratelimit-reset-requests uses per day instead of per minute for free accounts
+            request_reset_time = self._extract_time_delta(
+                headers.get("x-ratelimit-reset-requests")
+            )
+            timestamp = max(timestamp, datetime.now() + request_reset_time)
+        elif remaining_tokens == 0:
+            tokens_reset_time = self._extract_time_delta(
+                headers.get("x-ratelimit-reset-tokens")
+            )
+            timestamp = max(timestamp, datetime.now() + tokens_reset_time)
+
+        if remaining_requests == 0 or remaining_tokens == 0:
+            logger.warning(
+                f"OpenAI ratelimit reached! Next ratelimit reset at {await self.config.ratelimit_reset()}. (Try a non-trial key)"
+            )
+            await self.config.ratelimit_reset.set(
+                timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            )
+
+    def _extract_time_delta(self, time_str):
+        """for openai's ratelimit time format"""
+
+        days, hours, minutes, seconds = 0, 0, 0, 0
+
+        if time_str[-2:] == "ms":
+            time_str = time_str[:-2]
+            seconds += 1
+
+        components = time_str.split("d")
+        if len(components) > 1:
+            days = float(components[0])
+            time_str = components[1]
+
+        components = time_str.split("h")
+        if len(components) > 1:
+            hours = float(components[0])
+            time_str = components[1]
+
+        components = time_str.split("m")
+        if len(components) > 1:
+            minutes = float(components[0])
+            time_str = components[1]
+
+        components = time_str.split("s")
+        if len(components) > 1:
+            seconds = float(components[0])
+            time_str = components[1]
+
+        return timedelta(
+            days=days,
+            hours=hours,
+            minutes=minutes,
+            seconds=seconds + random.randint(2, 5),
         )

@@ -1,9 +1,7 @@
-import json
 import logging
 import re
 
 import discord
-import openai
 from redbot.core import commands
 
 from aiuser.abc import MixinMeta
@@ -37,7 +35,7 @@ class ImageResponse():
             if image is None:
                 return False
 
-        except Exception:
+        except:
             logger.error(f"Error while generating image", exc_info=True)
             return False
 

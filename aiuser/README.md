@@ -57,7 +57,7 @@ Utilize [AI Horde's](https://stablehorde.net/) Image Alchemy to caption images.
 
 AI Horde is a crowdsourced distributed cluster. Images will be uploaded to a **unknown third party** (a random volunteer worker machine)
 
-Recommended to set a [API key](https://stablehorde.net/register) (or some [kudos](https://dbzer0.com/blog/the-kudos-based-economy-for-the-koboldai-horde/))
+Recommended to set a [API key](https://stablehorde.net/register). (or some [kudos](https://dbzer0.com/blog/the-kudos-based-economy-for-the-koboldai-horde/))
 
 
 ### Local Image Mode
@@ -81,7 +81,7 @@ First, images will be OCR'ed for text to use. If the OCR is not of significant c
   See [here](https://tesseract-ocr.github.io/tessdoc/Installation.html) for instructions on installing TessaractOCR, or alternatively just use the phasecorex/red-discordbot:full image.
 
 
-  First time scans will require some time to download processing models (~1gb)
+  First time scans will require some time to download processing models. (~1gb)
 
 </details>
 
@@ -136,12 +136,12 @@ Remove list regex patterns only support `{authorname}` (will use authors of last
 
 ---
 
-#### OpenRouter
+### OpenRouter
 
 [OpenRouter](https://openrouter.ai) is compatible as a custom OpenAI endpoint.
 
 OpenRouter has unfiltered open source models, Claude, and PaLM available for a cost.
-See full details [here](https://openrouter.ai/docs#models)
+See full details [here].(https://openrouter.ai/docs#models)
 
 Bot owners can set this globally using the following:
 ```
@@ -153,10 +153,9 @@ Get an API key from OpenRouter and set it here:
 [p]set api openrouter api_key,INSERT_API_KEY
 ```
 
-
 Models will also need **changing** per server.
 
-Third party models may have undesirable results
+Third party models may have undesirable results.
 
 ---
 
@@ -173,11 +172,11 @@ Bot owners can set this globally using:
 [p]aiuserowner endpoint <ENDPOINT>
 ```
 
-Like above, similar disclaimers apply:
+Like OpenRouter, similar disclaimers apply:
 
 Models will also need **changing** per server.
 
-Third party models may have undesirable results
+Third party models may have undesirable results.
 
 Bot owners may also want to set custom parameters (per server). See:
 ```

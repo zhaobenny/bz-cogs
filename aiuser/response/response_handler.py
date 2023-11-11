@@ -6,17 +6,11 @@ import openai
 from redbot.core import commands
 
 from aiuser.abc import MixinMeta
-from aiuser.common.constants import (
-    IMAGE_CHECK_REQUEST_PROMPT,
-    MAX_MESSAGE_LENGTH,
-    MIN_MESSAGE_LENGTH,
-    RELATED_IMAGE_WORDS,
-    SECOND_PERSON_WORDS,
-)
-from aiuser.common.utilities import is_using_openrouter_endpoint
+from aiuser.common.constants import (IMAGE_CHECK_REQUEST_PROMPT,
+                                     MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH,
+                                     RELATED_IMAGE_WORDS, SECOND_PERSON_WORDS)
 from aiuser.messages_list.messages import create_messages_list
 from aiuser.response.chat.openai import OpenAI_Chat_Generator
-from aiuser.response.chat.openrouter import OpenRouter_Chat_Generator
 from aiuser.response.chat.response import ChatResponse
 from aiuser.response.image.generic import GenericStableDiffusionGenerator
 from aiuser.response.image.nemusona import NemusonaGenerator
@@ -37,16 +31,9 @@ class ResponseHandler(MixinMeta):
         message_list = await create_messages_list(self, ctx)
         async with ctx.message.channel.typing():
             await message_list.add_history()
-            chat = self.pick_chat_api(ctx, message_list)
+            chat = OpenAI_Chat_Generator(self, ctx, message_list)
             response = ChatResponse(ctx, self.config, chat)
             await response.send()
-
-    def pick_chat_api(self, ctx, message_list):
-        if is_using_openrouter_endpoint(self.openai_client):
-            chat = OpenRouter_Chat_Generator(self, ctx, message_list)
-        else:
-            chat = OpenAI_Chat_Generator(self, ctx, message_list)
-        return chat
 
     async def send_image(self, ctx: commands.Context):
         sd_endpoint = await self.config.guild(ctx.guild).image_requests_endpoint()
@@ -73,7 +60,8 @@ class ResponseHandler(MixinMeta):
             return False
 
         message_content = message.content.lower()
-        displayname = (message.guild.me.nick or message.guild.me.display_name).lower()
+        displayname = (
+            message.guild.me.nick or message.guild.me.display_name).lower()
 
         contains_image_words = any(
             word in message_content for word in RELATED_IMAGE_WORDS
@@ -90,9 +78,7 @@ class ResponseHandler(MixinMeta):
             and message.reference.resolved.author.id == message.guild.me.id
         )
 
-        skip_llm_check = await self.config.guild(
-            message.guild
-        ).image_requests_reduced_llm_calls()
+        skip_llm_check = await self.config.guild(message.guild).image_requests_reduced_llm_calls()
 
         return (
             contains_image_words
@@ -110,7 +96,7 @@ class ResponseHandler(MixinMeta):
         if message.reference:
             text = (
                 await message.reference.resolved.content + "\n " + text
-            )  # TODO: find a better way to do this
+            )
         try:
             response = await self.openai_client.chat.completions.create(
                 model=await self.config.guild(message.guild).model(),
@@ -124,9 +110,11 @@ class ResponseHandler(MixinMeta):
                 max_tokens=1,
             )
             bool_response = response.choices[0].message.content
+            print(bool_response)
+            bool_response = "True"
         except:
             logger.error(
-                f"Error while checking message if is a Stable Diffusion request"
+                f"Error while checking message for a image request", exc_info=True
             )
         return bool_response == "True"
 
@@ -141,11 +129,13 @@ class ResponseHandler(MixinMeta):
             return False
 
         if 1 <= len(message.content) < MIN_MESSAGE_LENGTH:
-            logger.debug(f"Skipping short message {message.id} in {message.guild.name}")
+            logger.debug(
+                f"Skipping short message {message.id} in {message.guild.name}")
             return False
 
         if len(message.content.split()) > MAX_MESSAGE_LENGTH:
-            logger.debug(f"Skipping long message {message.id} in {message.guild.name}")
+            logger.debug(
+                f"Skipping long message {message.id} in {message.guild.name}")
             return False
 
         return True
