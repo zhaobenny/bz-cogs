@@ -71,12 +71,6 @@ class OwnerSettings(MixinMeta):
                 value="Third party models may have undesirable results, compared to OpenAI.",
                 inline=False,
             )
-            embed.add_field(
-                name="Note",
-                value="This is an advanced feature. \
-                    \n If you don't know what you're doing, don't use it",
-                inline=False,
-            )
         else:
             embed.description = "Endpoint reset back to offical OpenAI endpoint."
 

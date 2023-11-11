@@ -54,4 +54,25 @@ Here is a sample of how it should be output: "Beautiful woman, contemplative and
 
 Convert the below message to a Stable Diffusion Art Prompt.  The prompt should be a full sentence, no second person references, no line breaks, no delimiters, and keep it as concise as possible while still conveying a full scene.
 """
-
+OTHER_MODELS_LIMITS = {
+    "gpt-3.5-turbo-1106": 12000,
+    "gpt-4-1106-preview": 123000 ,
+    "gpt-4-vision-preview": 123000,
+    "claude-2": 98000,
+    "claude-instant-v1": 98000,
+    "toppy-m-7b": 31000,
+    "palm-2-chat-bison": 7000,
+    "claude-v1": 7000,
+    "claude-1.2": 7000,
+    "claude-instant-1.0": 7000,
+    "codellama-34b-instruct": 6000,
+    "synthia-70b": 6000,
+    "mistral-7b-instruct": 6000,
+    "mistral-7b-openorca": 6000,
+    "mythalion-13b": 6000,
+    "xwin-lm-70b": 6000,
+    "goliath-120b": 6000,
+    "weaver": 6000,
+    "palm-2-codechat-bison": 6000,
+    "remm-slerp-l2-13b": 5000
+}

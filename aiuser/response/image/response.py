@@ -52,7 +52,7 @@ class ImageResponse():
                 saved_caption, index=len(message_list) + 1)
             await message_list.add_system(
                 "You sent the above image. Respond accordingly", index=len(message_list) + 1)
-            chat = OpenAI_Chat_Generator(self.ctx, self.config, message_list)
+            chat = OpenAI_Chat_Generator(self.cog, self.ctx, message_list)
             response = ChatResponse(self.ctx, self.config, chat)
 
 
@@ -82,7 +82,7 @@ class ImageResponse():
         request = re.sub(pattern, subject, request, flags=re.IGNORECASE)
 
         response = await self.cog.openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=await self.config.guild(self.message.guild).model(),
             messages=[
                 {"role": "system", "content": IMAGE_GENERATION_PROMPT},
                 {"role": "user", "content": request}

@@ -135,23 +135,52 @@ Prompts and topics can include certain variables by including one of the followi
 Remove list regex patterns only support `{authorname}` (will use authors of last 10 messages) and `{botname}` strings.
 
 ---
+
+#### OpenRouter
+
+[OpenRouter](https://openrouter.ai) is compatible as a custom OpenAI endpoint.
+
+OpenRouter has unfiltered open source models, Claude, and PaLM available for a cost.
+See full details [here](https://openrouter.ai/docs#models)
+
+Bot owners can set this globally using the following:
+```
+[p]aiuserowner endpoint https://openrouter.ai/api/v1
+```
+
+Get an API key from OpenRouter and set it here:
+```
+[p]set api openrouter api_key,INSERT_API_KEY
+```
+
+
+Models will also need **changing** per server.
+
+Third party models may have undesirable results
+
+---
+
 ### Custom OpenAI endpoint
 
 ⚠️ For advanced users! ⚠️
 
-OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. gpt4all or text-generation-webui, for a local and more private alternative to OpenAI)
+Other OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. gpt4all or text-generation-webui)
+
+Compatibility may vary and is not guaranteed.
 
 Bot owners can set this globally using:
 ```
-[p]aiuser endpoint <ENDPOINT>
+[p]aiuserowner endpoint <ENDPOINT>
 ```
+
+Like above, similar disclaimers apply:
 
 Models will also need **changing** per server.
 
-
-Third party models may have undesirable results! (I tested this [one](https://huggingface.co/mindrage/Manticore-13B-Chat-Pyg-Guanaco-GGML) and the results are decent-ish)
+Third party models may have undesirable results
 
 Bot owners may also want to set custom parameters (per server). See:
 ```
 [p]aiuser response parameters
 ```
+

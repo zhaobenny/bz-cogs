@@ -36,7 +36,7 @@ class OpenAI_Chat_Generator(Chat_Generator):
             logger.warning(
                 "logit_bias is currently not supported for gpt-4-vision-preview, removing..."
             )
-            del kwargs["logit_bias"]       
+            del kwargs["logit_bias"]
 
         if "gpt-3.5-turbo-instruct" in model:
             prompt = "\n".join(message["content"] for message in self.messages)
@@ -126,11 +126,13 @@ class OpenAI_Chat_Generator(Chat_Generator):
         )
 
     async def _update_ratelimit_time(self, response_headers):
-        if is_using_openai_endpoint(self.openai_client):
+        if not is_using_openai_endpoint(self.openai_client):
             return
 
-        remaining_requests = response_headers.get("x-ratelimit-remaining-requests") or 1
-        remaining_tokens = response_headers.get("x-ratelimit-remaining-tokens") or 1
+        remaining_requests = response_headers.get(
+            "x-ratelimit-remaining-requests") or 1
+        remaining_tokens = response_headers.get(
+            "x-ratelimit-remaining-tokens") or 1
 
         timestamp = datetime.now()
 

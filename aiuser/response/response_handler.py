@@ -72,13 +72,6 @@ class ResponseHandler(MixinMeta):
         if not await self.config.guild(message.guild).image_requests():
             return False
 
-        if await self.config.custom_openai_endpoint() != None:
-            await self.config.guild(message.guild).image_requests.set(False)
-            logger.warning(
-                f"Custom OpenAI endpoint detected, disabling stable-diffusion-webui requests for {message.guild.name}..."
-            )
-            return False
-
         message_content = message.content.lower()
         displayname = (message.guild.me.nick or message.guild.me.display_name).lower()
 
@@ -120,7 +113,7 @@ class ResponseHandler(MixinMeta):
             )  # TODO: find a better way to do this
         try:
             response = await self.openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model=await self.config.guild(message.guild).model(),
                 messages=[
                     {
                         "role": "system",

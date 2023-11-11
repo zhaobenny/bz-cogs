@@ -31,9 +31,9 @@ class OpenRouter_Chat_Generator(Chat_Generator):
         response = await self.openai_client.chat.completions.with_raw_response.create(
             model=model,
             messages=self.messages,
-            extra_headers={"HTTP-Referer": "https://github.com/zhaobenny/bz-cogs/tree/main/aiuser", "X-Title":"ai user"},
             **kwargs,
         )
+
         completion = response.parse()
         completion = completion.choices[0].message.content
 

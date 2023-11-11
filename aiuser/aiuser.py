@@ -269,9 +269,15 @@ class AIUser(
         base_url = await self.config.custom_openai_endpoint()
         api_type = "openai"
         api_key = None
+        headers = None
+
         if base_url and str(base_url).startswith("https://openrouter.ai/api/v1"):
             api_type = "openrouter"
             api_key = (await self.bot.get_shared_api_tokens(api_type)).get("api_key")
+            headers = {
+                "HTTP-Referer": "https://github.com/zhaobenny/bz-cogs/tree/main/aiuser",
+                "X-Title": "ai user",
+            }
         else:
             api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
 
@@ -291,5 +297,5 @@ class AIUser(
 
         timeout = 60.0 if base_url else 50.0
         self.openai_client = AsyncOpenAI(
-            api_key=api_key, base_url=base_url, timeout=timeout
+            api_key=api_key, base_url=base_url, timeout=timeout, default_headers=headers
         )

@@ -116,7 +116,11 @@ class Settings(
             inline=False,
             value=" ".join(channels) if channels else "None",
         )
-        if glob_config["custom_openai_endpoint"]:
+
+        endpoint_url = str(glob_config["custom_openai_endpoint"] or "")
+        if endpoint_url.startswith("https://openrouter.ai/api/"):
+            endpoint_text = "Using OpenRouter endpoint"
+        elif endpoint_url:
             endpoint_text = "Using an custom endpoint"
         else:
             endpoint_text = "Using offical OpenAI endpoint"
@@ -250,11 +254,9 @@ class Settings(
 
         if model not in gpt_models:
             await ctx.send(":warning: Not a valid model! :warning:")
-            embed = discord.Embed(
-                title="Available Models", color=await ctx.embed_color()
-            )
-            embed.description = "\n".join([f"`{model}`" for model in gpt_models])
-            return await ctx.send(embed=embed)
+            menu = await self._paginate_models(ctx, gpt_models)
+            await menu.start(ctx)
+            return
 
         mode = ScanImageMode(await self.config.guild(ctx.guild).scan_images_mode())
         if mode == ScanImageMode.GPT4:
@@ -280,13 +282,15 @@ class Settings(
                 color=await ctx.embed_color(),
             )
             embed.description = "\n".join([f"`{model}`" for model in models_page])
-            if is_using_openrouter_endpoint(self.openai_client):
-                embed.add_field(
-                    name="For pricing and more details go to:",
-                    value="https://openrouter.ai/models",
-                    inline=False,
-                )
             menu_pages.append(embed)
+
+        if is_using_openrouter_endpoint(self.openai_client):
+            menu_pages[0].add_field(
+                name="For pricing and more details go to:",
+                value="https://openrouter.ai/models",
+                inline=False,
+            )
+
         if len(menu_pages) == 1:
             return await ctx.send(embed=menu_pages[0])
         for i, page in enumerate(menu_pages):
