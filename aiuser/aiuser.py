@@ -1,4 +1,3 @@
-
 import asyncio
 import json
 import logging
@@ -13,9 +12,14 @@ from redbot.core.bot import Red
 
 from aiuser.abc import CompositeMetaClass
 from aiuser.common.cache import Cache
-from aiuser.common.constants import (DEFAULT_PRESETS, DEFAULT_REMOVE_PATTERNS,
-                                     DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS,
-                                     MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
+from aiuser.common.constants import (
+    DEFAULT_PRESETS,
+    DEFAULT_REMOVE_PATTERNS,
+    DEFAULT_REPLY_PERCENT,
+    DEFAULT_TOPICS,
+    MAX_MESSAGE_LENGTH,
+    MIN_MESSAGE_LENGTH,
+)
 from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import is_embed_valid
 from aiuser.messages_list.entry import MessageEntry
@@ -26,14 +30,20 @@ from aiuser.settings.base import Settings
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metaclass=CompositeMetaClass):
-    """ Utilize OpenAI to reply to messages and images in approved channels. """
+class AIUser(
+    Settings,
+    ResponseHandler,
+    RandomMessageTask,
+    commands.Cog,
+    metaclass=CompositeMetaClass,
+):
+    """Utilize OpenAI to reply to messages and images in approved channels."""
 
     def __init__(self, bot):
         super().__init__()
         self.bot: Red = bot
         self.config = Config.get_conf(self, identifier=754070)
-        self.openai_client : AsyncOpenAI = None
+        self.openai_client: AsyncOpenAI = None
         # cached options
         self.optin_users: list[int] = []
         self.optout_users: list[int] = []
@@ -49,7 +59,7 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
             "custom_openai_endpoint": None,
             "optout": [],
             "optin": [],
-            "ratelimit_reset": datetime(1990, 1, 1, 0, 1).strftime('%Y-%m-%d %H:%M:%S'),
+            "ratelimit_reset": datetime(1990, 1, 1, 0, 1).strftime("%Y-%m-%d %H:%M:%S"),
             "max_topic_length": 200,
             "max_prompt_length": 200,
         }
@@ -81,7 +91,7 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
             "image_requests_parameters": None,
             "image_requests_preprompt": "",
             "image_requests_subject": "woman",
-            "image_requests_reduced_llm_calls": False
+            "image_requests_reduced_llm_calls": False,
         }
         default_member = {
             "custom_text_prompt": None,
@@ -96,7 +106,6 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
         self.config.register_global(**default_global)
 
     async def cog_load(self):
-
         await self.initialize_openai_client()
 
         self.optin_users = await self.config.optin()
@@ -124,27 +133,37 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
                 self.cached_messages = Cache(limit=100)
 
     @commands.Cog.listener()
-    async def on_red_api_tokens_update(self, service_name, api_tokens):
-        if service_name == "openai" and self.openai_client:
-           self.openai_client.api_key = api_tokens.get("api_key")
+    async def on_red_api_tokens_update(self, service_name, _):
+        if service_name in ["openai", "openrouter"]:
+            await self.initialize_openai_client()
 
     @app_commands.command(name="chat")
     @app_commands.describe(text="The prompt you want to send to the AI.")
     @app_commands.checks.cooldown(1, 30)
     @app_commands.checks.cooldown(1, 5, key=None)
-    async def slash_command(self, inter: discord.Interaction, *,
-                            text: app_commands.Range[str, MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH]):
-        """ Talk directly to this bot's AI. Ask it anything you want! """
+    async def slash_command(
+        self,
+        inter: discord.Interaction,
+        *,
+        text: app_commands.Range[str, MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH],
+    ):
+        """Talk directly to this bot's AI. Ask it anything you want!"""
         await inter.response.defer()
 
         ctx = await commands.Context.from_interaction(inter)
         ctx.message.content = text
         if not await self.is_common_valid_reply(ctx):
-            return await ctx.send("You're not allowed to use this command here.", ephemeral=True)
+            return await ctx.send(
+                "You're not allowed to use this command here.", ephemeral=True
+            )
 
-        rate_limit_reset = datetime.strptime(await self.config.ratelimit_reset(), '%Y-%m-%d %H:%M:%S')
+        rate_limit_reset = datetime.strptime(
+            await self.config.ratelimit_reset(), "%Y-%m-%d %H:%M:%S"
+        )
         if rate_limit_reset > datetime.now():
-            return await ctx.send("The command is currently being ratelimited!", ephemeral=True)
+            return await ctx.send(
+                "The command is currently being ratelimited!", ephemeral=True
+            )
 
         try:
             await self.send_response(ctx)
@@ -160,14 +179,23 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
 
         if await self.is_bot_mentioned_or_replied(message):
             pass
-        elif random.random() > self.reply_percent.get(message.guild.id, DEFAULT_REPLY_PERCENT):
+        elif random.random() > self.reply_percent.get(
+            message.guild.id, DEFAULT_REPLY_PERCENT
+        ):
             return
 
-        rate_limit_reset = datetime.strptime(await self.config.ratelimit_reset(), '%Y-%m-%d %H:%M:%S')
+        rate_limit_reset = datetime.strptime(
+            await self.config.ratelimit_reset(), "%Y-%m-%d %H:%M:%S"
+        )
         if rate_limit_reset > datetime.now():
             logger.debug(
-                f"Want to respond but ratelimited until {rate_limit_reset.strftime('%Y-%m-%d %H:%M:%S')}")
-            if await self.is_bot_mentioned_or_replied(message) or self.reply_percent.get(message.guild.id, DEFAULT_REPLY_PERCENT) == 1.0:
+                f"Want to respond but ratelimited until {rate_limit_reset.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+            if (
+                await self.is_bot_mentioned_or_replied(message)
+                or self.reply_percent.get(message.guild.id, DEFAULT_REPLY_PERCENT)
+                == 1.0
+            ):
                 await ctx.react_quietly("💤")
             return
 
@@ -178,7 +206,7 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
         await self.send_response(ctx)
 
     async def wait_for_embed(self, ctx: commands.Context):
-        """ Wait for possible embed to be valid """
+        """Wait for possible embed to be valid"""
         start_time = asyncio.get_event_loop().time()
         while not is_embed_valid(ctx.message):
             ctx.message = await ctx.channel.fetch_message(ctx.message.id)
@@ -188,7 +216,7 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
         return ctx
 
     async def is_common_valid_reply(self, ctx: commands.Context) -> bool:
-        """ Run some common checks to see if a message is valid for the bot to reply to """
+        """Run some common checks to see if a message is valid for the bot to reply to"""
         if not ctx.guild:
             return False
         if await self.bot.cog_disabled_in_guild(self, ctx.guild):
@@ -196,8 +224,8 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
         if ctx.author.bot or not self.channels_whitelist.get(ctx.guild.id, []):
             return False
         if not ctx.interaction and (
-            isinstance(
-                ctx.channel, discord.Thread) and ctx.channel.parent.id not in self.channels_whitelist[ctx.guild.id]
+            isinstance(ctx.channel, discord.Thread)
+            and ctx.channel.parent.id not in self.channels_whitelist[ctx.guild.id]
             or ctx.channel.id not in self.channels_whitelist[ctx.guild.id]
         ):
             return False
@@ -207,13 +235,18 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
             return False
         if ctx.author.id in self.optout_users:
             return False
-        if not self.optindefault.get(ctx.guild.id) and ctx.author.id not in self.optin_users:
+        if (
+            not self.optindefault.get(ctx.guild.id)
+            and ctx.author.id not in self.optin_users
+        ):
             return False
-        if self.ignore_regex.get(ctx.guild.id) and self.ignore_regex[ctx.guild.id].search(ctx.message.content):
+        if self.ignore_regex.get(ctx.guild.id) and self.ignore_regex[
+            ctx.guild.id
+        ].search(ctx.message.content):
             return False
 
         if not self.openai_client:
-            await self.initalize_openai(ctx)
+            await self.initialize_openai_client(ctx)
         if not self.openai_client:
             return False
 
@@ -225,28 +258,38 @@ class AIUser(Settings, ResponseHandler, RandomMessageTask, commands.Cog, metacla
         if self.bot.user in message.mentions:
             return True
         if message.reference and message.reference.message_id:
-            reference_message = message.reference.cached_message or await message.channel.fetch_message(message.reference.message_id)
+            reference_message = (
+                message.reference.cached_message
+                or await message.channel.fetch_message(message.reference.message_id)
+            )
             return reference_message.author == self.bot.user
         return False
 
-    async def initialize_openai_client(self, ctx : commands.Context = None):
-        api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
+    async def initialize_openai_client(self, ctx: commands.Context = None):
+        base_url = await self.config.custom_openai_endpoint()
+        api_type = "openai"
+        api_key = None
+        if base_url and str(base_url).startswith("https://openrouter.ai/api/v1"):
+            api_type = "openrouter"
+            api_key = (await self.bot.get_shared_api_tokens(api_type)).get("api_key")
+        else:
+            api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
 
         if not api_key and ctx:
             error_message = (
-                f"OpenAI API key not set for `aiuser`. "
-                f"Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`"
+                f"{api_type} API key not set for `aiuser`. "
+                f"Please set it with `{ctx.clean_prefix}set api {api_type} api_key,API_KEY`"
             )
             await ctx.send(error_message)
             return
 
         if not api_key:
-            logger.error(F"OpenAI API key not set for `aiuser` yet! Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
+            logger.error(
+                f'{api_type} API key not set for "aiuser" yet! Please set it with: [p]set api {api_type} api_key,API_KEY'
+            )
             return
 
-        self.openai_client = AsyncOpenAI(api_key=api_key, timeout=50.0)
-
-        base_url = await self.config.custom_openai_endpoint()
-
-        if base_url:
-            self.openai_client.base_url = base_url
+        timeout = 60.0 if base_url else 50.0
+        self.openai_client = AsyncOpenAI(
+            api_key=api_key, base_url=base_url, timeout=timeout
+        )

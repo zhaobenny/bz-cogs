@@ -121,6 +121,7 @@ class MessagesList:
                 users.add(message.author)
 
         for i in range(len(past_messages)-1):
+
             if self.tokens > self.token_limit:
                 return logger.debug(f"{self.tokens} tokens used - nearing limit, stopping context creation for message {self.init_message.id}")
             if await self._is_valid_time_gap(past_messages[i], past_messages[i+1], max_seconds_gap):

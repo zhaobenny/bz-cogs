@@ -14,7 +14,7 @@ from aiuser.messages_list.entry import MessageEntry
 @commands.group(aliases=["ai_user"])
 @commands.guild_only()
 async def aiuser(self, _):
-    """ Utilize OpenAI to reply to messages and images in approved channels"""
+    """Utilize OpenAI to reply to messages and images in approved channels"""
     pass
 
 
@@ -31,4 +31,7 @@ class MixinMeta(ABC):
         self.cached_messages: Cache[int, MessageEntry]
         self.ignore_regex: dict[int, re.Pattern]
         self.channels_whitelist: dict[int, list[int]]
-        self.openai_client : AsyncOpenAI
+        self.openai_client: AsyncOpenAI
+
+    def initialize_openai_client(self):
+        pass
