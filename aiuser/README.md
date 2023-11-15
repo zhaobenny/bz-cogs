@@ -99,6 +99,13 @@ Requests are classified by trigger words / LLM decision. (eg. *"hey @botname, ca
 
 A suitable Stable Diffusion endpoint (Automatic1111 in API mode) must be provided and a non-trial OpenAI account is recommended.
 
+For a cost-efficient hosted solution, you can use [modal.com](https://modal.com/) to get a SD endpoint running. I written a modal template, [serverless-img-gen](https://github.com/zhaobenny/serverless-img-gen), that is compatible with this cog.
+
+When using serverless-img-gen, you might need to set an auth token:
+```
+[p]set api modal-img-gen token,AUTH_TOKEN
+```
+
 ---
 
 ## Random Messages 🎲
@@ -122,7 +129,7 @@ Admins also manage topics here:
 
 ## Prompt/Topics Variables  📝
 
-Prompts and topics can include certain variables by including one of the following strings:
+Prompts and topics can include certain variables by including one of the following placeholders:
 
 - `{botname}` - the bot's current nickname or username
 - `{authorname}` - the author of the message the bot is activated on
@@ -132,7 +139,7 @@ Prompts and topics can include certain variables by including one of the followi
 - `{currentweekday}` - the current weekday eg. Monday
 - `{currenttime}` - the current 24-hour time eg. 21:59
 
-Remove list regex patterns only support `{authorname}` (will use authors of last 10 messages) and `{botname}` strings.
+Remove list regex patterns only support `{authorname}` (will use authors of last 10 messages) and `{botname}` placeholders.
 
 ---
 
@@ -141,7 +148,7 @@ Remove list regex patterns only support `{authorname}` (will use authors of last
 [OpenRouter](https://openrouter.ai) is compatible as a custom OpenAI endpoint.
 
 OpenRouter has unfiltered open source models, Claude, and PaLM available for a cost.
-See full details [here].(https://openrouter.ai/docs#models)
+See full details [here](https://openrouter.ai/docs#models).
 
 Bot owners can set this globally using the following:
 ```
@@ -155,7 +162,7 @@ Get an API key from OpenRouter and set it here:
 
 Models will also need **changing** per server.
 
-Third party models may have undesirable results.
+Some third party models may have undesirable results.
 
 ---
 
@@ -176,7 +183,7 @@ Like OpenRouter, similar disclaimers apply:
 
 Models will also need **changing** per server.
 
-Third party models may have undesirable results.
+Some third party models may have undesirable results.
 
 Bot owners may also want to set custom parameters (per server). See:
 ```

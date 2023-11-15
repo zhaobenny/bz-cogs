@@ -53,12 +53,9 @@ class ImageResponse():
             chat = OpenAI_Chat_Generator(self.cog, self.ctx, message_list)
             response = ChatResponse(self.ctx, self.config, chat)
 
-
-        image_msg = await self.message.channel.send(file=discord.File(image, filename=f"{self.message.id}.png"))
-
         if response is not None:
             await response.send()
-
+        image_msg = await self.message.channel.send(file=discord.File(image, filename=f"{self.message.id}.png"))
 
         self.cog.cached_messages[image_msg.id] = saved_caption
         return True

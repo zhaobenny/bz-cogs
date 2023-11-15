@@ -25,12 +25,12 @@ class ChatResponse():
         self.response = await self.chat.generate_message()
 
         if not self.response:
-            return
+            return False
 
         await self.remove_patterns_from_response()
 
         if not self.response:
-            return
+            return False
 
         if len(self.response) >= 2000:
             chunks = [self.response[i:i+2000]
@@ -38,11 +38,12 @@ class ChatResponse():
             for chunk in chunks:
                 await self.ctx.send(chunk)
         elif not standalone and await self.is_reply():
-            return await message.reply(self.response, mention_author=False)
+            await message.reply(self.response, mention_author=False)
         elif self.ctx.interaction:
-            return await self.ctx.interaction.followup.send(self.response)
+            await self.ctx.interaction.followup.send(self.response)
         else:
-            return await self.ctx.send(self.response)
+            await self.ctx.send(self.response)
+        return True
 
     async def remove_patterns_from_response(self) -> str:
 

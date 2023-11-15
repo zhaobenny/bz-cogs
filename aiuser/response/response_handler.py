@@ -2,7 +2,6 @@ import logging
 import re
 
 import discord
-import openai
 from redbot.core import commands
 
 from aiuser.abc import MixinMeta
@@ -12,7 +11,8 @@ from aiuser.common.constants import (IMAGE_CHECK_REQUEST_PROMPT,
 from aiuser.messages_list.messages import create_messages_list
 from aiuser.response.chat.openai import OpenAI_Chat_Generator
 from aiuser.response.chat.response import ChatResponse
-from aiuser.response.image.generic import GenericStableDiffusionGenerator
+from aiuser.response.image.generic import GenericImageGenerator
+from aiuser.response.image.modal import ModalImageGenerator
 from aiuser.response.image.nemusona import NemusonaGenerator
 from aiuser.response.image.response import ImageResponse
 
@@ -46,8 +46,11 @@ class ResponseHandler(MixinMeta):
             return False
         elif sd_endpoint.startswith("https://waifus-api.nemusona.com/"):
             image_generator = NemusonaGenerator(ctx, self.config)
+        elif sd_endpoint.endswith("imggen.modal.run/"):
+            auth_token = (await self.bot.get_shared_api_tokens("modal-img-gen")).get("token")
+            image_generator = ModalImageGenerator(ctx, self.config, auth_token)
         else:
-            image_generator = GenericStableDiffusionGenerator(ctx, self.config)
+            image_generator = GenericImageGenerator(ctx, self.config)
 
         async with ctx.message.channel.typing():
             response = ImageResponse(self, ctx, image_generator)
@@ -110,8 +113,6 @@ class ResponseHandler(MixinMeta):
                 max_tokens=1,
             )
             bool_response = response.choices[0].message.content
-            print(bool_response)
-            bool_response = "True"
         except:
             logger.error(
                 f"Error while checking message for a image request", exc_info=True

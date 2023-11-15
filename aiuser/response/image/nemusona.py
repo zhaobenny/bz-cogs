@@ -7,29 +7,20 @@ import random
 
 import aiohttp
 from tenacity import retry, stop_after_attempt, wait_random
-from redbot.core import Config, commands
 from aiuser.response.image.generator import ImageGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class NemusonaGenerator(ImageGenerator):
-    def __init__(self, ctx: commands.Context, config: Config):
-        super().__init__(ctx, config)
-
     async def generate_image(self, caption):
         # eg. https://waifus-api.nemusona.com/job/submit/nemu
 
         url = await self.config.guild(self.ctx.guild).image_requests_endpoint()
         self.model = url.split("/")[-1]
 
-        parameters = await self.config.guild(self.ctx.guild).image_requests_parameters()
-        payload = {}
+        payload = await self._prepare_payload(caption)
 
-        if parameters is not None:
-            payload = json.loads(parameters)
-
-        payload["prompt"] = await self.config.guild(self.ctx.guild).image_requests_preprompt() + " " + caption
         logger.debug(f"Sending SD request to Nemusona with payload: {json.dumps(payload, indent=4)}")
         async with aiohttp.ClientSession() as session:
             async with session.post(url=f'{url}', json=payload) as response:
