@@ -100,7 +100,7 @@ class OwnerSettings(MixinMeta):
 
     @aiuserowner.command(name="importconfig")
     async def import_config(self, ctx: commands.Context):
-        """ Imports a config from json file (No checks are done!)
+        """ Imports a config from json file (:warning: No checks are done)
 
             Make sure your new config is valid, and the old config is backed up.
 
@@ -122,13 +122,15 @@ class OwnerSettings(MixinMeta):
 
         embed = discord.Embed(
             title="Have you backed up your current config?",
-            description="This will overwrite the current config, and you will lose existing settings!",
+            description=f":warning: This will overwrite the current config, and you will lose existing settings! \
+                \n :warning: You may also break the cog or bot, if the config is invalid. \
+                \n To fix, make sure you can access the config file: \n `{path}`",
             color=await ctx.embed_color())
         confirm = await ctx.send(embed=embed)
         start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
         pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
         try:
-            await ctx.bot.wait_for("reaction_add", timeout=10.0, check=pred)
+            await ctx.bot.wait_for("reaction_add", timeout=30.0, check=pred)
         except asyncio.TimeoutError:
             return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
         if pred.result is False:
