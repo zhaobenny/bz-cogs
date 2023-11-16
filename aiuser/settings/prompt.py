@@ -254,14 +254,18 @@ class PromptSettings(MixinMeta):
 
     async def _set_prompt(self, ctx: commands.Context, entity, entity_type, prompt: Optional[str]):
         """ Set custom prompt for the specified entity type (server, channel, role, user) """
-        self.override_prompt_start_time[entity.id] = ctx.message.created_at
 
-        config_attr = {
-            "server": self.config.guild(ctx.guild),
-            "user": self.config.member(entity),
-            "role": self.config.role(entity),
-            "channel": self.config.channel(entity),
-        }.get(entity_type)
+        self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
+        config_attr = None
+
+        if entity_type == "server":
+            config_attr = self.config.guild(ctx.guild)
+        elif entity_type == "user":
+            config_attr = self.config.member(entity)
+        elif entity_type == "role":
+            config_attr = self.config.role(entity)
+        elif entity_type == "channel":
+            config_attr = self.config.channel(entity)
 
         if not config_attr:
             return await ctx.send("Invalid entity type provided.")
