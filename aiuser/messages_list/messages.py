@@ -39,7 +39,8 @@ class MessagesList:
         self.init_message = ctx.message
         self.guild = ctx.guild
         self.ignore_regex = cog.ignore_regex.get(self.guild.id, None)
-        self.start_time = cog.override_prompt_start_time.get(self.guild.id, None)
+        self.start_time = cog.override_prompt_start_time.get(
+            self.guild.id, None)
         self.messages = []
         self.messages_ids = set()
         self.tokens = 0
@@ -50,7 +51,7 @@ class MessagesList:
     def __repr__(self) -> str:
         return json.dumps(self.get_json(), indent=4)
 
-    async def _init(self, prompt=None):
+    async def _init(self, given_prompt=None):
         model = await self.config.guild(self.guild).model()
         self.token_limit = self._get_token_limit(model)
         try:
@@ -58,18 +59,26 @@ class MessagesList:
         except KeyError:
             self._encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
-        if not prompt:
+        if not given_prompt:
             await self.add_msg(self.init_message)
 
-        bot_prompt = (
-            prompt
-            or await self.config.member(self.init_message.author).custom_text_prompt()
-            or await self.config.channel(self.init_message.channel).custom_text_prompt()
-            or await self.config.guild(self.guild).custom_text_prompt()
-            or DEFAULT_PROMPT
-        )
+        bot_prompt = given_prompt or await self._pick_prompt()
 
         await self.add_system(format_variables(self.ctx, bot_prompt))
+
+    async def _pick_prompt(self):
+        author = self.init_message.author
+
+        for role in author.roles:
+            if role.id in (await self.config.all_roles()):
+                role_prompt = await self.config.role(role).custom_text_prompt()
+                break
+
+        return (await self.config.member(self.init_message.author).custom_text_prompt()
+                or role_prompt
+                or await self.config.channel(self.init_message.channel).custom_text_prompt()
+                or await self.config.guild(self.guild).custom_text_prompt()
+                or DEFAULT_PROMPT)
 
     async def add_msg(self, message: Message, index: int = None, force: bool = False):
         if self.tokens > self.token_limit:

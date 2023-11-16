@@ -32,7 +32,7 @@ class PromptSettings(MixinMeta):
         """ Reset ALL prompts in this guild to default (inc. channels and members) """
         embed = discord.Embed(
             title="Are you sure?",
-            description="This will reset *ALL* prompts in this guild to default (including per channels and per member)",
+            description="This will reset *ALL* prompts in this guild to default (including per channel, per role and per member)",
             color=await ctx.embed_color())
         confirm = await ctx.send(embed=embed)
         start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
@@ -50,10 +50,12 @@ class PromptSettings(MixinMeta):
                 await self.config.member(member).custom_text_prompt.set(None)
             for channel in ctx.guild.channels:
                 await self.config.channel(channel).custom_text_prompt.set(None)
+            for role in ctx.guild.roles:
+                await self.config.role(role).custom_text_prompt.set(None)
             return await confirm.edit(embed=discord.Embed(title="All prompts have been reset to default.", color=await ctx.embed_color()))
 
     @prompt.group(name="show", invoke_without_command=True)
-    async def prompt_show(self, ctx: commands.Context, mention: Optional[Union[discord.Member, discord.TextChannel, discord.VoiceChannel, discord.StageChannel]]):
+    async def prompt_show(self, ctx: commands.Context, mention: Optional[Union[discord.Member, discord.Role, discord.TextChannel, discord.VoiceChannel, discord.StageChannel]]):
         """ Show the prompt for the server (or provided user/channel)
             **Arguments**
                 - `mention` *(Optional)* User or channel
@@ -61,6 +63,9 @@ class PromptSettings(MixinMeta):
         if mention and isinstance(mention, discord.Member):
             prompt = await self.config.member(mention).custom_text_prompt()
             title = f"The prompt for the user {mention.display_name} is:"
+        elif mention and isinstance(mention, discord.Role):
+            prompt = await self.config.role(mention).custom_text_prompt()
+            title = f"The prompt for the role {mention.name} is:"
         elif mention and isinstance(mention, discord.TextChannel) or isinstance(mention, discord.VoiceChannel) or isinstance(mention, discord.StageChannel):
             prompt = await self.config.channel(mention).custom_text_prompt()
             title = f"The prompt for {mention.mention} is:"
@@ -80,6 +85,60 @@ class PromptSettings(MixinMeta):
         embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
         await ctx.send(embed=embed)
 
+    @prompt_show.command(name="members", aliases=["users"])
+    async def show_user_prompts(self, ctx: commands.Context):
+        """ Show all users with custom prompts """
+        await self._show_prompts(ctx, ctx.guild.members, "user")
+
+    @prompt_show.command(name="roles")
+    async def show_role_prompts(self, ctx: commands.Context):
+        """ Show all roles with custom prompts """
+        await self._show_prompts(ctx, ctx.guild.roles, "role")
+
+    @prompt_show.command(name="channels")
+    async def show_channel_prompts(self, ctx: commands.Context):
+        """ Show all channels with custom prompts """
+        await self._show_prompts(ctx, ctx.guild.channels, "channel")
+
+    async def _get_custom_prompt(self, ctx, entity, entity_name, entity_type):
+
+        if entity_type == "user":
+            custom_prompt = await self.config.member(entity).custom_text_prompt()
+        elif entity_type == "role":
+            custom_prompt = await self.config.role(entity).custom_text_prompt()
+        elif entity_type == "channel":
+            custom_prompt = await self.config.channel(entity).custom_text_prompt()
+
+        if not custom_prompt:
+            return None
+
+        embed = discord.Embed(
+            title=f"The prompt for {entity_type} {entity_name} is:",
+            description=self._truncate_prompt(custom_prompt),
+            color=await ctx.embed_color()
+        )
+        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, custom_prompt))
+        return embed
+
+    async def _show_prompts(self, ctx, entities, entity_type):
+        pages = []
+        for entity in entities:
+            entity_name = entity.display_name if entity_type == "user" else entity.name
+            embed = await self._get_custom_prompt(ctx, entity, entity_name, entity_type)
+            if embed:
+                pages.append(embed)
+
+        if not pages:
+            return await ctx.send(f"No {entity_type}s with custom prompts")
+
+        if len(pages) == 1:
+            return await ctx.send(embed=pages[0])
+
+        for i, page in enumerate(pages):
+            page.set_footer(text=f"Page {i+1} of {len(pages)}")
+
+        await SimpleMenu(pages).start(ctx)
+
     @prompt_show.command(name="server", aliases=["guild"])
     async def show_server_prompt(self, ctx: commands.Context):
         """ Show the current server prompt """
@@ -91,50 +150,8 @@ class PromptSettings(MixinMeta):
         embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
         await ctx.send(embed=embed)
 
-    @prompt_show.command(name="members", aliases=["users"])
-    async def show_user_prompts(self, ctx: commands.Context):
-        """ Show all users with custom prompts """
-        pages = []
-        for member in ctx.guild.members:
-            prompt = await self.config.member(member).custom_text_prompt()
-            if prompt:
-                page = discord.Embed(
-                    title=f"The prompt for user {member.display_name} is:",
-                    description=self._truncate_prompt(prompt),
-                    color=await ctx.embed_color())
-                page.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
-                pages.append(page)
-        if not pages:
-            return await ctx.send("No users with custom prompts")
-        if len(pages) == 1:
-            return await ctx.send(embed=pages[0])
-        for i, page in enumerate(pages):
-            page.set_footer(text=f"Page {i+1} of {len(pages)}")
-        await SimpleMenu(pages).start(ctx)
-
-    @prompt_show.command(name="channels")
-    async def show_channel_prompts(self, ctx: commands.Context):
-        """ Show all channels with custom prompts """
-        pages = []
-        for channel in ctx.guild.channels:
-            prompt = await self.config.channel(channel).custom_text_prompt()
-            if prompt:
-                page = discord.Embed(
-                    title=f"The prompt for {channel.mention} is:",
-                    description=self._truncate_prompt(prompt),
-                    color=await ctx.embed_color())
-                page.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
-                pages.append(page)
-        if not pages:
-            return await ctx.send("No channels with custom prompts")
-        if len(pages) == 1:
-            return await ctx.send(embed=pages[0])
-        for i, page in enumerate(pages):
-            page.set_footer(text=f"Page {i+1} of {len(pages)}")
-        await SimpleMenu(pages).start(ctx)
-
     @prompt.group(name="preset")
-    async def prompt_preset(self, ctx: commands.Context):
+    async def prompt_preset(self, _: commands.Context):
         """ Manage presets for the current server
         """
         pass
@@ -209,8 +226,10 @@ class PromptSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @prompt.command(name="set", aliases=["custom", "customize"])
-    async def prompt_custom(self, ctx, mention: Optional[Union[discord.Member, discord.TextChannel, discord.VoiceChannel, discord.StageChannel]], *, prompt: Optional[str]):
-        """ Set a custom prompt or preset for the server (or provided channel/user)
+    async def prompt_custom(self, ctx, mention: Optional[Union[discord.Member, discord.Role, discord.TextChannel, discord.VoiceChannel, discord.StageChannel]], *, prompt: Optional[str]):
+        """ Set a custom prompt or preset for the server (or provided channel/role/member)
+
+            If multiple prompts can be used, the most specific prompt will be used, eg. it will go for: member > role > channel > server
 
             **Arguments**
                 - `mention` *(Optional)* A specific user or channel
@@ -223,48 +242,37 @@ class PromptSettings(MixinMeta):
         presets = json.loads(await self.config.guild(ctx.guild).presets())
         if prompt and prompt in presets:
             prompt = presets[prompt]
-        if isinstance(mention, discord.Member):
-            await self.set_user_prompt(ctx, mention, prompt)
+        elif isinstance(mention, discord.Role):
+            entity_type = "role"
+        elif isinstance(mention, discord.Member):
+            entity_type = "user"
         elif isinstance(mention, discord.TextChannel) or isinstance(mention, discord.VoiceChannel) or isinstance(mention, discord.StageChannel):
-            await self.set_channel_prompt(ctx, mention, prompt)
+            entity_type = "channel"
         else:
-            await self.set_server_prompt(ctx, prompt)
+            entity_type = "server"
+        return await self._set_prompt(ctx, mention, entity_type, prompt)
 
-    async def set_server_prompt(self, ctx: commands.Context, prompt: Optional[str]):
-        """ Set custom prompt for current server """
-        self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
-        if not prompt:
-            await self.config.guild(ctx.guild).custom_text_prompt.set(None)
-            return await ctx.send(f"The prompt for this server is now reset to the default prompt")
-        await self.config.guild(ctx.guild).custom_text_prompt.set(prompt)
-        embed = discord.Embed(
-            title="The prompt for this server is now changed to:",
-            description=f"{self._truncate_prompt(prompt)}",
-            color=await ctx.embed_color())
-        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
-        return await ctx.send(embed=embed)
+    async def _set_prompt(self, ctx: commands.Context, entity, entity_type, prompt: Optional[str]):
+        """ Set custom prompt for the specified entity type (server, channel, role, user) """
+        self.override_prompt_start_time[entity.id] = ctx.message.created_at
 
-    async def set_user_prompt(self, ctx: commands.Context, member: discord.Member, prompt: Optional[str]):
-        """ Set custom prompt for a member of this server, overrides server and channel prompts """
-        if not prompt:
-            await self.config.member(member).custom_text_prompt.set(None)
-            return await ctx.send(f"The prompt for user {member.display_name} is now reset to default server prompt.")
-        await self.config.member(member).custom_text_prompt.set(prompt)
-        embed = discord.Embed(
-            title=f"The prompt for user {member.display_name} is now changed to:",
-            description=f"{self._truncate_prompt(prompt)}",
-            color=await ctx.embed_color())
-        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
-        return await ctx.send(embed=embed)
+        config_attr = {
+            "server": self.config.guild(ctx.guild),
+            "user": self.config.member(entity),
+            "role": self.config.role(entity),
+            "channel": self.config.channel(entity),
+        }.get(entity_type)
 
-    async def set_channel_prompt(self, ctx: commands.Context, channel: Union[discord.TextChannel, discord.VoiceChannel, discord.StageChannel], prompt: Optional[str]):
-        """ Set custom prompt for the current channel, overrides the server prompt """
+        if not config_attr:
+            return await ctx.send("Invalid entity type provided.")
+
         if not prompt:
-            await self.config.channel(channel).custom_text_prompt.set(None)
-            return await ctx.send(f"The prompt for {channel.mention} is now reset to default server prompt.")
-        await self.config.channel(channel).custom_text_prompt.set(prompt)
+            await config_attr.custom_text_prompt.set(None)
+            return await ctx.send(f"The prompt for this {entity_type} is now reset to the default prompt")
+
+        await config_attr.custom_text_prompt.set(prompt)
         embed = discord.Embed(
-            title=f"The prompt for channel {channel.mention} is now changed to:",
+            title=f"The prompt for this {entity_type} is now changed to:",
             description=f"{self._truncate_prompt(prompt)}",
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))

@@ -90,16 +90,20 @@ class AIUser(
             "image_requests_subject": "woman",
             "image_requests_reduced_llm_calls": False,
         }
-        default_member = {
+        default_channel = {
             "custom_text_prompt": None,
         }
-        default_channel = {
+        default_role = {
+            "custom_text_prompt": None,
+        }
+        default_member = {
             "custom_text_prompt": None,
         }
 
         self.config.register_member(**default_member)
-        self.config.register_guild(**default_guild)
+        self.config.register_role(**default_role)
         self.config.register_channel(**default_channel)
+        self.config.register_guild(**default_guild)
         self.config.register_global(**default_global)
 
     async def cog_load(self):
@@ -312,6 +316,8 @@ class AIUser(
         bytes = await request.aread()
         request = json.loads(bytes.decode('utf-8'))
         messages = request.get("messages", {})
+        if not messages:
+            return
         logger.debug(
             f"Senting request with prompt: \n{json.dumps(messages, indent=4)}"
         )
