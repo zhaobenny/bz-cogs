@@ -68,7 +68,8 @@ class MessagesList:
 
     async def _pick_prompt(self):
         author = self.init_message.author
-
+        role_prompt = None
+        
         for role in author.roles:
             if role.id in (await self.config.all_roles()):
                 role_prompt = await self.config.role(role).custom_text_prompt()
