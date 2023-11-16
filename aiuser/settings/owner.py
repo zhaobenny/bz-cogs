@@ -1,8 +1,14 @@
+import asyncio
+import json
 import logging
+from pathlib import Path
 from typing import Optional
 
 import discord
 from redbot.core import checks, commands
+from redbot.core.data_manager import cog_data_path
+from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
+from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.abc import MixinMeta
 
@@ -75,3 +81,63 @@ class OwnerSettings(MixinMeta):
             embed.description = "Endpoint reset back to offical OpenAI endpoint."
 
         await ctx.send(embed=embed)
+
+    @aiuserowner.command(name="exportconfig")
+    async def export_config(self, ctx: commands.Context):
+        """Exports the current config to a json file
+
+           :warning: JSON backend only
+        """
+        path = Path(cog_data_path(self) / "settings.json")
+
+        if not path.exists():
+            return await ctx.send(":warning: Export is only supported for json backends")
+
+        await ctx.send(
+            file=discord.File(path, filename="aiuser_config.json")
+        )
+        await ctx.tick()
+
+    @aiuserowner.command(name="importconfig")
+    async def import_config(self, ctx: commands.Context):
+        """ Imports a config from json file (No checks are done!)
+
+            Make sure your new config is valid, and the old config is backed up.
+
+           :warning: JSON backend only
+        """
+        if not ctx.message.attachments:
+            return await ctx.send(":warning: No file was attached.")
+
+        file = ctx.message.attachments[0]
+        try:
+            new_config = json.loads(await file.read())
+        except json.JSONDecodeError:
+            return await ctx.send(":warning: Invalid JSON format!")
+
+        path = Path(cog_data_path(self) / "settings.json")
+
+        if not path.exists():
+            return await ctx.send(":warning: Import is only supported for json backends")
+
+        embed = discord.Embed(
+            title="Have you backed up your current config?",
+            description="This will overwrite the current config, and you will lose existing settings!",
+            color=await ctx.embed_color())
+        confirm = await ctx.send(embed=embed)
+        start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
+        pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
+        try:
+            await ctx.bot.wait_for("reaction_add", timeout=10.0, check=pred)
+        except asyncio.TimeoutError:
+            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+        if pred.result is False:
+            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+
+        with path.open("w") as f:
+            json.dump(new_config, f, indent=4)
+
+        return await confirm.edit(embed=discord.Embed(
+            title="Overwritten!",
+            description="You will need to restart the bot for the changes to take effect.",
+            color=await ctx.embed_color()))
