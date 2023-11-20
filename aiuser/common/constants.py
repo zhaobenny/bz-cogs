@@ -43,7 +43,8 @@ MAX_MESSAGE_LENGTH = 1000  # in words
 # image captioning
 IMAGE_RESOLUTION = 1024
 # for rudimentary SD request checks
-RELATED_IMAGE_WORDS = ["image", "images", "picture", "pictures", "photo", "photos", "photograph", "photographes"]
+RELATED_IMAGE_WORDS = ["image", "images", "picture",
+                       "pictures", "photo", "photos", "photograph", "photographs"]
 SECOND_PERSON_WORDS = ["yourself", "you"]
 IMAGE_CHECK_REQUEST_PROMPT = "Your task is to classify messages. You are {botname}. Is the following a message asking for a picture, image, or photo that includes yourself or {botname}?  Answer with True/False."
 IMAGE_GENERATION_PROMPT = """
@@ -54,13 +55,19 @@ Here is a sample of how it should be output: "Beautiful woman, contemplative and
 
 Convert the below message to a Stable Diffusion Art Prompt.  The prompt should be a full sentence, no second person references, no line breaks, no delimiters, and keep it as concise as possible while still conveying a full scene.
 """
+VISION_SUPPORTED_MODELS = [
+    "gpt-4-vision-preview",
+    "openai/gpt-4-vision-preview",
+    "haotian-liu/llava-13b"
+]
 OTHER_MODELS_LIMITS = {
     "gpt-3.5-turbo-1106": 12000,
-    "gpt-4-1106-preview": 123000 ,
+    "gpt-4-1106-preview": 123000,
     "gpt-4-vision-preview": 123000,
     "claude-2": 98000,
     "claude-instant-v1": 98000,
     "toppy-m-7b": 31000,
+    "nous-capybara-34b": 31000,
     "palm-2-chat-bison": 7000,
     "claude-v1": 7000,
     "claude-1.2": 7000,

@@ -5,6 +5,7 @@ import discord
 from redbot.core import checks, commands
 
 from aiuser.abc import MixinMeta, aiuser
+from aiuser.common.constants import VISION_SUPPORTED_MODELS
 from aiuser.common.enums import ScanImageMode
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -47,8 +48,17 @@ class ImageScanSettings(MixinMeta):
     async def image_mode(self, ctx: commands.Context, mode: str):  # Modify the parameter type
         """ Set method for scanning images """
         values = [m.value for m in ScanImageMode]
+
         if mode not in values:
-            return await ctx.send(f"Invalid mode. Choose from: {', '.join(values)}")
+            await ctx.send(":warning: Invalid mode.")
+
+        if mode == "list" or mode not in values:
+            embed = discord.Embed(
+                title="Valid modes:",
+                description="\n".join(values),
+                color=await ctx.embed_color())
+            return await ctx.send(embed=embed)
+
         mode = ScanImageMode(mode)
         if mode == ScanImageMode.LOCAL:
             try:
@@ -57,10 +67,12 @@ class ImageScanSettings(MixinMeta):
                 importlib.import_module("transformers")
                 await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.LOCAL.value)
                 embed = discord.Embed(title="Scanning Images for this server now set to", color=await ctx.embed_color())
-                embed.add_field(name=":warning: __WILL CAUSE HEAVY CPU LOAD__ :warning:", value=mode.value, inline=False)
+                embed.add_field(
+                    name=":warning: __WILL CAUSE HEAVY CPU LOAD__ :warning:", value=mode.value, inline=False)
                 return await ctx.send(embed=embed)
             except Exception as e:
-                logger.error("Image processing dependencies import failed. ", exc_info=True)
+                logger.error(
+                    "Image processing dependencies import failed. ", exc_info=True)
                 await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.AI_HORDE.value)
                 return await ctx.send(":warning: Local image processing dependencies not available. Please install them (see cog README.md) to use this feature locally.")
         elif mode == ScanImageMode.AI_HORDE:
@@ -85,17 +97,15 @@ class ImageScanSettings(MixinMeta):
                 value="AI Horde is a crowdsourced volunteer service. \n Please contribute back if heavily used. See [here](https://stablehorde.net/)",
                 inline=False)
             return await ctx.send(embed=embed)
-        elif mode == ScanImageMode.GPT4:
-            models = [model.id for model in (await self.openai_client.models.list()).data]
-            if "gpt-4-vision-preview" not in models:
-                return await ctx.send(":warning: Your OpenAI API key does not have access to the gpt-4-vision-preview model.")
+        elif mode == ScanImageMode.LLM:
+            if not ((await self.config.guild(ctx.guild).model()) in VISION_SUPPORTED_MODELS):
+                return await ctx.send(":warning: Currently selected model does not support image scanning. Set a comptaible model first!")
 
-            await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.GPT4.value)
+            await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.LLM.value)
             embed = discord.Embed(title="Scanning Images for this server now set to", description=mode.value, color=await ctx.embed_color())
-            embed.add_field(name="__Model switch__", value="This will set the model to gpt-4-vision-preview", inline=False)
-            await self.config.guild(ctx.guild).model.set("gpt-4-vision-preview")
+
             embed.add_field(
                 name=":warning: __PRIVACY WARNING__ :warning:",
-                value="This will send images to OpenAI for processing! \n Please inform users or use local mode for privacy.",
+                value="This may send images to OpenAI / third party for processing! \n Please inform users or use local mode for privacy.",
                 inline=False)
             return await ctx.send(embed=embed)

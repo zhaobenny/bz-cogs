@@ -48,9 +48,9 @@ Bot owners can see settings here:
 [p]aiuser imagescan
 ```
 
-### gpt-4-vision-preview mode
+### Supported LLM mode
 
-Utilize OpenAI's gpt-4-vision-preview mode for images, superior to other modes in performance but not in cost.
+If the chosen LLM model (eg. gpt-4-vision-preview) supports images, it will directly sent the image as a input using this mode. (superior to other modes in performance but not in cost)
 
 ### AI Horde Mode
 Utilize [AI Horde's](https://stablehorde.net/) Image Alchemy to caption images.

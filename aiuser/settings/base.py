@@ -7,11 +7,10 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.abc import MixinMeta
+from aiuser.common.constants import VISION_SUPPORTED_MODELS
 from aiuser.common.enums import ScanImageMode
-from aiuser.common.utilities import (
-    is_using_openai_endpoint,
-    is_using_openrouter_endpoint,
-)
+from aiuser.common.utilities import (is_using_openai_endpoint,
+                                     is_using_openrouter_endpoint)
 from aiuser.settings.image_request import ImageRequestSettings
 from aiuser.settings.image_scan import ImageScanSettings
 from aiuser.settings.owner import OwnerSettings
@@ -124,7 +123,8 @@ class Settings(
             endpoint_text = "Using an custom endpoint"
         else:
             endpoint_text = "Using offical OpenAI endpoint"
-        main_embed.add_field(name="LLM Endpoint", inline=False, value=endpoint_text)
+        main_embed.add_field(name="LLM Endpoint",
+                             inline=False, value=endpoint_text)
         embeds.append(main_embed)
 
         regex_embed = discord.Embed(
@@ -135,7 +135,8 @@ class Settings(
             regex_embed.add_field(
                 name="Remove list", value=f"{len(removelist_regexes)} regexes set"
             )
-        regex_embed.add_field(name="Ignore Regex", value=f"`{config['ignore_regex']}`")
+        regex_embed.add_field(name="Ignore Regex",
+                              value=f"`{config['ignore_regex']}`")
         embeds.append(regex_embed)
 
         parameters = config["parameters"]
@@ -240,10 +241,14 @@ class Settings(
         if not self.openai_client:
             await self.initalize_openai(ctx)
 
+        if await self.config.guild(ctx.guild).scan_images_mode() == ScanImageMode.LLM.value and model not in VISION_SUPPORTED_MODELS:
+            return await ctx.send(":warning: Can not select model that with no build-in support for images!\n Switch image scanning mode or select a model that supports images.")
+
         models_list = await self.openai_client.models.list()
 
         if is_using_openai_endpoint(self.openai_client):
-            gpt_models = [model.id for model in models_list.data if "gpt" in model.id]
+            gpt_models = [
+                model.id for model in models_list.data if "gpt" in model.id]
         else:
             gpt_models = [model.id for model in models_list.data]
 
@@ -253,16 +258,10 @@ class Settings(
             return
 
         if model not in gpt_models:
-            await ctx.send(":warning: Not a valid model! :warning:")
+            await ctx.send(":warning: Not a valid model!")
             menu = await self._paginate_models(ctx, gpt_models)
             await menu.start(ctx)
             return
-
-        mode = ScanImageMode(await self.config.guild(ctx.guild).scan_images_mode())
-        if mode == ScanImageMode.GPT4:
-            return await ctx.send(
-                ":warning: Can not swap models when set to scan images using gpt-4-vision-preview :warning:"
-            )
 
         await self.config.guild(ctx.guild).model.set(model)
         embed = discord.Embed(
@@ -273,7 +272,8 @@ class Settings(
         return await ctx.send(embed=embed)
 
     async def _paginate_models(self, ctx, models):
-        pagified_models = [models[i : i + 10] for i in range(0, len(models), 10)]
+        pagified_models = [models[i: i + 10]
+                           for i in range(0, len(models), 10)]
         menu_pages = []
 
         for models_page in pagified_models:
@@ -281,7 +281,8 @@ class Settings(
                 title="Available Models",
                 color=await ctx.embed_color(),
             )
-            embed.description = "\n".join([f"`{model}`" for model in models_page])
+            embed.description = "\n".join(
+                [f"`{model}`" for model in models_page])
             menu_pages.append(embed)
 
         if is_using_openrouter_endpoint(self.openai_client):

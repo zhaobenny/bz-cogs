@@ -36,7 +36,7 @@ async def transcribe_image(cog: MixinMeta, message: Message):
         except ImportError:
             logger.error("Local image scanning dependencies not installed, check cog README for instructions", exc_info=True)
             return None
-    elif mode == ScanImageMode.GPT4:
+    elif mode == ScanImageMode.LLM:
         content = [{"type": "image", "image_url": message.attachments[0].url}]
         if message.content != "":
             content.append({"type": "text", "text":  format_text_content(message)})

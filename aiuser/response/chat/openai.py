@@ -1,12 +1,12 @@
 import json
 import logging
-import random
-from datetime import datetime, timedelta
 
+import httpx
 import openai
 from redbot.core import commands
 
 from aiuser.abc import MixinMeta
+from aiuser.common.constants import VISION_SUPPORTED_MODELS
 from aiuser.messages_list.messages import MessagesList
 from aiuser.response.chat.generator import Chat_Generator
 
@@ -31,9 +31,9 @@ class OpenAI_Chat_Generator(Chat_Generator):
             )
             kwargs["logit_bias"] = logit_bias
 
-        if "gpt-4-vision-preview" in model:
+        if model in VISION_SUPPORTED_MODELS:
             logger.warning(
-                "logit_bias is currently not supported for gpt-4-vision-preview, removing..."
+                "logit_bias is currently not supported for this LLM, removing..."
             )
             del kwargs["logit_bias"]
 
@@ -62,11 +62,15 @@ class OpenAI_Chat_Generator(Chat_Generator):
         try:
             response = await self.request_openai(model)
             return response
+        except httpx.ReadTimeout:
+            logger.error(
+                f"Failed request to LLM endpoint. Timed out after >50 seconds")
+            await self.ctx.react_quietly("💤")
         except openai.RateLimitError:
             await self.ctx.react_quietly("💤")
         except:
             logger.error(
-                f"Failed API request(s) to OpenAI. Last exception was:", exc_info=True
+                f"Failed API request(s) to LLM endpoint. Last exception was:", exc_info=True
             )
             await self.ctx.react_quietly("⚠️")
         return None
