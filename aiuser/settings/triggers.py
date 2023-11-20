@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Optional
+from typing import Optional, Union
 
 import discord
 from redbot.core import checks, commands
@@ -61,3 +61,76 @@ class TriggerSettings(MixinMeta):
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
+    @trigger.group(name="whitelist", aliases=["whitelists"])
+    async def trigger_whitelist(self, ctx: commands.Context):
+        """ If configured, only whitelisted roles / uses can trigger a response in whitelisted channels
+        """
+        pass
+
+    @trigger_whitelist.command(name="add")
+    async def trigger_whitelist_add(self, ctx: commands.Context, new: Union[discord.Role, discord.Member]):
+        """ Add a role to the whitelist """
+        if isinstance(new, discord.Role):
+            whitelist = await self.config.guild(ctx.guild).roles_whitelist()
+            if new.id in whitelist:
+                return await ctx.send("That role is already whitelisted")
+            whitelist.append(new.id)
+            await self.config.guild(ctx.guild).roles_whitelist.set(whitelist)
+
+        elif isinstance(new, discord.Member):
+            whitelist = await self.config.guild(ctx.guild).members_whitelist()
+            if new.id in whitelist:
+                return await ctx.send("That user is already whitelisted")
+            whitelist.append(new.id)
+            await self.config.guild(ctx.guild).members_whitelist.set(whitelist)
+
+        return await self.show_trigger_whitelist(ctx, discord.Embed(
+            title="The whitelist is now:",
+            color=await ctx.embed_color()))
+
+    @trigger_whitelist.command(name="remove")
+    async def trigger_whitelist_remove(self, ctx: commands.Context, rm: Union[discord.Role, discord.Member]):
+        """ Remove a role from the whitelist """
+        if isinstance(rm, discord.Role):
+            whitelist = await self.config.guild(ctx.guild).roles_whitelist()
+            if rm.id not in whitelist:
+                return await ctx.send("That role is not whitelisted")
+            whitelist.remove(rm.id)
+            await self.config.guild(ctx.guild).roles_whitelist.set(whitelist)
+
+        elif isinstance(rm, discord.Member):
+            whitelist = await self.config.guild(ctx.guild).members_whitelist()
+            if rm.id not in whitelist:
+                return await ctx.send("That user is not whitelisted")
+            whitelist.remove(rm.id)
+            await self.config.guild(ctx.guild).members_whitelist.set(whitelist)
+        return await self.show_trigger_whitelist(ctx, discord.Embed(
+            title="The whitelist is now:",
+            color=await ctx.embed_color()))
+
+    @trigger_whitelist.command(name="list", aliases=["show"])
+    async def trigger_whitelist_list(self, ctx: commands.Context):
+        """ Show the whitelist """
+        return await self.show_trigger_whitelist(ctx, discord.Embed(
+            title="Whitelist of users/roles that will trigger LLM",
+            color=await ctx.embed_color()))
+
+    @trigger_whitelist.command(name="clear")
+    async def trigger_whitelist_clear(self, ctx: commands.Context):
+        """ Clear the whitelist, allowing anyone to trigger LLM in whitelisted channels """
+        await self.config.guild(ctx.guild).roles_whitelist.set([])
+        await self.config.guild(ctx.guild).members_whitelist.set([])
+        return await ctx.send("The whitelist has been cleared.")
+
+    async def show_trigger_whitelist(self, ctx: commands.Context, embed: discord.Embed):
+        roles_whitelist = await self.config.guild(ctx.guild).roles_whitelist()
+        users_whitelist = await self.config.guild(ctx.guild).members_whitelist()
+        if roles_whitelist:
+            embed.add_field(name="Roles", value="\n".join(
+                [f"<@&{r}>" for r in roles_whitelist]), inline=False)
+        if users_whitelist:
+            embed.add_field(name="Users", value="\n".join(
+                [f"<@{u}>" for u in users_whitelist]), inline=False)
+        if not roles_whitelist and not users_whitelist:
+            embed.description = "There is nothing whitelisted.\nAnyone can trigger it in whitelisted channels."
+        return await ctx.send(embed=embed)

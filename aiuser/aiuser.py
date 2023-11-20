@@ -74,6 +74,8 @@ class AIUser(
             "model": "gpt-3.5-turbo",
             "custom_text_prompt": None,
             "channels_whitelist": [],
+            "roles_whitelist": [],
+            "members_whitelist": [],
             "public_forget": False,
             "ignore_regex": None,
             "removelist_regexes": DEFAULT_REMOVE_PATTERNS,
@@ -245,6 +247,11 @@ class AIUser(
         ):
             return False
         if self.ignore_regex.get(ctx.guild.id) and self.ignore_regex[ctx.guild.id].search(ctx.message.content):
+            return False
+
+        whitelisted_roles = await self.config.guild(ctx.guild).roles_whitelist()
+        whitelisted_members = await self.config.guild(ctx.guild).members_whitelist()
+        if (whitelisted_members or whitelisted_roles)  and not ((ctx.author.id in whitelisted_members) or (ctx.author.roles and (set([role.id for role in ctx.author.roles]) & set(whitelisted_roles)))):
             return False
 
         if not self.openai_client:
