@@ -1,7 +1,6 @@
 import base64
 import io
 import logging
-from typing import Optional
 
 import aiohttp
 import discord
@@ -9,10 +8,11 @@ from redbot.core import Config, app_commands, checks, commands
 from redbot.core.bot import Red
 
 from aimage.abc import CompositeMetaClass
+from aimage.constants import (DEFAULT_BADWORDS_BLACKLIST,
+                              DEFAULT_NEGATIVE_PROMPT)
 from aimage.settings import Settings
 from aimage.views import ImageActions
 
-DEFAULT_NEGATIVE_PROMPT = "ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, bad anatomy, watermark, signature, cut off, low contrast, underexposed, overexposed, bad art, beginner, amateur, distorted face"
 logger = logging.getLogger("red.bz_cogs.aiimage")
 
 
@@ -28,12 +28,12 @@ class AImage(Settings,
 
         default_global = {
             "endpoint": None,
-            "words_blacklist": []
+            "words_blacklist": DEFAULT_BADWORDS_BLACKLIST
         }
 
         default_guild = {
             "endpoint": None,
-            "words_blacklist": [],
+            "words_blacklist": DEFAULT_BADWORDS_BLACKLIST,
             "negativeprompt": DEFAULT_NEGATIVE_PROMPT,
             "cfg": 7,
             "sampling_steps": 20,
@@ -47,26 +47,20 @@ class AImage(Settings,
     async def red_delete_data_for_user(self, **kwargs):
         return
 
-    async def cog_load(self):
-        # remove this
-        # self.bot.tree.copy_global_to(
-        #     guild=discord.Object(id=744802856074346556))
-        return
-
     async def cog_unload(self):
         await self.session.close()
 
     @commands.command()
     @commands.cooldown(1, 5, commands.BucketType.user)
     @checks.bot_has_permissions(attach_files=True)
+    @checks.bot_in_a_guild()
     async def paint(self, ctx: commands.Context, *, prompt: str):
         """
-        Generate an image using a Stable Diffusion endpoint
+        Generate an image using Stable Diffusion
 
         **Arguments**
             - `prompt` a prompt to generate an image from
         """
-
         endpoint = await self._get_endpoint(ctx)
 
         if not endpoint:
@@ -82,7 +76,7 @@ class AImage(Settings,
             "prompt": prompt,
             "cfg": await self.config.guild(ctx.guild).cfg(),
             "negativeprompt": await self.config.guild(ctx.guild).negativeprompt(),
-            "sampling_steps": await self.config.guild(ctx.guild).sampling_steps()
+            "steps": await self.config.guild(ctx.guild).sampling_steps()
         }
 
         try:
@@ -96,19 +90,23 @@ class AImage(Settings,
 
         await ctx.react_quietly("✅")
 
-        await ctx.send(file=discord.File(io.BytesIO(image_data), filename=f"{ctx.message.id}.png"), view=ImageActions(payload=payload))
+        await ctx.send(file=discord.File(io.BytesIO(image_data), filename=f"{ctx.message.id}.png"), view=ImageActions(payload=payload, bot=self.bot, author=ctx.author))
 
     @app_commands.command(name="paint")
     @app_commands.describe(
         prompt="The prompt to generate an image from",
         negative_prompt="The negative prompt to use",
-        sampling_steps="The sampling steps to use",
+        steps="The sampling steps to use",
         cfg="The cfg to use",
         seed="The seed to use"
     )
     @app_commands.checks.cooldown(1, 5, key=None)
     @app_commands.checks.bot_has_permissions(attach_files=True)
-    async def paint_app(self, interaction: discord.Interaction, prompt: str, negative_prompt: str = None, cfg: app_commands.Range[float, 1, 30] = None, sampling_steps: app_commands.Range[int, 1, 150] = None, seed: app_commands.Range[int, -1, None] = None):
+    @app_commands.guild_only()
+    async def paint_app(self, interaction: discord.Interaction, prompt: str, negative_prompt: str = None, cfg: app_commands.Range[float, 1, 30] = None, steps: app_commands.Range[int, 1, 150] = None, seed: app_commands.Range[int, -1, None] = -1):
+        """
+        Generate an image using Stable Diffusion
+        """
         ctx = await self.bot.get_context(interaction)
 
         endpoint = await self._get_endpoint(ctx)
@@ -125,8 +123,8 @@ class AImage(Settings,
             "prompt": prompt,
             "cfg": cfg or await self.config.guild(ctx.guild).cfg(),
             "negativeprompt": negative_prompt or await self.config.guild(ctx.guild).negativeprompt(),
-            "sampling_steps": sampling_steps or await self.config.guild(ctx.guild).sampling_steps(),
-            "seed": seed or -1,
+            "steps": steps or await self.config.guild(ctx.guild).sampling_steps(),
+            "seed": seed
         }
 
         try:
@@ -135,7 +133,8 @@ class AImage(Settings,
             logger.exception("Failed request to Stable Diffusion endpoint")
             return await interaction.followup.send(content=":warning: Something went wrong!", ephemeral=True)
 
-        await interaction.followup.send(file=discord.File(io.BytesIO(image_data), filename=f"image.png"), view=ImageActions(payload=payload))
+        await interaction.followup.send(file=discord.File(io.BytesIO(image_data), filename=f"image.png"), view=ImageActions(payload=payload, bot=self.bot, author=ctx.author))
+
 
     async def _get_endpoint(self, ctx):
         endpoint = await self.config.guild(ctx.guild).endpoint()
@@ -144,10 +143,13 @@ class AImage(Settings,
         return endpoint
 
     async def _get_blacklist(self, ctx):
-        guild_blacklist = await self.config.guild(ctx.guild).words_blacklist()
-        global_blacklist = await self.config.words_blacklist()
-        combined_blacklist = guild_blacklist + global_blacklist
-        return combined_blacklist
+        endpoint = await self.config.guild(ctx.guild).endpoint()
+        if endpoint:
+            blacklist = await self.config.guild(ctx.guild).words_blacklist()
+        else:
+            blacklist = await self.config.words_blacklist()
+
+        return blacklist
 
     async def _post_sd_endpoint(self, endpoint, payload):
         async with self.session.post(url=endpoint, json=payload) as response:
