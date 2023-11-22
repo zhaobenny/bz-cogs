@@ -194,7 +194,7 @@ class ImageRequestSettings(MixinMeta):
                     name=key, value=f"```{json.dumps(value, indent=4)}```", inline=False
                 )
 
-        embeds.append(parameters_embed)
+            embeds.append(parameters_embed)
 
         for embed in embeds:
             await ctx.send(embed=embed)

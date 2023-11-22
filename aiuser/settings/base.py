@@ -253,15 +253,11 @@ class Settings(
             gpt_models = [model.id for model in models_list.data]
 
         if model == "list":
-            menu = await self._paginate_models(ctx, gpt_models)
-            await menu.start(ctx)
-            return
+            return await self._paginate_models(ctx, gpt_models)
 
         if model not in gpt_models:
             await ctx.send(":warning: Not a valid model!")
-            menu = await self._paginate_models(ctx, gpt_models)
-            await menu.start(ctx)
-            return
+            return await self._paginate_models(ctx, gpt_models)
 
         await self.config.guild(ctx.guild).model.set(model)
         embed = discord.Embed(
@@ -296,7 +292,7 @@ class Settings(
             return await ctx.send(embed=menu_pages[0])
         for i, page in enumerate(menu_pages):
             page.set_footer(text=f"Page {i+1} of {len(menu_pages)}")
-        return SimpleMenu(menu_pages)
+        return (await SimpleMenu(menu_pages).start(ctx))
 
     @aiuser.command()
     async def optin(self, ctx: commands.Context):

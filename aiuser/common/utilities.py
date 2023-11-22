@@ -33,16 +33,19 @@ def format_variables(ctx: commands.Context, text: str):
     """
     botname = ctx.message.guild.me.nick or ctx.bot.user.display_name
     authorname = ctx.message.author.display_name
+    authortoprole = ctx.message.author.top_role.name
     servername = ctx.guild.name
     channelname = ctx.message.channel.name
     currentdate = datetime.today().strftime("%Y/%m/%d")
     currentweekday = datetime.today().strftime("%A")
     currenttime = datetime.today().strftime("%H:%M")
 
+
     try:
         res = text.format(
             botname=botname,
             authorname=authorname,
+            authortoprole=authortoprole,
             servername=servername,
             channelname=channelname,
             currentdate=currentdate,

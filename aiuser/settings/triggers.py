@@ -132,5 +132,5 @@ class TriggerSettings(MixinMeta):
             embed.add_field(name="Users", value="\n".join(
                 [f"<@{u}>" for u in users_whitelist]), inline=False)
         if not roles_whitelist and not users_whitelist:
-            embed.description = "There is nothing whitelisted.\nAnyone can trigger it in whitelisted channels."
+            embed.description = "Nothing whitelisted\nAnyone can trigger bot in whitelisted channels"
         return await ctx.send(embed=embed)
