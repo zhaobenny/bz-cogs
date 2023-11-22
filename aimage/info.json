@@ -1,0 +1,25 @@
+{
+    "author": [
+        "zhaobenny"
+    ],
+    "description": "Generate images using your provided Stable Diffusion endpoint",
+    "install_msg": "This cog will require your own (AUTOMATIC1111-compatible) Stable Diffusion endpoint to be configured. See [p]aimageowner for owner specific commands, else [p]aimage",
+    "short": "SD image generation",
+    "permissions": [
+        "read_messages",
+        "send_messages"
+    ],
+    "requirements": [
+        "pillow",
+        "aiohttp",
+        "tenacity"
+    ],
+    "end_user_data_statement": "This cog does not persistently store data or metadata about users.",
+    "tags": [
+        "image",
+        "ai image",
+        "stable diffusion"
+    ],
+    "min_bot_version": "3.5.0",
+    "hidden": true
+}
