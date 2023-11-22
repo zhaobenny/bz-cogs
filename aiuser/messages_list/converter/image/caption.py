@@ -1,4 +1,4 @@
-import json
+
 import logging
 from io import BytesIO
 
@@ -6,7 +6,6 @@ from discord import Message
 from PIL import Image
 
 from aiuser.abc import MixinMeta
-from aiuser.common.constants import IMAGE_RESOLUTION
 from aiuser.common.enums import ScanImageMode
 from aiuser.messages_list.converter.helpers import format_text_content
 from aiuser.messages_list.converter.image.AI_horde import \
@@ -22,7 +21,7 @@ async def transcribe_image(cog: MixinMeta, message: Message):
     buffer = BytesIO()
     await attachment.save(buffer)
     image = Image.open(buffer)
-    image = scale_image(image, IMAGE_RESOLUTION ** 2)
+    image = scale_image(image, 1028 ** 2)
 
     mode = ScanImageMode(await config.guild(message.guild).scan_images_mode())
 

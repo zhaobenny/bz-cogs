@@ -52,7 +52,7 @@ class OpenAI_Chat_Generator(Chat_Generator):
             completion = response.choices[0].message.content
 
         logger.debug(
-            f'Generated the following raw response using OpenAI in {self.ctx.guild.name}: "{completion}"'
+            f'Generated the following raw response in {self.ctx.guild.name}: "{completion}"'
         )
         return completion
 

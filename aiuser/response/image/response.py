@@ -5,8 +5,8 @@ import discord
 from redbot.core import commands
 
 from aiuser.abc import MixinMeta
-from aiuser.common.constants import (IMAGE_GENERATION_PROMPT,
-                                     SECOND_PERSON_WORDS)
+from aiuser.common.constants import IMAGE_REQUEST_SD_GEN_PROMPT
+
 from aiuser.messages_list.messages import create_messages_list
 from aiuser.response.chat.openai import OpenAI_Chat_Generator
 from aiuser.response.chat.response import ChatResponse
@@ -69,7 +69,7 @@ class ImageResponse():
         for m in self.message.mentions:
             request = request.replace(m.mention, m.display_name)
 
-        for w in SECOND_PERSON_WORDS:
+        for w in (await self.config.guild(self.ctx.guild).image_requests_second_person_trigger_words()):
             pattern = r'\b{}\b'.format(re.escape(w))
             request = re.sub(pattern, subject, request, flags=re.IGNORECASE)
 
@@ -79,7 +79,7 @@ class ImageResponse():
         response = await self.cog.openai_client.chat.completions.create(
             model=await self.config.guild(self.message.guild).model(),
             messages=[
-                {"role": "system", "content": IMAGE_GENERATION_PROMPT},
+                {"role": "system", "content": IMAGE_REQUEST_SD_GEN_PROMPT},
                 {"role": "user", "content": request}
             ],
         )

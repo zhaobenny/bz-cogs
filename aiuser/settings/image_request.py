@@ -4,6 +4,9 @@ import discord
 from redbot.core import checks, commands
 
 from aiuser.abc import MixinMeta, aiuser
+from aiuser.common.constants import (
+    DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
+    DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS)
 
 
 class ImageRequestSettings(MixinMeta):
@@ -156,7 +159,8 @@ class ImageRequestSettings(MixinMeta):
         embed = discord.Embed(
             title="Image Request Settings", color=await ctx.embed_color()
         )
-        embed.add_field(name="Enabled", value=config["image_requests"], inline=True)
+        embed.add_field(
+            name="Enabled", value=config["image_requests"], inline=True)
         embed.add_field(
             name="Reduced LLM calls mode",
             value=config["image_requests_reduced_llm_calls"],
@@ -194,3 +198,98 @@ class ImageRequestSettings(MixinMeta):
 
         for embed in embeds:
             await ctx.send(embed=embed)
+
+    @imagerequest.group(name="trigger")
+    async def imagerequest_trigger(self, _):
+        """Set trigger words to detect image requests"""
+        pass
+
+    @imagerequest_trigger.command(name="add")
+    async def imagerequest_trigger_add(self, ctx: commands.Context, *, word: str):
+        """Add a word to the trigger words list"""
+        words = await self.config.guild(ctx.guild).image_requests_trigger_words()
+        if word in words:
+            return await ctx.send("That word is already in the list")
+        words.append(word)
+        await self.config.guild(ctx.guild).image_requests_trigger_words.set(words)
+        return await self.show_trigger_words(ctx, discord.Embed(
+            title="The trigger words are now:",
+            color=await ctx.embed_color()))
+
+    @imagerequest_trigger.command(name="remove")
+    async def imagerequest_trigger_remove(self, ctx: commands.Context, *, word: str):
+        """Remove a word from the trigger words list"""
+        words = await self.config.guild(ctx.guild).image_requests_trigger_words()
+        if word not in words:
+            return await ctx.send("That word is not in the list")
+        words.remove(word)
+        await self.config.guild(ctx.guild).image_requests_trigger_words.set(words)
+        return await self.show_trigger_words(ctx, discord.Embed(
+            title="The trigger words are now:",
+            color=await ctx.embed_color()))
+
+    @imagerequest_trigger.command(name="list", aliases=["show"])
+    async def imagerequest_trigger_list(self, ctx: commands.Context):
+        """Show the trigger words list"""
+        return await self.show_trigger_words(ctx, discord.Embed(
+            title="Trigger words for image requests",
+            color=await ctx.embed_color()))
+
+    @imagerequest_trigger.command(name="clear")
+    async def imagerequest_trigger_clear(self, ctx: commands.Context):
+        """Clear the trigger words list to default"""
+        await self.config.guild(ctx.guild).image_requests_trigger_words.set(DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS)
+        return await ctx.send("The trigger words list has been reset.")
+
+    async def show_trigger_words(self, ctx: commands.Context, embed: discord.Embed):
+        words = await self.config.guild(ctx.guild).image_requests_trigger_words()
+        if words:
+            embed.description = ", ".join(words)
+        else:
+            embed.description = "No trigger words set."
+        return await ctx.send(embed=embed)
+
+    @imagerequest_trigger.command(name="sadd", aliases=["addsecond"])
+    async def imagerequest_trigger_add_second(self, ctx: commands.Context, *, word: str):
+        """Add a word to the second person words list (to replace with subject) """
+        words = await self.config.guild(ctx.guild).image_requests_second_person_trigger_words()
+        if word in words:
+            return await ctx.send("That word is already in the list")
+        words.append(word)
+        await self.config.guild(ctx.guild).image_requests_second_person_trigger_words.set(words)
+        return await self.show_trigger_second_words(ctx, discord.Embed(
+            title="The second person words are now:",
+            color=await ctx.embed_color()))
+
+    @imagerequest_trigger.command(name="sremove", aliases=["removesecond"])
+    async def imagerequest_trigger_remove_second(self, ctx: commands.Context, *, word: str):
+        """Remove a word from the second person words list"""
+        words = await self.config.guild(ctx.guild).image_requests_second_person_trigger_words()
+        if word not in words:
+            return await ctx.send("That word is not in the list")
+        words.remove(word)
+        await self.config.guild(ctx.guild).image_requests_second_person_trigger_words.set(words)
+        return await self.show_trigger_second_words(ctx, discord.Embed(
+            title="The second person words are now:",
+            color=await ctx.embed_color()))
+
+    @imagerequest_trigger.command(name="slist", aliases=["showsecond", "sshow"])
+    async def imagerequest_trigger_list_second(self, ctx: commands.Context):
+        """Show the second person words list"""
+        return await self.show_trigger_second_words(ctx, discord.Embed(
+            title="Second person words for image requests",
+            color=await ctx.embed_color()))
+
+    @imagerequest_trigger.command(name="sclear", aliases=["clearsecond"])
+    async def imagerequest_trigger_clear_second(self, ctx: commands.Context):
+        """Clear the second person words list to default"""
+        await self.config.guild(ctx.guild).image_requests_second_person_trigger_words.set(DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS)
+        return await ctx.send("The second person words list has been reset.")
+
+    async def show_trigger_second_words(self, ctx: commands.Context, embed: discord.Embed):
+        words = await self.config.guild(ctx.guild).image_requests_second_person_trigger_words()
+        if words:
+            embed.description = ", ".join(words)
+        else:
+            embed.description = "No second person words set."
+        return await ctx.send(embed=embed)

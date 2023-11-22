@@ -13,8 +13,8 @@ from redbot.core.bot import Red
 
 from aiuser.abc import CompositeMetaClass
 from aiuser.common.cache import Cache
-from aiuser.common.constants import (DEFAULT_PRESETS, DEFAULT_REMOVE_PATTERNS,
-                                     DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS,
+from aiuser.common.constants import (DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS, DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, IMAGE_UPLOAD_LIMIT, DEFAULT_PRESETS, DEFAULT_REMOVE_PATTERNS,
+                                     DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS, IMAGE_UPLOAD_LIMIT,
                                      MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
 from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import is_embed_valid, is_using_openai_endpoint
@@ -70,7 +70,7 @@ class AIUser(
             "reply_to_mentions_replies": False,
             "scan_images": False,
             "scan_images_mode": ScanImageMode.AI_HORDE.value,
-            "max_image_size": 2 * (1024 * 1024),
+            "max_image_size": IMAGE_UPLOAD_LIMIT,
             "model": "gpt-3.5-turbo",
             "custom_text_prompt": None,
             "channels_whitelist": [],
@@ -91,6 +91,8 @@ class AIUser(
             "image_requests_preprompt": "",
             "image_requests_subject": "woman",
             "image_requests_reduced_llm_calls": False,
+            "image_requests_trigger_words": DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS,
+            "image_requests_second_person_trigger_words": DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS
         }
         default_channel = {
             "custom_text_prompt": None,

@@ -5,9 +5,8 @@ import discord
 from redbot.core import commands
 
 from aiuser.abc import MixinMeta
-from aiuser.common.constants import (IMAGE_CHECK_REQUEST_PROMPT,
-                                     MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH,
-                                     RELATED_IMAGE_WORDS, SECOND_PERSON_WORDS)
+from aiuser.common.constants import (IMAGE_REQUEST_CHECK_PROMPT,
+                                     MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
 from aiuser.messages_list.messages import create_messages_list
 from aiuser.response.chat.openai import OpenAI_Chat_Generator
 from aiuser.response.chat.response import ChatResponse
@@ -67,10 +66,10 @@ class ResponseHandler(MixinMeta):
             message.guild.me.nick or message.guild.me.display_name).lower()
 
         contains_image_words = any(
-            word in message_content for word in RELATED_IMAGE_WORDS
+            word in message_content for word in (await self.config.guild(message.guild).image_requests_trigger_words())
         )
         contains_second_person = any(
-            word in message_content for word in SECOND_PERSON_WORDS
+            word in message_content for word in (await self.config.guild(message.guild).image_requests_second_person_trigger_words())
         )
         mentioned_me = (
             displayname in message_content
@@ -106,7 +105,7 @@ class ResponseHandler(MixinMeta):
                 messages=[
                     {
                         "role": "system",
-                        "content": IMAGE_CHECK_REQUEST_PROMPT.format(botname=botname),
+                        "content": IMAGE_REQUEST_CHECK_PROMPT.format(botname=botname),
                     },
                     {"role": "user", "content": text},
                 ],
