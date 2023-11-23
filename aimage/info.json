@@ -2,15 +2,16 @@
     "author": [
         "zhaobenny"
     ],
-    "description": "Generate images using your provided Stable Diffusion endpoint",
-    "install_msg": "This cog will require your own (AUTOMATIC1111-compatible) Stable Diffusion endpoint to be configured. See [p]aimageowner for owner specific commands, else [p]aimage",
+    "description": "Use a provided AUTOMATIC1111 Stable Diffusion endpoint to generate images through Discord",
+    "install_msg": "This cog will require your own (AUTOMATIC1111-compatible) Stable Diffusion endpoint to be configured.\nTo generate, use `[p]imagine`, else `[p]aimage` or `[p]aimageowner` for settings\nSlash is available and recommended, do `[p]slash enablecog aimage`, then `[p]slash sync`",
     "short": "SD image generation",
     "permissions": [
-        "read_messages",
-        "send_messages"
+        "send_messages",
+        "embed_links",
+        "attach_files",
+        "add_reactions"
     ],
     "requirements": [
-        "pillow",
         "aiohttp",
         "tenacity"
     ],
@@ -18,7 +19,9 @@
     "tags": [
         "image",
         "ai image",
-        "stable diffusion"
+        "ai art",
+        "stable diffusion",
+        "image generation"
     ],
     "min_bot_version": "3.5.0",
     "hidden": true
