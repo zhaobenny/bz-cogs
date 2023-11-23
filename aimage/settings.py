@@ -3,6 +3,7 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aimage.abc import MixinMeta
+from aimage.constants import AUTO_COMPLETE_SAMPLERS
 
 
 class Settings(MixinMeta):
@@ -63,26 +64,20 @@ class Settings(MixinMeta):
         nsfw = await self.config.guild(ctx.guild).nsfw()
         if nsfw:
             await ctx.message.add_reaction("🔄")
-            endpoint, _ = await self._get_endpoint(ctx)
-            async with self.session.get(endpoint + "scripts") as res:
-                if res.status != 200:
-                    await ctx.message.remove_reaction("🔄", ctx.me)
-                    return await ctx.send(":warning: Couldn't request Stable Diffusion endpoint!")
-                res = await res.json()
-                if "censorscript" not in res.get("txt2img", []):
-                    await ctx.message.remove_reaction("🔄", ctx.me)
-                    return await ctx.send(":warning: Compatible censor script is not installed in A1111, install [this.](https://github.com/IOMisaka/sdapi-scripts)")
+            data = await self._fetch_data(ctx.guild, "scripts") or {}
             await ctx.message.remove_reaction("🔄", ctx.me)
+            if "censorscript" not in data.get("txt2img", []):
+                return await ctx.send(":warning: Compatible censor script is not installed in A1111, install [this.](https://github.com/IOMisaka/sdapi-scripts)")
 
         await self.config.guild(ctx.guild).nsfw.set(not nsfw)
         await ctx.send(f"NSFW filtering is now {'`disabled`' if not nsfw else '`enabled`'}")
 
-    @aimage.command(name="negativeprompt")
-    async def negativeprompt(self, ctx: commands.Context, negativeprompt: str):
+    @aimage.command(name="negative_prompt")
+    async def negative_prompt(self, ctx: commands.Context, negative_prompt: str):
         """
         Set the default negative prompt
         """
-        await self.config.guild(ctx.guild).negative_prompt.set(negativeprompt)
+        await self.config.guild(ctx.guild).negative_prompt.set(negative_prompt)
         await ctx.tick()
 
     @aimage.command(name="cfg")
@@ -96,7 +91,7 @@ class Settings(MixinMeta):
     @aimage.command(name="sampling_steps")
     async def sampling_steps(self, ctx: commands.Context, sampling_steps: int):
         """
-        Set the default sampling_steps
+        Set the default sampling steps
         """
         await self.config.guild(ctx.guild).sampling_steps.set(sampling_steps)
         await ctx.tick()
@@ -106,6 +101,17 @@ class Settings(MixinMeta):
         """
         Set the default sampler
         """
+        await ctx.message.add_reaction("🔄")
+        data = await self._fetch_data(ctx.guild, "samplers")
+        await ctx.message.remove_reaction("🔄", ctx.me)
+        if not data:
+            samplers = AUTO_COMPLETE_SAMPLERS
+        else:
+            samplers = [choice["name"] for choice in data]
+
+        if sampler not in samplers:
+            return await ctx.send(f":warning: Sampler must be one of: `{', '.join(samplers)}`")
+
         await self.config.guild(ctx.guild).sampler.set(sampler)
         await ctx.tick()
 

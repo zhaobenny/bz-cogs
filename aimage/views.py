@@ -1,11 +1,15 @@
 import discord
 from redbot.core.bot import Red
 
+from aimage.abc import MixinMeta
+
 
 class ImageActions(discord.ui.View):
-    def __init__(self, image_info: str, bot: Red, author: discord.Member):
+    def __init__(self, cog: MixinMeta, image_info: str, payload: dict, author: discord.Member):
         self.info_string = image_info
-        self.bot = bot
+        self.payload = payload
+        self.bot: Red = cog.bot
+        self.generate_image = cog.generate_image
         self.og_user = author
         super().__init__()
 
@@ -13,6 +17,18 @@ class ImageActions(discord.ui.View):
     async def get_caption(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(f'Parameters for this image were:\n```\n{self.info_string}```')
         button.disabled = True
+        await interaction.message.edit(view=self)
+
+    @discord.ui.button(emoji='🔄')
+    async def regenerate_image(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.payload["seed"] = -1
+        prompt = self.payload["prompt"]
+        button.disabled = True
+        button.emoji = "⏳"
+        await interaction.message.edit(view=self)
+        await self.generate_image(interaction, prompt, payload=self.payload)
+        button.emoji = "🔄"
+        button.disabled = False
         await interaction.message.edit(view=self)
 
     @discord.ui.button(emoji='🗑️')
@@ -24,8 +40,7 @@ class ImageActions(discord.ui.View):
         button.disabled = True
         await interaction.message.delete()
 
-        prompt = self.info_string.split("\n")[0]  # jank
-
+        prompt = self.payload["prompt"]
         if interaction.user.id == self.og_user.id:
             await interaction.response.send_message(f'{self.og_user.mention} deleted their requested image with prompt: `{prompt}`', allowed_mentions=discord.AllowedMentions.none())
         else:

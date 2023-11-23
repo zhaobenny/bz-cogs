@@ -6,7 +6,7 @@
 <a href="https://makeapullrequest.com"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat"></a>
 
 <p align="center">
-A collection of niche/random cogs for Red-Discordbot. 
+A collection of interesting/niche cogs for Red-Discordbot.
 
 ## Install
 ```
@@ -19,6 +19,7 @@ cog install bz-cogs <cog>
 | --- | --- |
 [aiuser](https://github.com/zhaobenny/bz-cogs/tree/main/aiuser) | Human-like Discord interactions powered by OpenAI for messages (and images).
 [aiemote](https://github.com/zhaobenny/bz-cogs/tree/main/aiemote) | Human-like Discord reacts to messages powered by OpenAI.
+[aimage](https://github.com/zhaobenny/bz-cogs/tree/main/aimage) | A1111 Stable Diffusion image generation in Discord
 oneletteronly | Set nicknames to be initials for new users.
 
 
