@@ -8,7 +8,9 @@
     "permissions": [
         "read_messages",
         "send_messages",
-        "embed_links"
+        "embed_links",
+        "attach_files",
+        "add_reactions"
     ],
     "requirements": [
         "openai>=1.2.3",
