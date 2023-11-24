@@ -42,8 +42,6 @@ class AIUser(
         self.config = Config.get_conf(self, identifier=754070)
         self.openai_client: AsyncOpenAI = None
         # cached options
-        self.optin_users: list[int] = []
-        self.optout_users: list[int] = []
         self.optindefault: dict[int, bool] = {}
         self.channels_whitelist: dict[int, list[int]] = {}
         self.reply_percent: dict[int, float] = {}
@@ -113,8 +111,6 @@ class AIUser(
     async def cog_load(self):
         await self.initialize_openai_client()
 
-        self.optin_users = await self.config.optin()
-        self.optout_users = await self.config.optout()
         all_config = await self.config.all_guilds()
 
         for guild_id, config in all_config.items():
@@ -241,11 +237,11 @@ class AIUser(
             return False
         if not await self.bot.allowed_by_whitelist_blacklist(ctx.author):
             return False
-        if ctx.author.id in self.optout_users:
+        if (ctx.author.id in await self.config.optout()):
             return False
         if (
             not self.optindefault.get(ctx.guild.id)
-            and ctx.author.id not in self.optin_users
+            and (ctx.author.id not in await self.config.optin())
         ):
             return False
         if self.ignore_regex.get(ctx.guild.id) and self.ignore_regex[ctx.guild.id].search(ctx.message.content):

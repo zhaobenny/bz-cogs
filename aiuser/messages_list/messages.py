@@ -13,6 +13,7 @@ from aiuser.common.constants import DEFAULT_PROMPT, OTHER_MODELS_LIMITS
 from aiuser.common.utilities import format_variables
 from aiuser.messages_list.converter.converter import MessageConverter
 from aiuser.messages_list.entry import MessageEntry
+from aiuser.messages_list.opt_view import OptView
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -40,7 +41,7 @@ class MessagesList:
         self.guild = ctx.guild
         self.ignore_regex = cog.ignore_regex.get(self.guild.id, None)
         self.start_time = cog.override_prompt_start_time.get(
-            self.guild.id, None)
+            self.guild.id)
         self.messages = []
         self.messages_ids = set()
         self.tokens = 0
@@ -69,7 +70,7 @@ class MessagesList:
     async def _pick_prompt(self):
         author = self.init_message.author
         role_prompt = None
-        
+
         for role in author.roles:
             if role.id in (await self.config.all_roles()):
                 role_prompt = await self.config.role(role).custom_text_prompt()
@@ -188,8 +189,9 @@ class MessagesList:
                 title=":information_source: AI User Opt-In / Opt-Out",
                 color=await self.bot.get_embed_color(message),
             )
-            embed.description = f"Hey there! Looks like {users} have not opted in or out of AI User! \n Please use `{prefix}aiuser optin` or `{prefix}aiuser optout` to opt in or out of sending messages / images to OpenAI or an external party. \n This embed will stop showing up if all users chatting have opted in or out."
-            await message.channel.send(embed=embed)
+            view = OptView(self.config)
+            embed.description = f"Hey there, looks like {users} have not opted in or out of AI User! \n Please opt in/out of sending your messages/images to OpenAI/external party. \n This embed will stop showing up if all users chatting have opted in or out."
+            await message.channel.send(embed=embed, view=view)
 
     def get_json(self):
         result = []

@@ -307,9 +307,7 @@ class Settings(
         if ctx.author.id in optout:
             optout.remove(ctx.author.id)
             await self.config.optout.set(optout)
-            self.optout_users.remove(ctx.author.id)
         optin.append(ctx.author.id)
-        self.optin_users.append(ctx.author.id)
         await self.config.optin.set(optin)
         await ctx.send("You are now opted in bot-wide")
 
@@ -326,10 +324,8 @@ class Settings(
         if ctx.author.id in optin:
             optin.remove(ctx.author.id)
             await self.config.optin.set(optin)
-            self.optin_users.remove(ctx.author.id)
         optout.append(ctx.author.id)
         await self.config.optout.set(optout)
-        self.optout_users.append(ctx.author.id)
         await ctx.send("You are now opted out bot-wide")
 
     @aiuser.command(name="optinbydefault", alias=["optindefault"])
