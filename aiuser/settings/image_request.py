@@ -72,6 +72,8 @@ class ImageRequestSettings(MixinMeta):
     @imagerequest.command(name="endpoint")
     async def image_request_endpoint(self, ctx: commands.Context, url: str):
         """Set compatible endpoint url (eg. for A1111 include `/sdapi/v1/txt2img`)"""
+        if not url.endswith("/"):
+            url += "/"
         await self.config.guild(ctx.guild).image_requests_endpoint.set(url)
         embed = discord.Embed(
             title="Stable Diffusion url now set to:",

@@ -116,6 +116,14 @@ class Settings(
             value=" ".join(channels) if channels else "None",
         )
 
+        whitelisted_trigger = bool(
+            config["members_whitelist"] or config["roles_whitelist"])
+        main_embed.add_field(
+            name="Only whitelisted users/roles can trigger",
+            inline=False,
+            value=whitelisted_trigger,
+        )
+
         endpoint_url = str(glob_config["custom_openai_endpoint"] or "")
         if endpoint_url.startswith("https://openrouter.ai/api/"):
             endpoint_text = "Using OpenRouter endpoint"
@@ -244,7 +252,9 @@ class Settings(
         if await self.config.guild(ctx.guild).scan_images_mode() == ScanImageMode.LLM.value and model not in VISION_SUPPORTED_MODELS:
             return await ctx.send(":warning: Can not select model that with no build-in support for images!\n Switch image scanning mode or select a model that supports images.")
 
+        await ctx.message.add_reaction("🔄")
         models_list = await self.openai_client.models.list()
+        await ctx.message.remove_reaction("🔄", ctx.me)
 
         if is_using_openai_endpoint(self.openai_client):
             gpt_models = [

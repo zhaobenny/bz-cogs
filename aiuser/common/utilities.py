@@ -1,6 +1,7 @@
 import asyncio
 import functools
 import logging
+import random
 import re
 from datetime import datetime
 from typing import Callable, Coroutine
@@ -34,12 +35,16 @@ def format_variables(ctx: commands.Context, text: str):
     botname = ctx.message.guild.me.nick or ctx.bot.user.display_name
     authorname = ctx.message.author.display_name
     authortoprole = ctx.message.author.top_role.name
+
     servername = ctx.guild.name
     channelname = ctx.message.channel.name
     currentdate = datetime.today().strftime("%Y/%m/%d")
     currentweekday = datetime.today().strftime("%A")
     currenttime = datetime.today().strftime("%H:%M")
 
+    serveremojis = [str(e) for e in ctx.message.guild.emojis]
+    random.shuffle(serveremojis)
+    serveremojis = ' '.join(serveremojis)
 
     try:
         res = text.format(
@@ -47,6 +52,7 @@ def format_variables(ctx: commands.Context, text: str):
             authorname=authorname,
             authortoprole=authortoprole,
             servername=servername,
+            serveremojis=serveremojis,
             channelname=channelname,
             currentdate=currentdate,
             currentweekday=currentweekday,

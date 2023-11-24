@@ -13,9 +13,11 @@ from redbot.core.bot import Red
 
 from aiuser.abc import CompositeMetaClass
 from aiuser.common.cache import Cache
-from aiuser.common.constants import (DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS, DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, IMAGE_UPLOAD_LIMIT, DEFAULT_PRESETS, DEFAULT_REMOVE_PATTERNS,
-                                     DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS, IMAGE_UPLOAD_LIMIT,
-                                     MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
+from aiuser.common.constants import (
+    DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
+    DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_PRESETS,
+    DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS,
+    IMAGE_UPLOAD_LIMIT, MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
 from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import is_embed_valid, is_using_openai_endpoint
 from aiuser.messages_list.entry import MessageEntry
@@ -118,8 +120,13 @@ class AIUser(
             self.channels_whitelist[guild_id] = config["channels_whitelist"]
             self.reply_percent[guild_id] = config["reply_percent"]
             pattern = config["ignore_regex"]
+
             self.ignore_regex[guild_id] = re.compile(
                 pattern) if pattern else None
+
+        if logger.isEnabledFor(logging.DEBUG):  # development
+            self.override_prompt_start_time[744802856074346556] = datetime.utcnow(
+            )
 
         self.random_message_trigger.start()
 
@@ -156,10 +163,14 @@ class AIUser(
 
         ctx = await commands.Context.from_interaction(inter)
         ctx.message.content = text
+
         if not await self.is_common_valid_reply(ctx):
             return await ctx.send(
                 "You're not allowed to use this command here.", ephemeral=True
             )
+
+        if not (await self.config.guild(ctx.guild).reply_to_mentions_replies()):
+            return await ctx.send("This command is not enabled.", ephemeral=True)
 
         rate_limit_reset = datetime.strptime(
             await self.config.ratelimit_reset(), "%Y-%m-%d %H:%M:%S"
@@ -249,7 +260,7 @@ class AIUser(
 
         whitelisted_roles = await self.config.guild(ctx.guild).roles_whitelist()
         whitelisted_members = await self.config.guild(ctx.guild).members_whitelist()
-        if (whitelisted_members or whitelisted_roles)  and not ((ctx.author.id in whitelisted_members) or (ctx.author.roles and (set([role.id for role in ctx.author.roles]) & set(whitelisted_roles)))):
+        if (whitelisted_members or whitelisted_roles) and not ((ctx.author.id in whitelisted_members) or (ctx.author.roles and (set([role.id for role in ctx.author.roles]) & set(whitelisted_roles)))):
             return False
 
         if not self.openai_client:

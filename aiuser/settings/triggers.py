@@ -63,13 +63,13 @@ class TriggerSettings(MixinMeta):
 
     @trigger.group(name="whitelist", aliases=["whitelists"])
     async def trigger_whitelist(self, ctx: commands.Context):
-        """ If configured, only whitelisted roles / uses can trigger a response in whitelisted channels
+        """ If configured, only whitelisted roles / users can trigger a response in whitelisted channels
         """
         pass
 
     @trigger_whitelist.command(name="add")
     async def trigger_whitelist_add(self, ctx: commands.Context, new: Union[discord.Role, discord.Member]):
-        """ Add a role to the whitelist """
+        """ Add a role/user to the whitelist """
         if isinstance(new, discord.Role):
             whitelist = await self.config.guild(ctx.guild).roles_whitelist()
             if new.id in whitelist:
@@ -90,7 +90,7 @@ class TriggerSettings(MixinMeta):
 
     @trigger_whitelist.command(name="remove")
     async def trigger_whitelist_remove(self, ctx: commands.Context, rm: Union[discord.Role, discord.Member]):
-        """ Remove a role from the whitelist """
+        """ Remove a user/role from the whitelist """
         if isinstance(rm, discord.Role):
             whitelist = await self.config.guild(ctx.guild).roles_whitelist()
             if rm.id not in whitelist:
