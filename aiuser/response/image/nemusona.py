@@ -7,6 +7,7 @@ import random
 
 import aiohttp
 from tenacity import retry, stop_after_attempt, wait_random
+
 from aiuser.response.image.generator import ImageGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -17,11 +18,12 @@ class NemusonaGenerator(ImageGenerator):
         # eg. https://waifus-api.nemusona.com/job/submit/nemu
 
         url = await self.config.guild(self.ctx.guild).image_requests_endpoint()
-        self.model = url.split("/")[-1]
+        self.model = url.split("/")[-2]
 
         payload = await self._prepare_payload(caption)
 
-        logger.debug(f"Sending SD request to Nemusona with payload: {json.dumps(payload, indent=4)}")
+        logger.debug(
+            f"Sending SD request to Nemusona with payload: {json.dumps(payload, indent=4)}")
         async with aiohttp.ClientSession() as session:
             async with session.post(url=f'{url}', json=payload) as response:
                 self.id = await response.text()
