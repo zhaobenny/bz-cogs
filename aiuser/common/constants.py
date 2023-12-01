@@ -9,21 +9,11 @@ DEFAULT_PRESETS = {
     "neutral": "You are {botname}. You are in a Discord text channel. Respond to anything, including URLs. Fulfill your persona and don't speak in third person. You are forbidden from saying you're an AI or a bot.",
     "tsundere": "You are {botname}. You are in a Discord text channel. Respond to anything, including URLs. Be a tsundere when responding. Use text emojis. Fulfill your persona and don't speak in third person. You are forbidden from saying you're an AI or a bot.",
 }
-DEFAULT_TOPICS = [
-    "video games",
-    "tech",
-    "music",
-    "art",
-    "a movie",
-    "a tv show",
-    "anime",
-    "manga",
-    "sports",
-    "books",
-    "fitness and health",
-    "politics",
-    "science",
-    "cooking",
+DEFAULT_RANDOM_PROMPTS = [
+    "Talk about how today is {currentweekday}. You must state that today is {currentweekday}.",
+    "Talk about how empty the Discord channel is",
+    "Talk about how you are currently ordering takeout. State the specific cuisine ordered, and any other details you'd like to the Discord channel.",
+    "Make up a topic in the news. State that you just read about it in the news. Talk about that topic."
 ]
 DEFAULT_REMOVE_PATTERNS = [
     r'^As an AI language model,?',

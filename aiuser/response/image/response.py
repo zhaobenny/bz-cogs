@@ -8,7 +8,7 @@ from aiuser.abc import MixinMeta
 from aiuser.common.constants import IMAGE_REQUEST_SD_GEN_PROMPT
 
 from aiuser.messages_list.messages import create_messages_list
-from aiuser.response.chat.openai import OpenAI_Chat_Generator
+from aiuser.response.chat.openai import OpenAI_API_Generator
 from aiuser.response.chat.response import ChatResponse
 from aiuser.response.image.generator import ImageGenerator
 
@@ -50,7 +50,7 @@ class ImageResponse():
                 saved_caption, index=len(message_list) + 1)
             await message_list.add_system(
                 "You sent the above image. Respond accordingly", index=len(message_list) + 1)
-            chat = OpenAI_Chat_Generator(self.cog, self.ctx, message_list)
+            chat = OpenAI_API_Generator(self.cog, self.ctx, message_list)
             response = ChatResponse(self.ctx, self.config, chat)
 
         if response is not None:

@@ -16,7 +16,7 @@ from aiuser.common.cache import Cache
 from aiuser.common.constants import (
     DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
     DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_PRESETS,
-    DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT, DEFAULT_TOPICS,
+    DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT, DEFAULT_RANDOM_PROMPTS,
     IMAGE_UPLOAD_LIMIT, MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
 from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import is_embed_valid, is_using_openai_endpoint
@@ -83,7 +83,7 @@ class AIUser(
             "weights": None,
             "random_messages_enabled": False,
             "random_messages_percent": 0.012,
-            "random_messages_topics": DEFAULT_TOPICS,
+            "random_messages_prompts": DEFAULT_RANDOM_PROMPTS,
             "presets": json.dumps(DEFAULT_PRESETS),
             "image_requests": False,
             "image_requests_endpoint": None,

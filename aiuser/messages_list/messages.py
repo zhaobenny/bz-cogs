@@ -23,7 +23,7 @@ async def create_messages_list(
 ):
     """to manage messages in ChatML format"""
     thread = MessagesList(cog, ctx)
-    await thread._init(prompt)
+    await thread._init(prompt=prompt)
     return thread
 
 
@@ -52,7 +52,7 @@ class MessagesList:
     def __repr__(self) -> str:
         return json.dumps(self.get_json(), indent=4)
 
-    async def _init(self, given_prompt=None):
+    async def _init(self, prompt=None):
         model = await self.config.guild(self.guild).model()
         self.token_limit = self._get_token_limit(model)
         try:
@@ -60,10 +60,10 @@ class MessagesList:
         except KeyError:
             self._encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
-        if not given_prompt:
+        if not prompt:  # jank
             await self.add_msg(self.init_message)
 
-        bot_prompt = given_prompt or await self._pick_prompt()
+        bot_prompt = prompt or await self._pick_prompt()
 
         await self.add_system(format_variables(self.ctx, bot_prompt))
 

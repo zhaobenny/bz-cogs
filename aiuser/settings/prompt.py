@@ -242,14 +242,15 @@ class PromptSettings(MixinMeta):
         presets = json.loads(await self.config.guild(ctx.guild).presets())
         if prompt and prompt in presets:
             prompt = presets[prompt]
-        elif isinstance(mention, discord.Role):
+
+        entity_type = "server"
+        if isinstance(mention, discord.Role):
             entity_type = "role"
         elif isinstance(mention, discord.Member):
             entity_type = "user"
         elif isinstance(mention, discord.TextChannel) or isinstance(mention, discord.VoiceChannel) or isinstance(mention, discord.StageChannel):
             entity_type = "channel"
-        else:
-            entity_type = "server"
+
         return await self._set_prompt(ctx, mention, entity_type, prompt)
 
     async def _set_prompt(self, ctx: commands.Context, entity, entity_type, prompt: Optional[str]):

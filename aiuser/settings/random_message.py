@@ -1,6 +1,4 @@
 import logging
-import re
-from typing import Optional
 
 import discord
 from redbot.core import checks, commands
@@ -8,6 +6,7 @@ from redbot.core.utils.chat_formatting import box, pagify
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.abc import MixinMeta, aiuser
+from aiuser.common.constants import DEFAULT_RANDOM_PROMPTS
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -19,7 +18,7 @@ class RandomMessageSettings(MixinMeta):
         """ Configure the random message event
             **(Must be enabled by bot owner first using `[p]aiuser random toggle`)**
 
-            Every 33 minutes, a RNG roll will determine if a random message will be sent using a list of topics as a prompt.
+            Every 33 minutes, a RNG roll will determine if a random message will be sent using a random prompt from a given list.
 
             Whitelisted channels must have a hour pass without a message sent in it for a random message to be sent. Last message author must not be this bot.
 
@@ -54,18 +53,19 @@ class RandomMessageSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @randommessage.command(name="show", aliases=["list"])
-    async def show_random_topics(self, ctx: commands.Context):
-        """ Lists topics to used in random messages """
-        topics = await self.config.guild(ctx.guild).random_messages_topics()
+    async def show_random_prompts(self, ctx: commands.Context):
+        """ Lists prompts to used in random messages """
+        prompts = await self.config.guild(ctx.guild).random_messages_prompts()
 
-        if not topics:
-            return await ctx.send("The topic list is empty.")
+        if not prompts:
+            return await ctx.send("The prompt list is empty.")
 
-        formatted_list = "\n".join(f"{index+1}. {topic}" for index, topic in enumerate(topics))
+        formatted_list = "\n".join(
+            f"{index+1}. {prompt}" for index, prompt in enumerate(prompts))
         pages = []
         for text in pagify(formatted_list, page_length=888):
             page = discord.Embed(
-                title=f"List of random message topics in {ctx.guild.name}",
+                title=f"List of random message prompt in {ctx.guild.name}",
                 description=box(text),
                 color=await ctx.embed_color())
             pages.append(page)
@@ -79,33 +79,39 @@ class RandomMessageSettings(MixinMeta):
         return await SimpleMenu(pages).start(ctx)
 
     @randommessage.command(name="add", aliases=["a"])
-    async def add_random_topics(self, ctx: commands.Context, *, topic: str):
-        """ Add a new topic to be used in random messages"""
-        topics = await self.config.guild(ctx.guild).random_messages_topics()
-        if topic in topics:
-            return await ctx.send("That topic is already in the list.")
-        if topic and len(topic) > await self.config.max_topic_length() and not await ctx.bot.is_owner(ctx.author):
-            return await ctx.send(f"Topic too long. Max length is {await self.config.max_topic_length()} characters.")
-        topics.append(topic)
-        await self.config.guild(ctx.guild).random_messages_topics.set(topics)
+    async def add_random_prompts(self, ctx: commands.Context, *, prompt: str):
+        """ Add a new prompt to be used in random messages"""
+        prompts = await self.config.guild(ctx.guild).random_messages_prompts()
+        if prompt in prompts:
+            return await ctx.send("That prompt is already in the list.")
+        if prompt and len(prompt) > await self.config.max_random_prompt_length() and not await ctx.bot.is_owner(ctx.author):
+            return await ctx.send(f"Topic too long. Max length is {await self.config.max_random_prompt_length()} characters.")
+        prompts.append(prompt)
+        await self.config.guild(ctx.guild).random_messages_prompts.set(prompts)
         embed = discord.Embed(
-            title="Added topic to random message topics:",
-            description=f"{topic}",
+            title="Added topic to random message prompts:",
+            description=f"{prompt}",
             color=await ctx.embed_color())
-        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, topic))
+        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
         return await ctx.send(embed=embed)
 
     @randommessage.command(name="remove", aliases=["rm", "delete"])
-    async def remove_random_topics(self, ctx: commands.Context, *, number: int):
-        """ Removes a topic (by number) from the list"""
-        topics = await self.config.guild(ctx.guild).random_messages_topics()
-        if not (1 <= number <= len(topics)):
+    async def remove_random_prompts(self, ctx: commands.Context, *, number: int):
+        """ Removes a prompt (by number) from the list"""
+        prompts = await self.config.guild(ctx.guild).random_messages_prompts()
+        if not (1 <= number <= len(prompts)):
             return await ctx.send("Invalid topic number.")
-        topic = topics[number - 1]
-        topics.remove(topic)
-        await self.config.guild(ctx.guild).random_messages_topics.set(topics)
+        prompt = prompts[number - 1]
+        prompts.remove(prompt)
+        await self.config.guild(ctx.guild).random_messages_prompts.set(prompts)
         embed = discord.Embed(
-            title="Removed topic from random message topics:",
-            description=f"{topic}",
+            title="Removed topic from random message prompts:",
+            description=f"{prompt}",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
+
+    @randommessage.command(name="reset")
+    async def reset_random_prompts(self, ctx: commands.Context):
+        """ Resets the random prompt list to the default"""
+        await self.config.guild(ctx.guild).random_messages_prompts.set(DEFAULT_RANDOM_PROMPTS)
+        return await ctx.send("Random prompt list resetted.")

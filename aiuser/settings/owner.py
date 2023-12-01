@@ -7,7 +7,7 @@ from typing import Optional
 import discord
 from redbot.core import checks, commands
 from redbot.core.data_manager import cog_data_path
-from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
+from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.abc import MixinMeta
@@ -36,11 +36,11 @@ class OwnerSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @aiuserowner.command(name="maxtopiclength")
-    async def max_topic_length(self, ctx: commands.Context, length: int):
-        """Sets the maximum character length of a topic that can set by any server."""
+    async def max_random_prompt_length(self, ctx: commands.Context, length: int):
+        """Sets the maximum character length of a random prompt that can set by any server."""
         if length < 1:
             return await ctx.send("Please enter a positive integer.")
-        await self.config.max_topic_length.set(length)
+        await self.config.max_random_prompt_length.set(length)
         embed = discord.Embed(
             title="The maximum topic length is now:",
             description=f"{length}",
