@@ -9,7 +9,7 @@ from aiuser.common.constants import (IMAGE_REQUEST_CHECK_PROMPT,
                                      MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
 from aiuser.messages_list.messages import create_messages_list
 from aiuser.response.chat.openai import OpenAI_API_Generator
-#1
+from aiuser.response.chat.openai_funcs import OpenAI_Functions_API_Generator
 from aiuser.response.chat.response import ChatResponse
 from aiuser.response.image.generic import GenericImageGenerator
 from aiuser.response.image.modal import ModalImageGenerator
@@ -30,7 +30,12 @@ class ResponseHandler(MixinMeta):
     async def send_message(self, ctx: commands.Context):
         message_list = await create_messages_list(self, ctx)
         await message_list.add_history()
-        chat = OpenAI_API_Generator(self, ctx, message_list)
+        chat = None
+
+        if await self.config.guild(ctx.guild).function_calling():
+            chat = OpenAI_Functions_API_Generator(self, ctx, message_list)
+        else:
+            chat = OpenAI_API_Generator(self, ctx, message_list)
 
         async with ctx.message.channel.typing():
             response = ChatResponse(ctx, self.config, chat)

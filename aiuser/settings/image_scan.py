@@ -98,8 +98,9 @@ class ImageScanSettings(MixinMeta):
                 inline=False)
             return await ctx.send(embed=embed)
         elif mode == ScanImageMode.LLM:
-            if not ((await self.config.guild(ctx.guild).model()) in VISION_SUPPORTED_MODELS):
-                return await ctx.send(":warning: Currently selected model does not support image scanning. Set a comptaible model first!")
+            model = await self.config.guild(ctx.guild).model()
+            if not (model in VISION_SUPPORTED_MODELS):
+                return await ctx.send(f":warning: Currently selected model, {model}, does not support image scanning. Set a comptaible model first!")
 
             await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.LLM.value)
             embed = discord.Embed(title="Scanning Images for this server now set to", description=mode.value, color=await ctx.embed_color())

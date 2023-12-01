@@ -16,7 +16,7 @@ from aiuser.common.cache import Cache
 from aiuser.common.constants import (
     DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
     DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_PRESETS,
-    DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT, DEFAULT_RANDOM_PROMPTS,
+    DEFAULT_RANDOM_PROMPTS, DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT,
     IMAGE_UPLOAD_LIMIT, MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
 from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import is_embed_valid, is_using_openai_endpoint
@@ -57,7 +57,7 @@ class AIUser(
             "optout": [],
             "optin": [],
             "ratelimit_reset": datetime(1990, 1, 1, 0, 1).strftime("%Y-%m-%d %H:%M:%S"),
-            "max_topic_length": 200,
+            "max_random_prompt_length": 200,
             "max_prompt_length": 200,
         }
 
@@ -92,7 +92,8 @@ class AIUser(
             "image_requests_subject": "woman",
             "image_requests_reduced_llm_calls": False,
             "image_requests_trigger_words": DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS,
-            "image_requests_second_person_trigger_words": DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS
+            "image_requests_second_person_trigger_words": DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
+            "function_calling": False,
         }
         default_channel = {
             "custom_text_prompt": None,
@@ -124,9 +125,10 @@ class AIUser(
             self.ignore_regex[guild_id] = re.compile(
                 pattern) if pattern else None
 
-        if logger.isEnabledFor(logging.DEBUG):  # development
-            self.override_prompt_start_time[744802856074346556] = datetime.utcnow(
-            )
+        if logger.isEnabledFor(logging.DEBUG):
+            # for development
+            test_guild = 744802856074346556
+            self.override_prompt_start_time[test_guild] = datetime.now()
 
         self.random_message_trigger.start()
 
@@ -168,8 +170,9 @@ class AIUser(
             return await ctx.send(
                 "You're not allowed to use this command here.", ephemeral=True
             )
-
-        if not (await self.config.guild(ctx.guild).reply_to_mentions_replies()):
+        elif self.reply_percent.get(ctx.guild.id) == 1.0:
+            pass
+        elif not (await self.config.guild(ctx.guild).reply_to_mentions_replies()):
             return await ctx.send("This command is not enabled.", ephemeral=True)
 
         rate_limit_reset = datetime.strptime(

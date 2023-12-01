@@ -7,10 +7,12 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.abc import MixinMeta
-from aiuser.common.constants import VISION_SUPPORTED_MODELS
+from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
+                                     VISION_SUPPORTED_MODELS)
 from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import (is_using_openai_endpoint,
                                      is_using_openrouter_endpoint)
+from aiuser.settings.functions import FunctionCallingSettings
 from aiuser.settings.image_request import ImageRequestSettings
 from aiuser.settings.image_scan import ImageScanSettings
 from aiuser.settings.owner import OwnerSettings
@@ -30,6 +32,7 @@ class Settings(
     TriggerSettings,
     OwnerSettings,
     RandomMessageSettings,
+    FunctionCallingSettings,
     MixinMeta,
 ):
     @commands.group(aliases=["ai_user"])
@@ -249,9 +252,6 @@ class Settings(
         if not self.openai_client:
             await self.initalize_openai(ctx)
 
-        if await self.config.guild(ctx.guild).scan_images_mode() == ScanImageMode.LLM.value and model not in VISION_SUPPORTED_MODELS:
-            return await ctx.send(":warning: Can not select model that with no build-in support for images!\n Switch image scanning mode or select a model that supports images.")
-
         await ctx.message.add_reaction("🔄")
         models_list = await self.openai_client.models.list()
         await ctx.message.remove_reaction("🔄", ctx.me)
@@ -264,6 +264,12 @@ class Settings(
 
         if model == "list":
             return await self._paginate_models(ctx, gpt_models)
+
+        if await self.config.guild(ctx.guild).scan_images_mode() == ScanImageMode.LLM.value and model not in VISION_SUPPORTED_MODELS:
+            return await ctx.send(":warning: Can not select model that with no build-in support for images!\nSwitch image scanning mode or select a model that supports images.")
+
+        if await self.config.guild(ctx.guild).function_calling() and model not in FUNCTION_CALLING_SUPPORTED_MODELS:
+            return await ctx.send(":warning: Can not select model that with no build-in support for function calling!\nSwitch function calling off or select a model that supports function calling.")
 
         if model not in gpt_models:
             await ctx.send(":warning: Not a valid model!")

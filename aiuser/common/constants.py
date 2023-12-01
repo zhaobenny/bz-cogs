@@ -55,6 +55,22 @@ IMAGE_UPLOAD_LIMIT = 2 * (1024 * 1024)  # 2 MB
 
 
 # models
+FUNCTION_CALLING_SUPPORTED_MODELS = [
+    "gpt-4",
+    "gpt-4-1106-preview",
+    "gpt-4-0613",
+    "gpt-3.5-turbo",
+    "gpt-3.5-turbo-1106",
+    "gpt-3.5-turbo-0613"
+    "openai/gpt-4",
+    "openai/gpt-4-1106-preview",
+    "openai/gpt-4-0613",
+    "openai/gpt-3.5-turbo",
+    "openai/gpt-3.5-turbo-1106",
+    "openai/gpt-3.5-turbo-0613"
+    "teknium/openhermes-2.5-mistral-7b",
+    "jondurbin/airoboros-l2-70b",
+]
 VISION_SUPPORTED_MODELS = [
     "gpt-4-vision-preview",
     "openai/gpt-4-vision-preview",
@@ -81,5 +97,6 @@ OTHER_MODELS_LIMITS = {
     "goliath-120b": 6000,
     "weaver": 6000,
     "palm-2-codechat-bison": 6000,
+    "openchat-7b": 6000,
     "remm-slerp-l2-13b": 5000
 }

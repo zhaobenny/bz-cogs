@@ -124,6 +124,8 @@ class MessagesList:
             await self.add_msg(message.reference.resolved, index=0)
 
     async def add_system(self, content: str, index: int = None):
+        if self.tokens > self.token_limit:
+            return
         entry = MessageEntry("system", content)
         self.messages.insert(index or 0, entry)
         await self._add_tokens(content)
@@ -183,7 +185,6 @@ class MessagesList:
                 break
 
         if users and not (await self.config.guild(self.guild).optin_disable_embed()):
-            prefix = (await self.bot.get_prefix(message))[0]
             users = ", ".join([user.mention for user in users])
             embed = discord.Embed(
                 title=":information_source: AI User Opt-In / Opt-Out",
