@@ -67,9 +67,7 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
     "openai/gpt-4-0613",
     "openai/gpt-3.5-turbo",
     "openai/gpt-3.5-turbo-1106",
-    "openai/gpt-3.5-turbo-0613"
-    "teknium/openhermes-2.5-mistral-7b",
-    "jondurbin/airoboros-l2-70b",
+    "openai/gpt-3.5-turbo-0613",
 ]
 VISION_SUPPORTED_MODELS = [
     "gpt-4-vision-preview",

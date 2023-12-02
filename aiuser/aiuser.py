@@ -122,8 +122,7 @@ class AIUser(
             self.reply_percent[guild_id] = config["reply_percent"]
             pattern = config["ignore_regex"]
 
-            self.ignore_regex[guild_id] = re.compile(
-                pattern) if pattern else None
+            self.ignore_regex[guild_id] = re.compile(pattern) if pattern else None
 
         if logger.isEnabledFor(logging.DEBUG):
             # for development
@@ -202,13 +201,9 @@ class AIUser(
         ):
             return
 
-        rate_limit_reset = datetime.strptime(
-            await self.config.ratelimit_reset(), "%Y-%m-%d %H:%M:%S"
-        )
+        rate_limit_reset = datetime.strptime(await self.config.ratelimit_reset(), "%Y-%m-%d %H:%M:%S")
         if rate_limit_reset > datetime.now():
-            logger.debug(
-                f"Want to respond but ratelimited until {rate_limit_reset.strftime('%Y-%m-%d %H:%M:%S')}"
-            )
+            logger.debug(f"Want to respond but ratelimited until {rate_limit_reset.strftime('%Y-%m-%d %H:%M:%S')}")
             if (
                 await self.is_bot_mentioned_or_replied(message)
                 or self.reply_percent.get(message.guild.id, DEFAULT_REPLY_PERCENT)
@@ -296,8 +291,8 @@ class AIUser(
             api_type = "openrouter"
             api_key = (await self.bot.get_shared_api_tokens(api_type)).get("api_key")
             headers = {
-                "HTTP-Referer": "https://github.com/zhaobenny/bz-cogs/tree/main/aiuser",
-                "X-Title": "ai user",
+                "HTTP-Referer": "https://aiuser.zhao.gg",
+                "X-Title": "aiuser",
             }
         else:
             api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
@@ -316,7 +311,7 @@ class AIUser(
             )
             return
 
-        timeout = 60.0 if base_url else 50.0
+        timeout = 60.0 if api_type == "openrouter" else 50.0
 
         client = httpx.AsyncClient(
             event_hooks={"request": [self._log_request_prompt], "response": [self._update_ratelimit_hook]})

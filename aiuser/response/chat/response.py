@@ -73,7 +73,13 @@ class ChatResponse():
             for author in authors:
                 patterns.append(pattern.replace(r'{authorname}', author))
 
-        patterns = [re.compile(pattern, re.IGNORECASE) for pattern in patterns]
+        patterns = []
+        for pattern in patterns:
+            try:
+                patterns.append(re.compile(pattern, re.IGNORECASE))
+            except:
+                logger.warning(
+                    f"Failed to compile regex pattern \"{pattern}\" for response \"{self.response}\", continuing...", exc_info=True)
 
         response = self.response.strip(' "')
         for pattern in patterns:
