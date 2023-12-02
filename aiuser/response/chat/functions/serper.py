@@ -1,17 +1,16 @@
 import json
 import logging
-import re
 
 import aiohttp
 import discord
 from bs4 import BeautifulSoup
 
+from aiuser.common.utilities import contains_youtube_link
+
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 async def search_google(query, api_key: str = None, guild: discord.Guild = None):
-    # serper.dev
-    # [p]set api serper api_key,APIKEY
     if not api_key:
         raise ValueError("No API key provided for serper.io")
 
@@ -36,18 +35,31 @@ async def search_google(query, api_key: str = None, guild: discord.Guild = None)
             if response.status != 200:
                 logger.warning(
                     f"Failed request to serper.io - {response.status}")
-                return None
+                return text_content
 
-            first_result = data.get("organic", [])[0]
+            answer_box = data.get("answerBox")
+            if answer_box and "snippet" in answer_box:
+                return "Use the following relevant infomation to generate your response: " + answer_box["snippet"]
+
+            results = data.get("organic", [])
+
+            results = [result for result in results if not contains_youtube_link(result.get("link", ""))]
+
+            if not results:
+                return text_content
+
+            first_result = results[0]
             link = first_result.get("link")
 
-            text_content = await get_text_from_link(link)
-
-            if text_content is None:
+            try:
+                text_content = await scrape_page(link)
+            except:
+                logger.debug(f"Failed scraping url {link}", exc_info=1)
                 knowledge_graph = data.get("knowledgeGraph", {})
                 text_content = format_knowledge_graph(
                     knowledge_graph) if knowledge_graph else first_result.get("snippet")
 
+    text_content = "Use the following relevant infomation to generate your response: " + text_content
     return text_content
 
 
@@ -64,17 +76,17 @@ def format_knowledge_graph(knowledge_graph):
     return text_content
 
 
-async def get_text_from_link(link):
+async def scrape_page(link):
     headers = {
         "Cache-Control": "no-cache",
         "Referer": "https://www.google.com/",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
     }
-    logger.debug(f"Requesting {link}...")
+    logger.debug(f"Requesting {link} to scrape")
     async with aiohttp.ClientSession(headers=headers) as session:
         async with session.get(link) as response:
             if response.status != 200:
-                return None
+                response.raise_for_status()
 
             html_content = await response.text()
 
@@ -83,35 +95,24 @@ async def get_text_from_link(link):
             if len(text_content) > 2000:
                 text_content = text_content[:2000]
 
-            text_content = "Use the following relevant infomation to generate your response: " + text_content
-
             return text_content
 
 
 def find_best_text(html_content):
     def get_text_content(tag):
         return tag.get_text(separator=" ", strip=True) if tag else ""
+
     soup = BeautifulSoup(html_content, 'html.parser')
 
-    bodycontent = soup.find('div', id='bodyContent')  # mainly for wikipedia
-    if bodycontent:
-        paragraph_tags = bodycontent.find_all('p')
-        if not paragraph_tags:
-            bodycontent_text = get_text_content(bodycontent)
-        bodycontent_text = ' '.join(get_text_content(tag) for tag in paragraph_tags)
-    else:
-        bodycontent_text = ""
+    paragraph_tags = soup.find_all('p') or []
+    paragraph_text = ""
+    for tag in paragraph_tags:
+        tag_content = get_text_content(tag)
+        paragraph_text = paragraph_text + tag_content if len(tag_content) > 100 else paragraph_text
 
-    article_tags = soup.find_all('article') or []
-    main_tag = soup.find('main')
-    article_text = max((get_text_content(tag) for tag in article_tags if tag and len(tag) > 100), default="")
-    main_text = get_text_content(main_tag)
-
-    if not any([article_text, main_text, bodycontent_text]) or all(len(text) < 100 for text in [article_text, main_text, bodycontent_text]):
+    if not paragraph_text or len(paragraph_text) < 300:
         text_content = soup.get_text(separator=" ", strip=True)
-    elif bodycontent_text:
-        text_content = bodycontent_text
     else:
-        text_content = max(article_text, main_text, key=len)
+        text_content = paragraph_text
 
     return text_content

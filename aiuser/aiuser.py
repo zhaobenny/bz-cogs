@@ -329,7 +329,7 @@ class AIUser(
         if not logger.isEnabledFor(logging.DEBUG):
             return
 
-        if request.method == "GET":
+        if request.url.path != "/v1/chat/completions":
             return
 
         bytes = await request.aread()

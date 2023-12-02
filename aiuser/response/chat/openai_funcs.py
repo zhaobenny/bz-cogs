@@ -69,11 +69,13 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
                 arguments = json.loads(function.arguments)
 
                 if function.name == "search_google":
+                    kwargs["tool_choice"] = "none"  # temp, remove for multiple tool calls
                     result = await search_google(arguments["query"], api_key=(await self.bot.get_shared_api_tokens("serper")).get("api_key"), guild=self.ctx.guild)
+                    if not result:
+                        continue
                     await self.msg_list.add_system(
                         result, index=len(self.msg_list) + 1
                     )
-                    del kwargs["tools"]
 
         logger.debug(
             f'Generated the following raw response in {self.ctx.guild.name}: "{completion}"'
