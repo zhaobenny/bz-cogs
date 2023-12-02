@@ -10,5 +10,5 @@ See settings to optin for users:
 
 See settings for bot owners:
 ```
-[p]aiemote_owner
+[p]aiemoteowner
 ```
