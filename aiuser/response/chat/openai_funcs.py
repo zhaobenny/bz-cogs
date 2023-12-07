@@ -6,6 +6,12 @@ from redbot.core import commands
 from aiuser.abc import MixinMeta
 from aiuser.messages_list.messages import MessagesList
 from aiuser.response.chat.functions.serper import search_google
+from aiuser.response.chat.functions.tool_defs import (IS_DAYTIME,
+                                                      LOCAL_WEATHER,
+                                                      LOCATION_WEATHER,
+                                                      SERPER_SEARCH)
+from aiuser.response.chat.functions.weather import (get_local_weather,
+                                                    get_weather, is_daytime)
 from aiuser.response.chat.openai import OpenAI_API_Generator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -19,25 +25,6 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
     async def request_openai(self, model):
         custom_parameters = await self.config.guild(self.ctx.guild).parameters()
         kwargs = {}
-        tools = [
-            {
-                "type": "function",
-                "function": {
-                    "name": "search_google",
-                    "description": "Searches Google for the query for any unknown information or most current infomation",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "query": {
-                                "type": "string",
-                                "description": "The search query",
-                            }
-                        },
-                        "required": ["query"],
-                    },
-                }
-            },
-        ]
 
         if custom_parameters is not None:
             custom_parameters = json.loads(custom_parameters)
@@ -50,9 +37,12 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
             kwargs["logit_bias"] = logit_bias
 
         completion = None
-        kwargs["tools"] = tools
+        kwargs["tools"] = await self.get_available_tools()
 
         while completion is None:
+            if kwargs["tools"] == []:
+                del kwargs["tools"]
+
             response = (
                 await self.openai_client.chat.completions.create(
                     model=model, messages=self.msg_list.get_json(), **kwargs
@@ -64,20 +54,48 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
             if not tool_calls:
                 break
 
-            for tool_call in tool_calls:
-                function = tool_call.function
-                arguments = json.loads(function.arguments)
-
-                if function.name == "search_google":
-                    kwargs["tool_choice"] = "none"  # temp, remove for multiple tool calls
-                    result = await search_google(arguments["query"], api_key=(await self.bot.get_shared_api_tokens("serper")).get("api_key"), guild=self.ctx.guild)
-                    if not result:
-                        continue
-                    await self.msg_list.add_system(
-                        result, index=len(self.msg_list) + 1
-                    )
+            await self.handle_tool_calls(kwargs, tool_calls)
 
         logger.debug(
             f'Generated the following raw response in {self.ctx.guild.name}: "{completion}"'
         )
         return completion
+
+    async def get_available_tools(self):
+        tools = []
+        if await self.config.guild(self.ctx.guild).function_calling_search():
+            tools.append(SERPER_SEARCH)
+        if await self.config.guild(self.ctx.guild).function_calling_weather():
+            tools.append(LOCAL_WEATHER)
+            tools.append(LOCATION_WEATHER)
+            tools.append(IS_DAYTIME)
+        return tools
+
+    async def handle_tool_calls(self, kwargs, tool_calls):
+        for tool_call in tool_calls:
+            function = tool_call.function
+            arguments = json.loads(function.arguments)
+
+            logger.info(
+                f"Handling tool call in {self.ctx.guild.name}: \"{function.name}\" with arguments: \"{arguments}\"")
+
+            if function.name == "search_google":
+                kwargs["tools"].remove(SERPER_SEARCH)
+                result = await search_google(arguments["query"], (await self.bot.get_shared_api_tokens("serper")).get("api_key"), self.ctx)
+                if not result:
+                    continue
+                await self.msg_list.add_system(result, index=len(self.msg_list) + 1)
+            elif function.name == "get_weather":
+                kwargs["tools"].remove(LOCATION_WEATHER)
+                kwargs["tools"].remove(LOCAL_WEATHER)
+                result = await get_weather(arguments["location"])
+                await self.msg_list.add_system(result, index=len(self.msg_list) + 1)
+            elif function.name == "get_local_weather":
+                kwargs["tools"].remove(LOCATION_WEATHER)
+                kwargs["tools"].remove(LOCAL_WEATHER)
+                result = await get_local_weather(self.config, self.ctx)
+                await self.msg_list.add_system(result, index=len(self.msg_list) + 1)
+            elif function.name == "is_daytime_local":
+                kwargs["tools"].remove(IS_DAYTIME)
+                result = await is_daytime(self.config, self.ctx)
+                await self.msg_list.add_system(result, index=len(self.msg_list) + 1)

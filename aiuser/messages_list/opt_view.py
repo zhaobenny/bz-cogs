@@ -8,7 +8,7 @@ class OptView(discord.ui.View):
         super().__init__()
 
     @discord.ui.button(label='Opt In', style=discord.ButtonStyle.green)
-    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def confirm(self, interaction: discord.Interaction, _: discord.ui.Button):
         optin = await self.config.optin()
         if interaction.user.id in await self.config.optin():
             return await interaction.response.send_message("You are already opted in.", ephemeral=True)
@@ -20,10 +20,8 @@ class OptView(discord.ui.View):
         await self.config.optin.set(optin)
         await interaction.response.send_message("You are now opted in bot-wide", ephemeral=True)
 
-    # This one is similar to the confirmation button except sets the inner value to `False`
-
     @discord.ui.button(label='Opt Out', style=discord.ButtonStyle.grey)
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def cancel(self, interaction: discord.Interaction, _: discord.ui.Button):
         optout = await self.config.optout()
         if interaction.user.id in optout:
             return await interaction.response.send_message("You are already opted out.", ephemeral=True)

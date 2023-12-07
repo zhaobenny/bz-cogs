@@ -10,6 +10,11 @@ Bot owners can change the percentage of eligible messages (per server) to reply 
 [p]aiuser percent <PERCENT>
 ```
 
+Bot owners can also manage/enable function calling (eg. using web searches or weather data for responses) using:
+```
+[p]aiuser functions
+```
+
 Users will also have to opt-in (bot-wide) into having their messages used:
 ```
 [p]aiuser optin
@@ -108,25 +113,6 @@ When using serverless-img-gen, you might need to set an auth token:
 
 ---
 
-## Random Messages 🎲
-
-Have the bot sent random messages into a channel without external triggers.
-
-Every 33 minutes, a RNG roll will determine if a random message will be sent using a list of topics as a prompt.
-
-Whitelisted channels must have a hour pass without a message sent in it for a random message to be sent, and the last sent message must be sent by a user.
-
-Bot owners enable this setting per server here:
-```
-[p]aiuser randommessage toggle
-```
-
-Admins also manage topics here:
-```
-[p]aiuser randommessage
-```
----
-
 ## Prompt/Topics Variables  📝
 
 Prompts and topics can include certain variables by including one of the following placeholders:
@@ -137,9 +123,9 @@ Prompts and topics can include certain variables by including one of the followi
 - `{serveremojis}` - all of the server emojis, in a string format (eg. `<:emoji:12345> <:emoji2:78912>`)
 - `{servername}` - the server name
 - `{channelname}` - the channel name
-- `{currentdate}` - the current date eg. 2023/08/31
-- `{currentweekday}` - the current weekday eg. Monday
-- `{currenttime}` - the current 24-hour time eg. 21:59
+- `{currentdate}` - the current date eg. 2023/08/31 (based on host timezone)
+- `{currentweekday}` - the current weekday eg. Monday (based on host timezone)
+- `{currenttime}` - the current 24-hour time eg. 21:59 (based on host timezone)
 
 
 Remove list regex patterns only support `{authorname}` (will use authors of last 10 messages) and `{botname}` placeholders.

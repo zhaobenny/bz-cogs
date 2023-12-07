@@ -10,12 +10,21 @@ class FunctionCallingSettings(MixinMeta):
     @aiuser.group()
     @checks.is_owner()
     async def functions(self, _):
-        """Function calling settings"""
+        """ Settings to manage function calling
+
+            (All subcommands are per server)
+        """
         pass
 
     @functions.command(name="toggle")
     async def toggle_function_calling(self, ctx: commands.Context):
-        """Toggle functions calling """
+        """Toggle functions calling
+
+        Requires a model that supports function calling
+        If enabled, the LLM will call functions to generate responses when needed
+        This will generate additional API calls and token usage
+
+        """
 
         current_value = not await self.config.guild(ctx.guild).function_calling()
 
@@ -33,6 +42,56 @@ class FunctionCallingSettings(MixinMeta):
         )
         await ctx.send(embed=embed)
 
-        # temp for now
-        if current_value:
-            await ctx.send("TEMP: Only Google search function via Serper.dev is supported at the moment.\nSet `[p]set api serper api_key,APIKEY` ")
+    @functions.command(name="location")
+    async def set_location(self, ctx: commands.Context, latitude: float, longitude: float):
+        """ Set the location where the bot will canonically be in
+
+            Used for some functions.
+
+            **Arguments**
+            - `latitude` decimal latitude
+            - `longitude` decimal longitude
+        """
+        await self.config.guild(ctx.guild).function_calling_default_location.set([latitude, longitude])
+        embed = discord.Embed(
+            title="Location now set to:",
+            description=f"{latitude}, {longitude}",
+            color=await ctx.embed_color(),
+        )
+        await ctx.send(embed=embed)
+
+    @functions.command(name="search")
+    async def toggle_search_function(self, ctx: commands.Context):
+        """ Enable/disable searching/scraping the Internet using Serper.dev """
+
+        if (not (await self.bot.get_shared_api_tokens("serper")).get("api_key")):
+            return await ctx.send(f"Serper.dev key not set! Set it using `{ctx.clean_prefix}set api serper api_key,APIKEY`.")
+
+        current_value = not await self.config.guild(ctx.guild).function_calling_search()
+
+        await self.config.guild(ctx.guild).function_calling_search.set(current_value)
+
+        embed = discord.Embed(
+            title="Search function calling now set to:",
+            description=f"{current_value}",
+            color=await ctx.embed_color(),
+        )
+        await ctx.send(embed=embed)
+
+    @functions.command(name="weather")
+    async def toggle_weather_function(self, ctx: commands.Context):
+        """ Enable/disable getting current weather using Open-Meteo
+
+            See [Open-Meteo terms](https://open-meteo.com/en/terms) for their free API
+        """
+
+        current_value = not await self.config.guild(ctx.guild).function_calling_weather()
+
+        await self.config.guild(ctx.guild).function_calling_weather.set(current_value)
+
+        embed = discord.Embed(
+            title="Weather function calling now set to:",
+            description=f"{current_value}",
+            color=await ctx.embed_color(),
+        )
+        await ctx.send(embed=embed)
