@@ -50,13 +50,13 @@ async def get_weather(location: str):
 
 
 async def get_local_weather(config: Config, ctx: commands.Context):
-    location = await (config.guild(ctx.guild).function_calling_weather_default_location())
+    location = await (config.guild(ctx.guild).function_calling_default_location())
     lat, lon = location
     return await request_weather(lat, lon, "current location")
 
 
 async def is_daytime(config: Config, ctx: commands.Context):
-    location = await (config.guild(ctx.guild).function_calling_weather_default_location())
+    location = await (config.guild(ctx.guild).function_calling_default_location())
     lat, lon = location
     params = {
         "latitude": lat,
@@ -71,9 +71,9 @@ async def is_daytime(config: Config, ctx: commands.Context):
                 weather = await res.json()
                 is_day = weather['current']['is_day']
                 if is_day:
-                    return "Use the following infomation about your location to generate your response: It's daytime."
+                    return "Use the following information about your location to generate your response: It's daytime."
                 else:
-                    return "Use the following infomation about your location to generate your response: It's nighttime."
+                    return "Use the following information about your location to generate your response: It's nighttime."
     except:
         logger.exception("Failed request to open-meteo.com")
         return "Unknown if it's daytime or nighttime."
@@ -104,7 +104,7 @@ async def request_weather(lat, lon, location):
                 apparent_temperature_unit = current_units.get('apparent_temperature', '°C')
                 apparent_temperature = weather['current']['apparent_temperature']
 
-                return f"Use the following weather report for {location} to generate your response:\n Today's forecast is {daily_weather_description}. The current weather is {current_weather_description}. The temperature currently feels like {apparent_temperature}{apparent_temperature_unit}."
+                return f"Use the following information for {location} to generate your response:\n Today's forecast is {daily_weather_description}. The current weather is {current_weather_description}. The temperature currently feels like {apparent_temperature}{apparent_temperature_unit}."
     except:
         logger.exception("Failed request to open-meteo.com")
         return f"Could not get weather data at {location}"

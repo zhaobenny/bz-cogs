@@ -111,6 +111,23 @@ When using serverless-img-gen, you might need to set an auth token:
 [p]set api modal-img-gen token,AUTH_TOKEN
 ```
 
+## Random Messages 🎲
+
+Have the bot sent random messages into a channel without external triggers.
+
+Every 33 minutes, a RNG roll will determine if a random message will be sent using a list of topics as a prompt.
+
+Whitelisted channels must have a hour pass without a message sent in it for a random message to be sent, and the last sent message must be sent by a user.
+
+Bot owners enable this setting per server here:
+```
+[p]aiuser randommessage toggle
+```
+
+Admins also manage topics here:
+```
+[p]aiuser randommessage
+```
 ---
 
 ## Prompt/Topics Variables  📝
