@@ -124,8 +124,9 @@ async def find_lat_lon(location: str):
 
             res = await res.json()
 
-            if not location:
+            if not (res.get('results', False)):
                 raise Exception("Location not found")
+
             location = res['results'][0]
 
             return location['latitude'], location['longitude']
