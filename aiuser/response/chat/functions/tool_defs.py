@@ -20,11 +20,16 @@ LOCAL_WEATHER = {
     "type": "function",
     "function": {
         "name": "get_local_weather",
-        "description": "Get the weather of the local location you are in",
+        "description": "Get the weather forecast of the local location you are in",
         "parameters": {
             "type": "object",
             "properties": {},
-        }
+        },
+        "days": {
+            "type": "integer",
+                    "description": "The number of days to get the weather of",
+                    "default": 1,
+        },
     }
 }
 
@@ -32,14 +37,19 @@ LOCATION_WEATHER = {
     "type": "function",
     "function": {
         "name": "get_weather",
-        "description": "Get the weather of a city, region, or country",
+        "description": "Get the weather forecast of a city, region, or country",
         "parameters": {
             "type": "object",
             "properties": {
                 "location": {
                     "type": "string",
                     "description": "The location to get the weather of",
-                }
+                },
+                "days": {
+                    "type": "integer",
+                    "description": "The number of days to get the weather of",
+                    "default": 1,
+                },
             },
             "required": ["location"],
         },

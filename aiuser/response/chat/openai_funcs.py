@@ -88,12 +88,14 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
             elif function.name == "get_weather":
                 kwargs["tools"].remove(LOCATION_WEATHER)
                 kwargs["tools"].remove(LOCAL_WEATHER)
-                result = await get_weather(arguments["location"])
+                days = arguments.get("days", 1)
+                result = await get_weather(arguments["location"], days=days)
                 await self.msg_list.add_system(result, index=len(self.msg_list) + 1)
             elif function.name == "get_local_weather":
                 kwargs["tools"].remove(LOCATION_WEATHER)
                 kwargs["tools"].remove(LOCAL_WEATHER)
-                result = await get_local_weather(self.config, self.ctx)
+                days = arguments.get("days", 1)
+                result = await get_local_weather(self.config, self.ctx, days=days)
                 await self.msg_list.add_system(result, index=len(self.msg_list) + 1)
             elif function.name == "is_daytime_local":
                 kwargs["tools"].remove(IS_DAYTIME)

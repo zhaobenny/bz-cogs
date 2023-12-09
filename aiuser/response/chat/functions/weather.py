@@ -1,5 +1,6 @@
 
 import logging
+from itertools import islice
 
 import aiohttp
 from redbot.core import Config, commands
@@ -40,19 +41,19 @@ WMO_DESCRIPTIONS = {
 }
 
 
-async def get_weather(location: str):
+async def get_weather(location: str, days=1):
     try:
         lat, lon = await find_lat_lon(location)
     except:
         logger.exception(f"Failed request to determine lat/lon for location {location}")
         return f"Unable to find weather for the location {location}"
-    return await request_weather(lat, lon, location)
+    return await request_weather(lat, lon, location, days=days)
 
 
-async def get_local_weather(config: Config, ctx: commands.Context):
+async def get_local_weather(config: Config, ctx: commands.Context, days=1):
     location = await (config.guild(ctx.guild).function_calling_default_location())
     lat, lon = location
-    return await request_weather(lat, lon, "current location")
+    return await request_weather(lat, lon, "current location", days=days)
 
 
 async def is_daytime(config: Config, ctx: commands.Context):
@@ -79,35 +80,58 @@ async def is_daytime(config: Config, ctx: commands.Context):
         return "Unknown if it's daytime or nighttime."
 
 
-async def request_weather(lat, lon, location):
+async def request_weather(lat, lon, location, days=1):
     params = {
         "latitude": lat,
         "longitude": lon,
-        "current": ["apparent_temperature", "weather_code"],
+        "current": ["temperature_2m", "weather_code"],
         "daily": "weather_code",
-        "forecast_days": 1
+        "forecast_days": days
     }
 
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(METEO_WEATHER_URL, params=params) as res:
                 res.raise_for_status()
-                weather = await res.json()
+                data = await res.json()
 
-                current_weather_code = weather['current']['weather_code']
+                res = f"Use the following information for {location} to generate your response: \n"
+
+                current_weather_code = data['current']['weather_code']
                 current_weather_description = WMO_DESCRIPTIONS.get(current_weather_code, 'Unknown')
 
-                daily_weather_code = weather['daily']['weather_code'][0]
+                res += f"The current weather is {current_weather_description}. "
+
+                daily_weather_code = data['daily']['weather_code'][0]
                 daily_weather_description = WMO_DESCRIPTIONS.get(daily_weather_code, 'Unknown')
 
-                current_units = weather['current_units']
-                apparent_temperature_unit = current_units.get('apparent_temperature', '°C')
-                apparent_temperature = weather['current']['apparent_temperature']
+                res += f"Today's forecast is {daily_weather_description}. "
 
-                return f"Use the following information for {location} to generate your response:\n Today's forecast is {daily_weather_description}. The current weather is {current_weather_description}. The temperature currently feels like {apparent_temperature}{apparent_temperature_unit}."
+                current_units = data['current_units']
+                temperature_unit = current_units.get('temperature_2m', '°C')
+                temperature = data['current']['temperature_2m']
+
+                res += f"The temperature currently is {temperature}{temperature_unit}. "
+                print(data)
+
+                if days > 1:
+                    res += handle_multiple_days(data)
+
+                return res
     except:
         logger.exception("Failed request to open-meteo.com")
         return f"Could not get weather data at {location}"
+
+
+def handle_multiple_days(data):
+    if not data.get('daily', False):
+        return ""
+    res = " "
+    time_list = data["daily"]["time"]
+    weather_code_list = data["daily"]["weather_code"]
+    res += (" ".join([f"On {time}, the forecasted weather is {WMO_DESCRIPTIONS.get(code, 'unknown')}." for time,
+            code in islice(zip(time_list, weather_code_list), 1, None)]))
+    return res
 
 
 async def find_lat_lon(location: str):
