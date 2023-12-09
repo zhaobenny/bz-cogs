@@ -72,7 +72,8 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
 VISION_SUPPORTED_MODELS = [
     "gpt-4-vision-preview",
     "openai/gpt-4-vision-preview",
-    "haotian-liu/llava-13b"
+    "haotian-liu/llava-13b",
+    "nousresearch/nous-hermes-2-vision-7b"
 ]
 OTHER_MODELS_LIMITS = {
     "gpt-3.5-turbo-1106": 12000,
@@ -82,6 +83,12 @@ OTHER_MODELS_LIMITS = {
     "claude-instant-v1": 98000,
     "toppy-m-7b": 31000,
     "nous-capybara-34b": 31000,
+    "stripedhyena-hessian-7b": 31000,
+    "stripedhyena-nous-7b": 31000,
+    "mythomist-7b": 31000,
+    "cinematika-7b": 31000,
+    "pplx-7b-chat": 7000,
+    "noromaid-20b": 7000,
     "palm-2-chat-bison": 7000,
     "claude-v1": 7000,
     "claude-1.2": 7000,
