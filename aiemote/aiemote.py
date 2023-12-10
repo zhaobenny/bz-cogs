@@ -74,12 +74,13 @@ class AIEmote(commands.Cog):
                 f"OpenAI API key not set for `aiemote`. "
                 f"Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
         if not key:
-            logger.error(F"OpenAI API key not set for `aiemote` yet! Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
+            logger.error(
+                F"OpenAI API key not set for `aiemote` yet! Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
             return
 
         self.aclient = AsyncOpenAI(
-                api_key=key,
-                timeout=50.0
+            api_key=key,
+            timeout=50.0
         )
 
     @commands.Cog.listener()
@@ -95,8 +96,13 @@ class AIEmote(commands.Cog):
 
     async def pick_emoji(self, message: discord.Message):
         options = "\n"
-        emojis = await self.config.guild(message.guild).emojis() or []
+        emojis = await self.config.guild(message.guild).server_emojis() or []
         emojis += await self.config.global_emojis() or []
+
+        if not emojis:
+            logger.warning(f"Skipping react! No valid emojis to use in {message.guild.name}")
+            return None
+
         for index, value in enumerate(emojis):
             options += f"{index}. {value['description']}\n"
 
@@ -119,7 +125,7 @@ class AIEmote(commands.Cog):
                 logit_bias=logit_bias,
             )
         except:
-            logger.warning("Skipping react! Failed to get response from OpenAI")
+            logger.warning(f"Skipping react in {message.guild.name}! Failed to get response from OpenAI")
             return None
 
         response = response.choices[0].message.content
@@ -131,7 +137,7 @@ class AIEmote(commands.Cog):
             return partial_emoji
         else:
             logger.warning(
-                f"Skipping react! Non-numeric response from OpenAI: {response}. (Please report to dev if this occurs often)")
+                f"Skipping react in {message.guild.name}! Non-numeric response from OpenAI: {response}. (Please report to dev if this occurs often)")
             return None
 
     async def is_valid_to_react(self, ctx: commands.Context):
