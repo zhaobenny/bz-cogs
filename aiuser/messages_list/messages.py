@@ -131,6 +131,7 @@ class MessagesList:
         await self._add_tokens(content)
 
     async def add_history(self):
+        OPTIN_EMBED_TITLE = ":information_source: AI User Opt-In / Opt-Out"
         limit = await self.config.guild(self.guild).messages_backread()
         max_seconds_gap = await self.config.guild(
             self.guild
@@ -149,15 +150,7 @@ class MessagesList:
             )
         ]
 
-        if (
-            past_messages
-            and abs(
-                (
-                    past_messages[0].created_at - self.init_message.created_at
-                ).total_seconds()
-            )
-            > max_seconds_gap
-        ):
+        if (past_messages and not (await self._is_valid_time_gap(self.init_message, past_messages[0], max_seconds_gap))):
             return
 
         users = set()
@@ -176,9 +169,9 @@ class MessagesList:
                 return logger.debug(
                     f"{self.tokens} tokens used - nearing limit, stopping context creation for message {self.init_message.id}"
                 )
-            if await self._is_valid_time_gap(
-                past_messages[i], past_messages[i + 1], max_seconds_gap
-            ):
+            if (past_messages[i].author.id == self.bot.user.id) and (past_messages[i].embeds and past_messages[i].embeds[0].title == OPTIN_EMBED_TITLE):
+                continue
+            if await self._is_valid_time_gap(past_messages[i], past_messages[i + 1], max_seconds_gap):
                 await self.add_msg(past_messages[i])
             else:
                 await self.add_msg(past_messages[i])
@@ -187,7 +180,7 @@ class MessagesList:
         if users and not (await self.config.guild(self.guild).optin_disable_embed()):
             users = ", ".join([user.mention for user in users])
             embed = discord.Embed(
-                title=":information_source: AI User Opt-In / Opt-Out",
+                title=OPTIN_EMBED_TITLE,
                 color=await self.bot.get_embed_color(message),
             )
             view = OptView(self.config)
@@ -228,12 +221,8 @@ class MessagesList:
         return limit
 
     @staticmethod
-    async def _is_valid_time_gap(
-        message: discord.Message, next_message: discord.Message, max_seconds_gap: int
-    ) -> bool:
-        time_between_messages = abs(
-            message.created_at - next_message.created_at
-        ).total_seconds()
-        if time_between_messages > max_seconds_gap:
+    async def _is_valid_time_gap(message: discord.Message, next_message: discord.Message, max_seconds_gap: int) -> bool:
+        seconds_diff = abs(message.created_at - next_message.created_at).total_seconds()
+        if seconds_diff > max_seconds_gap:
             return False
         return True
