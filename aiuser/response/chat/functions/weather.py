@@ -112,7 +112,6 @@ async def request_weather(lat, lon, location, days=1):
                 temperature = data['current']['temperature_2m']
 
                 res += f"The temperature currently is {temperature}{temperature_unit}. "
-                print(data)
 
                 if days > 1:
                     res += handle_multiple_days(data)

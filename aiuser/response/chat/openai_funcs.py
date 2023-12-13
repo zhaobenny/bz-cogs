@@ -51,7 +51,7 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
             tool_calls = response.choices[0].message.tool_calls
             completion = response.choices[0].message.content
 
-            if not tool_calls:
+            if not tool_calls or completion:
                 break
 
             await self.handle_tool_calls(kwargs, tool_calls)
@@ -82,22 +82,21 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
             if function.name == "search_google":
                 kwargs["tools"].remove(SERPER_SEARCH)
                 result = await search_google(arguments["query"], (await self.bot.get_shared_api_tokens("serper")).get("api_key"), self.ctx)
-                if not result:
-                    continue
-                await self.msg_list.add_system(result, index=len(self.msg_list) + 1)
-            elif function.name == "get_weather":
-                kwargs["tools"].remove(LOCATION_WEATHER)
-                kwargs["tools"].remove(LOCAL_WEATHER)
+            elif function.name == "get_weather" or function.name == "get_local_weather":
+                if LOCATION_WEATHER in kwargs["tools"]:
+                    kwargs["tools"].remove(LOCATION_WEATHER)
+                if LOCAL_WEATHER in kwargs["tools"]:
+                    kwargs["tools"].remove(LOCAL_WEATHER)
                 days = arguments.get("days", 1)
-                result = await get_weather(arguments["location"], days=days)
-                await self.msg_list.add_system(result, index=len(self.msg_list) + 1)
-            elif function.name == "get_local_weather":
-                kwargs["tools"].remove(LOCATION_WEATHER)
-                kwargs["tools"].remove(LOCAL_WEATHER)
-                days = arguments.get("days", 1)
-                result = await get_local_weather(self.config, self.ctx, days=days)
-                await self.msg_list.add_system(result, index=len(self.msg_list) + 1)
+                if function.name == "get_weather":
+                    result = await get_weather(arguments["location"], days=days)
+                else:
+                    result = await get_local_weather(self.config, self.ctx, days=days)
             elif function.name == "is_daytime_local":
                 kwargs["tools"].remove(IS_DAYTIME)
                 result = await is_daytime(self.config, self.ctx)
-                await self.msg_list.add_system(result, index=len(self.msg_list) + 1)
+
+            if not result:
+                continue
+
+            await self.msg_list.add_system(result, index=len(self.msg_list) + 1)
