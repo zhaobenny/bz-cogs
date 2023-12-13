@@ -1,5 +1,6 @@
 import json
 import logging
+from dataclasses import asdict
 
 from redbot.core import commands
 
@@ -37,10 +38,12 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
             kwargs["logit_bias"] = logit_bias
 
         completion = None
-        kwargs["tools"] = await self.get_available_tools()
+        available_tools = await self.get_available_tools()
 
         while completion is None:
-            if kwargs["tools"] == []:
+            if available_tools != []:
+                kwargs["tools"] = [asdict(tool) for tool in available_tools]
+            elif "tools" in kwargs:
                 del kwargs["tools"]
 
             response = (
@@ -54,7 +57,7 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
             if not tool_calls or completion:
                 break
 
-            await self.handle_tool_calls(kwargs, tool_calls)
+            await self.handle_tool_calls(available_tools, tool_calls)
 
         logger.debug(
             f'Generated the following raw response in {self.ctx.guild.name}: "{completion}"'
@@ -71,7 +74,7 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
             tools.append(IS_DAYTIME)
         return tools
 
-    async def handle_tool_calls(self, kwargs, tool_calls):
+    async def handle_tool_calls(self, available_tools, tool_calls):
         for tool_call in tool_calls:
             function = tool_call.function
             arguments = json.loads(function.arguments)
@@ -79,21 +82,21 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
             logger.info(
                 f"Handling tool call in {self.ctx.guild.name}: \"{function.name}\" with arguments: \"{arguments}\"")
 
-            if function.name == "search_google":
-                kwargs["tools"].remove(SERPER_SEARCH)
+            if function.name == SERPER_SEARCH.function.name:
+                available_tools.remove(SERPER_SEARCH)
                 result = await search_google(arguments["query"], (await self.bot.get_shared_api_tokens("serper")).get("api_key"), self.ctx)
-            elif function.name == "get_weather" or function.name == "get_local_weather":
-                if LOCATION_WEATHER in kwargs["tools"]:
-                    kwargs["tools"].remove(LOCATION_WEATHER)
-                if LOCAL_WEATHER in kwargs["tools"]:
-                    kwargs["tools"].remove(LOCAL_WEATHER)
+            elif function.name == LOCATION_WEATHER.function.name or function.name == LOCAL_WEATHER.function.name:
+                if LOCATION_WEATHER in available_tools:
+                    available_tools.remove(LOCATION_WEATHER)
+                if LOCAL_WEATHER in available_tools:
+                    available_tools.remove(LOCAL_WEATHER)
                 days = arguments.get("days", 1)
-                if function.name == "get_weather":
+                if function.name == LOCATION_WEATHER.function.name:
                     result = await get_weather(arguments["location"], days=days)
                 else:
                     result = await get_local_weather(self.config, self.ctx, days=days)
-            elif function.name == "is_daytime_local":
-                kwargs["tools"].remove(IS_DAYTIME)
+            elif function.name == IS_DAYTIME.function.name:
+                available_tools.remove(IS_DAYTIME)
                 result = await is_daytime(self.config, self.ctx)
 
             if not result:
