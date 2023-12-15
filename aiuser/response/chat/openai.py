@@ -49,6 +49,10 @@ class OpenAI_API_Generator(Chat_Generator):
                     model=model, messages=self.messages, **kwargs
                 )
             )
+
+            if hasattr(response, "error"):
+                raise Exception(f"LLM endpoint error: {response.error}")
+
             completion = response.choices[0].message.content
 
         logger.debug(
