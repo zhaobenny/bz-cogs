@@ -78,6 +78,7 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
         for tool_call in tool_calls:
             function = tool_call.function
             arguments = json.loads(function.arguments)
+            result = None
 
             logger.info(
                 f"Handling tool call in {self.ctx.guild.name}: \"{function.name}\" with arguments: \"{arguments}\"")
