@@ -71,7 +71,6 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
 ]
 VISION_SUPPORTED_MODELS = [
     "gpt-4-vision-preview",
-    "gpt-4-1106-vision-preview",
     "openai/gpt-4-vision-preview",
     "haotian-liu/llava-13b",
     "nousresearch/nous-hermes-2-vision-7b"
