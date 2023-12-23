@@ -17,7 +17,7 @@ class OpenAI_API_Generator(Chat_Generator):
     def __init__(self, cog: MixinMeta, ctx: commands.Context, messages: MessagesList):
         super().__init__(cog, ctx, messages)
 
-    async def request_openai(self, model):
+    async def get_custom_parameters(self, model):
         custom_parameters = await self.config.guild(self.ctx.guild).parameters()
         kwargs = {}
 
@@ -26,16 +26,17 @@ class OpenAI_API_Generator(Chat_Generator):
             kwargs.update(custom_parameters)
 
         if kwargs.get("logit_bias") is None:
-            logit_bias = json.loads(
-                await self.config.guild(self.ctx.guild).weights() or "{}"
-            )
+            logit_bias = json.loads(await self.config.guild(self.ctx.guild).weights() or "{}")
             kwargs["logit_bias"] = logit_bias
 
         if model in VISION_SUPPORTED_MODELS:
-            logger.warning(
-                "logit_bias is currently not supported for this LLM, removing..."
-            )
+            logger.warning(f"logit_bias is currently not supported for for model {model}, removing...")
             del kwargs["logit_bias"]
+
+        return kwargs
+
+    async def request_openai(self, model):
+        kwargs = await self.get_custom_parameters(model)
 
         if "gpt-3.5-turbo-instruct" in model:
             prompt = "\n".join(message["content"] for message in self.messages)
@@ -67,14 +68,11 @@ class OpenAI_API_Generator(Chat_Generator):
             response = await self.request_openai(model)
             return response
         except httpx.ReadTimeout:
-            logger.error(
-                f"Failed request to LLM endpoint. Timed out after >50 seconds")
+            logger.error(f"Failed request to LLM endpoint. Timed out after >50 seconds")
             await self.ctx.react_quietly("💤")
         except openai.RateLimitError:
             await self.ctx.react_quietly("💤")
         except:
-            logger.error(
-                f"Failed API request(s) to LLM endpoint. Last exception was:", exc_info=True
-            )
+            logger.exception(f"Failed API request(s) to LLM endpoint")
             await self.ctx.react_quietly("⚠️")
         return None

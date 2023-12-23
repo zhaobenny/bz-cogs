@@ -41,6 +41,13 @@ WMO_DESCRIPTIONS = {
 }
 
 
+async def get_endpoint_data(url, params):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, params=params) as response:
+            response.raise_for_status()
+            return await response.json()
+
+
 async def get_weather(location: str, days=1):
     try:
         lat, lon = await find_lat_lon(location)
@@ -66,15 +73,12 @@ async def is_daytime(config: Config, ctx: commands.Context):
         "forecast_days": 1
     }
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(METEO_WEATHER_URL, params=params) as res:
-                res.raise_for_status()
-                weather = await res.json()
-                is_day = weather['current']['is_day']
-                if is_day:
-                    return "Use the following information about your location to generate your response: It's daytime."
-                else:
-                    return "Use the following information about your location to generate your response: It's nighttime."
+        data = await get_endpoint_data(METEO_WEATHER_URL, params)
+        is_day = data['current']['is_day']
+        if is_day:
+            return "Use the following information about your location to generate your response: It's daytime."
+        else:
+            return "Use the following information about your location to generate your response: It's nighttime."
     except:
         logger.exception("Failed request to open-meteo.com")
         return "Unknown if it's daytime or nighttime."
@@ -90,33 +94,30 @@ async def request_weather(lat, lon, location, days=1):
     }
 
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(METEO_WEATHER_URL, params=params) as res:
-                res.raise_for_status()
-                data = await res.json()
+        data = await get_endpoint_data(METEO_WEATHER_URL, params)
 
-                res = f"Use the following information for {location} to generate your response: \n"
+        res = f"Use the following information for {location} to generate your response: \n"
 
-                current_weather_code = data['current']['weather_code']
-                current_weather_description = WMO_DESCRIPTIONS.get(current_weather_code, 'Unknown')
+        current_weather_code = data['current']['weather_code']
+        current_weather_description = WMO_DESCRIPTIONS.get(current_weather_code, 'Unknown')
 
-                res += f"The current weather is {current_weather_description}. "
+        res += f"The current weather is {current_weather_description}. "
 
-                daily_weather_code = data['daily']['weather_code'][0]
-                daily_weather_description = WMO_DESCRIPTIONS.get(daily_weather_code, 'Unknown')
+        daily_weather_code = data['daily']['weather_code'][0]
+        daily_weather_description = WMO_DESCRIPTIONS.get(daily_weather_code, 'Unknown')
 
-                res += f"Today's forecast is {daily_weather_description}. "
+        res += f"Today's forecast is {daily_weather_description}. "
 
-                current_units = data['current_units']
-                temperature_unit = current_units.get('temperature_2m', '°C')
-                temperature = data['current']['temperature_2m']
+        current_units = data['current_units']
+        temperature_unit = current_units.get('temperature_2m', '°C')
+        temperature = data['current']['temperature_2m']
 
-                res += f"The temperature currently is {temperature}{temperature_unit}. "
+        res += f"The temperature currently is {temperature}{temperature_unit}. "
 
-                if days > 1:
-                    res += handle_multiple_days(data)
+        if days > 1:
+            res += handle_multiple_days(data)
 
-                return res
+        return res
     except:
         logger.exception("Failed request to open-meteo.com")
         return f"Could not get weather data at {location}"
@@ -141,15 +142,12 @@ async def find_lat_lon(location: str):
         "format": "json"
     }
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(METEO_GEOCODE_URL, params=params) as res:
-            res.raise_for_status()
 
-            res = await res.json()
+    response = await get_endpoint_data(METEO_GEOCODE_URL, params)
 
-            if not (res.get('results', False)):
-                raise Exception("Location not found")
+    if not (response.get('results', False)):
+        raise Exception("Location not found")
 
-            location = res['results'][0]
+    location = response['results'][0]
 
-            return location['latitude'], location['longitude']
+    return location['latitude'], location['longitude']

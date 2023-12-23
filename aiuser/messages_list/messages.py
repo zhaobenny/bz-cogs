@@ -17,6 +17,8 @@ from aiuser.messages_list.opt_view import OptView
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
+OPTIN_EMBED_TITLE = ":information_source: AI User Opt-In / Opt-Out"
+
 
 async def create_messages_list(
     cog: MixinMeta, ctx: commands.Context, prompt: str = None
@@ -82,27 +84,33 @@ class MessagesList:
                 or await self.config.guild(self.guild).custom_text_prompt()
                 or DEFAULT_PROMPT)
 
-    async def add_msg(self, message: Message, index: int = None, force: bool = False):
+    async def check_if_add(self, message: Message, force: bool = False):
         if self.tokens > self.token_limit:
-            return
+            return False
 
         if message.id in self.messages_ids and not force:
             logger.debug(
                 f"Skipping duplicate message in {message.guild.name} when creating context"
             )
-            return
+            return False
 
         if self.ignore_regex and self.ignore_regex.search(message.content):
-            return
+            return False
         if not await self.bot.allowed_by_whitelist_blacklist(message.author):
-            return
+            return False
         if message.author.id in await self.config.optout():
-            return
+            return False
         if (
             (not message.author.id == self.bot.user.id)
             and not message.author.id in await self.config.optin()
             and not await self.config.guild(self.guild).optin_by_default()
         ):
+            return False
+
+        return True
+
+    async def add_msg(self, message: Message, index: int = None, force: bool = False):
+        if not await self.check_if_add(message, force):
             return
 
         converted = await self.converter.convert(message)
@@ -115,10 +123,10 @@ class MessagesList:
             self.messages_ids.add(message.id)
             await self._add_tokens(entry.content)
 
-        # TODO: proper chaining
+        # TODO: proper reply chaining
         if (
             message.reference
-            and type(message.reference.resolved) == discord.Message
+            and isinstance(message.reference.resolved, discord.Message)
             and message.author.id != self.bot.user.id
         ):
             await self.add_msg(message.reference.resolved, index=0)
@@ -131,16 +139,28 @@ class MessagesList:
         await self._add_tokens(content)
 
     async def add_history(self):
-        OPTIN_EMBED_TITLE = ":information_source: AI User Opt-In / Opt-Out"
         limit = await self.config.guild(self.guild).messages_backread()
-        max_seconds_gap = await self.config.guild(
-            self.guild
-        ).messages_backread_seconds()
+        max_seconds_gap = await self.config.guild(self.guild).messages_backread_seconds()
         start_time: datetime = (
             self.start_time + timedelta(seconds=1) if self.start_time else None
         )
 
-        past_messages = [
+        past_messages = await self._get_past_messages(limit, start_time)
+        if not past_messages:
+            return
+
+        if not await self._is_valid_time_gap(self.init_message, past_messages[0], max_seconds_gap):
+            return
+
+        users = await self._get_unopted_users(past_messages)
+
+        await self._process_past_messages(past_messages, max_seconds_gap)
+
+        if users and not await self.config.guild(self.guild).optin_disable_embed():
+            await self._send_optin_embed(users)
+
+    async def _get_past_messages(self, limit, start_time):
+        return [
             message
             async for message in self.init_message.channel.history(
                 limit=limit + 1,
@@ -150,13 +170,13 @@ class MessagesList:
             )
         ]
 
-        if (past_messages and not (await self._is_valid_time_gap(self.init_message, past_messages[0], max_seconds_gap))):
-            return
-
+    async def _get_unopted_users(self, past_messages):
         users = set()
+
+        if await self.config.guild(self.guild).optin_by_default():
+            return users
+
         for message in past_messages:
-            if await self.config.guild(self.guild).optin_by_default():
-                break
             if (
                 (not message.author.bot)
                 and (message.author.id not in await self.config.optin())
@@ -164,11 +184,12 @@ class MessagesList:
             ):
                 users.add(message.author)
 
+        return users
+
+    async def _process_past_messages(self, past_messages, max_seconds_gap):
         for i in range(len(past_messages) - 1):
             if self.tokens > self.token_limit:
-                return logger.debug(
-                    f"{self.tokens} tokens used - nearing limit, stopping context creation for message {self.init_message.id}"
-                )
+                return logger.debug(f"{self.tokens} tokens used - nearing limit, stopping context creation for message {self.init_message.id}")
             if (past_messages[i].author.id == self.bot.user.id) and (past_messages[i].embeds and past_messages[i].embeds[0].title == OPTIN_EMBED_TITLE):
                 continue
             if await self._is_valid_time_gap(past_messages[i], past_messages[i + 1], max_seconds_gap):
@@ -177,21 +198,18 @@ class MessagesList:
                 await self.add_msg(past_messages[i])
                 break
 
-        if users and not (await self.config.guild(self.guild).optin_disable_embed()):
-            users = ", ".join([user.mention for user in users])
-            embed = discord.Embed(
-                title=OPTIN_EMBED_TITLE,
-                color=await self.bot.get_embed_color(message),
-            )
-            view = OptView(self.config)
-            embed.description = f"Hey there, looks like {users} have not opted in or out of AI User! \n Please opt in/out of sending your messages/images to OpenAI/external party. \n This embed will stop showing up if all users chatting have opted in or out."
-            await message.channel.send(embed=embed, view=view)
+    async def _send_optin_embed(self, users):
+        users = ", ".join([user.mention for user in users])
+        embed = discord.Embed(
+            title=OPTIN_EMBED_TITLE,
+            color=await self.bot.get_embed_color(self.init_message),
+        )
+        view = OptView(self.config)
+        embed.description = f"Hey there, looks like {users} have not opted in or out of AI User! \n Please opt in/out of sending your messages/images to OpenAI/external party. \n This embed will stop showing up if all users chatting have opted in or out."
+        await self.init_message.channel.send(embed=embed, view=view)
 
     def get_json(self):
-        result = []
-        for message in self.messages:
-            result.append(asdict(message))
-        return result
+        return [asdict(message) for message in self.messages]
 
     async def _add_tokens(self, content):
         if not self._encoding:

@@ -6,7 +6,6 @@ from redbot.core import commands
 
 from aiuser.abc import MixinMeta
 from aiuser.common.constants import IMAGE_REQUEST_SD_GEN_PROMPT
-
 from aiuser.messages_list.messages import create_messages_list
 from aiuser.response.chat.openai import OpenAI_API_Generator
 from aiuser.response.chat.response import ChatResponse
@@ -36,7 +35,7 @@ class ImageResponse():
                 return False
 
         except:
-            logger.error(f"Error while generating image", exc_info=True)
+            logger.exception(f"Error while attempting to generate image")
             return False
 
         response = None

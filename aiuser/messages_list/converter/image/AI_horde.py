@@ -9,7 +9,7 @@ from io import BytesIO
 import aiohttp
 from discord import Message
 from PIL.Image import Image
-from tenacity import retry, stop_after_attempt, wait_random
+from tenacity import retry, stop_after_attempt, stop_after_delay, wait_random
 
 from aiuser.abc import MixinMeta
 
@@ -33,7 +33,7 @@ async def process_image_ai_horde(cog: MixinMeta, message: Message, image: Image)
     try:
         caption = await request_ai_horde(payload, api_key)
     except:
-        logger.error(f"Failed request to AI Horde", exc_info=True)
+        logger.exception(f"Failed request to AI Horde")
 
     logger.info(
         f"AI Horde image caption result for message {message.id} in {message.guild.name}: {caption}")
@@ -43,6 +43,7 @@ async def process_image_ai_horde(cog: MixinMeta, message: Message, image: Image)
 
     content = f'User "{message.author.display_name}" sent: [Image: {caption}]'
     return content
+
 
 async def request_ai_horde(payload, api_key):
     async with aiohttp.ClientSession() as session:
@@ -60,11 +61,10 @@ async def request_ai_horde(payload, api_key):
 
 
 @retry(
-    wait=wait_random(min=1, max=3), stop=(stop_after_attempt(4)),
+    wait=wait_random(min=1, max=3), stop=(stop_after_attempt(4) | stop_after_delay(300)),
     reraise=True
 )
 async def wait_for_response(session: aiohttp.ClientSession, session_id):
-    start_time = asyncio.get_event_loop().time()
     while True:
         async with session.get(f"https://stablehorde.net/api/v2/interrogate/status/{session_id}") as response:
             if response.status != 200:
@@ -73,9 +73,6 @@ async def wait_for_response(session: aiohttp.ClientSession, session_id):
             response = await response.json()
             if response["state"] == "done":
                 break
-
-            if asyncio.get_event_loop().time() - start_time >= 300:
-                raise TimeoutError(f"Timed out after {300} seconds")
 
             await asyncio.sleep(random.randint(1, 2))
     return response

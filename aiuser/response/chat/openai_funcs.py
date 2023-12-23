@@ -22,24 +22,18 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
     def __init__(self, cog: MixinMeta, ctx: commands.Context, messages: MessagesList):
         self.bot = cog.bot
         super().__init__(cog, ctx, messages)
+        self.tool_handlers = {
+            SERPER_SEARCH.function.name: self.handle_serper_search,
+            LOCATION_WEATHER.function.name: self.handle_location_weather,
+            LOCAL_WEATHER.function.name: self.handle_local_weather,
+            IS_DAYTIME.function.name: self.handle_is_daytime,
+        }
 
     async def request_openai(self, model):
-        custom_parameters = await self.config.guild(self.ctx.guild).parameters()
-        kwargs = {}
-
-        if custom_parameters is not None:
-            custom_parameters = json.loads(custom_parameters)
-            kwargs.update(custom_parameters)
-
-        if kwargs.get("logit_bias") is None:
-            logit_bias = json.loads(
-                await self.config.guild(self.ctx.guild).weights() or "{}"
-            )
-            kwargs["logit_bias"] = logit_bias
-
-        completion = None
+        kwargs = await self.get_custom_parameters(model)
         available_tools = await self.get_available_tools()
 
+        completion = None
         while completion is None:
             if available_tools != []:
                 kwargs["tools"] = [asdict(tool) for tool in available_tools]
@@ -56,6 +50,9 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
 
             if not tool_calls or completion:
                 break
+
+            if hasattr(response, "error"):
+                raise Exception(f"LLM endpoint error: {response.error}")
 
             await self.handle_tool_calls(available_tools, tool_calls)
 
@@ -83,24 +80,35 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
             logger.info(
                 f"Handling tool call in {self.ctx.guild.name}: \"{function.name}\" with arguments: \"{arguments}\"")
 
-            if function.name == SERPER_SEARCH.function.name:
-                available_tools.remove(SERPER_SEARCH)
-                result = await search_google(arguments["query"], (await self.bot.get_shared_api_tokens("serper")).get("api_key"), self.ctx)
-            elif function.name == LOCATION_WEATHER.function.name or function.name == LOCAL_WEATHER.function.name:
-                if LOCATION_WEATHER in available_tools:
-                    available_tools.remove(LOCATION_WEATHER)
-                if LOCAL_WEATHER in available_tools:
-                    available_tools.remove(LOCAL_WEATHER)
-                days = arguments.get("days", 1)
-                if function.name == LOCATION_WEATHER.function.name:
-                    result = await get_weather(arguments["location"], days=days)
-                else:
-                    result = await get_local_weather(self.config, self.ctx, days=days)
-            elif function.name == IS_DAYTIME.function.name:
-                available_tools.remove(IS_DAYTIME)
-                result = await is_daytime(self.config, self.ctx)
+            handler = self.tool_handlers.get(function.name)
+            if handler:
+                result = await handler(arguments, available_tools)
 
             if not result:
                 continue
 
             await self.msg_list.add_system(result, index=len(self.msg_list) + 1)
+
+    async def handle_serper_search(self, arguments, available_tools):
+        self.remove_tool_from_available(SERPER_SEARCH, available_tools)
+        return await search_google(arguments["query"], (await self.bot.get_shared_api_tokens("serper")).get("api_key"), self.ctx)
+
+    async def handle_location_weather(self, arguments, available_tools):
+        self.remove_tool_from_available(LOCATION_WEATHER, available_tools)
+        self.remove_tool_from_available(LOCAL_WEATHER, available_tools)
+        days = arguments.get("days", 1)
+        return await get_weather(arguments["location"], days=days)
+
+    async def handle_local_weather(self, arguments, available_tools):
+        self.remove_tool_from_available(LOCATION_WEATHER, available_tools)
+        self.remove_tool_from_available(LOCAL_WEATHER, available_tools)
+        days = arguments.get("days", 1)
+        return await get_local_weather(self.config, self.ctx, days=days)
+
+    async def handle_is_daytime(self, _, available_tools):
+        self.remove_tool_from_available(IS_DAYTIME, available_tools)
+        return await is_daytime(self.config, self.ctx)
+
+    def remove_tool_from_available(self, tool, available_tools):
+        if tool in available_tools:
+            available_tools.remove(tool)

@@ -24,26 +24,32 @@ async def transcribe_image(cog: MixinMeta, message: Message):
     image = scale_image(image, 1028 ** 2)
 
     mode = ScanImageMode(await config.guild(message.guild).scan_images_mode())
+    content = await process_image(cog, message, image, mode)
 
+    if content and mode != ScanImageMode.LLM:
+        cog.cached_messages[message.id] = content
+
+    return content
+
+
+async def process_image(cog: MixinMeta, message: Message, image: Image, mode: ScanImageMode) -> dict:
     if mode == ScanImageMode.AI_HORDE:
-        content = await process_image_ai_horde(cog, message, image)
+        return await process_image_ai_horde(cog, message, image)
     elif mode == ScanImageMode.LOCAL:
         try:
             from aiuser.messages_list.converter.image.local import \
                 process_image_locally
-            content = await process_image_locally(cog, message, image)
+            return await process_image_locally(cog, message, image)
         except ImportError:
-            logger.error("Local image scanning dependencies not installed, check cog README for instructions", exc_info=True)
+            logger.exception("Local image scanning dependencies not installed, check cog README for instructions")
             return None
     elif mode == ScanImageMode.LLM:
         content = [{"type": "image", "image_url": message.attachments[0].url}]
         if message.content != "":
-            content.append({"type": "text", "text":  format_text_content(message)})
-
-    if content:
-        cog.cached_messages[message.id] = content
-
-    return content
+            content.append({"type": "text", "text": format_text_content(message)})
+        return content
+    else:
+        return None
 
 
 def scale_image(image: Image.Image, target_resolution: int) -> Image:

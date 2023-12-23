@@ -86,10 +86,7 @@ class SerperQuery:
         soup = BeautifulSoup(html_content, 'html.parser')
         paragraph_tags = soup.find_all('p') or []
 
-        paragraph_text = ""
-        for tag in paragraph_tags:
-            tag_content = get_text_content(tag)
-            paragraph_text = paragraph_text + tag_content if len(tag_content) > 100 else paragraph_text
+        paragraph_text = " ".join([get_text_content(tag) for tag in paragraph_tags if len(get_text_content(tag)) > 100])
 
         if not paragraph_text or len(paragraph_text) < 300:
             return soup.get_text(separator=" ", strip=True)

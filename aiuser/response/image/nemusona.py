@@ -6,7 +6,7 @@ import logging
 import random
 
 import aiohttp
-from tenacity import retry, stop_after_attempt, wait_random
+from tenacity import retry, stop_after_attempt, stop_after_delay, wait_random
 
 from aiuser.response.image.generator import ImageGenerator
 
@@ -41,11 +41,10 @@ class NemusonaGenerator(ImageGenerator):
         return image
 
     @retry(
-        wait=wait_random(min=3, max=5), stop=(stop_after_attempt(4)),
+        wait=wait_random(min=3, max=5), stop=(stop_after_attempt(4) | stop_after_delay(300)),
         reraise=True
     )
     async def poll_status(self, session: aiohttp.ClientSession):
-        start_time = asyncio.get_event_loop().time()
 
         while True:
             async with session.get(f"https://waifus-api.nemusona.com/job/status/{self.model}/{self.id}") as response:
@@ -59,8 +58,5 @@ class NemusonaGenerator(ImageGenerator):
 
                 if status == "failed":
                     raise Exception("Job failed")
-
-            if asyncio.get_event_loop().time() - start_time >= 300:
-                raise TimeoutError(f"Timed out after {300} seconds")
 
             await asyncio.sleep(random.randint(2, 5))

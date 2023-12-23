@@ -9,6 +9,9 @@ from tenacity import retry, stop_after_attempt, wait_random
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
+YOUTUBE_URL_PATTERN = r"(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/|v\/|t\/\S*?\/?)([a-zA-Z0-9_-]{11})"
+YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3/videos?part=snippet&id={}&key={}"
+
 
 async def format_youtube_embed(bot: Red, message: Message):
     api_key = (await bot.get_shared_api_tokens("youtube")).get("api_key")
@@ -28,30 +31,26 @@ async def format_youtube_embed(bot: Red, message: Message):
 
 
 async def get_video_id(url):
-    pattern = r"(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/|v\/|t\/\S*?\/?)([a-zA-Z0-9_-]{11})"
-    match = re.search(pattern, url)
+    match = re.search(YOUTUBE_URL_PATTERN, url)
 
     if match:
-        video_id = match.group(1)
-        return video_id
+        return match.group(1)
     else:
         return None
 
 
 @retry(
-    wait=wait_random(min=1, max=2), stop=(stop_after_attempt(4)),
+    wait=wait_random(min=1, max=2), stop=(stop_after_attempt(3)),
     reraise=True
 )
 async def get_video_details(api_key, video_id):
-    url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet&id={video_id}&key={api_key}"
+    url = YOUTUBE_API_URL.format(video_id, api_key)
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
-            if response.status == 200:
-                video_data = await response.json()
-                snippet = video_data["items"][0]["snippet"]
-                video_title = snippet["title"]
-                channel_title = snippet["channelTitle"]
-                description = snippet["description"]
-                return (video_title, channel_title, description)
-            else:
-                response.raise_for_status()
+            response.raise_for_status()
+            video_data = await response.json()
+            snippet = video_data["items"][0]["snippet"]
+            video_title = snippet["title"]
+            channel_title = snippet["channelTitle"]
+            description = snippet["description"]
+            return (video_title, channel_title, description)

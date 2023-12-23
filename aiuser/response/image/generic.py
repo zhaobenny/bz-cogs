@@ -25,8 +25,7 @@ class GenericImageGenerator(ImageGenerator):
     async def _post_request(self, url, payload):
         async with aiohttp.ClientSession() as session:
             async with session.post(url=url, json=payload) as response:
-                if response.status != 200:
-                    response.raise_for_status()
+                response.raise_for_status()
                 r = await response.json()
                 image_data = base64.b64decode(r["images"][0])
 
