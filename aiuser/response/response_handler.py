@@ -15,6 +15,7 @@ from aiuser.response.image.generic import GenericImageGenerator
 from aiuser.response.image.modal import ModalImageGenerator
 from aiuser.response.image.nemusona import NemusonaGenerator
 from aiuser.response.image.response import ImageResponse
+from aiuser.response.image.runpod import RunPodGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -55,6 +56,9 @@ class ResponseHandler(MixinMeta):
         elif sd_endpoint.endswith("imggen.modal.run/"):
             auth_token = (await self.bot.get_shared_api_tokens("modal-img-gen")).get("token")
             image_generator = ModalImageGenerator(ctx, self.config, auth_token)
+        elif sd_endpoint.startswith("https://api.runpod.ai/v2/"):
+            api_key = (await self.bot.get_shared_api_tokens("runpod")).get("apikey")
+            image_generator = RunPodGenerator(ctx, self.config, api_key)
         else:
             image_generator = GenericImageGenerator(ctx, self.config)
 
