@@ -3,7 +3,6 @@ import io
 import json
 import logging
 
-
 import aiohttp
 from redbot.core import Config, commands
 from tenacity import retry, stop_after_attempt, stop_after_delay, wait_random
@@ -56,7 +55,7 @@ class RunPodGenerator(ImageGenerator):
 
         return image
 
-    async def _post_request(self, url, payload):
+    async def _post_request(self, url, headers, payload):
         headers = {"Authorization": "Bearer " + self.apikey}
         async with aiohttp.ClientSession() as session:
             async with session.post(url=url, headers=headers, json=payload) as response:
