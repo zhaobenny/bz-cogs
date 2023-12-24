@@ -1,5 +1,4 @@
 import asyncio
-import io
 import logging
 from collections import defaultdict
 from typing import List
@@ -15,7 +14,6 @@ from aimage.constants import (AUTO_COMPLETE_SAMPLERS,
                               DEFAULT_NEGATIVE_PROMPT)
 from aimage.functions import Functions
 from aimage.settings import Settings
-from aimage.views import ImageActions
 
 logger = logging.getLogger("red.bz_cogs.aimage")
 
@@ -33,6 +31,7 @@ class AImage(Settings,
 
         default_global = {
             "endpoint": None,
+            "auth": None,
             "nsfw": True,
             "words_blacklist": DEFAULT_BADWORDS_BLACKLIST
         }
@@ -45,6 +44,11 @@ class AImage(Settings,
             "cfg": 7,
             "sampling_steps": 20,
             "sampler": "Euler a",
+            "checkpoint": None,
+            "adetailer": False,
+            "width": 512,
+            "height": 512,
+            "auth": None,
         }
 
         self.session = aiohttp.ClientSession()
@@ -95,8 +99,7 @@ class AImage(Settings,
             ]
 
     async def loras_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
-        choices = self.autocomplete_cache[interaction.guild_id].get("loras") or [
-        ]
+        choices = self.autocomplete_cache[interaction.guild_id].get("loras") or []
 
         if not choices:
             asyncio.create_task(self._update_autocomplete_cache(interaction))
@@ -111,19 +114,35 @@ class AImage(Settings,
             for choice in choices[:24]
         ]
 
+    async def checkpoint_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+        choices = self.autocomplete_cache[interaction.guild_id].get("checkpoints") or []
+
+        if not choices:
+            asyncio.create_task(self._update_autocomplete_cache(interaction))
+
+        if current:
+            choices = [choice for choice in choices if current.lower() in choice.lower()]
+
+        return [
+            app_commands.Choice(name=choice, value=choice)
+            for choice in choices[:24]
+        ]
+
     @app_commands.command(name="imagine")
     @app_commands.describe(
         prompt="The prompt to generate an image from",
         negative_prompt="The negative prompt to use",
         steps="The sampling steps to use",
         lora="Shortcut to get a LoRA to insert into a prompt",
+        checkpoint="The checkpoint to use",
         cfg="The cfg to use",
         sampler="The sampler to use",
         seed="The seed to use",
     )
     @app_commands.autocomplete(
         sampler=samplers_autocomplete,
-        lora=loras_autocomplete
+        lora=loras_autocomplete,
+        checkpoint=checkpoint_autocomplete,
     )
     @app_commands.checks.cooldown(1, 8, key=None)
     @app_commands.checks.bot_has_permissions(attach_files=True)
@@ -133,16 +152,19 @@ class AImage(Settings,
         interaction: discord.Interaction,
         prompt: str,
         negative_prompt: str = None,
+        width: app_commands.Range[int, 256, 768] = None,
+        height: app_commands.Range[int, 256, 768] = None,
         cfg: app_commands.Range[float, 1, 30] = None,
         steps: app_commands.Range[int, 1, 150] = None,
         sampler: str = None,
         seed: app_commands.Range[int, -1, None] = -1,
+        checkpoint: str = None,
         lora: str = None
     ):
         """
         Generate an image using Stable Diffusion
         """
-        await self.generate_image(interaction, prompt, lora, cfg, negative_prompt, steps, seed, sampler)
+        await self.generate_image(interaction, prompt, lora, cfg, negative_prompt, steps, seed, sampler, width, height, checkpoint)
         asyncio.create_task(self._update_autocomplete_cache(interaction))
 
     async def _update_autocomplete_cache(self, interaction: discord.Interaction):
@@ -155,5 +177,9 @@ class AImage(Settings,
         if data:
             choices = [f"<lora:{choice['name']}:1>" for choice in data]
             self.autocomplete_cache[guild.id]["loras"] = choices
+        data = await self._fetch_data(guild, "sd-models")
+        if data:
+            choices = [choice["model_name"] for choice in data]
+            self.autocomplete_cache[guild.id]["checkpoints"] = choices
         logger.debug(
             f"Ran a update to get possible autocomplete terms in server {guild.id}")

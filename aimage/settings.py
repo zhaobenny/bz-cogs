@@ -25,16 +25,15 @@ class Settings(MixinMeta):
         config = await self.config.guild(guild).get_raw()
 
         embed = discord.Embed(title="AImage Config", color=await ctx.embed_color())
-        embed.add_field(name="Endpoint", value=config["endpoint"])
-        embed.add_field(name="NSFW allowed",
-                        value=config["nsfw"], inline=False)
-        embed.add_field(name="Default negative prompt",
-                        value=config["negative_prompt"], inline=False)
-        embed.add_field(name="Default sampler",
-                        value=config["sampler"], inline=False)
+        embed.add_field(name="Endpoint", value=config["endpoint"], inline=False)
+        embed.add_field(name="NSFW allowed", value=config["nsfw"])
+        embed.add_field(name="Default negative prompt", value=config["negative_prompt"])
+        embed.add_field(name="Default checkpoint", value=config["checkpoint"])
+        embed.add_field(name="Default sampler", value=config["sampler"])
         embed.add_field(name="Default cfg", value=config["cfg"])
-        embed.add_field(name="Default sampling_steps",
-                        value=config["sampling_steps"])
+        embed.add_field(name="Default sampling_steps", value=config["sampling_steps"])
+        embed.add_field(name="Default size", value=f"{config['width']}x{config['height']}")
+        embed.add_field(name="Use ADetailer", value=config["adetailer"])
         blacklist = ", ".join(config["words_blacklist"])
         if len(blacklist) > 1024:
             blacklist = blacklist[:1020] + "..."
@@ -50,7 +49,9 @@ class Settings(MixinMeta):
         """
         Set the endpoint URL for AI Image (include `/sdapi/v1/`)
         """
-        if not endpoint.endswith("/"):
+        if not endpoint:
+            endpoint = None
+        elif not endpoint.endswith("/"):
             endpoint += "/"
         await self.config.guild(ctx.guild).endpoint.set(endpoint)
         await ctx.tick()
@@ -67,7 +68,7 @@ class Settings(MixinMeta):
             data = await self._fetch_data(ctx.guild, "scripts") or {}
             await ctx.message.remove_reaction("🔄", ctx.me)
             if "censorscript" not in data.get("txt2img", []):
-                return await ctx.send(":warning: Compatible censor script is not installed in A1111, install [this.](https://github.com/IOMisaka/sdapi-scripts)")
+                return await ctx.send(":warning: Compatible censor script is not installed in A1111, install [this.](<https://github.com/IOMisaka/sdapi-scripts>)")
 
         await self.config.guild(ctx.guild).nsfw.set(not nsfw)
         await ctx.send(f"NSFW filtering is now {'`disabled`' if not nsfw else '`enabled`'}")
@@ -97,7 +98,7 @@ class Settings(MixinMeta):
         await ctx.tick()
 
     @aimage.command(name="sampler")
-    async def sampler(self, ctx: commands.Context, sampler: str):
+    async def sampler(self, ctx: commands.Context, *, sampler: str):
         """
         Set the default sampler
         """
@@ -114,6 +115,62 @@ class Settings(MixinMeta):
 
         await self.config.guild(ctx.guild).sampler.set(sampler)
         await ctx.tick()
+
+    @aimage.command(name="width")
+    async def width(self, ctx: commands.Context, width: int):
+        """
+        Set the default width
+        """
+        if width < 256 or width > 768:
+            return await ctx.send("Value must range between 256 and 768.")
+        await self.config.guild(ctx.guild).width.set(width)
+        await ctx.tick()
+
+    @aimage.command(name="height")
+    async def height(self, ctx: commands.Context, height: int):
+        """
+        Set the default height
+        """
+        if height < 256 or height > 768:
+            return await ctx.send("Value must range between 256 and 768.")
+        await self.config.guild(ctx.guild).height.set(height)
+        await ctx.tick()
+
+    @aimage.command(name="checkpoint")
+    async def checkpoint(self, ctx: commands.Context, *, checkpoint: str):
+        """
+        Set the default checkpoint used for generating images.
+        """
+        await self.config.guild(ctx.guild).checkpoint.set(checkpoint)
+        await ctx.tick()
+
+    @aimage.command(name="auth")
+    async def auth(self, ctx: commands.Context, *, auth: str):
+        """
+        Set the API auth username:password in that format.
+        """
+        try:
+            await ctx.message.delete()
+        except:
+            pass
+        await self.config.guild(ctx.guild).auth.set(auth)
+        await ctx.send("✅ Auth set.")
+
+    @aimage.command(name="adetailer")
+    async def adetailer(self, ctx: commands.Context):
+        """
+        Whether to use face adetailer on generated pictures
+        """
+        new = not await self.config.guild(ctx.guild).adetailer()
+        if new:
+            await ctx.message.add_reaction("🔄")
+            data = await self._fetch_data(ctx.guild, "scripts") or {}
+            await ctx.message.remove_reaction("🔄", ctx.me)
+            if "adetailer" not in data.get("txt2img", []):
+                return await ctx.send(":warning: The adetailer script is not installed in A1111, install [this.](<https://github.com/Bing-su/adetailer>)")
+
+        await self.config.guild(ctx.guild).adetailer.set(new)
+        await ctx.send(f"adetailer is now {'`disabled`' if not new else '`enabled`'}")
 
     @aimage.group(name="blacklist")
     async def blacklist(self, _: commands.Context):
@@ -231,6 +288,20 @@ class Settings(MixinMeta):
         await self.config.endpoint.set(endpoint)
         await ctx.tick()
 
+    @aimageowner.command(name="auth")
+    async def auth_owner(self, ctx: commands.Context, auth: str):
+        """
+        Set the API auth username:password in that format.
+
+        Will be used if no guild endpoint is set
+        """
+        try:
+            await ctx.message.delete()
+        except:
+            pass
+        await self.config.auth.set(auth)
+        await ctx.send("✅ Auth set.")
+
     @aimageowner.command(name="nsfw")
     async def nsfw_owner(self, ctx: commands.Context):
         """
@@ -241,7 +312,8 @@ class Settings(MixinMeta):
         if nsfw:
             await ctx.message.add_reaction("🔄")
             endpoint = await self.config.endpoint()
-            async with self.session.get(endpoint + "scripts") as res:
+            auth_str = await self.config.auth()
+            async with self.session.get(endpoint + "scripts", auth=self.get_auth(auth_str)) as res:
                 if res.status != 200:
                     await ctx.message.remove_reaction("🔄", ctx.me)
                     return await ctx.send(":warning: Couldn't request Stable Diffusion endpoint!")
