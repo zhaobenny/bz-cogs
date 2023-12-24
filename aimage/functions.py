@@ -55,7 +55,9 @@ class Functions(MixinMeta):
             "steps": steps or await self.config.guild(guild).sampling_steps(),
             "seed": seed,
             "sampler_name": sampler or await self.config.guild(guild).sampler(),
-            "sd_model_checkpoint": checkpoint or await self.config.guild(guild).checkpoint(),
+            "override_settings": {
+                "sd_model_checkpoint": checkpoint or await self.config.guild(guild).checkpoint(),
+            },
             "width": width or await self.config.guild(guild).width(),
             "height": height or await self.config.guild(guild).height(),
         }
