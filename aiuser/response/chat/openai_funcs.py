@@ -5,6 +5,7 @@ from dataclasses import asdict
 from redbot.core import commands
 
 from aiuser.abc import MixinMeta
+from aiuser.common.utilities import get_available_tools
 from aiuser.messages_list.messages import MessagesList
 from aiuser.response.chat.functions.serper import search_google
 from aiuser.response.chat.functions.tool_defs import (IS_DAYTIME,
@@ -31,7 +32,7 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
 
     async def request_openai(self, model):
         kwargs = await self.get_custom_parameters(model)
-        available_tools = await self.get_available_tools()
+        available_tools = await get_available_tools(self.config, self.ctx)
 
         completion = None
         while completion is None:
@@ -61,15 +62,6 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
         )
         return completion
 
-    async def get_available_tools(self):
-        tools = []
-        if await self.config.guild(self.ctx.guild).function_calling_search():
-            tools.append(SERPER_SEARCH)
-        if await self.config.guild(self.ctx.guild).function_calling_weather():
-            tools.append(LOCAL_WEATHER)
-            tools.append(LOCATION_WEATHER)
-            tools.append(IS_DAYTIME)
-        return tools
 
     async def handle_tool_calls(self, available_tools, tool_calls):
         for tool_call in tool_calls:

@@ -80,7 +80,7 @@ class FunctionCallingSettings(MixinMeta):
 
     @functions.command(name="weather")
     async def toggle_weather_function(self, ctx: commands.Context):
-        """ Enable/disable getting current weather using Open-Meteo
+        """ Enable/disable a group of functions to getting weather using Open-Meteo
 
             See [Open-Meteo terms](https://open-meteo.com/en/terms) for their free API
         """

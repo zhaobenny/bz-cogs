@@ -14,7 +14,7 @@ class ImageRequestSettings(MixinMeta):
     @checks.is_owner()
     async def imagerequest(self, _):
         """
-        Generate self-portraits images based on user request (on trigger words / LLM decision)
+        Generate self-portrait images based on user request (on trigger words / LLM decision)
 
         See [here](https://github.com/zhaobenny/bz-cogs/tree/main/aiuser#image-requests-%EF%B8%8F)
 
@@ -71,12 +71,12 @@ class ImageRequestSettings(MixinMeta):
 
     @imagerequest.command(name="endpoint")
     async def image_request_endpoint(self, ctx: commands.Context, url: str):
-        """Set compatible endpoint url (eg. for A1111 include `/sdapi/v1/txt2img`)"""
+        """Set compatible image generation endpoint (eg. for local A1111 include `/sdapi/v1/txt2img`)"""
         if not url.endswith("/"):
             url += "/"
         await self.config.guild(ctx.guild).image_requests_endpoint.set(url)
         embed = discord.Embed(
-            title="Stable Diffusion url now set to:",
+            title="Image generation endpoint now set to:",
             description=f"{url}",
             color=await ctx.embed_color(),
         )
@@ -162,25 +162,25 @@ class ImageRequestSettings(MixinMeta):
             title="Image Request Settings", color=await ctx.embed_color()
         )
         embed.add_field(
-            name="Enabled", value=config["image_requests"], inline=True)
+            name="Enabled", value=f"`{config['image_requests']}`", inline=True)
         embed.add_field(
-            name="Reduced LLM calls mode",
-            value=config["image_requests_reduced_llm_calls"],
+            name="Reduced LLM calls",
+            value=f"`{config['image_requests_reduced_llm_calls']}`",
             inline=True,
         )
         embed.add_field(
-            name="SD API Endpoint",
-            value=config["image_requests_endpoint"],
+            name="Image Generation Endpoint",
+            value=f"{config['image_requests_endpoint']}",
             inline=False,
         )
         embed.add_field(
             name="Default prompt added",
-            value=config["image_requests_preprompt"],
+            value=f"`{config['image_requests_preprompt']}`",
             inline=False,
         )
         embed.add_field(
             name="Subject to replace second person",
-            value=config["image_requests_subject"],
+            value=f"`{config['image_requests_subject']}`",
         )
 
         embeds.append(embed)

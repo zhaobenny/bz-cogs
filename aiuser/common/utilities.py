@@ -8,7 +8,12 @@ from typing import Callable, Coroutine
 
 from discord import Message
 from openai import AsyncOpenAI
-from redbot.core import commands
+from redbot.core import Config, commands
+
+from aiuser.response.chat.functions.tool_defs import (IS_DAYTIME,
+                                                      LOCAL_WEATHER,
+                                                      LOCATION_WEATHER,
+                                                      SERPER_SEARCH)
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -88,3 +93,14 @@ def is_using_openai_endpoint(client: AsyncOpenAI):
 
 def is_using_openrouter_endpoint(client: AsyncOpenAI):
     return str(client.base_url).startswith("https://openrouter.ai/api/")
+
+
+async def get_available_tools(config: Config, ctx: commands.Context):
+    tools = []
+    if await config.guild(ctx.guild).function_calling_search():
+        tools.append(SERPER_SEARCH)
+    if await config.guild(ctx.guild).function_calling_weather():
+        tools.append(LOCAL_WEATHER)
+        tools.append(LOCATION_WEATHER)
+        tools.append(IS_DAYTIME)
+    return tools
