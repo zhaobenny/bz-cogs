@@ -24,7 +24,6 @@ class ImageResponse():
 
     async def send(self):
         image, caption = None, None
-
         try:
             caption = await self._create_image_caption()
             if caption is None:
@@ -40,20 +39,20 @@ class ImageResponse():
 
         response = None
         saved_caption = await self._format_saved_caption(caption)
-        if (await self.config.guild(self.message.guild).image_requests_reduced_llm_calls()):
-            await self.message.add_reaction("👍")
-        else:
-            message_list = await create_messages_list(self.cog, self.ctx)
-            await message_list.add_history()
-            await message_list.add_system(
-                saved_caption, index=len(message_list) + 1)
-            await message_list.add_system(
-                "You sent the above image. Respond accordingly", index=len(message_list) + 1)
-            chat = OpenAI_API_Generator(self.cog, self.ctx, message_list)
-            response = ChatResponse(self.ctx, self.config, chat)
 
-        if response is not None:
-            await response.send()
+        message_list = await create_messages_list(self.cog, self.ctx)
+        await message_list.add_history()
+        await message_list.add_system(
+            saved_caption, index=len(message_list) + 1)
+        await message_list.add_system(
+            "You are able to sent images. You sent the above image. Respond accordingly.", index=len(message_list) + 1)
+        chat = OpenAI_API_Generator(self.cog, self.ctx, message_list)
+        response = ChatResponse(self.ctx, self.config, chat)
+
+        if not (await response.send()):
+            await self._clean_error_emojis()
+            await self.message.add_reaction("👍")
+
         image_msg = await self.message.channel.send(file=discord.File(image, filename=f"{self.message.id}.png"))
 
         self.cog.cached_messages[image_msg.id] = saved_caption
@@ -94,3 +93,11 @@ class ImageResponse():
         caption = re.sub(pattern, "", caption, flags=re.IGNORECASE)
         caption = re.sub(r'^[\s,]+', '', caption)
         return f"You sent: [Image: A picture of yourself. Keywords describing this picture would be: {caption}]"
+
+    async def _clean_error_emojis(self):
+        emojis = ["💤", "⚠️"]
+        for emoji in emojis:
+            try:
+                await self.message.remove_reaction(emoji, self.ctx.me)
+            except:
+                pass

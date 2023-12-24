@@ -49,7 +49,7 @@ class RunPodGenerator(ImageGenerator):
         headers = {"Authorization": "Bearer " + self.apikey}
 
         logger.debug(
-            f"Sending SD request to Runpod with payload: {json.dumps(payload, indent=4)}")
+            f"Sending SD request to runpod-worker-a1111 Runpod with payload: {json.dumps(payload, indent=4)}")
 
         image = await self._post_request(url, headers, payload)
 

@@ -62,10 +62,13 @@ class ResponseHandler(MixinMeta):
         else:
             image_generator = GenericImageGenerator(ctx, self.config)
 
+        await ctx.react_quietly("🧐")
         async with ctx.message.channel.typing():
             response = ImageResponse(self, ctx, image_generator)
             if await response.send():
+                await ctx.message.remove_reaction("🧐", ctx.me)
                 return True
+        await ctx.message.remove_reaction("🧐", ctx.me)
         return False
 
     async def is_image_request(self, message) -> bool:

@@ -104,11 +104,18 @@ Requests are classified by trigger words / LLM decision. (eg. *"hey @botname, ca
 
 A suitable Stable Diffusion endpoint (Automatic1111 in API mode) must be provided and a non-trial OpenAI account is recommended.
 
-For a cost-efficient hosted solution, you can use [modal.com](https://modal.com/) to get a SD endpoint running. I written a modal template, [serverless-img-gen](https://github.com/zhaobenny/serverless-img-gen), that is compatible with this cog.
+For a cost-efficient hosted solution, you can use [modal.com](https://modal.com/) to get a SD endpoint running. I written a modal template, [serverless-img-gen](https://github.com/zhaobenny/serverless-img-gen), that is supported with this cog.
 
 When using serverless-img-gen, you might need to set an auth token:
 ```
 [p]set api modal-img-gen token,AUTH_TOKEN
+```
+
+If you want a hosted A1111 instead, this [Runpod template](https://github.com/ashleykleynhans/runpod-worker-a1111/) is semi-compatible with the cog.
+
+Set an API key like this, and use the `/runsync` endpoint:
+```
+[p]set api runpod apikey,API_KEY
 ```
 
 ## Random Messages 🎲
