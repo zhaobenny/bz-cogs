@@ -33,7 +33,8 @@ class AImage(Settings,
             "endpoint": None,
             "auth": None,
             "nsfw": True,
-            "words_blacklist": DEFAULT_BADWORDS_BLACKLIST
+            "words_blacklist": DEFAULT_BADWORDS_BLACKLIST,
+            "aihorde": True,
         }
 
         default_guild = {
@@ -49,6 +50,7 @@ class AImage(Settings,
             "width": 512,
             "height": 512,
             "auth": None,
+            "aihorde_anime": False,
         }
 
         self.session = aiohttp.ClientSession()
@@ -125,7 +127,8 @@ class AImage(Settings,
             for choice in choices[:24]
         ]
 
-    def filter_list(self, options: list[str], filter: str):
+    @staticmethod
+    def filter_list(options: list[str], filter: str):
         results = []
         available = list(options)
 
