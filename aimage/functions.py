@@ -59,8 +59,8 @@ class Functions(MixinMeta):
             "width": width or await self.config.guild(guild).width(),
             "height": height or await self.config.guild(guild).height(),
         }
-        
-        if self.config.guild(guild).adetailer():
+
+        if await self.config.guild(guild).adetailer():
             payload["alwayson_scripts"] = ADETAILER_ARGS
 
         if not nsfw:
