@@ -80,7 +80,7 @@ class AImage(Settings,
         choices = self.autocomplete_cache[interaction.guild_id].get("samplers")
 
         if not choices:
-            asyncio.create_task(self._update_autocomplete_cache(interaction))
+            await self._update_autocomplete_cache(interaction)
 
         if not choices:
             choices = AUTO_COMPLETE_SAMPLERS
@@ -91,8 +91,7 @@ class AImage(Settings,
                 for choice in choices[:24]
             ]
         else:
-            choices = [choice for choice in choices if current.lower()
-                       in choice.lower()]
+            choices = self.filter_list(choices, current)
             return [
                 app_commands.Choice(name=choice, value=choice)
                 for choice in choices[:24]
@@ -102,12 +101,10 @@ class AImage(Settings,
         choices = self.autocomplete_cache[interaction.guild_id].get("loras") or []
 
         if not choices:
-            asyncio.create_task(self._update_autocomplete_cache(interaction))
+            await self._update_autocomplete_cache(interaction)
 
-        if not (current.startswith("<lora:") and current.endswith(">")):
-            current = "<lora:" + current
-            choices = [choice for choice in choices if current.lower()
-                       in choice.lower()]
+        if current:
+            choices = self.filter_list(choices, current)
 
         return [
             app_commands.Choice(name=choice, value=choice)
@@ -118,15 +115,28 @@ class AImage(Settings,
         choices = self.autocomplete_cache[interaction.guild_id].get("checkpoints") or []
 
         if not choices:
-            asyncio.create_task(self._update_autocomplete_cache(interaction))
+            await self._update_autocomplete_cache(interaction)
 
         if current:
-            choices = [choice for choice in choices if current.lower() in choice.lower()]
+            choices = self.filter_list(choices, current)
 
         return [
             app_commands.Choice(name=choice, value=choice)
             for choice in choices[:24]
         ]
+
+    def filter_list(self, options: list[str], filter: str):
+        results = []
+        available = list(options)
+
+        for item in available:
+            if item.lower().removeprefix("<lora:").startswith(filter.lower()):
+                results.append(item)
+                available.remove(item)
+        for item in available:
+            if filter.lower() in item.lower():
+                results.append(item)
+        return results
 
     @app_commands.command(name="imagine")
     @app_commands.describe(
