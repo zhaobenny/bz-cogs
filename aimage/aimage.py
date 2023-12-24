@@ -124,14 +124,16 @@ class AImage(Settings,
             app_commands.Choice(name=choice, value=choice)
             for choice in choices[:24]
         ]
-    
-    def filter_list(self, lst: list[str], filter: str):
+
+    def filter_list(self, options: list[str], filter: str):
         results = []
-        for item in list(lst):
+        available = list(options)
+
+        for item in available:
             if item.lower().removeprefix("<lora:").startswith(filter.lower()):
                 results.append(item)
-                lst.remove(item)
-        for item in lst:
+                available.remove(item)
+        for item in available:
             if filter.lower() in item.lower():
                 results.append(item)
         return results
