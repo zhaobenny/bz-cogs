@@ -1,5 +1,4 @@
 import asyncio
-import io
 import logging
 from collections import defaultdict
 from typing import List
@@ -15,7 +14,6 @@ from aimage.constants import (AUTO_COMPLETE_SAMPLERS,
                               DEFAULT_NEGATIVE_PROMPT)
 from aimage.functions import Functions
 from aimage.settings import Settings
-from aimage.views import ImageActions
 
 logger = logging.getLogger("red.bz_cogs.aimage")
 
@@ -101,8 +99,7 @@ class AImage(Settings,
             ]
 
     async def loras_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
-        choices = self.autocomplete_cache[interaction.guild_id].get("loras") or [
-        ]
+        choices = self.autocomplete_cache[interaction.guild_id].get("loras") or []
 
         if not choices:
             asyncio.create_task(self._update_autocomplete_cache(interaction))
@@ -117,19 +114,35 @@ class AImage(Settings,
             for choice in choices[:24]
         ]
 
+    async def checkpoint_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+        choices = self.autocomplete_cache[interaction.guild_id].get("checkpoints") or []
+
+        if not choices:
+            asyncio.create_task(self._update_autocomplete_cache(interaction))
+
+        if current:
+            choices = [choice for choice in choices if current.lower() in choice.lower()]
+
+        return [
+            app_commands.Choice(name=choice, value=choice)
+            for choice in choices[:24]
+        ]
+
     @app_commands.command(name="imagine")
     @app_commands.describe(
         prompt="The prompt to generate an image from",
         negative_prompt="The negative prompt to use",
         steps="The sampling steps to use",
         lora="Shortcut to get a LoRA to insert into a prompt",
+        checkpoint="The checkpoint to use",
         cfg="The cfg to use",
         sampler="The sampler to use",
         seed="The seed to use",
     )
     @app_commands.autocomplete(
         sampler=samplers_autocomplete,
-        lora=loras_autocomplete
+        lora=loras_autocomplete,
+        checkpoint=checkpoint_autocomplete,
     )
     @app_commands.checks.cooldown(1, 8, key=None)
     @app_commands.checks.bot_has_permissions(attach_files=True)
@@ -164,5 +177,9 @@ class AImage(Settings,
         if data:
             choices = [f"<lora:{choice['name']}:1>" for choice in data]
             self.autocomplete_cache[guild.id]["loras"] = choices
+        data = await self._fetch_data(guild, "sd-models")
+        if data:
+            choices = [choice["model_name"] for choice in data]
+            self.autocomplete_cache[guild.id]["checkpoints"] = choices
         logger.debug(
             f"Ran a update to get possible autocomplete terms in server {guild.id}")
