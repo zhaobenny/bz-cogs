@@ -289,7 +289,7 @@ class Settings(MixinMeta):
         await ctx.tick()
 
     @aimageowner.command(name="auth")
-    async def auth(self, ctx: commands.Context, auth: str):
+    async def auth_owner(self, ctx: commands.Context, auth: str):
         """
         Set the API auth username:password in that format.
 
@@ -312,7 +312,8 @@ class Settings(MixinMeta):
         if nsfw:
             await ctx.message.add_reaction("🔄")
             endpoint = await self.config.endpoint()
-            async with self.session.get(endpoint + "scripts") as res:
+            auth_str = await self.config.auth()
+            async with self.session.get(endpoint + "scripts", auth=self.get_auth(auth_str)) as res:
                 if res.status != 200:
                     await ctx.message.remove_reaction("🔄", ctx.me)
                     return await ctx.send(":warning: Couldn't request Stable Diffusion endpoint!")

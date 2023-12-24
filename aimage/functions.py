@@ -1,17 +1,17 @@
 import base64
 import io
 import json
-import aiohttp
 import logging
 from typing import Union
 
+import aiohttp
 import discord
 from redbot.core import commands
 from tenacity import retry, stop_after_attempt, wait_random
 
 from aimage.abc import MixinMeta
-from aimage.views import ImageActions
 from aimage.constants import ADETAILER_ARGS
+from aimage.views import ImageActions
 
 logger = logging.getLogger("red.bz_cogs.aimage")
 
@@ -38,7 +38,7 @@ class Functions(MixinMeta):
 
         guild = context.guild
 
-        endpoint, auth, nsfw = await self._get_endpoint(guild)
+        endpoint, auth_str, nsfw = await self._get_endpoint(guild)
         if not endpoint:
             return await self.sent_response(context, content=":warning: Endpoint not yet set for this server!")
 
@@ -70,7 +70,7 @@ class Functions(MixinMeta):
             payload["script_args"] = [True, True]
 
         try:
-            image_data, info_string, is_nsfw = await self._post_sd_endpoint(endpoint, payload, auth)
+            image_data, info_string, is_nsfw = await self._post_sd_endpoint(endpoint, payload, auth_str)
         except:
             logger.exception("Failed request to Stable Diffusion endpoint")
             return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
@@ -92,14 +92,14 @@ class Functions(MixinMeta):
         await context.send(**kwargs)
 
     async def _get_endpoint(self, guild: discord.Guild):
-        endpoint = await self.config.guild(guild).endpoint()
-        auth = await self.config.guild(guild).auth()
-        nsfw = await self.config.guild(guild).nsfw()
+        endpoint: str = await self.config.guild(guild).endpoint()
+        auth: str = await self.config.guild(guild).auth()
+        nsfw: bool = await self.config.guild(guild).nsfw()
         if not endpoint:
             endpoint = await self.config.endpoint()
             auth = await self.config.auth()
             nsfw = await self.config.nsfw() and nsfw
-        return endpoint, auth, nsfw
+        return (endpoint, auth, nsfw)
 
     async def _contains_blacklisted_word(self, guild: discord.Guild, prompt: str):
         endpoint = await self.config.guild(guild).endpoint()
@@ -115,10 +115,8 @@ class Functions(MixinMeta):
     @retry(wait=wait_random(min=2, max=5), stop=stop_after_attempt(2), reraise=True)
     async def _post_sd_endpoint(self, endpoint, payload, auth_str):
         url = endpoint + "txt2img"
-        if auth_str:
-            username, password = auth_str.split(':')
-            auth = aiohttp.BasicAuth(username, password)
-        async with self.session.post(url=url, json=payload, auth=auth) as response:
+
+        async with self.session.post(url=url, json=payload, auth=self.get_auth(auth_str)) as response:
             if response.status != 200:
                 response.raise_for_status()
             r = await response.json()
@@ -149,9 +147,10 @@ class Functions(MixinMeta):
     async def _fetch_data(self, guild: discord.Guild, endpoint_suffix: str):
         res = None
         try:
-            endpoint, _ = await self._get_endpoint(guild)
+            endpoint, auth_str, _ = await self._get_endpoint(guild)
             url = endpoint + endpoint_suffix
-            async with self.session.get(url) as response:
+
+            async with self.session.get(url, auth=self.get_auth(auth_str)) as response:
                 if response.status != 200:
                     response.raise_for_status()
                 res = await response.json()
@@ -160,3 +159,10 @@ class Functions(MixinMeta):
                 f"Failed getting {endpoint_suffix} from Stable Diffusion endpoint in server {guild.id}")
 
         return res
+
+    def get_auth(self, auth_str: str):
+        auth = None
+        if auth_str:
+            username, password = auth_str.split(':')
+            auth = aiohttp.BasicAuth(username, password)
+        return auth
