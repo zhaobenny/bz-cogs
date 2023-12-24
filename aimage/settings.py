@@ -35,6 +35,10 @@ class Settings(MixinMeta):
         embed.add_field(name="Default cfg", value=config["cfg"])
         embed.add_field(name="Default sampling_steps",
                         value=config["sampling_steps"])
+        embed.add_field(name="Default checkpoint",
+                        value=config["checkpoint"])
+        embed.add_field(name="Default size",
+                        value=config["width"]+"x"+config["height"])
         blacklist = ", ".join(config["words_blacklist"])
         if len(blacklist) > 1024:
             blacklist = blacklist[:1020] + "..."
@@ -114,6 +118,55 @@ class Settings(MixinMeta):
 
         await self.config.guild(ctx.guild).sampler.set(sampler)
         await ctx.tick()
+
+    @aimage.command(name="width")
+    async def width(self, ctx: commands.Context, width: int):
+        """
+        Set the default width
+        """
+        if width < 256 or width > 768:
+            return await ctx.send("Value must range between 256 and 768.")
+        await self.config.guild(ctx.guild).width.set(width)
+        await ctx.tick()
+
+    @aimage.command(name="height")
+    async def height(self, ctx: commands.Context, height: int):
+        """
+        Set the default height
+        """
+        if height < 256 or height > 768:
+            return await ctx.send("Value must range between 256 and 768.")
+        await self.config.guild(ctx.guild).height.set(height)
+        await ctx.tick()
+
+    @aimage.command(name="checkpoint")
+    async def checkpoint(self, ctx: commands.Context, checkpoint: str):
+        """
+        Set the default checkpoint used for generating images.
+        """
+        await self.config.guild(ctx.guild).checkpoint.set(checkpoint)
+        await ctx.tick()
+
+    @aimage.command(name="auth")
+    async def auth(self, ctx: commands.Context, auth: str):
+        """
+        Set the API auth username:password in that format.
+        """
+        try:
+            await ctx.message.delete()
+        except:
+            pass
+        await self.config.guild(ctx.guild).auth.set(auth)
+        await ctx.send("✅ Auth set.")
+
+    @aimage.command(name="adetailer")
+    async def height(self, ctx: commands.Context):
+        """
+        Whether to use face adetailer on generated pictures
+        """
+        new = not await self.config.adetailer()
+        await self.config.adetailer.set(new)
+        await ctx.reply(f"Adetailer set to {new}")
 
     @aimage.group(name="blacklist")
     async def blacklist(self, _: commands.Context):
@@ -230,6 +283,20 @@ class Settings(MixinMeta):
         """
         await self.config.endpoint.set(endpoint)
         await ctx.tick()
+
+    @aimageowner.command(name="auth")
+    async def auth(self, ctx: commands.Context, auth: str):
+        """
+        Set the API auth username:password in that format.
+
+        Will be used if no guild endpoint is set
+        """
+        try:
+            await ctx.message.delete()
+        except:
+            pass
+        await self.config.auth.set(auth)
+        await ctx.send("✅ Auth set.")
 
     @aimageowner.command(name="nsfw")
     async def nsfw_owner(self, ctx: commands.Context):

@@ -33,6 +33,7 @@ class AImage(Settings,
 
         default_global = {
             "endpoint": None,
+            "auth": None,
             "nsfw": True,
             "words_blacklist": DEFAULT_BADWORDS_BLACKLIST
         }
@@ -45,6 +46,11 @@ class AImage(Settings,
             "cfg": 7,
             "sampling_steps": 20,
             "sampler": "Euler a",
+            "checkpoint": None,
+            "adetailer": False,
+            "width": 512,
+            "height": 512,
+            "auth": None,
         }
 
         self.session = aiohttp.ClientSession()
@@ -133,16 +139,19 @@ class AImage(Settings,
         interaction: discord.Interaction,
         prompt: str,
         negative_prompt: str = None,
+        width: app_commands.Range[int, 256, 768] = None,
+        height: app_commands.Range[int, 256, 768] = None,
         cfg: app_commands.Range[float, 1, 30] = None,
         steps: app_commands.Range[int, 1, 150] = None,
         sampler: str = None,
         seed: app_commands.Range[int, -1, None] = -1,
+        checkpoint: str = None,
         lora: str = None
     ):
         """
         Generate an image using Stable Diffusion
         """
-        await self.generate_image(interaction, prompt, lora, cfg, negative_prompt, steps, seed, sampler)
+        await self.generate_image(interaction, prompt, lora, cfg, negative_prompt, steps, seed, sampler, width, height, checkpoint)
         asyncio.create_task(self._update_autocomplete_cache(interaction))
 
     async def _update_autocomplete_cache(self, interaction: discord.Interaction):

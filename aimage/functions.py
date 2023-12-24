@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import aiohttp
 import logging
 from typing import Union
 
@@ -10,6 +11,7 @@ from tenacity import retry, stop_after_attempt, wait_random
 
 from aimage.abc import MixinMeta
 from aimage.views import ImageActions
+from aimage.constants import ADETAILER_ARGS
 
 logger = logging.getLogger("red.bz_cogs.aimage")
 
@@ -24,6 +26,9 @@ class Functions(MixinMeta):
                              steps: int = None,
                              seed: int = -1,
                              sampler: str = None,
+                             width: int = None,
+                             height: int = None,
+                             checkpoint: str = None,
                              payload: dict = None):
 
         if isinstance(context, discord.Interaction):
@@ -33,7 +38,7 @@ class Functions(MixinMeta):
 
         guild = context.guild
 
-        endpoint, nsfw = await self._get_endpoint(guild)
+        endpoint, auth, nsfw = await self._get_endpoint(guild)
         if not endpoint:
             return await self.sent_response(context, content=":warning: Endpoint not yet set for this server!")
 
@@ -50,7 +55,13 @@ class Functions(MixinMeta):
             "steps": steps or await self.config.guild(guild).sampling_steps(),
             "seed": seed,
             "sampler_name": sampler or await self.config.guild(guild).sampler(),
+            "sd_model_checkpoint": checkpoint or await self.config.guild(guild).checkpoint(),
+            "width": width or await self.config.guild(guild).width(),
+            "height": height or await self.config.guild(guild).height(),
         }
+        
+        if self.config.guild(guild).adetailer():
+            payload["alwayson_scripts"] = ADETAILER_ARGS
 
         if not nsfw:
             payload["script_name"] = "CensorScript"
@@ -80,11 +91,13 @@ class Functions(MixinMeta):
 
     async def _get_endpoint(self, guild: discord.Guild):
         endpoint = await self.config.guild(guild).endpoint()
+        auth = await self.config.guild(guild).auth()
         nsfw = await self.config.guild(guild).nsfw()
         if not endpoint:
             endpoint = await self.config.endpoint()
+            auth = await self.config.auth()
             nsfw = await self.config.nsfw() and nsfw
-        return endpoint, nsfw
+        return endpoint, auth, nsfw
 
     async def _contains_blacklisted_word(self, guild: discord.Guild, prompt: str):
         endpoint = await self.config.guild(guild).endpoint()
@@ -100,7 +113,12 @@ class Functions(MixinMeta):
     @retry(wait=wait_random(min=2, max=5), stop=stop_after_attempt(2), reraise=True)
     async def _post_sd_endpoint(self, endpoint, payload):
         url = endpoint + "txt2img"
-        async with self.session.post(url=url, json=payload) as response:
+        auth = None
+        auth_str = await self.config.auth()
+        if auth_str:
+            username, password = auth_str.split(':')
+            auth = aiohttp.BasicAuth(username, password)
+        async with self.session.post(url=url, json=payload, auth=auth) as response:
             if response.status != 200:
                 response.raise_for_status()
             r = await response.json()
