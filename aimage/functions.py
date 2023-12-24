@@ -5,16 +5,21 @@ import logging
 from typing import Union
 
 import aiohttp
+import asyncio
+import requests
 import discord
 from redbot.core import commands
 from tenacity import retry, stop_after_attempt, wait_random
 
 from aimage.abc import MixinMeta
-from aimage.constants import ADETAILER_ARGS
 from aimage.views import ImageActions
+from aimage.constants import ADETAILER_ARGS
+from aimage.stablehordeapi import StableHordeAPI
 
 logger = logging.getLogger("red.bz_cogs.aimage")
 
+def round_to_nearest(x, base):
+    return int(base * round(x/base))
 
 class Functions(MixinMeta):
     async def generate_image(self,
@@ -71,16 +76,56 @@ class Functions(MixinMeta):
 
         try:
             image_data, info_string, is_nsfw = await self._post_sd_endpoint(endpoint, payload, auth_str)
+            image_extension = "png"
         except:
-            logger.exception("Failed request to Stable Diffusion endpoint")
-            return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
+            if await self.config.aihorde():
+                logger.info("Requesting image from AI Horde.")
+                api_key = (await self.bot.get_shared_api_tokens("ai-horde")).get("api_key") or "0000000000"
+                client = StableHordeAPI(api_key)
+                horde_payload = {
+                    "prompt": payload["prompt"],
+                    "nsfw": nsfw,
+                    "censor_nsfw": not context.channel.nsfw,
+                    "models": ["Anything Diffusion" if await self.config.guild(guild).aihorde_anime() else "Deliberate"],
+                    "params": {
+                        "sampler_name": "k_euler_a",
+                        "cfg_scale": payload["cfg_scale"],
+                        "width": round_to_nearest(payload["width"], 64),
+                        "height": round_to_nearest(payload["height"], 64),
+                        "steps": payload["steps"],
+                    },
+                }
+                response = await client.txt2img_request(horde_payload)
+                if response.get("errors", None):
+                    logger.error(response)
+                    return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
+                img_uuid = response["id"]
+                done = False
+                elapsed = 0
+                while not done and elapsed < 5 * 60:
+                    await asyncio.sleep(1)
+                    elapsed += 1
+                    generate_check = await client.generate_check(img_uuid)
+                    done = generate_check["done"] == 1
+                generate_status = await client.generate_status(img_uuid)
+                if not generate_status["done"]:
+                    logger.error("Failed request to AI Horde")
+                    return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
+                image = generate_status["generations"][0]
+                image_data = requests.get(image["img"]).content
+                info_string = f"AI Horde image. Seed: {image['seed']}"
+                is_nsfw = False
+                image_extension = ".webp"
+            else:
+                logger.exception("Failed request to Stable Diffusion endpoint")
+                return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
 
         user = context.user if isinstance(
             context, discord.Interaction) else context.author
         if is_nsfw:
             return await self.sent_response(context, content=f"🔞 {user.mention} generated a possible NSFW image with prompt: `{prompt}`", allowed_mentions=discord.AllowedMentions.none())
 
-        await self.sent_response(context, file=discord.File(io.BytesIO(image_data), filename=f"image.png"), view=ImageActions(cog=self, image_info=info_string, payload=payload, author=user))
+        await self.sent_response(context, file=discord.File(io.BytesIO(image_data), filename=f"image.{image_extension}"), view=ImageActions(cog=self, image_info=info_string, payload=payload, author=user))
 
     async def sent_response(self, context: Union[commands.Context, discord.Interaction], **kwargs):
         if isinstance(context, discord.Interaction):

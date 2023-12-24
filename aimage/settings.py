@@ -172,6 +172,16 @@ class Settings(MixinMeta):
         await self.config.guild(ctx.guild).adetailer.set(new)
         await ctx.send(f"adetailer is now {'`disabled`' if not new else '`enabled`'}")
 
+    @aimage.command(name="aihorde_mode")
+    async def aihorde_mode(self, ctx: commands.Context):
+        """
+        Whether the aihorde fallback, if enabled, should use a generalist model or an anime model.
+        """
+        new = not await self.config.guild(ctx.guild).aihorde_anime()
+        await self.config.guild(ctx.guild).aihorde_anime.set(new)
+        await ctx.send(f"aihorde mode is now {'`generalist`' if not new else '`anime`'}")
+
+
     @aimage.group(name="blacklist")
     async def blacklist(self, _: commands.Context):
         """
@@ -324,6 +334,16 @@ class Settings(MixinMeta):
             await ctx.message.remove_reaction("🔄", ctx.me)
         await self.config.nsfw.set(not nsfw)
         await ctx.send(f"NSFW filtering is now {'`disabled`' if not nsfw else '`enabled`'}")
+
+    @aimageowner.command(name="aihorde")
+    async def aihorde_owner(self, ctx: commands.Context):
+        """
+        Whether to use aihorde as a fallback for generations.
+        Set your AI Horde API key with [p]set api ai-horde api_key,API_KEY
+        """
+        new = not await self.config.aihorde()
+        await self.config.aihorde.set(new)
+        await ctx.send(f"aihorde fallback is now {'`disabled`' if not new else '`enabled`'}")
 
     @aimageowner.group(name="blacklist")
     async def blacklist_owner(self, _: commands.Context):
