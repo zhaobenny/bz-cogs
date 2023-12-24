@@ -25,20 +25,15 @@ class Settings(MixinMeta):
         config = await self.config.guild(guild).get_raw()
 
         embed = discord.Embed(title="AImage Config", color=await ctx.embed_color())
-        embed.add_field(name="Endpoint", value=config["endpoint"])
-        embed.add_field(name="NSFW allowed",
-                        value=config["nsfw"], inline=False)
-        embed.add_field(name="Default negative prompt",
-                        value=config["negative_prompt"], inline=False)
-        embed.add_field(name="Default sampler",
-                        value=config["sampler"], inline=False)
+        embed.add_field(name="Endpoint", value=config["endpoint"], inline=False)
+        embed.add_field(name="NSFW allowed", value=config["nsfw"])
+        embed.add_field(name="Default negative prompt", value=config["negative_prompt"])
+        embed.add_field(name="Default checkpoint", value=config["checkpoint"])
+        embed.add_field(name="Default sampler", value=config["sampler"])
         embed.add_field(name="Default cfg", value=config["cfg"])
-        embed.add_field(name="Default sampling_steps",
-                        value=config["sampling_steps"])
-        embed.add_field(name="Default checkpoint",
-                        value=config["checkpoint"])
-        embed.add_field(name="Default size",
-                        value=config["width"]+"x"+config["height"])
+        embed.add_field(name="Default sampling_steps", value=config["sampling_steps"])
+        embed.add_field(name="Default size", value=f"{config['width']}x{config['height']}")
+        embed.add_field(name="Use ADetailer", value=config["adetailer"])
         blacklist = ", ".join(config["words_blacklist"])
         if len(blacklist) > 1024:
             blacklist = blacklist[:1020] + "..."
@@ -54,7 +49,9 @@ class Settings(MixinMeta):
         """
         Set the endpoint URL for AI Image (include `/sdapi/v1/`)
         """
-        if not endpoint.endswith("/"):
+        if not endpoint:
+            endpoint = None
+        elif not endpoint.endswith("/"):
             endpoint += "/"
         await self.config.guild(ctx.guild).endpoint.set(endpoint)
         await ctx.tick()
@@ -101,7 +98,7 @@ class Settings(MixinMeta):
         await ctx.tick()
 
     @aimage.command(name="sampler")
-    async def sampler(self, ctx: commands.Context, sampler: str):
+    async def sampler(self, ctx: commands.Context, *, sampler: str):
         """
         Set the default sampler
         """
@@ -140,7 +137,7 @@ class Settings(MixinMeta):
         await ctx.tick()
 
     @aimage.command(name="checkpoint")
-    async def checkpoint(self, ctx: commands.Context, checkpoint: str):
+    async def checkpoint(self, ctx: commands.Context, *, checkpoint: str):
         """
         Set the default checkpoint used for generating images.
         """
@@ -148,7 +145,7 @@ class Settings(MixinMeta):
         await ctx.tick()
 
     @aimage.command(name="auth")
-    async def auth(self, ctx: commands.Context, auth: str):
+    async def auth(self, ctx: commands.Context, *, auth: str):
         """
         Set the API auth username:password in that format.
         """
@@ -160,12 +157,12 @@ class Settings(MixinMeta):
         await ctx.send("✅ Auth set.")
 
     @aimage.command(name="adetailer")
-    async def height(self, ctx: commands.Context):
+    async def adetailer(self, ctx: commands.Context):
         """
         Whether to use face adetailer on generated pictures
         """
-        new = not await self.config.adetailer()
-        await self.config.adetailer.set(new)
+        new = not await self.config.guild(ctx.guild).adetailer()
+        await self.config.guild(ctx.guild).adetailer.set(new)
         await ctx.reply(f"Adetailer set to {new}")
 
     @aimage.group(name="blacklist")
