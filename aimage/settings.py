@@ -68,7 +68,7 @@ class Settings(MixinMeta):
             data = await self._fetch_data(ctx.guild, "scripts") or {}
             await ctx.message.remove_reaction("🔄", ctx.me)
             if "censorscript" not in data.get("txt2img", []):
-                return await ctx.send(":warning: Compatible censor script is not installed in A1111, install [this.](https://github.com/IOMisaka/sdapi-scripts)")
+                return await ctx.send(":warning: Compatible censor script is not installed in A1111, install [this.](<https://github.com/IOMisaka/sdapi-scripts>)")
 
         await self.config.guild(ctx.guild).nsfw.set(not nsfw)
         await ctx.send(f"NSFW filtering is now {'`disabled`' if not nsfw else '`enabled`'}")
@@ -162,8 +162,15 @@ class Settings(MixinMeta):
         Whether to use face adetailer on generated pictures
         """
         new = not await self.config.guild(ctx.guild).adetailer()
+        if new:
+            await ctx.message.add_reaction("🔄")
+            data = await self._fetch_data(ctx.guild, "scripts") or {}
+            await ctx.message.remove_reaction("🔄", ctx.me)
+            if "adetailer" not in data.get("txt2img", []):
+                return await ctx.send(":warning: The adetailer script is not installed in A1111, install [this.](<https://github.com/Bing-su/adetailer>)")
+
         await self.config.guild(ctx.guild).adetailer.set(new)
-        await ctx.reply(f"Adetailer set to {new}")
+        await ctx.send(f"adetailer is now {'`disabled`' if not new else '`enabled`'}")
 
     @aimage.group(name="blacklist")
     async def blacklist(self, _: commands.Context):
