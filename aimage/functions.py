@@ -68,7 +68,7 @@ class Functions(MixinMeta):
             payload["script_args"] = [True, True]
 
         try:
-            image_data, info_string, is_nsfw = await self._post_sd_endpoint(endpoint, payload)
+            image_data, info_string, is_nsfw = await self._post_sd_endpoint(endpoint, payload, auth)
         except:
             logger.exception("Failed request to Stable Diffusion endpoint")
             return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
@@ -111,10 +111,8 @@ class Functions(MixinMeta):
         return False
 
     @retry(wait=wait_random(min=2, max=5), stop=stop_after_attempt(2), reraise=True)
-    async def _post_sd_endpoint(self, endpoint, payload):
+    async def _post_sd_endpoint(self, endpoint, payload, auth_str):
         url = endpoint + "txt2img"
-        auth = None
-        auth_str = await self.config.auth()
         if auth_str:
             username, password = auth_str.split(':')
             auth = aiohttp.BasicAuth(username, password)
