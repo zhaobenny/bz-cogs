@@ -37,7 +37,7 @@ class Functions(MixinMeta):
                              payload: dict = None):
 
         if isinstance(context, discord.Interaction):
-            await context.response.defer()
+            await context.response.defer(thinking=True)
         else:
             await context.message.add_reaction("⏳")
 

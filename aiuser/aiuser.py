@@ -273,15 +273,7 @@ class AIUser(
     async def is_bot_mentioned_or_replied(self, message: discord.Message) -> bool:
         if not (await self.config.guild(message.guild).reply_to_mentions_replies()):
             return False
-        if self.bot.user in message.mentions:
-            return True
-        if message.reference and message.reference.message_id:
-            reference_message = (
-                message.reference.cached_message
-                or await message.channel.fetch_message(message.reference.message_id)
-            )
-            return reference_message.author == self.bot.user
-        return False
+        return self.bot.user in message.mentions
 
     async def initialize_openai_client(self, ctx: commands.Context = None):
         base_url = await self.config.custom_openai_endpoint()
