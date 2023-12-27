@@ -24,10 +24,8 @@ class ImageActions(discord.ui.View):
         self.payload["seed"] = -1
         prompt = self.payload["prompt"]
         button.disabled = True
-        button.emoji = "⏳"
         await interaction.message.edit(view=self)
         await self.generate_image(interaction, prompt, payload=self.payload)
-        button.emoji = "🔄"
         button.disabled = False
         await interaction.message.edit(view=self)
 
