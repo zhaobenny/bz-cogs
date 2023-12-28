@@ -2,8 +2,8 @@
     "author": [
         "zhaobenny"
     ],
-    "description": "Use a provided AUTOMATIC1111 Stable Diffusion endpoint to generate images through Discord",
-    "install_msg": "This cog will require your own (AUTOMATIC1111-compatible) Stable Diffusion endpoint to be configured.\nSee `[p]aimage` or `[p]aimageowner` for settings first. To generate, use `[p]imagine`\nSlash is available and recommended, do `[p]slash enablecog aimage`, then `[p]slash sync`",
+    "description": "Use a self-provided AUTOMATIC1111 endpoint to generate images through Discord",
+    "install_msg": "This cog will require your own AUTOMATIC1111-compatible endpoint to be configured.\nSee `[p]aimage` or `[p]aimageowner` for settings first. To generate, use `[p]imagine`\nSlash is available and recommended, do `[p]slash enablecog aimage`, then `[p]slash sync`",
     "short": "A1111 Stable Diffusion image generation in Discord",
     "permissions": [
         "send_messages",
@@ -13,7 +13,8 @@
     ],
     "requirements": [
         "aiohttp",
-        "tenacity"
+        "tenacity",
+        "rapidfuzz"
     ],
     "end_user_data_statement": "This cog does not persistently store data or metadata about users.",
     "tags": [

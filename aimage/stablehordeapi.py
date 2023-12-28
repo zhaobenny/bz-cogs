@@ -1,18 +1,18 @@
 # https://github.com/F1zzTao/StableHordeAPI.py/blob/main/stablehorde_api/client.py
-import aiohttp
 import json
 from typing import Optional
 
+import aiohttp
+
+
 class StableHordeAPI:
     def __init__(
-        self, api_key: Optional[str] = None,
+        self,
+        session: aiohttp.ClientSession,
+        api_key: Optional[str] = None,
         api: Optional[str] = 'https://stablehorde.net/api/v2',
-        session: Optional[aiohttp.ClientSession] = None,
     ):
-        if session is None:
-            self._session = aiohttp.ClientSession()
-        else:
-            self._session = session
+        self._session: aiohttp.ClientSession = session
         self.api_key: str = api_key
         self.api: str = api
 

@@ -51,6 +51,6 @@ class ImageActions(discord.ui.View):
 
         guild = interaction.guild
         member = guild.get_member(interaction.user.id)
-        is_staff = await self.bot.is_mod(member) or await self.bot.is_admin(member) or await self.bot.is_owner(member)
+        can_delete = await self.bot.is_owner(member) or interaction.channel.permissions_for(member).manage_messages
 
-        return is_og_user or is_staff
+        return is_og_user or can_delete

@@ -17,9 +17,11 @@ class MixinMeta(ABC):
         self.session: ClientSession
 
     async def _get_endpoint(self, guild: discord.Guild):
+        """ Gets the correct endpoint for the guild """
         pass
 
     async def _fetch_data(self, guild: discord.Guild, endpoint_suffix: str):
+        """ Helper function to fetch data from Stable Diffusion endpoint """
         pass
 
     async def get_auth(self, auth_str: str):

@@ -141,6 +141,12 @@ class Settings(MixinMeta):
         """
         Set the default checkpoint used for generating images.
         """
+        await ctx.message.add_reaction("🔄")
+        data = await self._fetch_data(ctx.guild, "sd-models")
+        data = [choice["model_name"] for choice in data]
+        await ctx.message.remove_reaction("🔄", ctx.me)
+        if checkpoint not in data:
+            return await ctx.send(f":warning: Invalid checkpoint. Pick one of these:\n`{', '.join(data)}`")
         await self.config.guild(ctx.guild).checkpoint.set(checkpoint)
         await ctx.tick()
 
@@ -180,7 +186,6 @@ class Settings(MixinMeta):
         new = not await self.config.guild(ctx.guild).aihorde_anime()
         await self.config.guild(ctx.guild).aihorde_anime.set(new)
         await ctx.send(f"aihorde mode is now {'`generalist`' if not new else '`anime`'}")
-
 
     @aimage.group(name="blacklist")
     async def blacklist(self, _: commands.Context):
@@ -338,7 +343,7 @@ class Settings(MixinMeta):
     @aimageowner.command(name="aihorde")
     async def aihorde_owner(self, ctx: commands.Context):
         """
-        Whether to use aihorde as a fallback for generations.
+        Whether to use aihorde (a crowdsourced volunteer service) as a fallback for generations.
         Set your AI Horde API key with [p]set api ai-horde api_key,API_KEY
         """
         new = not await self.config.aihorde()

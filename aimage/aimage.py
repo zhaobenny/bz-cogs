@@ -5,6 +5,7 @@ from typing import List
 
 import aiohttp
 import discord
+from rapidfuzz import fuzz
 from redbot.core import Config, app_commands, checks, commands
 from redbot.core.bot import Red
 
@@ -22,7 +23,7 @@ class AImage(Settings,
              Functions,
              commands.Cog,
              metaclass=CompositeMetaClass):
-    """ Generate images using a Stable Diffusion endpoint """
+    """ Generate images using a A1111 endpoint """
 
     def __init__(self, bot):
         super().__init__()
@@ -71,7 +72,7 @@ class AImage(Settings,
     @checks.bot_in_a_guild()
     async def imagine(self, ctx: commands.Context, *, prompt: str):
         """
-        Generate an image using Stable Diffusion
+        Generate an image
 
         **Arguments**
             - `prompt` a prompt to generate an image from
@@ -130,15 +131,14 @@ class AImage(Settings,
     @staticmethod
     def filter_list(options: list[str], filter: str):
         results = []
-        available = list(options)
 
-        for item in available:
-            if item.lower().removeprefix("<lora:").startswith(filter.lower()):
-                results.append(item)
-                available.remove(item)
-        for item in available:
-            if filter.lower() in item.lower():
-                results.append(item)
+        ratios = [(item, fuzz.partial_ratio(filter.lower(), item.lower().removeprefix("<lora:"))) for item in options]
+
+        sorted_options = sorted(ratios, key=lambda x: x[1], reverse=True)
+
+        for item, _ in sorted_options:
+            results.append(item)
+
         return results
 
     @app_commands.command(name="imagine")
@@ -182,6 +182,10 @@ class AImage(Settings,
 
     async def _update_autocomplete_cache(self, interaction: discord.Interaction):
         guild = interaction.guild
+
+        if not await self._check_endpoint_online(guild):
+            return
+
         data = await self._fetch_data(guild, "samplers")
         if data:
             choices = [choice["name"] for choice in data]

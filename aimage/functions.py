@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import io
 import json
@@ -5,21 +6,21 @@ import logging
 from typing import Union
 
 import aiohttp
-import asyncio
-import requests
 import discord
 from redbot.core import commands
 from tenacity import retry, stop_after_attempt, wait_random
 
 from aimage.abc import MixinMeta
-from aimage.views import ImageActions
-from aimage.constants import ADETAILER_ARGS
+from aimage.constants import ADETAILER_ARGS, VIEW_TIMEOUT
 from aimage.stablehordeapi import StableHordeAPI
+from aimage.views import ImageActions
 
 logger = logging.getLogger("red.bz_cogs.aimage")
 
+
 def round_to_nearest(x, base):
     return int(base * round(x/base))
+
 
 class Functions(MixinMeta):
     async def generate_image(self,
@@ -79,45 +80,10 @@ class Functions(MixinMeta):
             image_extension = "png"
         except:
             if await self.config.aihorde():
-                logger.info("Requesting image from AI Horde.")
-                api_key = (await self.bot.get_shared_api_tokens("ai-horde")).get("api_key") or "0000000000"
-                client = StableHordeAPI(api_key)
-                horde_payload = {
-                    "prompt": payload["prompt"],
-                    "nsfw": nsfw,
-                    "censor_nsfw": not context.channel.nsfw,
-                    "models": ["Anything Diffusion" if await self.config.guild(guild).aihorde_anime() else "Deliberate"],
-                    "params": {
-                        "sampler_name": "k_euler_a",
-                        "cfg_scale": payload["cfg_scale"],
-                        "width": round_to_nearest(payload["width"], 64),
-                        "height": round_to_nearest(payload["height"], 64),
-                        "steps": payload["steps"],
-                    },
-                }
-                response = await client.txt2img_request(horde_payload)
-                if response.get("errors", None):
-                    logger.error(response)
-                    return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
-                img_uuid = response["id"]
-                done = False
-                elapsed = 0
-                while not done and elapsed < 5 * 60:
-                    await asyncio.sleep(1)
-                    elapsed += 1
-                    generate_check = await client.generate_check(img_uuid)
-                    done = generate_check["done"] == 1
-                generate_status = await client.generate_status(img_uuid)
-                if not generate_status["done"]:
-                    logger.error("Failed request to AI Horde")
-                    return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
-                image = generate_status["generations"][0]
-                image_data = requests.get(image["img"]).content
-                info_string = f"AI Horde image. Seed: {image['seed']}"
-                is_nsfw = False
+                image_data, info_string, is_nsfw = await self._request_aihorde(context, nsfw, payload)
                 image_extension = ".webp"
             else:
-                logger.exception("Failed request to Stable Diffusion endpoint")
+                logger.exception(f"Failed request to Stable Diffusion endpoint in server {guild.id}")
                 return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
 
         user = context.user if isinstance(
@@ -125,7 +91,8 @@ class Functions(MixinMeta):
         if is_nsfw:
             return await self.sent_response(context, content=f"🔞 {user.mention} generated a possible NSFW image with prompt: `{prompt}`", allowed_mentions=discord.AllowedMentions.none())
 
-        await self.sent_response(context, file=discord.File(io.BytesIO(image_data), filename=f"image.{image_extension}"), view=ImageActions(cog=self, image_info=info_string, payload=payload, author=user))
+        msg = await self.sent_response(context, file=discord.File(io.BytesIO(image_data), filename=f"image.{image_extension}"), view=ImageActions(cog=self, image_info=info_string, payload=payload, author=user))
+        asyncio.create_task(self.delete_button_after(msg))
 
     async def sent_response(self, context: Union[commands.Context, discord.Interaction], **kwargs):
         if isinstance(context, discord.Interaction):
@@ -134,7 +101,7 @@ class Functions(MixinMeta):
             await context.message.remove_reaction("⏳", self.bot.user)
         except:
             pass
-        await context.send(**kwargs)
+        return await context.send(**kwargs)
 
     async def _get_endpoint(self, guild: discord.Guild):
         endpoint: str = await self.config.guild(guild).endpoint()
@@ -189,15 +156,55 @@ class Functions(MixinMeta):
 
         return image_data, info_string, is_nsfw
 
-    async def _fetch_data(self, guild: discord.Guild, endpoint_suffix: str):
+    async def _request_aihorde(self, context: Union[commands.Context, discord.Interaction], is_allowed_nsfw: bool, payload: dict):
+        logger.info(f"Using fallback AI Horde to generate image in server {context.guild.id}")
+        api_key = (await self.bot.get_shared_api_tokens("ai-horde")).get("api_key") or "0000000000"
+        client = StableHordeAPI(self.session, api_key)
+        horde_payload = {
+            "prompt": payload["prompt"],
+            "nsfw": is_allowed_nsfw,
+            "censor_nsfw": not context.channel.nsfw,
+            "models": ["Anything Diffusion" if await self.config.guild(context.guild).aihorde_anime() else "Deliberate"],
+            "params": {
+                "sampler_name": "k_euler_a",
+                "cfg_scale": payload["cfg_scale"],
+                "width": round_to_nearest(payload["width"], 64),
+                "height": round_to_nearest(payload["height"], 64),
+                "steps": payload["steps"],
+            },
+        }
+        response = await client.txt2img_request(horde_payload)
+        if response.get("errors", None):
+            logger.error(response)
+            return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
+        img_uuid = response["id"]
+        done = False
+        elapsed = 0
+        while not done and elapsed < 5 * 60:
+            await asyncio.sleep(1)
+            elapsed += 1
+            generate_check = await client.generate_check(img_uuid)
+            done = generate_check["done"] == 1
+        generate_status = await client.generate_status(img_uuid)
+        if not generate_status["done"]:
+            logger.error(f"Failed request to AI Horde in server {context.guild.id}")
+            return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
+        res = generate_status["generations"][0]
+        image_url = res["img"]
+        async with self.session.get(image_url) as response:
+            image_data = await response.read()
+        info_string = f"{payload['prompt']}\nAI Horde image. Seed: {res['seed']}, Model: {res['model']}"
+        is_nsfw = False
+        return image_data, info_string, is_nsfw
+
+    async def _fetch_data(self, guild: discord.Guild, endpoint_suffix):
         res = None
         try:
             endpoint, auth_str, _ = await self._get_endpoint(guild)
             url = endpoint + endpoint_suffix
 
             async with self.session.get(url, auth=self.get_auth(auth_str)) as response:
-                if response.status != 200:
-                    response.raise_for_status()
+                response.raise_for_status()
                 res = await response.json()
         except:
             logger.exception(
@@ -205,9 +212,28 @@ class Functions(MixinMeta):
 
         return res
 
+    async def _check_endpoint_online(self, guild: discord.Guild):
+        endpoint, auth_str, _ = await self._get_endpoint(guild)
+        try:
+            async with self.session.get(endpoint + "progress", auth=self.get_auth(auth_str)) as response:
+                response.raise_for_status()
+                return True
+        except:
+            return False
+
     def get_auth(self, auth_str: str):
+        """ Format auth string to aiohttp.BasicAuth """
         auth = None
         if auth_str:
             username, password = auth_str.split(':')
             auth = aiohttp.BasicAuth(username, password)
         return auth
+
+    # https://github.com/hollowstrawberry/crab-cogs/blob/b1f28057ae9760dbc1d51dadb290bdeb141642bf/novelai/novelai.py#L200C1-L200C74
+    @staticmethod
+    async def delete_button_after(msg: discord.Message):
+        await asyncio.sleep(VIEW_TIMEOUT)
+        try:
+            await msg.edit(view=None)
+        except:
+            return
