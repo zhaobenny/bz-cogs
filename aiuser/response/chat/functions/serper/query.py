@@ -5,8 +5,6 @@ import aiohttp
 from bs4 import BeautifulSoup
 from redbot.core import commands
 
-from aiuser.common.utilities import contains_youtube_link
-
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 SERPER_ENDPOINT = "https://google.serper.dev/search"
@@ -39,6 +37,8 @@ class SerperQuery:
             return "An error occured while searching Google."
 
     async def process_search_results(self, data: dict):
+        from aiuser.common.utilities import contains_youtube_link
+
         answer_box = data.get("answerBox")
         if answer_box and "snippet" in answer_box:
             return f"Use the following relevant information to generate your response: {answer_box['snippet']}"

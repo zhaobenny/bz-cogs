@@ -10,7 +10,7 @@ from aiuser.abc import MixinMeta
 from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
                                      VISION_SUPPORTED_MODELS)
 from aiuser.common.enums import ScanImageMode
-from aiuser.common.utilities import (get_available_tools,
+from aiuser.common.utilities import (get_enabled_tools,
                                      is_using_openai_endpoint,
                                      is_using_openrouter_endpoint)
 from aiuser.settings.functions import FunctionCallingSettings
@@ -132,7 +132,7 @@ class Settings(
         main_embed.add_field(
             name="Enabled Functions",
             inline=True,
-            value=f"`{len(await get_available_tools(self.config, ctx))}`",
+            value=f"`{len(await get_enabled_tools(self.config, ctx))}`",
         )
 
         main_embed.add_field(
