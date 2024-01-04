@@ -22,7 +22,7 @@ class FunctionCallingSettings(MixinMeta):
 
         Requires a model that supports function calling
         If enabled, the LLM will call functions to generate responses when needed
-        This will generate additional API calls and token usage
+        This will generate additional API calls and token usage!
 
         """
 
@@ -91,6 +91,24 @@ class FunctionCallingSettings(MixinMeta):
 
         embed = discord.Embed(
             title="Weather function calling now set to:",
+            description=f"{current_value}",
+            color=await ctx.embed_color(),
+        )
+        await ctx.send(embed=embed)
+
+    @functions.command(name="noresponse")
+    async def toggle_ignore_function(self, ctx: commands.Context):
+        """
+        Enable/disable the functionality for the LLM to choose to not respond and ignore messages.
+
+        Temperamental, may require additional prompting to work better.
+        """
+        current_value = not await self.config.guild(ctx.guild).function_calling_no_response()
+
+        await self.config.guild(ctx.guild).function_calling_no_response.set(current_value)
+
+        embed = discord.Embed(
+            title="No response function calling now set to:",
             description=f"{current_value}",
             color=await ctx.embed_color(),
         )

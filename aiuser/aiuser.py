@@ -97,6 +97,7 @@ class AIUser(
             "function_calling_search": False,
             "function_calling_weather": False,
             "function_calling_default_location": [49.24966, -123.11934],
+            "function_calling_no_response": False
         }
         default_channel = {
             "custom_text_prompt": None,

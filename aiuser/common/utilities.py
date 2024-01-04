@@ -10,6 +10,8 @@ from discord import Message
 from openai import AsyncOpenAI
 from redbot.core import Config, commands
 
+from aiuser.response.chat.functions.noresponse.tool_call import \
+    NoResponseToolCall
 from aiuser.response.chat.functions.serper.tool_call import SearchToolCall
 from aiuser.response.chat.functions.tool_call import ToolCall
 from aiuser.response.chat.functions.weather.tool_call import (
@@ -103,4 +105,6 @@ async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolC
         tools.append(LocationWeatherToolCall(config=config, ctx=ctx))
         tools.append(LocalWeatherToolCall(config=config, ctx=ctx))
         tools.append(IsDaytimeToolCall(config=config, ctx=ctx))
+    if await config.guild(ctx.guild).function_calling_no_response():
+        tools.append(NoResponseToolCall(config=config, ctx=ctx))
     return tools
