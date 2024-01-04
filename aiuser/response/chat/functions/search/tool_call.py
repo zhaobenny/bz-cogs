@@ -1,10 +1,9 @@
 
 
-from aiuser.response.chat.functions.serper.query import search_google
+from aiuser.response.chat.functions.search.query import search_google
 from aiuser.response.chat.functions.tool_call import ToolCall
-from aiuser.response.chat.functions.types import (Function,
-                                                      Parameters,
-                                                      ToolCallSchema)
+from aiuser.response.chat.functions.types import (Function, Parameters,
+                                                  ToolCallSchema)
 
 
 class SearchToolCall(ToolCall):

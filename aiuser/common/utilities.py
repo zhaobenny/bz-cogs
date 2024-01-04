@@ -10,12 +10,7 @@ from discord import Message
 from openai import AsyncOpenAI
 from redbot.core import Config, commands
 
-from aiuser.response.chat.functions.noresponse.tool_call import \
-    NoResponseToolCall
-from aiuser.response.chat.functions.serper.tool_call import SearchToolCall
 from aiuser.response.chat.functions.tool_call import ToolCall
-from aiuser.response.chat.functions.weather.tool_call import (
-    IsDaytimeToolCall, LocalWeatherToolCall, LocationWeatherToolCall)
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -98,6 +93,11 @@ def is_using_openrouter_endpoint(client: AsyncOpenAI):
 
 
 async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolCall]:
+    from aiuser.response.chat.functions.noresponse.tool_call import \
+        NoResponseToolCall
+    from aiuser.response.chat.functions.search.tool_call import SearchToolCall
+    from aiuser.response.chat.functions.weather.tool_call import (
+        IsDaytimeToolCall, LocalWeatherToolCall, LocationWeatherToolCall)
     tools = []
     if await config.guild(ctx.guild).function_calling_search():
         tools.append(SearchToolCall(config=config, ctx=ctx))
