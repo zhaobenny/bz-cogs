@@ -22,13 +22,13 @@ DEFAULT_REMOVE_PATTERNS = [
     r'^You respond as "?{botname}"?:',
     r'^[<({{\[]{botname}[>)}}\]]',  # [name], {name}, <name>, (name)
     r'^{botname}:',
-    r'^{botname}: ',
     r'^(User )?"?{authorname}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
     r'^As "?{authorname}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
     r'^You respond as "?{authorname}"?:',
     r'^[<({{\[]{authorname}[>)}}\]]',  # [name], {name}, <name>, (name)
     r'^{authorname}:',
-    r'\n*\[Image[^\]]+\]'
+    r'\n*\[Image[^\]]+\]',
+    r'^Killua: ',  # New pattern to remove "Killua: " 
 ]
 DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS = [
     "image", "images", "picture", "pictures", "photo", "photos", "photograph", "photographs"]
