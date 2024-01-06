@@ -27,8 +27,7 @@ DEFAULT_REMOVE_PATTERNS = [
     r'^You respond as "?{authorname}"?:',
     r'^[<({{\[]{authorname}[>)}}\]]',  # [name], {name}, <name>, (name)
     r'^{authorname}:',
-    r'\n*\[Image[^\]]+\]',
-    r'^Killua: ',  # New pattern to remove "Killua: " 
+    r'\n*\[Image[^\]]+\]'
 ]
 DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS = [
     "image", "images", "picture", "pictures", "photo", "photos", "photograph", "photographs"]
