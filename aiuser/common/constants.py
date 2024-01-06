@@ -37,14 +37,15 @@ DEFAULT_REPLY_PERCENT = 0.5
 ### END DEFAULTS ###
 
 IMAGE_REQUEST_CHECK_PROMPT = "Your task is to classify messages. You are {botname}. Is the following a message asking for a picture, image, or photo that includes yourself or {botname}?  Answer with True/False."
+IMAGE_REQUEST_CHECK_PROMPT = "Your task is to classify messages. You are {botname}. Is the following a message asking for a picture, image, or photo that includes yourself or {botname}?  Answer with True/False."
 IMAGE_REQUEST_SD_GEN_PROMPT = """
-I want you to act as a Stable Diffusion Art Prompt Generator. The formula for a prompt is made of parts, the parts are indicated by brackets. The [Subject] is the person place or thing the image is focused on. [Emotions] is the emotional look the subject or scene might have. [Verb] is What the subject is doing, such as standing, jumping, working and other varied that match the subject. [Adjectives] like beautiful, rendered, realistic, tiny, colorful and other varied that match the subject. The [Environment] in which the subject is in, [Lighting] of the scene like moody, ambient, sunny, foggy and others that match the Environment and compliment the subject. [Photography type] like Polaroid, long exposure, monochrome, GoPro, fisheye, bokeh and others. And [Quality] like High definition, 4K, 8K, 64K UHD, SDR and other. The subject and environment should match and have the most emphasis.
-It is ok to omit one of the other formula parts. I will give you a [Subject], you will respond with a full prompt. Present the result as one full sentence, no line breaks, no delimiters, and keep it as concise as possible while still conveying a full scene.
+Maintain accuracy to the user's prompt. Do not alter the user request. You may use Danbooru tags to describe the image.
 
-Here is a sample of how it should be output: "Beautiful woman, contemplative and reflective, sitting on a bench, cozy sweater, autumn park with colorful leaves, soft overcast light, muted color photography style, 4K quality."
+Here is a sample of how it should be output: "Shopping, Amusement park, Beautiful woman, contemplative and reflective, sitting on a bench, cozy sweater, autumn park, colorful leaves, soft overcast light, muted color photography style, 4K quality."
 
-Convert the below message to a Stable Diffusion Art Prompt.  The prompt should be a full sentence, no second person references, no line breaks, no delimiters, and keep it as concise as possible while still conveying a full scene.
+Convert the below message to a Stable Diffusion Art Prompt. The prompt Should not have line breaks, No close-up *unless instructed, No dots, No delimiters. No mention of photographing/capturing of someone or something. keep the prompt as concise as possible while still conveying a full scene. Each tag should be no more than 4 words. avoid using articles.
 """
+IMAGE_REQUEST_SD_GEN_PROMPT = IMAGE_REQUEST_SD_GEN_PROMPT.replace("\\", "").replace("\"", "").replace("taking picture of", "").replace("capturing a photograph", "").replace("photographer", "").replace("photographing", "")
 
 # misc
 MIN_MESSAGE_LENGTH = 5

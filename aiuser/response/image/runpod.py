@@ -34,7 +34,14 @@ class RunPodGenerator(ImageGenerator):
                     "method": "POST",
                     "endpoint": "/sdapi/v1/txt2img"
                 },
-                "payload": parameters
+                "payload": {
+                    "override_settings": {
+                        "sd_model_checkpoint": "mixProV45Colorbox_v45",
+                        "CLIP_stop_at_last_layers": 2,
+                        "sd_vae": "vae-ft-mse-840000-ema-pruned.safetensors"
+                    },
+                    **parameters
+                }
             }
         }
 
