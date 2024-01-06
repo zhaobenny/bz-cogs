@@ -22,6 +22,7 @@ DEFAULT_REMOVE_PATTERNS = [
     r'^You respond as "?{botname}"?:',
     r'^[<({{\[]{botname}[>)}}\]]',  # [name], {name}, <name>, (name)
     r'^{botname}:',
+    r'^{botname}: ',
     r'^(User )?"?{authorname}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
     r'^As "?{authorname}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',
     r'^You respond as "?{authorname}"?:',
