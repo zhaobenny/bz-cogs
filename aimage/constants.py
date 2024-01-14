@@ -1,3 +1,4 @@
+import re
 
 DEFAULT_NEGATIVE_PROMPT = "ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, bad anatomy, watermark, signature, cut off, low contrast, underexposed, overexposed, bad art, beginner, amateur, distorted face"
 
@@ -84,3 +85,10 @@ ADETAILER_ARGS = {
         ]
     }
 }
+
+PARAM_REGEX = re.compile(r' ?([^:]+): (.+?),(?=(?:[^"]*"[^"]*")*[^"]*$)')
+PARAM_GROUP_REGEX = re.compile(r', [^:]+: {.+?(?=(?:[^"]*"[^"]*")*[^"]*$)}')
+PARAMS_BLACKLIST = [
+    "ADetailer confidence", "ADetailer mask", "ADetailer dilate", "ADetailer denoising",
+    "ADetailer inpaint", "ADetailer version", "ADetailer prompt", "ADetailer use", "ADetailer checkpoint",
+]

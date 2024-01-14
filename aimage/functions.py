@@ -91,7 +91,8 @@ class Functions(MixinMeta):
         if is_nsfw:
             return await self.sent_response(context, content=f"🔞 {user.mention} generated a possible NSFW image with prompt: `{prompt}`", allowed_mentions=discord.AllowedMentions.none())
 
-        msg = await self.sent_response(context, file=discord.File(io.BytesIO(image_data), filename=f"image.{image_extension}"), view=ImageActions(cog=self, image_info=info_string, payload=payload, author=user))
+        view = ImageActions(cog=self, image_info=info_string, payload=payload, author=user, channel=context.channel)
+        msg = await self.sent_response(context, file=discord.File(io.BytesIO(image_data), filename=f"image.{image_extension}"), view=view)
         asyncio.create_task(self.delete_button_after(msg))
 
     async def sent_response(self, context: Union[commands.Context, discord.Interaction], **kwargs):
