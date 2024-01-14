@@ -78,13 +78,16 @@ class Functions(MixinMeta):
         try:
             image_data, info_string, is_nsfw = await self._post_sd_endpoint(endpoint, payload, auth_str)
             image_extension = "png"
-        except:
+        except Exception as error:
             if await self.config.aihorde():
                 image_data, info_string, is_nsfw = await self._request_aihorde(context, nsfw, payload)
                 image_extension = ".webp"
             else:
-                logger.exception(f"Failed request to Stable Diffusion endpoint in server {guild.id}")
-                return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
+                if isinstance(error, aiohttp.ClientConnectorError):
+                    await self.sent_response(context, content=":warning: Timed out! Server is offline.", ephemeral=True)
+                else:
+                    logger.exception(f"Failed request to Stable Diffusion endpoint in server {guild.id}")
+                    return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
 
         user = context.user if isinstance(
             context, discord.Interaction) else context.author
@@ -125,7 +128,7 @@ class Functions(MixinMeta):
             return True
         return False
 
-    @retry(wait=wait_random(min=2, max=5), stop=stop_after_attempt(2), reraise=True)
+    @retry(wait=wait_random(min=2, max=3), stop=stop_after_attempt(2), reraise=True)
     async def _post_sd_endpoint(self, endpoint, payload, auth_str):
         url = endpoint + "txt2img"
 
@@ -177,7 +180,7 @@ class Functions(MixinMeta):
         response = await client.txt2img_request(horde_payload)
         if response.get("errors", None):
             logger.error(response)
-            return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
+            return await self.sent_response(context, content=":warning: Something went wrong with AI Horde!", ephemeral=True)
         img_uuid = response["id"]
         done = False
         elapsed = 0
@@ -189,7 +192,7 @@ class Functions(MixinMeta):
         generate_status = await client.generate_status(img_uuid)
         if not generate_status["done"]:
             logger.error(f"Failed request to AI Horde in server {context.guild.id}")
-            return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
+            return await self.sent_response(context, content=":warning: AI Horde timed out!", ephemeral=True)
         res = generate_status["generations"][0]
         image_url = res["img"]
         async with self.session.get(image_url) as response:
