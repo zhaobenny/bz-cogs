@@ -74,7 +74,7 @@ class Settings(MixinMeta):
         await ctx.send(f"NSFW filtering is now {'`disabled`' if not nsfw else '`enabled`'}")
 
     @aimage.command(name="negative_prompt")
-    async def negative_prompt(self, ctx: commands.Context, negative_prompt: str):
+    async def negative_prompt(self, ctx: commands.Context, *, negative_prompt: str):
         """
         Set the default negative prompt
         """
