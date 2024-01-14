@@ -46,7 +46,12 @@ class ImageScanSettings(MixinMeta):
 
     @imagescan.command(name="mode")
     async def image_mode(self, ctx: commands.Context, mode: str):  # Modify the parameter type
-        """ Set method for scanning images """
+        """ Set method for scanning images
+
+
+            **Arguments**
+            - `mode` One of the following: `local`, `ai-horde`, `supported-llm`
+        """
         values = [m.value for m in ScanImageMode]
 
         if mode not in values:
@@ -98,10 +103,6 @@ class ImageScanSettings(MixinMeta):
                 inline=False)
             return await ctx.send(embed=embed)
         elif mode == ScanImageMode.LLM:
-            model = await self.config.guild(ctx.guild).model()
-            if not (model in VISION_SUPPORTED_MODELS):
-                return await ctx.send(f":warning: Currently selected model, {model}, does not support image scanning. Set a comptaible model first!")
-
             await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.LLM.value)
             embed = discord.Embed(title="Scanning Images for this server now set to", description=mode.value, color=await ctx.embed_color())
 
@@ -110,3 +111,30 @@ class ImageScanSettings(MixinMeta):
                 value="This may send images to OpenAI / third party for processing! \n Please inform users or use local mode for privacy.",
                 inline=False)
             return await ctx.send(embed=embed)
+
+    @imagescan.command(name="model")
+    async def image_model(self, ctx: commands.Context, model_name: str):
+        """ Set the specific LLM used in the `supported-llm` mode
+
+
+        **Arguments**
+            - `model_name` Name of a compatible model
+        """
+        if not self.openai_client:
+            await self.initalize_openai(ctx)
+
+        await ctx.message.add_reaction("🔄")
+        models = [model.id for model in (await self.openai_client.models.list()).data]
+        models = list(set(models) & set(VISION_SUPPORTED_MODELS))  # only show supported models
+        await ctx.message.remove_reaction("🔄", ctx.me)
+
+        if model_name not in models:
+            await ctx.send(":warning: Not a valid model!")
+            return await self._paginate_models(ctx, models)
+
+        await self.config.guild(ctx.guild).scan_images_model.set(model_name)
+        embed = discord.Embed(
+            title="LLM for scanning images now set to:",
+            description=f"{model_name}",
+            color=await ctx.embed_color())
+        return await ctx.send(embed=embed)

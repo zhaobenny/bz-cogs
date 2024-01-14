@@ -10,6 +10,7 @@ from redbot.core import commands
 
 from aiuser.abc import MixinMeta
 from aiuser.common.constants import DEFAULT_PROMPT, OTHER_MODELS_LIMITS
+from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import format_variables
 from aiuser.messages_list.converter.converter import MessageConverter
 from aiuser.messages_list.entry import MessageEntry
@@ -47,6 +48,7 @@ class MessagesList:
         self.messages = []
         self.messages_ids = set()
         self.tokens = 0
+        self.model = None
 
     def __len__(self):
         return len(self.messages)
@@ -55,10 +57,10 @@ class MessagesList:
         return json.dumps(self.get_json(), indent=4)
 
     async def _init(self, prompt=None):
-        model = await self.config.guild(self.guild).model()
-        self.token_limit = self._get_token_limit(model)
+        self.model = await self.config.guild(self.guild).model()
+        self.token_limit = self._get_token_limit(self.model)
         try:
-            self._encoding = tiktoken.encoding_for_model(model)
+            self._encoding = tiktoken.encoding_for_model(self.model)
         except KeyError:
             self._encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
@@ -68,6 +70,18 @@ class MessagesList:
         bot_prompt = prompt or await self._pick_prompt()
 
         await self.add_system(format_variables(self.ctx, bot_prompt))
+
+        if await self._check_if_inital_img():
+            self.model = await self.config.guild(self.guild).scan_images_model()
+
+    async def _check_if_inital_img(self):
+        return (
+            not self.ctx.interaction
+            and self.init_message.attachments
+            and self.init_message.attachments[0].content_type.startswith('image/')
+            and await self.config.guild(self.guild).scan_images()
+            and await self.config.guild(self.guild).scan_images_mode() == ScanImageMode.LLM.value
+        )
 
     async def _pick_prompt(self):
         author = self.init_message.author

@@ -70,6 +70,7 @@ class AIUser(
             "reply_to_mentions_replies": False,
             "scan_images": False,
             "scan_images_mode": ScanImageMode.AI_HORDE.value,
+            "scan_images_model": "gpt-4-vision-preview",
             "max_image_size": IMAGE_UPLOAD_LIMIT,
             "model": "gpt-3.5-turbo",
             "custom_text_prompt": None,

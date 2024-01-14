@@ -47,17 +47,21 @@ See other settings using:
 
 ![image_seeing](https://github.com/zhaobenny/bz-cogs/assets/46238123/8b0019f3-8b38-4578-b511-a350e10fce2d)
 
+Enabling image scanning will allow the bot to incorporate images in the triggering message into the prompt.
 
 Bot owners can see settings here:
 ```
 [p]aiuser imagescan
 ```
 
-### Supported LLM mode
+### Supported-LLM mode
 
-If the chosen LLM model (eg. gpt-4-vision-preview) supports images, it will directly sent the image as a input using this mode. (superior to other modes in performance but not in cost)
+This mode is superior in performance but not in cost. It will use the selected LLM from this command:
+```
+[p]aiuser imagescan model <MODEL_NAME>
+```
 
-### AI Horde Mode
+### AI-Horde Mode
 Utilize [AI Horde's](https://stablehorde.net/) Image Alchemy to caption images.
 
 AI Horde is a crowdsourced distributed cluster. Images will be uploaded to a **unknown third party** (a random volunteer worker machine)
@@ -65,7 +69,7 @@ AI Horde is a crowdsourced distributed cluster. Images will be uploaded to a **u
 Recommended to set a [API key](https://stablehorde.net/register). (or some [kudos](https://dbzer0.com/blog/the-kudos-based-economy-for-the-koboldai-horde/))
 
 
-### Local Image Mode
+### Local Mode
 
 Local image scanning mode will be **very CPU intensive**. *(Not recommended for busy servers/channel)*
 
