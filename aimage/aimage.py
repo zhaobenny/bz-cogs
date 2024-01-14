@@ -2,6 +2,7 @@ import asyncio
 import logging
 from collections import defaultdict
 from typing import List
+from copy import copy
 
 import aiohttp
 import discord
@@ -141,6 +142,19 @@ class AImage(Settings,
 
         return results
 
+    async def can_run_command(self, ctx: commands.Context, command_name: str) -> bool:
+        prefix = await self.bot.get_prefix(ctx.message)
+        prefix = prefix[0] if isinstance(prefix, list) else prefix
+        fake_message = copy(ctx.message)
+        fake_message.content = prefix + command_name
+        command = ctx.bot.get_command(command_name)
+        fake_context: commands.Context = await ctx.bot.get_context(fake_message)  # noqa
+        try:
+            can = await command.can_run(fake_context, check_all_parents=True, change_permission_state=False)
+        except commands.CommandError:
+            can = False
+        return can
+
     @app_commands.command(name="imagine")
     @app_commands.describe(
         prompt="The prompt to generate an image from",
@@ -177,6 +191,9 @@ class AImage(Settings,
         """
         Generate an image using Stable Diffusion
         """
+        ctx = await self.bot.get_context(interaction)
+        if not await self.can_run_command(ctx, "imagine"):
+            await interaction.response.send_message("You do not have permission to do this.", ephemeral=True)
         await self.generate_image(interaction, prompt, lora, cfg, negative_prompt, steps, seed, sampler, width, height, checkpoint)
         asyncio.create_task(self._update_autocomplete_cache(interaction))
 
