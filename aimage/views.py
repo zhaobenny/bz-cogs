@@ -4,7 +4,7 @@ from collections import OrderedDict
 from redbot.core.bot import Red
 
 from aimage.abc import MixinMeta
-from aimage.constants import PARAM_REGEX, PARAM_GROUP_REGEX, PARAMS_BLACKLIST
+from aimage.constants import VIEW_TIMEOUT, PARAM_REGEX, PARAM_GROUP_REGEX, PARAMS_BLACKLIST
 
 
 class ImageActions(discord.ui.View):
@@ -15,13 +15,16 @@ class ImageActions(discord.ui.View):
         self.generate_image = cog.generate_image
         self.og_user = author
         self.channel = channel
-        super().__init__()
+        super().__init__(timeout=VIEW_TIMEOUT)
 
     @discord.ui.button(emoji='🔎')
     async def get_caption(self, interaction: discord.Interaction, _: discord.ui.Button):
-        embed = await self.get_params_embed()
-        view = ParamsView(self.info_string)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        if "Steps: " in self.info_string:
+            embed = await self.get_params_embed()
+            view = ParamsView(self.info_string)
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        else:
+            await interaction.response.send_message(f'Parameters for this image:\n```yaml\n{self.info_string}```')
 
     @discord.ui.button(emoji='🔄')
     async def regenerate_image(self, interaction: discord.Interaction, button: discord.ui.Button):

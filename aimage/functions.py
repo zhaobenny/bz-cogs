@@ -84,7 +84,7 @@ class Functions(MixinMeta):
                 image_extension = ".webp"
             else:
                 if isinstance(error, aiohttp.ClientConnectorError):
-                    await self.sent_response(context, content=":warning: Timed out! Server is offline.", ephemeral=True)
+                    return await self.sent_response(context, content=":warning: Timed out! Server is offline.", ephemeral=True)
                 else:
                     logger.exception(f"Failed request to Stable Diffusion endpoint in server {guild.id}")
                     return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
@@ -115,7 +115,7 @@ class Functions(MixinMeta):
             endpoint = await self.config.endpoint()
             auth = await self.config.auth()
             nsfw = await self.config.nsfw() and nsfw
-        return (endpoint, auth, nsfw)
+        return endpoint, auth, nsfw
 
     async def _contains_blacklisted_word(self, guild: discord.Guild, prompt: str):
         endpoint = await self.config.guild(guild).endpoint()
