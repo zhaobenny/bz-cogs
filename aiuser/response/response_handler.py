@@ -5,7 +5,7 @@ import discord
 from redbot.core import commands
 
 from aiuser.abc import MixinMeta
-from aiuser.common.constants import (IMAGE_REQUEST_CHECK_PROMPT,
+from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS, IMAGE_REQUEST_CHECK_PROMPT,
                                      MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
 from aiuser.messages_list.messages import create_messages_list
 from aiuser.response.chat.openai import OpenAI_API_Generator
@@ -33,7 +33,7 @@ class ResponseHandler(MixinMeta):
         await message_list.add_history()
         chat = None
 
-        if await self.config.guild(ctx.guild).function_calling():
+        if await self.config.guild(ctx.guild).function_calling() and message_list.model in FUNCTION_CALLING_SUPPORTED_MODELS:
             chat = OpenAI_Functions_API_Generator(self, ctx, message_list)
         else:
             chat = OpenAI_API_Generator(self, ctx, message_list)

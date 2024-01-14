@@ -226,7 +226,7 @@ class PromptSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @prompt.command(name="set", aliases=["custom", "customize"])
-    async def prompt_custom(self, ctx, mention: Optional[Union[discord.Member, discord.Role, discord.TextChannel, discord.VoiceChannel, discord.StageChannel]], *, prompt: Optional[str]):
+    async def prompt_custom(self, ctx: commands.Context, mention: Optional[Union[discord.Member, discord.Role, discord.TextChannel, discord.VoiceChannel, discord.StageChannel]], *, prompt: Optional[str]):
         """ Set a custom prompt or preset for the server (or provided channel/role/member)
 
             If multiple prompts can be used, the most specific prompt will be used, eg. it will go for: member > role > channel > server
@@ -234,54 +234,64 @@ class PromptSettings(MixinMeta):
             **Arguments**
                 - `mention` *(Optional)* A specific user or channel
                 - `prompt` *(Optional)* The prompt (or name of a preset) to set. If blank, will remove current prompt.
+                - `<ATTACHMENT>` *(Optional)* An `.txt` file to use as the prompt
         """
+        if not prompt and ctx.message.attachments:
+            if not ctx.message.attachments[0].filename.endswith(".txt"):
+                return await ctx.send(":warning: Invalid attachment. Must be a `.txt` file.")
+            prompt = (await ctx.message.attachments[0].read()).decode("utf-8")
+
         if not prompt:
             prompt = None
+
         if prompt and len(prompt) > await self.config.max_prompt_length() and not await ctx.bot.is_owner(ctx.author):
-            return await ctx.send(f"Prompt too long. Max length is {await self.config.max_prompt_length()} characters.")
+            return await ctx.send(f":warning: Prompt too long. Max length is {await self.config.max_prompt_length()} characters.")
+
         presets = json.loads(await self.config.guild(ctx.guild).presets())
         if prompt and prompt in presets:
             prompt = presets[prompt]
 
-        entity_type = "server"
-        if isinstance(mention, discord.Role):
-            entity_type = "role"
-        elif isinstance(mention, discord.Member):
-            entity_type = "user"
-        elif isinstance(mention, discord.TextChannel) or isinstance(mention, discord.VoiceChannel) or isinstance(mention, discord.StageChannel):
-            entity_type = "channel"
-
-        return await self._set_prompt(ctx, mention, entity_type, prompt)
-
-    async def _set_prompt(self, ctx: commands.Context, entity, entity_type, prompt: Optional[str]):
-        """ Set custom prompt for the specified entity type (server, channel, role, user) """
-
-        self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
-        config_attr = None
-
-        if entity_type == "server":
-            config_attr = self.config.guild(ctx.guild)
-        elif entity_type == "user":
-            config_attr = self.config.member(entity)
-        elif entity_type == "role":
-            config_attr = self.config.role(entity)
-        elif entity_type == "channel":
-            config_attr = self.config.channel(entity)
+        mention_type = self._get_mention_type(mention)
+        config_attr = self._get_config_attribute(mention_type, ctx, mention)
 
         if not config_attr:
-            return await ctx.send("Invalid entity type provided.")
+            return await ctx.send(":warning: Invalid mention type provided.")
 
         if not prompt:
             await config_attr.custom_text_prompt.set(None)
-            return await ctx.send(f"The prompt for this {entity_type} is now reset to the default prompt")
+            return await ctx.send(f"The prompt for this {mention_type} is now reset to the default prompt")
 
         await config_attr.custom_text_prompt.set(prompt)
+        self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
+
         embed = discord.Embed(
-            title=f"The prompt for this {entity_type} is now changed to:",
+            title=f"The prompt for this {mention_type} is now changed to:",
             description=f"{self._truncate_prompt(prompt)}",
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
         return await ctx.send(embed=embed)
+
+    def _get_mention_type(self, mention):
+        if isinstance(mention, discord.Role):
+            return "role"
+        elif isinstance(mention, discord.Member):
+            return "user"
+        elif isinstance(mention, (discord.TextChannel, discord.VoiceChannel, discord.StageChannel)):
+            return "channel"
+        else:
+            return None
+
+    def _get_config_attribute(self, mention_type, ctx, mention):
+        if mention_type == "server":
+            return self.config.guild(ctx.guild)
+        elif mention_type == "user":
+            return self.config.member(mention)
+        elif mention_type == "role":
+            return self.config.role(mention)
+        elif mention_type == "channel":
+            return self.config.channel(mention)
+        else:
+            raise ValueError("Invalid mention type provided")
 
     async def get_tokens(self, ctx: commands.Context, prompt: str) -> int:
         prompt = format_variables(ctx, prompt)  # to provide a better estimate

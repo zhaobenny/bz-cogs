@@ -22,8 +22,8 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
         self.completion = None
         super().__init__(cog, ctx, messages)
 
-    async def request_openai(self, model):
-        kwargs = await self.get_custom_parameters(model)
+    async def request_openai(self):
+        kwargs = await self.get_custom_parameters()
         self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
         self.available_tools_schemas = [tool.schema for tool in self.enabled_tools]
 
@@ -36,7 +36,7 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
 
             response = (
                 await self.openai_client.chat.completions.create(
-                    model=model, messages=self.msg_list.get_json(), **kwargs
+                    model=self.model, messages=self.msg_list.get_json(), **kwargs
                 )
             )
 

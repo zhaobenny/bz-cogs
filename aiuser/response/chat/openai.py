@@ -17,7 +17,7 @@ class OpenAI_API_Generator(Chat_Generator):
     def __init__(self, cog: MixinMeta, ctx: commands.Context, messages: MessagesList):
         super().__init__(cog, ctx, messages)
 
-    async def get_custom_parameters(self, model):
+    async def get_custom_parameters(self):
         custom_parameters = await self.config.guild(self.ctx.guild).parameters()
         kwargs = {}
 
@@ -29,25 +29,25 @@ class OpenAI_API_Generator(Chat_Generator):
             logit_bias = json.loads(await self.config.guild(self.ctx.guild).weights() or "{}")
             kwargs["logit_bias"] = logit_bias
 
-        if model in VISION_SUPPORTED_MODELS:
-            logger.warning(f"logit_bias is currently not supported for for model {model}, removing...")
+        if self.model in VISION_SUPPORTED_MODELS:
+            logger.warning(f"logit_bias is currently not supported for for model {self.model}, removing...")
             del kwargs["logit_bias"]
 
         return kwargs
 
-    async def request_openai(self, model):
-        kwargs = await self.get_custom_parameters(model)
+    async def request_openai(self):
+        kwargs = await self.get_custom_parameters()
 
-        if "gpt-3.5-turbo-instruct" in model:
+        if "gpt-3.5-turbo-instruct" in self.model:
             prompt = "\n".join(message["content"] for message in self.messages)
             response = await self.openai_client.completions.create(
-                model=model, prompt=prompt, **kwargs
+                model=self.model, prompt=prompt, **kwargs
             )
             completion = response.choices[0].message.content
         else:
             response = (
                 await self.openai_client.chat.completions.create(
-                    model=model, messages=self.messages, **kwargs
+                    model=self.model, messages=self.messages, **kwargs
                 )
             )
 
@@ -62,10 +62,8 @@ class OpenAI_API_Generator(Chat_Generator):
         return completion
 
     async def generate_message(self):
-        model = await self.config.guild(self.ctx.guild).model()
-
         try:
-            response = await self.request_openai(model)
+            response = await self.request_openai()
             return response
         except httpx.ReadTimeout:
             logger.error(f"Failed request to LLM endpoint. Timed out after >50 seconds")
