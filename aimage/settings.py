@@ -74,7 +74,7 @@ class Settings(MixinMeta):
         await ctx.send(f"NSFW filtering is now {'`disabled`' if not nsfw else '`enabled`'}")
 
     @aimage.command(name="negative_prompt")
-    async def negative_prompt(self, ctx: commands.Context, negative_prompt: str):
+    async def negative_prompt(self, ctx: commands.Context, *, negative_prompt: str):
         """
         Set the default negative prompt
         """
@@ -121,8 +121,8 @@ class Settings(MixinMeta):
         """
         Set the default width
         """
-        if width < 256 or width > 768:
-            return await ctx.send("Value must range between 256 and 768.")
+        if width < 256 or width > 1536:
+            return await ctx.send("Value must range between 256 and 1536.")
         await self.config.guild(ctx.guild).width.set(width)
         await ctx.tick()
 
@@ -131,8 +131,8 @@ class Settings(MixinMeta):
         """
         Set the default height
         """
-        if height < 256 or height > 768:
-            return await ctx.send("Value must range between 256 and 768.")
+        if height < 256 or height > 1536:
+            return await ctx.send("Value must range between 256 and 1536.")
         await self.config.guild(ctx.guild).height.set(height)
         await ctx.tick()
 

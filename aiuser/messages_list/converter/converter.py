@@ -22,7 +22,7 @@ class MessageConverter():
         self.cog = cog
         self.config = cog.config
         self.bot_id = cog.bot.user.id
-        self.init_msg_id = ctx.message.id
+        self.init_msg = ctx.message
         self.message_cache = cog.cached_messages
         self.ctx = ctx
 
@@ -50,8 +50,9 @@ class MessageConverter():
         elif message.attachments[0].size > await self.config.guild(message.guild).max_image_size():
             content = format_generic_image(message)
             await self.add_entry(content, res, role)
-        # scan only the triggering image
-        elif self.init_msg_id == message.id and not self.ctx.interaction and await self.config.guild(message.guild).scan_images():
+        # scans images only if the msg is the trigger, or if the msg was replied to by the trigger
+        elif ((self.init_msg.id == message.id) or (self.init_msg.reference and self.init_msg.reference.message_id == message.id)) \
+                and not self.ctx.interaction and await self.config.guild(message.guild).scan_images():
             content = await transcribe_image(self.cog, message) or format_generic_image(message)
             await self.add_entry(content, res, role)
             if isinstance(content, list):

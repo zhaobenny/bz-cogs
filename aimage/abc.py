@@ -11,10 +11,12 @@ class CompositeMetaClass(type(commands.Cog), type(ABC)):
 
 
 class MixinMeta(ABC):
+    bot: Red
+    config: Config
+    session: ClientSession
+
     def __init__(self, *args):
-        self.bot: Red
-        self.config: Config
-        self.session: ClientSession
+        pass
 
     async def _get_endpoint(self, guild: discord.Guild):
         """ Gets the correct endpoint for the guild """

@@ -279,7 +279,7 @@ class PromptSettings(MixinMeta):
         elif isinstance(mention, (discord.TextChannel, discord.VoiceChannel, discord.StageChannel)):
             return "channel"
         else:
-            return None
+            return "server"
 
     def _get_config_attribute(self, mention_type, ctx, mention):
         if mention_type == "server":

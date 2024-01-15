@@ -74,14 +74,21 @@ class MessagesList:
         if await self._check_if_inital_img():
             self.model = await self.config.guild(self.guild).scan_images_model()
 
-    async def _check_if_inital_img(self):
-        return (
-            not self.ctx.interaction
-            and self.init_message.attachments
-            and self.init_message.attachments[0].content_type.startswith('image/')
-            and await self.config.guild(self.guild).scan_images()
-            and await self.config.guild(self.guild).scan_images_mode() == ScanImageMode.LLM.value
-        )
+    async def _check_if_inital_img(self) -> bool:
+        if (
+            self.ctx.interaction
+            or not await self.config.guild(self.guild).scan_images()
+            or await self.config.guild(self.guild).scan_images_mode() != ScanImageMode.LLM.value
+        ):
+            return False
+        if self.init_message.attachments and self.init_message.attachments[0].content_type.startswith('image/'):
+            return True
+        elif self.init_message.reference:
+            ref = self.init_message.reference
+            replied = ref.cached_message or await self.bot.get_channel(ref.channel_id).fetch_message(ref.message_id)
+            return replied.attachments and replied.attachments[0].content_type.startswith('image/')
+        else:
+            return False
 
     async def _pick_prompt(self):
         author = self.init_message.author

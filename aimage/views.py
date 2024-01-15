@@ -1,23 +1,30 @@
+import io
 import discord
+from collections import OrderedDict
 from redbot.core.bot import Red
 
 from aimage.abc import MixinMeta
+from aimage.constants import VIEW_TIMEOUT, PARAM_REGEX, PARAM_GROUP_REGEX, PARAMS_BLACKLIST
 
 
 class ImageActions(discord.ui.View):
-    def __init__(self, cog: MixinMeta, image_info: str, payload: dict, author: discord.Member):
+    def __init__(self, cog: MixinMeta, image_info: str, payload: dict, author: discord.Member, channel: discord.TextChannel):
         self.info_string = image_info
         self.payload = payload
         self.bot: Red = cog.bot
         self.generate_image = cog.generate_image
         self.og_user = author
-        super().__init__()
+        self.channel = channel
+        super().__init__(timeout=VIEW_TIMEOUT)
 
     @discord.ui.button(emoji='🔎')
-    async def get_caption(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message(f'Parameters for this image were:\n```\n{self.info_string}```')
-        button.disabled = True
-        await interaction.message.edit(view=self)
+    async def get_caption(self, interaction: discord.Interaction, _: discord.ui.Button):
+        if "Steps: " in self.info_string:
+            embed = await self.get_params_embed()
+            view = ParamsView(self.info_string)
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        else:
+            await interaction.response.send_message(f'Parameters for this image:\n```yaml\n{self.info_string}```')
 
     @discord.ui.button(emoji='🔄')
     async def regenerate_image(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -51,6 +58,49 @@ class ImageActions(discord.ui.View):
 
         guild = interaction.guild
         member = guild.get_member(interaction.user.id)
-        can_delete = await self.bot.is_owner(member) or interaction.channel.permissions_for(member).manage_messages
+        is_staff = await self.bot.is_mod(member) or await self.bot.is_admin(member) or await self.bot.is_owner(member)
 
-        return is_og_user or can_delete
+        return is_og_user or is_staff
+
+    async def get_params_embed(self) -> discord.Embed:
+        output_dict = OrderedDict()
+        prompts, params = self.info_string.rsplit("Steps: ", 1)
+        try:
+            output_dict["Prompt"], output_dict["Negative Prompt"] = prompts.rsplit("Negative prompt: ", 1)
+        except:
+            output_dict["Prompt"] = prompts
+        params = f"Steps: {params},"
+        params = PARAM_GROUP_REGEX.sub("", params)
+        param_list = PARAM_REGEX.findall(params)
+        for key, value in param_list:
+            if len(output_dict) > 24 or any(blacklisted in key for blacklisted in PARAMS_BLACKLIST):
+                continue
+            output_dict[key] = value
+        for key in output_dict:
+            if len(output_dict[key]) > 1000:
+                output_dict[key] = output_dict[key][:1000] + "..."
+
+        embed = discord.Embed(title="Image Parameters", color=await self.bot.get_embed_color(self.channel))
+        for key, value in output_dict.items():
+            embed.add_field(name=key, value=value, inline='Prompt' not in key)
+        return embed
+
+
+class ParamsView(discord.ui.View):
+    def __init__(self, params: str):
+        super().__init__()
+        self.params = params
+        self.pressed = False
+
+    @discord.ui.button(emoji="🔧", label='View Full', style=discord.ButtonStyle.grey)
+    async def view_full_parameters(self, ctx: discord.Interaction, _: discord.Button):
+        if len(self.params) < 1980:
+            await ctx.response.send_message(f"```yaml\n{self.params}```", ephemeral=True)
+        else:
+            with io.StringIO() as f:
+                f.write(self.params)
+                f.seek(0)
+                await ctx.response.send_message(file=discord.File(f, "parameters.yaml"), ephemeral=True)
+        await ctx.message.edit(view=None)
+        self.pressed = True
+        self.stop()
