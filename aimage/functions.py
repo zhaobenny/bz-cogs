@@ -97,6 +97,11 @@ class Functions(MixinMeta):
         view = ImageActions(cog=self, image_info=info_string, payload=payload, author=user, channel=context.channel)
         msg = await self.sent_response(context, file=discord.File(io.BytesIO(image_data), filename=f"image.{image_extension}"), view=view)
         asyncio.create_task(self.delete_button_after(msg))
+        imagescanner = self.bot.get_cog("ImageScanner")
+        if imagescanner and image_extension == "png":
+            if context.channel.id in imagescanner.scan_channels:
+                imagescanner.image_cache[msg.id] = ({1: info_string}, {1: image_data})
+                await msg.add_reaction("🔎")
 
     async def sent_response(self, context: Union[commands.Context, discord.Interaction], **kwargs):
         if isinstance(context, discord.Interaction):
