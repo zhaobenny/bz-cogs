@@ -11,8 +11,7 @@ from redbot.core import Config, app_commands, checks, commands
 from redbot.core.bot import Red
 
 from aimage.abc import CompositeMetaClass
-from aimage.constants import (AUTO_COMPLETE_SAMPLERS,
-                              DEFAULT_BADWORDS_BLACKLIST,
+from aimage.constants import (DEFAULT_BADWORDS_BLACKLIST,
                               DEFAULT_NEGATIVE_PROMPT)
 from aimage.functions import Functions
 from aimage.settings import Settings
@@ -48,6 +47,7 @@ class AImage(Settings,
             "sampling_steps": 20,
             "sampler": "Euler a",
             "checkpoint": None,
+            "vae": None,
             "adetailer": False,
             "width": 512,
             "height": 512,
@@ -80,60 +80,37 @@ class AImage(Settings,
         """
         await self.generate_image(ctx, prompt)
 
-    async def samplers_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
-        choices = self.autocomplete_cache[interaction.guild_id].get("samplers")
+    async def object_autocomplete(self, interaction: discord.Interaction, current: str, object_type: str) -> List[app_commands.Choice[str]]:
+        choices = self.autocomplete_cache[interaction.guild_id].get(object_type) or []
 
         if not choices:
             await self._update_autocomplete_cache(interaction)
 
-        if not choices:
-            choices = AUTO_COMPLETE_SAMPLERS
-
-        if not current:
-            return [
-                app_commands.Choice(name=choice, value=choice)
-                for choice in choices[:24]
-            ]
-        else:
+        if current:
             choices = self.filter_list(choices, current)
-            return [
-                app_commands.Choice(name=choice, value=choice)
-                for choice in choices[:24]
-            ]
+
+        return [
+            app_commands.Choice(name=choice, value=choice)
+            for choice in choices[:25]
+        ]
+
+    async def samplers_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+        return await self.object_autocomplete(interaction, current, "samplers")
 
     async def loras_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
-        choices = self.autocomplete_cache[interaction.guild_id].get("loras") or []
-
-        if not choices:
-            await self._update_autocomplete_cache(interaction)
-
-        if current:
-            choices = self.filter_list(choices, current)
-
-        return [
-            app_commands.Choice(name=choice, value=choice)
-            for choice in choices[:24]
-        ]
+        return await self.object_autocomplete(interaction, current, "loras")
 
     async def checkpoint_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
-        choices = self.autocomplete_cache[interaction.guild_id].get("checkpoints") or []
+        return await self.object_autocomplete(interaction, current, "checkpoints")
 
-        if not choices:
-            await self._update_autocomplete_cache(interaction)
-
-        if current:
-            choices = self.filter_list(choices, current)
-
-        return [
-            app_commands.Choice(name=choice, value=choice)
-            for choice in choices[:24]
-        ]
+    async def vae_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+        return await self.object_autocomplete(interaction, current, "vaes")
 
     @staticmethod
-    def filter_list(options: list[str], filter: str):
+    def filter_list(options: list[str], current: str):
         results = []
 
-        ratios = [(item, fuzz.partial_ratio(filter.lower(), item.lower().removeprefix("<lora:"))) for item in options]
+        ratios = [(item, fuzz.partial_ratio(current.lower(), item.lower().removeprefix("<lora:"))) for item in options]
 
         sorted_options = sorted(ratios, key=lambda x: x[1], reverse=True)
 
@@ -159,17 +136,21 @@ class AImage(Settings,
     @app_commands.describe(
         prompt="The prompt to generate an image from",
         negative_prompt="The negative prompt to use",
-        steps="The sampling steps to use",
-        lora="Shortcut to get a LoRA to insert into a prompt",
-        checkpoint="The checkpoint to use",
-        cfg="The cfg to use",
+        seed="Random number that generates the image, -1 for random.",
+        width="Default is 512 for SD1, 1024 for SDXL",
+        height="Default is 512 for SD1, 1024 for SDXL",
+        cfg="The CFG to use",
         sampler="The sampler to use",
-        seed="The seed to use",
+        steps="How many sampling steps to use",
+        checkpoint="The checkpoint to use",
+        vae="The VAE to use",
+        lora="Shortcut to get a LoRA to insert into a prompt",
     )
     @app_commands.autocomplete(
         sampler=samplers_autocomplete,
         lora=loras_autocomplete,
         checkpoint=checkpoint_autocomplete,
+        vae=vae_autocomplete,
     )
     @app_commands.checks.cooldown(1, 8, key=None)
     @app_commands.checks.bot_has_permissions(attach_files=True)
@@ -179,13 +160,14 @@ class AImage(Settings,
         interaction: discord.Interaction,
         prompt: str,
         negative_prompt: str = None,
+        seed: app_commands.Range[int, -1, None] = -1,
         width: app_commands.Range[int, 256, 1536] = None,
         height: app_commands.Range[int, 256, 1536] = None,
         cfg: app_commands.Range[float, 1, 30] = None,
-        steps: app_commands.Range[int, 1, 150] = None,
         sampler: str = None,
-        seed: app_commands.Range[int, -1, None] = -1,
+        steps: app_commands.Range[int, 1, 150] = None,
         checkpoint: str = None,
+        vae: str = None,
         lora: str = None
     ):
         """
@@ -193,8 +175,9 @@ class AImage(Settings,
         """
         ctx = await self.bot.get_context(interaction)
         if not await self.can_run_command(ctx, "imagine"):
-            await interaction.response.send_message("You do not have permission to do this.", ephemeral=True)
-        await self.generate_image(interaction, prompt, lora, cfg, negative_prompt, steps, seed, sampler, width, height, checkpoint)
+            return await interaction.response.send_message("You do not have permission to do this.", ephemeral=True)
+
+        await self.generate_image(interaction, prompt, lora, cfg, negative_prompt, steps, seed, sampler, width, height, checkpoint, vae)
         asyncio.create_task(self._update_autocomplete_cache(interaction))
 
     async def _update_autocomplete_cache(self, interaction: discord.Interaction):
@@ -203,17 +186,21 @@ class AImage(Settings,
         if not await self._check_endpoint_online(guild):
             return
 
-        data = await self._fetch_data(guild, "samplers")
-        if data:
-            choices = [choice["name"] for choice in data]
-            self.autocomplete_cache[guild.id]["samplers"] = choices
-        data = await self._fetch_data(guild, "loras")
-        if data:
+        if data := await self._fetch_data(guild, "loras"):
             choices = [f"<lora:{choice['name']}:1>" for choice in data]
             self.autocomplete_cache[guild.id]["loras"] = choices
-        data = await self._fetch_data(guild, "sd-models")
-        if data:
+
+        if data := await self._fetch_data(guild, "sd-models"):
             choices = [choice["model_name"] for choice in data]
             self.autocomplete_cache[guild.id]["checkpoints"] = choices
+
+        if data := await self._fetch_data(guild, "sd-vae"):
+            choices = [choice["model_name"] for choice in data]
+            self.autocomplete_cache[guild.id]["vaes"] = choices
+
+        if data := await self._fetch_data(guild, "samplers"):
+            choices = [choice["name"] for choice in data]
+            self.autocomplete_cache[guild.id]["samplers"] = choices
+
         logger.debug(
             f"Ran a update to get possible autocomplete terms in server {guild.id}")

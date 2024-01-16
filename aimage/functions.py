@@ -35,6 +35,7 @@ class Functions(MixinMeta):
                              width: int = None,
                              height: int = None,
                              checkpoint: str = None,
+                             vae: str = None,
                              payload: dict = None):
 
         if isinstance(context, discord.Interaction):
@@ -63,6 +64,7 @@ class Functions(MixinMeta):
             "sampler_name": sampler or await self.config.guild(guild).sampler(),
             "override_settings": {
                 "sd_model_checkpoint": checkpoint or await self.config.guild(guild).checkpoint(),
+                "sd_vae": vae or await self.config.guild(guild).vae()
             },
             "width": width or await self.config.guild(guild).width(),
             "height": height or await self.config.guild(guild).height(),
@@ -97,6 +99,7 @@ class Functions(MixinMeta):
         view = ImageActions(cog=self, image_info=info_string, payload=payload, author=user, channel=context.channel)
         msg = await self.sent_response(context, file=discord.File(io.BytesIO(image_data), filename=f"image.{image_extension}"), view=view)
         asyncio.create_task(self.delete_button_after(msg))
+
         imagescanner = self.bot.get_cog("ImageScanner")
         if imagescanner and image_extension == "png":
             if context.channel.id in imagescanner.scan_channels:
