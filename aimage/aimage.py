@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from collections import defaultdict
-from typing import List
+from typing import List, Union
 from copy import copy
 
 import aiohttp
@@ -77,6 +77,7 @@ class AImage(Settings,
         **Arguments**
             - `prompt` a prompt to generate an image from
         """
+        asyncio.create_task(self._update_autocomplete_cache(ctx))
         await self.generate_image(ctx, prompt=prompt)
 
     async def object_autocomplete(self, interaction: discord.Interaction, current: str, object_type: str) -> List[app_commands.Choice[str]]:
@@ -167,12 +168,12 @@ class AImage(Settings,
         if not await self._can_run_command(ctx, "imagine"):
             return await interaction.response.send_message("You do not have permission to do this.", ephemeral=True)
 
+        asyncio.create_task(self._update_autocomplete_cache(interaction))
         await self.generate_image(interaction,
                                   prompt=prompt, negative_prompt=negative_prompt,
                                   width=width, height=height, cfg=cfg, sampler=sampler, steps=steps,
                                   seed=seed, subseed=variation_seed, subseed_strength=variation,
                                   checkpoint=checkpoint, vae=vae, lora=lora)
-        asyncio.create_task(self._update_autocomplete_cache(interaction))
 
     async def _can_run_command(self, ctx: commands.Context, command_name: str) -> bool:
         prefix = await self.bot.get_prefix(ctx.message)
@@ -187,11 +188,15 @@ class AImage(Settings,
             can = False
         return can
 
-    async def _update_autocomplete_cache(self, interaction: discord.Interaction):
-        guild = interaction.guild
+    async def _update_autocomplete_cache(self, ctx: Union[commands.Context, discord.Interaction]):
+        guild = ctx.guild
 
         if not await self._check_endpoint_online(guild):
             return
+
+        if data := await self._fetch_data(guild, "upscalers"):
+            choices = [choice["name"] for choice in data]
+            self.autocomplete_cache[guild.id]["upscalers"] = choices
 
         if data := await self._fetch_data(guild, "loras"):
             choices = [f"<lora:{choice['name']}:1>" for choice in data]

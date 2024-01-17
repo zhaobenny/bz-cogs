@@ -38,7 +38,12 @@ AUTO_COMPLETE_SAMPLERS = [
     "Restart",
     "DDIM",
     "PLMS",
-    "UniPC"
+    "UniPC",
+]
+
+AUTO_COMPLETE_UPSCALERS = [
+    "Latent",
+    "Latent (nearest-exact)",
 ]
 
 ADETAILER_ARGS = {
