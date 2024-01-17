@@ -212,7 +212,7 @@ class ScaleSelect(discord.ui.Select):
         self.parent = parent
         super().__init__(
             options=[discord.SelectOption(label=f"x{num:.2f}", value=str(num), default=num == 1.5)
-                     for num in (1.25, 1.5, 1.75, 2)]
+                     for num in (1.00, 1.25, 1.5, 1.75, 2)]
         )
 
     async def callback(self, interaction: discord.Interaction):
