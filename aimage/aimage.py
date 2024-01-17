@@ -268,6 +268,10 @@ class AImage(Settings,
             choices = [choice["name"] for choice in data]
             self.autocomplete_cache[guild.id]["upscalers"] = choices
 
+        if data := await self._fetch_data(guild, "scripts"):
+            choices = [choice for choice in data["txt2img"]]
+            self.autocomplete_cache[guild.id]["scripts"] = choices
+
         if data := await self._fetch_data(guild, "loras"):
             choices = [f"<lora:{choice['name']}:1>" for choice in data]
             self.autocomplete_cache[guild.id]["loras"] = choices

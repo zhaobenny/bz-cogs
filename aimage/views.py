@@ -8,7 +8,7 @@ from typing import Optional
 
 from aimage.abc import MixinMeta
 from aimage.constants import (PARAM_GROUP_REGEX, PARAM_REGEX, PARAMS_BLACKLIST,
-                              VIEW_TIMEOUT, AUTO_COMPLETE_UPSCALERS)
+                              VIEW_TIMEOUT, AUTO_COMPLETE_UPSCALERS, ADETAILER_ARGS)
 from aimage.functions import delete_button_after
 
 
@@ -170,19 +170,24 @@ class HiresView(discord.ui.View):
         self.src_interaction = interaction
         self.payload = payload
         self.generate_image = generate_image
-        upscalers = AUTO_COMPLETE_UPSCALERS + cache[interaction.guild.id]["upscalers"]
+        upscalers = AUTO_COMPLETE_UPSCALERS + cache[interaction.guild.id].get("upscalers", [])
         maxscale = ((maxsize*maxsize) / (payload["width"]*payload["height"]))**0.5
         self.upscaler = upscalers[0]
         self.scale = 1.5
         self.denoising = 0.5
+        self.adetailer = "adetailer" in cache[interaction.guild.id].get("scripts", [])
         self.add_item(UpscalerSelect(self, upscalers))
         self.add_item(ScaleSelect(self, maxscale))
         self.add_item(DenoisingSelect(self))
+        if self.adetailer:
+            self.add_item(AdetailerSelect(self))
 
+    @discord.ui.button(emoji='⬆', label='Upscale', style=discord.ButtonStyle.blurple, row=4)
     async def upscale(self, interaction: discord.Interaction, _: discord.Button):
         self.payload["enable_hr"] = True
         self.payload["hr_upscaler"] = self.upscaler
         self.payload["hr_scale"] = self.scale
+        self.payload["denoising_strength"] = self.denoising
         self.payload["hr_second_pass_steps"] = self.payload["steps"] // 2
         self.payload["hr_prompt"] = self.payload["prompt"]
         self.payload["hr_negative_prompt"] = self.payload["negative_prompt"]
@@ -191,6 +196,8 @@ class HiresView(discord.ui.View):
         params = self.src_view.get_params_dict()
         self.payload["seed"] = int(params["Seed"])
         self.payload["subseed"] = int(params.get("Variation seed", -1))
+        if self.adetailer:
+            self.payload["alwayson_scripts"].update(ADETAILER_ARGS)
 
         self.src_button.disabled = True
         await self.src_interaction.message.edit(view=self.src_view)
@@ -239,6 +246,21 @@ class DenoisingSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         self.parent.denoising = float(self.values[0])
+        for option in self.options:
+            option.default = option.value == self.values[0]
+        await interaction.response.edit_message(view=self.parent)
+
+
+class AdetailerSelect(discord.ui.Select):
+    def __init__(self, parent: HiresView):
+        self.parent = parent
+        super().__init__(options=[
+            discord.SelectOption(label="ADetailer Enabled", value=str(1), default=True),
+            discord.SelectOption(label="ADetailer Disabled", value=str(0)),
+        ])
+
+    async def callback(self, interaction: discord.Interaction):
+        self.parent.adetailer = bool(int(self.values[0]))
         for option in self.options:
             option.default = option.value == self.values[0]
         await interaction.response.edit_message(view=self.parent)

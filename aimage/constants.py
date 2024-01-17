@@ -79,13 +79,16 @@ ADETAILER_ARGS = {
                 "ad_use_noise_multiplier": False,
                 "ad_noise_multiplier": 1.0,
                 "ad_use_clip_skip": False,
+                "ad_use_vae": False,
+                "ad_vae": "Use same VAE",
                 "ad_clip_skip": 1,
                 "ad_restore_face": False,
                 "ad_controlnet_model": "None",
                 "ad_controlnet_module": "None",
                 "ad_controlnet_weight": 1.0,
                 "ad_controlnet_guidance_start": 0.0,
-                "ad_controlnet_guidance_end": 1.0
+                "ad_controlnet_guidance_end": 1.0,
+                "is_api": [],
             }
         ]
     }
@@ -110,6 +113,7 @@ PARAM_REGEX = re.compile(r' ?([^:]+): (.+?),(?=(?:[^"]*"[^"]*")*[^"]*$)')
 PARAM_GROUP_REGEX = re.compile(r', [^:]+: {.+?(?=(?:[^"]*"[^"]*")*[^"]*$)}')
 
 PARAMS_BLACKLIST = [
-    "ADetailer confidence", "ADetailer mask", "ADetailer dilate", "ADetailer denoising",
+    "Template",
+    "ADetailer confidence", "ADetailer mask", "ADetailer dilate", "ADetailer denoising", "ADetailer steps",
     "ADetailer inpaint", "ADetailer version", "ADetailer prompt", "ADetailer use", "ADetailer checkpoint",
 ]
