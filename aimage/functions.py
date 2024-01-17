@@ -11,15 +11,12 @@ from redbot.core import commands
 from tenacity import retry, stop_after_attempt, wait_random
 
 from aimage.abc import MixinMeta
-from aimage.constants import ADETAILER_ARGS, VIEW_TIMEOUT
+from aimage.constants import ADETAILER_ARGS
+from aimage.helpers import delete_button_after, get_auth, round_to_nearest
 from aimage.stablehordeapi import StableHordeAPI
 from aimage.views import ImageActions
 
 logger = logging.getLogger("red.bz_cogs.aimage")
-
-
-def round_to_nearest(x, base):
-    return int(base * round(x/base))
 
 
 class Functions(MixinMeta):
@@ -105,7 +102,7 @@ class Functions(MixinMeta):
         file = discord.File(io.BytesIO(image_data), filename=f"image.{image_extension}")
         view = ImageActions(self, info_string, payload, user, context.channel)
         msg = await self.send_response(context, file=file, view=view)
-        asyncio.create_task(self.delete_button_after(msg))
+        asyncio.create_task(delete_button_after(msg))
 
         imagescanner = self.bot.get_cog("ImageScanner")
         if imagescanner and image_extension == "png":
@@ -148,7 +145,7 @@ class Functions(MixinMeta):
     async def _post_sd_endpoint(self, endpoint, payload, auth_str):
         url = endpoint + "txt2img"
 
-        async with self.session.post(url=url, json=payload, auth=self.get_auth(auth_str)) as response:
+        async with self.session.post(url=url, json=payload, auth=get_auth(auth_str)) as response:
             if response.status != 200:
                 response.raise_for_status()
             r = await response.json()
@@ -220,7 +217,8 @@ class Functions(MixinMeta):
         try:
             endpoint, auth_str, _ = await self._get_endpoint(guild)
             url = endpoint + endpoint_suffix
-            async with self.session.get(url, auth=self.get_auth(auth_str)) as response:
+
+            async with self.session.get(url, auth=get_auth(auth_str)) as response:
                 response.raise_for_status()
                 res = await response.json()
         except:
@@ -232,25 +230,8 @@ class Functions(MixinMeta):
     async def _check_endpoint_online(self, guild: discord.Guild):
         endpoint, auth_str, _ = await self._get_endpoint(guild)
         try:
-            async with self.session.get(endpoint + "progress", auth=self.get_auth(auth_str)) as response:
+            async with self.session.get(endpoint + "progress", auth=get_auth(auth_str)) as response:
                 response.raise_for_status()
                 return True
         except:
             return False
-
-    def get_auth(self, auth_str: str):
-        """ Format auth string to aiohttp.BasicAuth """
-        auth = None
-        if auth_str:
-            username, password = auth_str.split(':')
-            auth = aiohttp.BasicAuth(username, password)
-        return auth
-
-    # https://github.com/hollowstrawberry/crab-cogs/blob/b1f28057ae9760dbc1d51dadb290bdeb141642bf/novelai/novelai.py#L200C1-L200C74
-    @staticmethod
-    async def delete_button_after(msg: discord.Message):
-        await asyncio.sleep(VIEW_TIMEOUT)
-        try:
-            await msg.edit(view=None)
-        except:
-            return
