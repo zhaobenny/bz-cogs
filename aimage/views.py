@@ -2,6 +2,7 @@ import io
 import discord
 from collections import OrderedDict
 from redbot.core.bot import Red
+from typing import Optional
 
 from aimage.abc import MixinMeta
 from aimage.constants import VIEW_TIMEOUT, PARAM_REGEX, PARAM_GROUP_REGEX, PARAMS_BLACKLIST
@@ -19,8 +20,8 @@ class ImageActions(discord.ui.View):
 
     @discord.ui.button(emoji='🔎')
     async def get_caption(self, interaction: discord.Interaction, _: discord.ui.Button):
-        if "Steps: " in self.info_string:
-            embed = await self.get_params_embed()
+        embed = await self._get_params_embed()
+        if embed:
             view = ParamsView(self.info_string)
             await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
         else:
@@ -28,13 +29,18 @@ class ImageActions(discord.ui.View):
 
     @discord.ui.button(emoji='🔄')
     async def regenerate_image(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.payload["seed"] = -1
-        prompt = self.payload["prompt"]
+        params = self._get_params_dict()
+        if params and float(params.get("Variation seed strength", 0)) > 0:
+            self.payload["seed"] = int(params["Seed"])
+            self.payload["subseed"] = -1
+        else:
+            self.payload["seed"] = -1
         button.disabled = True
         await interaction.message.edit(view=self)
-        await self.generate_image(interaction, prompt, payload=self.payload)
+        await self.generate_image(interaction, payload=self.payload)
         button.disabled = False
-        await interaction.message.edit(view=self)
+        if not self.is_finished():
+            await interaction.message.edit(view=self)
 
     @discord.ui.button(emoji='🗑️')
     async def delete_image(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -62,7 +68,9 @@ class ImageActions(discord.ui.View):
 
         return is_og_user or is_staff
 
-    async def get_params_embed(self) -> discord.Embed:
+    def _get_params_dict(self) -> Optional[dict]:
+        if "Steps: " not in self.info_string:
+            return None
         output_dict = OrderedDict()
         prompts, params = self.info_string.rsplit("Steps: ", 1)
         try:
@@ -79,10 +87,15 @@ class ImageActions(discord.ui.View):
         for key in output_dict:
             if len(output_dict[key]) > 1000:
                 output_dict[key] = output_dict[key][:1000] + "..."
+        return output_dict
 
+    async def _get_params_embed(self) -> Optional[discord.Embed]:
+        params = self._get_params_dict()
+        if not params:
+            return None
         embed = discord.Embed(title="Image Parameters", color=await self.bot.get_embed_color(self.channel))
-        for key, value in output_dict.items():
-            embed.add_field(name=key, value=value, inline='Prompt' not in key)
+        for key, value in params.items():
+            embed.add_field(name=key, value=value, inline="Prompt" not in key)
         return embed
 
 

@@ -129,7 +129,7 @@ class AImage(Settings,
         steps="How many sampling steps, 20-30 is common.",
         seed="Random number that generates the image, -1 for random.",
         variation="Finetunes details within the same seed, 0.05 is common.",
-        variation_seed="The subseed guides the variation, -1 for random.",
+        variation_seed="This subseed guides the variation, -1 for random.",
         checkpoint="The main AI model used to generate the image.",
         vae="The VAE converts the final details of the image.",
         lora="Shortcut to insert a LoRA into the prompt.",
@@ -167,7 +167,7 @@ class AImage(Settings,
         if not await self._can_run_command(ctx, "imagine"):
             return await interaction.response.send_message("You do not have permission to do this.", ephemeral=True)
 
-        await self.generate_image(ctx,
+        await self.generate_image(interaction,
                                   prompt=prompt, negative_prompt=negative_prompt,
                                   width=width, height=height, cfg=cfg, sampler=sampler, steps=steps,
                                   seed=seed, subseed=variation_seed, subseed_strength=variation,

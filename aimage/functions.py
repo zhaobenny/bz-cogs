@@ -24,7 +24,7 @@ def round_to_nearest(x, base):
 
 class Functions(MixinMeta):
     async def generate_image(self,
-                             context: commands.Context,
+                             context: Union[commands.Context, discord.Interaction],
                              payload: dict = None,
                              prompt: str = "",
                              negative_prompt: str = None,
@@ -40,8 +40,8 @@ class Functions(MixinMeta):
                              vae: str = None,
                              lora: str = None):
 
-        if context.interaction:
-            await context.interaction.response.defer(thinking=True)
+        if isinstance(context, discord.Interaction):
+            await context.response.defer(thinking=True)
         else:
             await context.message.add_reaction("⏳")
 
@@ -98,8 +98,7 @@ class Functions(MixinMeta):
                     logger.exception(f"Failed request to Stable Diffusion endpoint in server {guild.id}")
                     return await self.send_response(context, content=":warning: Something went wrong!", ephemeral=True)
 
-        user = context.user if isinstance(
-            context, discord.Interaction) else context.author
+        user = context.user if isinstance(context, discord.Interaction) else context.author
         if is_nsfw:
             return await self.send_response(context, content=f"🔞 {user.mention} generated a possible NSFW image with prompt: `{prompt}`", allowed_mentions=discord.AllowedMentions.none())
 
@@ -114,9 +113,9 @@ class Functions(MixinMeta):
                 imagescanner.image_cache[msg.id] = ({1: info_string}, {1: image_data})
                 await msg.add_reaction("🔎")
 
-    async def send_response(self, context: commands.Context, **kwargs) -> discord.Message:
-        if context.interaction:
-            return await context.interaction.followup.send(**kwargs)
+    async def send_response(self, context: Union[commands.Context, discord.Interaction], **kwargs) -> discord.Message:
+        if isinstance(context, discord.Interaction):
+            return await context.followup.send(**kwargs)
         else:
             try:
                 await context.message.remove_reaction("⏳", self.bot.user)
