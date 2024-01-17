@@ -1,6 +1,6 @@
 import re
 
-DEFAULT_NEGATIVE_PROMPT = "(worst quality, bad quality:1.4)"
+DEFAULT_NEGATIVE_PROMPT = "(worst quality, low quality:1.4)"
 
 # taken from https://www.greataiprompts.com/imageprompt/list-of-banned-words-in-midjourney/
 DEFAULT_BADWORDS_BLACKLIST = ["blood", "bloodbath", "crucifixion", "bloody", "flesh", "bruises", "car crash", "corpse", "crucified", "cutting", "decapitate", "infested", "gruesome", "kill", "infected", "sadist", "slaughter", "teratoma", "tryphophobia", "wound", "cronenberg", "khorne", "cannibal", "cannibalism", "visceral", "guts", "bloodshot", "gory", "killing", "surgery", "vivisection", "massacre", "hemoglobin", "suicide", "female body parts", "ahegao", "pinup", "ballgag", "playboy", "bimbo", "pleasure", "bodily fluids", "pleasures", "boudoir", "rule34", "brothel", "seducing", "dominatrix", "seductive", "erotic seductive", "fuck", "sensual", "hardcore", "sexy", "hentai", "shag", "horny", "shibari", "incest", "smut", "jav", "succubus", "jerk off king at pic", "thot", "kinbaku", "transparent", "legs spread", "twerk", "making love", "voluptuous", "naughty", "wincest", "orgy", "sultry",
