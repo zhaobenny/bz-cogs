@@ -33,3 +33,6 @@ class MixinMeta(ABC):
 
     async def generate_image(self, *args, **kwargs):
         pass
+
+    async def generate_img2img(self, *args, **kwargs):
+        pass

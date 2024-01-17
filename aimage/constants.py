@@ -91,6 +91,20 @@ ADETAILER_ARGS = {
     }
 }
 
+TILED_VAE_ARGS = {
+    "Tiled VAE": {
+        "args": [
+            True,
+            1024,
+            96,
+            True,
+            True,
+            True,
+            False
+        ]
+    }
+}
+
 PARAM_REGEX = re.compile(r' ?([^:]+): (.+?),(?=(?:[^"]*"[^"]*")*[^"]*$)')
 
 PARAM_GROUP_REGEX = re.compile(r', [^:]+: {.+?(?=(?:[^"]*"[^"]*")*[^"]*$)}')

@@ -4,7 +4,7 @@ from collections import OrderedDict, defaultdict
 
 import discord
 from redbot.core.bot import Red
-from typing import Optional, Coroutine
+from typing import Optional
 
 from aimage.abc import MixinMeta
 from aimage.constants import (PARAM_GROUP_REGEX, PARAM_REGEX, PARAMS_BLACKLIST,
@@ -18,10 +18,12 @@ class ImageActions(discord.ui.View):
         self.info_string = image_info
         self.payload = payload
         self.bot: Red = cog.bot
-        self.generate_image = cog.generate_image
+        self.config = cog.config
         self.cache = cog.autocomplete_cache
         self.og_user = author
         self.channel = channel
+        self.generate_image = cog.generate_image
+        self.generate_img2img = cog.generate_img2img
 
         self.button_caption = discord.ui.Button(emoji='🔎')
         self.button_caption.callback = self.get_caption
@@ -35,7 +37,7 @@ class ImageActions(discord.ui.View):
         self.add_item(self.button_caption)
         if not payload.get("enable_hr", False):
             self.add_item(self.button_regenerate)
-            if payload["width"]*payload["height"] <= 768*768:
+            if not payload.get("init_images", []):
                 self.add_item(self.button_upscale)
         self.add_item(self.button_delete)
 
@@ -58,7 +60,11 @@ class ImageActions(discord.ui.View):
             self.payload["seed"] = -1
         self.button_regenerate.disabled = True
         await interaction.message.edit(view=self)
-        await self.generate_image(interaction, payload=self.payload)
+        if self.payload.get("init_images", []):
+            await interaction.response.defer(thinking=True)
+            await self.generate_img2img(interaction, payload=self.payload)
+        else:
+            await self.generate_image(interaction, payload=self.payload)
         self.button_regenerate.disabled = False
         if not self.is_finished():
             try:
@@ -67,7 +73,8 @@ class ImageActions(discord.ui.View):
                 pass
 
     async def upscale_image(self, interaction: discord.Interaction):
-        view = HiresView(self, self.button_upscale, interaction, self.payload, self.cache, self.generate_image)
+        maxsize = await self.config.guild(interaction.guild).max_img2img()
+        view = HiresView(self, self.button_upscale, interaction, self.payload, self.cache, self.generate_image, maxsize)
         await interaction.response.send_message(view=view, ephemeral=True)
 
     async def delete_image(self, interaction: discord.Interaction):
@@ -155,27 +162,27 @@ class HiresView(discord.ui.View):
                  interaction: discord.Interaction,
                  payload: dict,
                  cache: defaultdict,
-                 generate_image):
+                 generate_image,
+                 maxsize: int):
         super().__init__()
         self.src_view = parent
         self.src_button = button
         self.src_interaction = interaction
         self.payload = payload
         self.generate_image = generate_image
-        upscalers = (AUTO_COMPLETE_UPSCALERS + cache[interaction.guild.id]["upscalers"])[:25]
+        upscalers = AUTO_COMPLETE_UPSCALERS + cache[interaction.guild.id]["upscalers"]
+        maxscale = ((maxsize*maxsize) / (payload["width"]*payload["height"]))**0.5
         self.upscaler = upscalers[0]
         self.scale = 1.5
         self.denoising = 0.5
         self.add_item(UpscalerSelect(self, upscalers))
-        self.add_item(ScaleSelect(self))
+        self.add_item(ScaleSelect(self, maxscale))
         self.add_item(DenoisingSelect(self))
 
-    @discord.ui.button(emoji='⬆', label='Upscale', style=discord.ButtonStyle.blurple, row=3)
-    async def upscale(self, interaction: discord.Interaction, button: discord.Button):
+    async def upscale(self, interaction: discord.Interaction, _: discord.Button):
         self.payload["enable_hr"] = True
         self.payload["hr_upscaler"] = self.upscaler
         self.payload["hr_scale"] = self.scale
-        self.payload["denoising_strength"] = self.denoising
         self.payload["hr_second_pass_steps"] = self.payload["steps"] // 2
         self.payload["hr_prompt"] = self.payload["prompt"]
         self.payload["hr_negative_prompt"] = self.payload["negative_prompt"]
@@ -185,10 +192,9 @@ class HiresView(discord.ui.View):
         self.payload["seed"] = int(params["Seed"])
         self.payload["subseed"] = int(params.get("Variation seed", -1))
 
-        button.disabled = True
         self.src_button.disabled = True
         await self.src_interaction.message.edit(view=self.src_view)
-        await self.src_interaction.edit_original_response(view=self)
+        await self.src_interaction.delete_original_response()
         await self.generate_image(interaction, payload=self.payload)
 
 
@@ -197,7 +203,7 @@ class UpscalerSelect(discord.ui.Select):
         self.parent = parent
         super().__init__(
             options=[discord.SelectOption(label=name, default=i == 1)
-                     for i, name in enumerate(upscalers)]
+                     for i, name in enumerate(upscalers[:25])]
         )
 
     async def callback(self, interaction: discord.Interaction):
@@ -208,11 +214,12 @@ class UpscalerSelect(discord.ui.Select):
 
 
 class ScaleSelect(discord.ui.Select):
-    def __init__(self, parent: HiresView):
+    def __init__(self, parent: HiresView, maxscale: float):
         self.parent = parent
+        maxscale = int(maxscale * 100) + 1
         super().__init__(
-            options=[discord.SelectOption(label=f"x{num:.2f}", value=str(num), default=num == 1.5)
-                     for num in (1.00, 1.25, 1.5, 1.75, 2)]
+            options=[discord.SelectOption(label=f"x{num/100:.2f}", value=str(num/100), default=num == 200)
+                     for num in range(100, min(max(maxscale, 101), 201), 25)]
         )
 
     async def callback(self, interaction: discord.Interaction):
