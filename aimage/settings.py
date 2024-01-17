@@ -4,6 +4,7 @@ from redbot.core.utils.menus import SimpleMenu
 
 from aimage.abc import MixinMeta
 from aimage.constants import AUTO_COMPLETE_SAMPLERS
+from aimage.helpers import get_auth
 
 
 class Settings(MixinMeta):
@@ -343,7 +344,7 @@ class Settings(MixinMeta):
             await ctx.message.add_reaction("🔄")
             endpoint = await self.config.endpoint()
             auth_str = await self.config.auth()
-            async with self.session.get(endpoint + "scripts", auth=self.get_auth(auth_str)) as res:
+            async with self.session.get(endpoint + "scripts", auth=get_auth(auth_str)) as res:
                 if res.status != 200:
                     await ctx.message.remove_reaction("🔄", ctx.me)
                     return await ctx.send(":warning: Couldn't request Stable Diffusion endpoint!")

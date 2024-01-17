@@ -1,10 +1,14 @@
+import asyncio
 import io
-import discord
 from collections import OrderedDict
+
+import discord
 from redbot.core.bot import Red
 
 from aimage.abc import MixinMeta
-from aimage.constants import VIEW_TIMEOUT, PARAM_REGEX, PARAM_GROUP_REGEX, PARAMS_BLACKLIST
+from aimage.constants import (PARAM_GROUP_REGEX, PARAM_REGEX, PARAMS_BLACKLIST,
+                              VIEW_TIMEOUT)
+from aimage.functions import delete_button_after
 
 
 class ImageActions(discord.ui.View):
@@ -21,8 +25,10 @@ class ImageActions(discord.ui.View):
     async def get_caption(self, interaction: discord.Interaction, _: discord.ui.Button):
         if "Steps: " in self.info_string:
             embed = await self.get_params_embed()
-            view = ParamsView(self.info_string)
+            view = ParamsView(self.info_string, interaction)
             await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            msg = await interaction.original_response()
+            asyncio.create_task(delete_button_after(msg))
         else:
             await interaction.response.send_message(f'Parameters for this image:\n```yaml\n{self.info_string}```')
 
@@ -87,10 +93,10 @@ class ImageActions(discord.ui.View):
 
 
 class ParamsView(discord.ui.View):
-    def __init__(self, params: str):
+    def __init__(self, params: str, interaction: discord.Interaction):
         super().__init__()
         self.params = params
-        self.pressed = False
+        self.src_interaction = interaction
 
     @discord.ui.button(emoji="🔧", label='View Full', style=discord.ButtonStyle.grey)
     async def view_full_parameters(self, ctx: discord.Interaction, _: discord.Button):
@@ -101,6 +107,6 @@ class ParamsView(discord.ui.View):
                 f.write(self.params)
                 f.seek(0)
                 await ctx.response.send_message(file=discord.File(f, "parameters.yaml"), ephemeral=True)
-        await ctx.message.edit(view=None)
-        self.pressed = True
+
         self.stop()
+        await self.src_interaction.edit_original_response(view=None)
