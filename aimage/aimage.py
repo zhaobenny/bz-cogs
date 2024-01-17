@@ -11,8 +11,7 @@ from redbot.core import Config, app_commands, checks, commands
 from redbot.core.bot import Red
 
 from aimage.abc import CompositeMetaClass
-from aimage.constants import (DEFAULT_BADWORDS_BLACKLIST,
-                              DEFAULT_NEGATIVE_PROMPT)
+from aimage.constants import DEFAULT_BADWORDS_BLACKLIST, DEFAULT_NEGATIVE_PROMPT
 from aimage.functions import Functions
 from aimage.settings import Settings
 
@@ -78,7 +77,7 @@ class AImage(Settings,
         **Arguments**
             - `prompt` a prompt to generate an image from
         """
-        await self.generate_image(ctx, prompt)
+        await self.generate_image(ctx, prompt=prompt)
 
     async def object_autocomplete(self, interaction: discord.Interaction, current: str, object_type: str) -> List[app_commands.Choice[str]]:
         choices = self.autocomplete_cache[interaction.guild_id].get(object_type) or []
@@ -119,32 +118,21 @@ class AImage(Settings,
 
         return results
 
-    async def can_run_command(self, ctx: commands.Context, command_name: str) -> bool:
-        prefix = await self.bot.get_prefix(ctx.message)
-        prefix = prefix[0] if isinstance(prefix, list) else prefix
-        fake_message = copy(ctx.message)
-        fake_message.content = prefix + command_name
-        command = ctx.bot.get_command(command_name)
-        fake_context: commands.Context = await ctx.bot.get_context(fake_message)  # noqa
-        try:
-            can = await command.can_run(fake_context, check_all_parents=True, change_permission_state=False)
-        except commands.CommandError:
-            can = False
-        return can
-
     @app_commands.command(name="imagine")
     @app_commands.describe(
-        prompt="The prompt to generate an image from",
-        negative_prompt="The negative prompt to use",
+        prompt="The prompt to generate an image from.",
+        negative_prompt="Undesired terms go here.",
+        width="Default image width is 512, or 1024 for SDXL.",
+        height="Default image height is 512, or 1024 for SDXL.",
+        cfg="Sets the intensity of the prompt, 7 is common.",
+        sampler="The algorithm which guides image generation.",
+        steps="How many sampling steps, 20-30 is common.",
         seed="Random number that generates the image, -1 for random.",
-        width="Default is 512 for SD1, 1024 for SDXL",
-        height="Default is 512 for SD1, 1024 for SDXL",
-        cfg="The CFG to use",
-        sampler="The sampler to use",
-        steps="How many sampling steps to use",
-        checkpoint="The checkpoint to use",
-        vae="The VAE to use",
-        lora="Shortcut to get a LoRA to insert into a prompt",
+        variation="Finetunes details within the same seed, 0.05 is common.",
+        variation_seed="The subseed guides the variation, -1 for random.",
+        checkpoint="The main AI model used to generate the image.",
+        vae="The VAE converts the final details of the image.",
+        lora="Shortcut to insert a LoRA into the prompt.",
     )
     @app_commands.autocomplete(
         sampler=samplers_autocomplete,
@@ -160,25 +148,44 @@ class AImage(Settings,
         interaction: discord.Interaction,
         prompt: str,
         negative_prompt: str = None,
-        seed: app_commands.Range[int, -1, None] = -1,
         width: app_commands.Range[int, 256, 1536] = None,
         height: app_commands.Range[int, 256, 1536] = None,
         cfg: app_commands.Range[float, 1, 30] = None,
         sampler: str = None,
         steps: app_commands.Range[int, 1, 150] = None,
+        seed: app_commands.Range[int, -1, None] = -1,
+        variation: app_commands.Range[float, 0, 1] = 0,
+        variation_seed: app_commands.Range[int, -1, None] = -1,
         checkpoint: str = None,
         vae: str = None,
         lora: str = None
     ):
         """
-        Generate an image using Stable Diffusion
+        Generate an image using Stable Diffusion.
         """
-        ctx = await self.bot.get_context(interaction)
-        if not await self.can_run_command(ctx, "imagine"):
+        ctx: commands.Context = await self.bot.get_context(interaction)
+        if not await self._can_run_command(ctx, "imagine"):
             return await interaction.response.send_message("You do not have permission to do this.", ephemeral=True)
 
-        await self.generate_image(interaction, prompt, lora, cfg, negative_prompt, steps, seed, sampler, width, height, checkpoint, vae)
+        await self.generate_image(ctx,
+                                  prompt=prompt, negative_prompt=negative_prompt,
+                                  width=width, height=height, cfg=cfg, sampler=sampler, steps=steps,
+                                  seed=seed, subseed=variation_seed, subseed_strength=variation,
+                                  checkpoint=checkpoint, vae=vae, lora=lora)
         asyncio.create_task(self._update_autocomplete_cache(interaction))
+
+    async def _can_run_command(self, ctx: commands.Context, command_name: str) -> bool:
+        prefix = await self.bot.get_prefix(ctx.message)
+        prefix = prefix[0] if isinstance(prefix, list) else prefix
+        fake_message = copy(ctx.message)
+        fake_message.content = prefix + command_name
+        command = ctx.bot.get_command(command_name)
+        fake_context: commands.Context = await ctx.bot.get_context(fake_message)  # noqa
+        try:
+            can = await command.can_run(fake_context, check_all_parents=True, change_permission_state=False)
+        except commands.CommandError:
+            can = False
+        return can
 
     async def _update_autocomplete_cache(self, interaction: discord.Interaction):
         guild = interaction.guild
