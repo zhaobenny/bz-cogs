@@ -4,6 +4,7 @@ from redbot.core.utils.menus import SimpleMenu
 
 from aimage.abc import MixinMeta
 from aimage.constants import AUTO_COMPLETE_SAMPLERS
+from aimage.helpers import get_auth
 
 
 class Settings(MixinMeta):
@@ -26,13 +27,14 @@ class Settings(MixinMeta):
 
         embed = discord.Embed(title="AImage Config", color=await ctx.embed_color())
         embed.add_field(name="Endpoint", value=config["endpoint"], inline=False)
+        embed.add_field(name="Default Negative Prompt", value=config["negative_prompt"], inline=False)
+        embed.add_field(name="Default Checkpoint", value=config["checkpoint"])
+        embed.add_field(name="Default VAE", value=config["vae"])
+        embed.add_field(name="Default Sampler", value=config["sampler"])
+        embed.add_field(name="Default CFG", value=config["cfg"])
+        embed.add_field(name="Default Sampling Steps", value=config["sampling_steps"])
+        embed.add_field(name="Default Size", value=f"{config['width']}x{config['height']}")
         embed.add_field(name="NSFW allowed", value=config["nsfw"])
-        embed.add_field(name="Default negative prompt", value=config["negative_prompt"])
-        embed.add_field(name="Default checkpoint", value=config["checkpoint"])
-        embed.add_field(name="Default sampler", value=config["sampler"])
-        embed.add_field(name="Default cfg", value=config["cfg"])
-        embed.add_field(name="Default sampling_steps", value=config["sampling_steps"])
-        embed.add_field(name="Default size", value=f"{config['width']}x{config['height']}")
         embed.add_field(name="Use ADetailer", value=config["adetailer"])
         blacklist = ", ".join(config["words_blacklist"])
         if len(blacklist) > 1024:
@@ -148,6 +150,20 @@ class Settings(MixinMeta):
         if checkpoint not in data:
             return await ctx.send(f":warning: Invalid checkpoint. Pick one of these:\n`{', '.join(data)}`")
         await self.config.guild(ctx.guild).checkpoint.set(checkpoint)
+        await ctx.tick()
+
+    @aimage.command(name="vae")
+    async def vae(self, ctx: commands.Context, *, vae: str):
+        """
+        Set the default vae used for generating images.
+        """
+        await ctx.message.add_reaction("🔄")
+        data = await self._fetch_data(ctx.guild, "sd-vae")
+        data = [choice["model_name"] for choice in data]
+        await ctx.message.remove_reaction("🔄", ctx.me)
+        if vae not in data:
+            return await ctx.send(f":warning: Invalid vae. Pick one of these:\n`{', '.join(data)}`")
+        await self.config.guild(ctx.guild).vae.set(vae)
         await ctx.tick()
 
     @aimage.command(name="auth")
@@ -328,7 +344,7 @@ class Settings(MixinMeta):
             await ctx.message.add_reaction("🔄")
             endpoint = await self.config.endpoint()
             auth_str = await self.config.auth()
-            async with self.session.get(endpoint + "scripts", auth=self.get_auth(auth_str)) as res:
+            async with self.session.get(endpoint + "scripts", auth=get_auth(auth_str)) as res:
                 if res.status != 200:
                     await ctx.message.remove_reaction("🔄", ctx.me)
                     return await ctx.send(":warning: Couldn't request Stable Diffusion endpoint!")
