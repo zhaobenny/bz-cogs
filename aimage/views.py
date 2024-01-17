@@ -1,14 +1,15 @@
 import asyncio
 import io
 from collections import OrderedDict, defaultdict
+from typing import Coroutine, Optional
 
 import discord
 from redbot.core.bot import Red
-from typing import Optional
 
 from aimage.abc import MixinMeta
-from aimage.constants import (PARAM_GROUP_REGEX, PARAM_REGEX, PARAMS_BLACKLIST,
-                              VIEW_TIMEOUT, AUTO_COMPLETE_UPSCALERS, ADETAILER_ARGS)
+from aimage.constants import (AUTO_COMPLETE_UPSCALERS, ADETAILER_ARGS,
+                              PARAM_GROUP_REGEX, PARAM_REGEX,
+                              PARAMS_BLACKLIST, VIEW_TIMEOUT)
 from aimage.functions import delete_button_after
 
 
@@ -37,7 +38,7 @@ class ImageActions(discord.ui.View):
         self.add_item(self.button_caption)
         if not payload.get("enable_hr", False):
             self.add_item(self.button_regenerate)
-            if not payload.get("init_images", []):
+            if not payload.get("init_images", []) and not "AI Horde" in self.info_string:
                 self.add_item(self.button_upscale)
         self.add_item(self.button_delete)
 
