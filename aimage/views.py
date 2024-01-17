@@ -1,14 +1,14 @@
 import asyncio
 import io
 from collections import OrderedDict, defaultdict
+from typing import Coroutine, Optional
 
 import discord
 from redbot.core.bot import Red
-from typing import Optional, Coroutine
 
 from aimage.abc import MixinMeta
-from aimage.constants import (PARAM_GROUP_REGEX, PARAM_REGEX, PARAMS_BLACKLIST,
-                              VIEW_TIMEOUT, AUTO_COMPLETE_UPSCALERS)
+from aimage.constants import (AUTO_COMPLETE_UPSCALERS, PARAM_GROUP_REGEX,
+                              PARAM_REGEX, PARAMS_BLACKLIST, VIEW_TIMEOUT)
 from aimage.functions import delete_button_after
 
 
@@ -35,7 +35,7 @@ class ImageActions(discord.ui.View):
         self.add_item(self.button_caption)
         if not payload.get("enable_hr", False):
             self.add_item(self.button_regenerate)
-            if payload["width"]*payload["height"] <= 768*768:
+            if payload["width"]*payload["height"] <= 768*768 and not "AI Horde" in self.info_string:
                 self.add_item(self.button_upscale)
         self.add_item(self.button_delete)
 
