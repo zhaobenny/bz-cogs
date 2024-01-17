@@ -22,18 +22,20 @@ logger = logging.getLogger("red.bz_cogs.aimage")
 class Functions(MixinMeta):
     async def generate_image(self,
                              context: Union[commands.Context, discord.Interaction],
-                             prompt: str,
-                             lora: str = None,
-                             cfg: int = None,
+                             payload: dict = None,
+                             prompt: str = "",
                              negative_prompt: str = None,
-                             steps: int = None,
-                             seed: int = -1,
-                             sampler: str = None,
                              width: int = None,
                              height: int = None,
+                             cfg: int = None,
+                             sampler: str = None,
+                             steps: int = None,
+                             seed: int = -1,
+                             subseed: int = -1,
+                             subseed_strength: float = 0,
                              checkpoint: str = None,
                              vae: str = None,
-                             payload: dict = None):
+                             lora: str = None):
 
         if isinstance(context, discord.Interaction):
             await context.response.defer(thinking=True)
@@ -44,13 +46,13 @@ class Functions(MixinMeta):
 
         endpoint, auth_str, nsfw = await self._get_endpoint(guild)
         if not endpoint:
-            return await self.sent_response(context, content=":warning: Endpoint not yet set for this server!")
+            return await self.send_response(context, content=":warning: Endpoint not yet set for this server!")
 
         if await self._contains_blacklisted_word(guild, prompt):
-            return self.sent_response(context, content=":warning: Prompt contains blacklisted words!")
+            return self.send_response(context, content=":warning: Prompt contains blacklisted words!")
 
         if lora:
-            prompt = f"{lora} {prompt}"
+            prompt += lora  # loras are parsed out of the prompt beforehand
 
         payload = payload or {
             "prompt": prompt,
@@ -58,6 +60,8 @@ class Functions(MixinMeta):
             "negative_prompt": negative_prompt or await self.config.guild(guild).negative_prompt(),
             "steps": steps or await self.config.guild(guild).sampling_steps(),
             "seed": seed,
+            "subseed": subseed,
+            "subseed_strength": subseed_strength,
             "sampler_name": sampler or await self.config.guild(guild).sampler(),
             "override_settings": {
                 "sd_model_checkpoint": checkpoint or await self.config.guild(guild).checkpoint(),
@@ -79,22 +83,25 @@ class Functions(MixinMeta):
             image_extension = "png"
         except Exception as error:
             if await self.config.aihorde():
-                image_data, info_string, is_nsfw = await self._request_aihorde(context, nsfw, payload)
+                aihorde_result = await self._request_aihorde(context, nsfw, payload)
+                if isinstance(aihorde_result, discord.Message):
+                    return
+                image_data, info_string, is_nsfw = aihorde_result
                 image_extension = ".webp"
             else:
                 if isinstance(error, aiohttp.ClientConnectorError):
-                    return await self.sent_response(context, content=":warning: Timed out! Server is offline.", ephemeral=True)
+                    return await self.send_response(context, content=":warning: Timed out! Server is offline.", ephemeral=True)
                 else:
                     logger.exception(f"Failed request to Stable Diffusion endpoint in server {guild.id}")
-                    return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
+                    return await self.send_response(context, content=":warning: Something went wrong!", ephemeral=True)
 
-        user = context.user if isinstance(
-            context, discord.Interaction) else context.author
+        user = context.user if isinstance(context, discord.Interaction) else context.author
         if is_nsfw:
-            return await self.sent_response(context, content=f"🔞 {user.mention} generated a possible NSFW image with prompt: `{prompt}`", allowed_mentions=discord.AllowedMentions.none())
+            return await self.send_response(context, content=f"🔞 {user.mention} generated a possible NSFW image with prompt: `{prompt}`", allowed_mentions=discord.AllowedMentions.none())
 
-        view = ImageActions(cog=self, image_info=info_string, payload=payload, author=user, channel=context.channel)
-        msg = await self.sent_response(context, file=discord.File(io.BytesIO(image_data), filename=f"image.{image_extension}"), view=view)
+        file = discord.File(io.BytesIO(image_data), filename=f"image.{image_extension}")
+        view = ImageActions(self, info_string, payload, user, context.channel)
+        msg = await self.send_response(context, file=file, view=view)
         asyncio.create_task(delete_button_after(msg))
 
         imagescanner = self.bot.get_cog("ImageScanner")
@@ -103,14 +110,15 @@ class Functions(MixinMeta):
                 imagescanner.image_cache[msg.id] = ({1: info_string}, {1: image_data})
                 await msg.add_reaction("🔎")
 
-    async def sent_response(self, context: Union[commands.Context, discord.Interaction], **kwargs):
+    async def send_response(self, context: Union[commands.Context, discord.Interaction], **kwargs) -> discord.Message:
         if isinstance(context, discord.Interaction):
             return await context.followup.send(**kwargs)
-        try:
-            await context.message.remove_reaction("⏳", self.bot.user)
-        except:
-            pass
-        return await context.send(**kwargs)
+        else:
+            try:
+                await context.message.remove_reaction("⏳", self.bot.user)
+            except:
+                pass
+            return await context.send(**kwargs)
 
     async def _get_endpoint(self, guild: discord.Guild):
         endpoint: str = await self.config.guild(guild).endpoint()
@@ -147,21 +155,19 @@ class Functions(MixinMeta):
             info = json.loads(r["info"])
             info_string = info.get("infotexts")[0]
             try:
-                is_nsfw = info.get("extra_generation_params",
-                                   {}).get("nsfw", [])[0]
-                if is_nsfw:
-                    # try to save you from cold boot attack
-                    del r["images"]
-                    r["images"] = []
-                    del image_data
-                    image_data = ""
+                is_nsfw = info.get("extra_generation_params", {}).get("nsfw", [])[0]
             except IndexError:
                 is_nsfw = False
+            if is_nsfw:
+                # try to save you from cold boot attack
+                del r["images"]
+                r["images"] = []
+                del image_data
+                image_data = ""
 
             if logger.isEnabledFor(logging.DEBUG):
                 del r["images"]
-                logger.debug(
-                    f"Requested with parameters: {json.dumps(r, indent=4)}")
+                logger.debug(f"Requested with parameters: {json.dumps(r, indent=4)}")
 
         return image_data, info_string, is_nsfw
 
@@ -185,7 +191,7 @@ class Functions(MixinMeta):
         response = await client.txt2img_request(horde_payload)
         if response.get("errors", None):
             logger.error(response)
-            return await self.sent_response(context, content=":warning: Something went wrong with AI Horde!", ephemeral=True)
+            return await self.send_response(context, content=":warning: Something went wrong with AI Horde!", ephemeral=True)
         img_uuid = response["id"]
         done = False
         elapsed = 0
@@ -197,7 +203,7 @@ class Functions(MixinMeta):
         generate_status = await client.generate_status(img_uuid)
         if not generate_status["done"]:
             logger.error(f"Failed request to AI Horde in server {context.guild.id}")
-            return await self.sent_response(context, content=":warning: AI Horde timed out!", ephemeral=True)
+            return await self.send_response(context, content=":warning: AI Horde timed out!", ephemeral=True)
         res = generate_status["generations"][0]
         image_url = res["img"]
         async with self.session.get(image_url) as response:

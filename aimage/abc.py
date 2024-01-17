@@ -2,6 +2,7 @@ from abc import ABC
 
 import discord
 from aiohttp import ClientSession
+from collections import defaultdict
 from redbot.core import Config, commands
 from redbot.core.bot import Red
 
@@ -14,6 +15,7 @@ class MixinMeta(ABC):
     bot: Red
     config: Config
     session: ClientSession
+    autocomplete_cache: defaultdict
 
     def __init__(self, *args):
         pass
