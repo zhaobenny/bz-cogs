@@ -53,7 +53,7 @@ class Functions(MixinMeta):
             return self.send_response(context, content=":warning: Prompt contains blacklisted words!")
 
         payload = payload or {
-            "prompt": prompt + lora,  # loras are parsed out of the prompt beforehand
+            "prompt": prompt + " " + lora,
             "cfg_scale": cfg or await self.config.guild(guild).cfg(),
             "negative_prompt": negative_prompt or await self.config.guild(guild).negative_prompt(),
             "steps": steps or await self.config.guild(guild).sampling_steps(),
@@ -140,7 +140,7 @@ class Functions(MixinMeta):
             return self.send_response(context, content=":warning: Prompt contains blacklisted words!")
 
         payload = payload or {
-            "prompt": prompt + lora,  # loras are parsed out of the prompt beforehand
+            "prompt": prompt + " " + lora,
             "cfg_scale": cfg or await self.config.guild(guild).cfg(),
             "negative_prompt": negative_prompt or await self.config.guild(guild).negative_prompt(),
             "steps": steps or await self.config.guild(guild).sampling_steps(),
@@ -240,6 +240,7 @@ class Functions(MixinMeta):
                 is_nsfw = False
 
             if logger.isEnabledFor(logging.DEBUG):
+                del r["images"]
                 logger.debug(f"Requested with parameters: {json.dumps(r, indent=4)}")
 
         return image_data, info_string, is_nsfw

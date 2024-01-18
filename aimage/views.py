@@ -199,6 +199,8 @@ class HiresView(discord.ui.View):
         self.payload["subseed"] = int(params.get("Variation seed", -1))
         if self.adetailer:
             self.payload["alwayson_scripts"].update(ADETAILER_ARGS)
+        elif "ADetailer" in self.payload["alwayson_scripts"]:
+            del self.payload["alwayson_scripts"]["ADetailer"]
 
         self.src_button.disabled = True
         await self.src_interaction.message.edit(view=self.src_view)
@@ -241,8 +243,8 @@ class DenoisingSelect(discord.ui.Select):
     def __init__(self, parent: HiresView):
         self.parent = parent
         super().__init__(
-            options=[discord.SelectOption(label=f"Denoising: {num/100}", value=str(num/100), default=num == 50)
-                     for num in range(5, 100, 5)]
+            options=[discord.SelectOption(label=f"Denoising: {num/100:.2f}", value=str(num/100), default=num == 50)
+                     for num in range(0, 100, 5)]
         )
 
     async def callback(self, interaction: discord.Interaction):
