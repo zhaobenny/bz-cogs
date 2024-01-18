@@ -36,6 +36,9 @@ class Settings(MixinMeta):
         embed.add_field(name="Default Size", value=f"{config['width']}x{config['height']}")
         embed.add_field(name="NSFW allowed", value=config["nsfw"])
         embed.add_field(name="Use ADetailer", value=config["adetailer"])
+        embed.add_field(name="Use Tiled VAE", value=config["tiledvae"])
+        embed.add_field(name="Max img2img size", value=f"{config['max_img2img']}²")
+
         blacklist = ", ".join(config["words_blacklist"])
         if len(blacklist) > 1024:
             blacklist = blacklist[:1020] + "..."
@@ -138,6 +141,17 @@ class Settings(MixinMeta):
         await self.config.guild(ctx.guild).height.set(height)
         await ctx.tick()
 
+    @aimage.command(name="max_img2img")
+    async def max_img2img(self, ctx: commands.Context, resolution: int):
+        """
+        Set the maximum size (in pixels squared) of img2img and hires upscale.
+        Used to prevent out of memory errors. Default is 1536.
+        """
+        if resolution < 512 or resolution > 4096:
+            return await ctx.send("Value must range between 512 and 4096.")
+        await self.config.guild(ctx.guild).max_img2img.set(resolution)
+        await ctx.tick()
+
     @aimage.command(name="checkpoint")
     async def checkpoint(self, ctx: commands.Context, *, checkpoint: str):
         """
@@ -181,7 +195,7 @@ class Settings(MixinMeta):
     @aimage.command(name="adetailer")
     async def adetailer(self, ctx: commands.Context):
         """
-        Whether to use face adetailer on generated pictures
+        Whether to use face adetailer on generated pictures, which improves quality.
         """
         new = not await self.config.guild(ctx.guild).adetailer()
         if new:
@@ -189,10 +203,27 @@ class Settings(MixinMeta):
             data = await self._fetch_data(ctx.guild, "scripts") or {}
             await ctx.message.remove_reaction("🔄", ctx.me)
             if "adetailer" not in data.get("txt2img", []):
-                return await ctx.send(":warning: The adetailer script is not installed in A1111, install [this.](<https://github.com/Bing-su/adetailer>)")
+                return await ctx.send(":warning: The ADetailer script is not installed in A1111, install [this.](<https://github.com/Bing-su/adetailer>)")
 
         await self.config.guild(ctx.guild).adetailer.set(new)
-        await ctx.send(f"adetailer is now {'`disabled`' if not new else '`enabled`'}")
+        await ctx.send(f"ADetailer is now {'`disabled`' if not new else '`enabled`'}")
+
+    @aimage.command(name="tiledvae")
+    async def tiledvae(self, ctx: commands.Context):
+        """
+        Whether to use tiled vae on generated pictures, which is used to prevent out of memory errors.
+        """
+        new = not await self.config.guild(ctx.guild).tiledvae()
+        if new:
+            await ctx.message.add_reaction("🔄")
+            data = await self._fetch_data(ctx.guild, "scripts") or {}
+            await ctx.message.remove_reaction("🔄", ctx.me)
+            if "tiled vae" not in data.get("txt2img", []):
+                return await ctx.send(":warning: The Tiled VAE script is not installed in A1111, install [this.](<https://github.com/pkuliyi2015/multidiffusion-upscaler-for-automatic1111>)")
+
+        await self.config.guild(ctx.guild).tiledvae.set(new)
+        await ctx.send(f"Tiled VAE is now {'`disabled`' if not new else '`enabled`'}")
+
 
     @aimage.command(name="aihorde_mode")
     async def aihorde_mode(self, ctx: commands.Context):
