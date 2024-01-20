@@ -58,6 +58,7 @@ class AImage(Settings,
         }
 
         self.session = aiohttp.ClientSession()
+        self.generating = defaultdict(lambda: False)
         self.autocomplete_cache = defaultdict(dict)
 
         self.config.register_guild(**default_guild)
@@ -173,7 +174,7 @@ class AImage(Settings,
         """
         Generate an image using Stable Diffusion AI.
         """
-        ctx: commands.Context = await self.bot.get_context(interaction)
+        ctx: commands.Context = await self.bot.get_context(interaction)  # noqa
         if not await self._can_run_command(ctx, "imagine"):
             return await interaction.response.send_message("You do not have permission to do this.", ephemeral=True)
 
@@ -216,7 +217,7 @@ class AImage(Settings,
         """
         Convert an image using Stable Diffusion AI.
         """
-        ctx: commands.Context = await self.bot.get_context(interaction)
+        ctx: commands.Context = await self.bot.get_context(interaction)  # noqa
         if not await self._can_run_command(ctx, "imagine"):
             return await interaction.response.send_message("You do not have permission to do this.", ephemeral=True)
 

@@ -1,7 +1,8 @@
 import asyncio
 import io
-from collections import OrderedDict, defaultdict
-from typing import Coroutine, Optional
+from collections import OrderedDict
+from typing import Optional
+from copy import copy
 
 import discord
 from redbot.core.bot import Red
@@ -38,7 +39,7 @@ class ImageActions(discord.ui.View):
         self.add_item(self.button_caption)
         if not payload.get("enable_hr", False):
             self.add_item(self.button_regenerate)
-            if not payload.get("init_images", []) and not "AI Horde" in self.info_string:
+            if not payload.get("init_images", []) and "AI Horde" not in self.info_string:
                 self.add_item(self.button_upscale)
         self.add_item(self.button_delete)
 
@@ -75,7 +76,7 @@ class ImageActions(discord.ui.View):
 
     async def upscale_image(self, interaction: discord.Interaction):
         maxsize = await self.config.guild(interaction.guild).max_img2img()
-        view = HiresView(self, self.button_upscale, interaction, self.payload, self.cache, self.generate_image, maxsize)
+        view = HiresView(self, interaction, maxsize)
         await interaction.response.send_message(view=view, ephemeral=True)
 
     async def delete_image(self, interaction: discord.Interaction):
@@ -128,9 +129,9 @@ class ImageActions(discord.ui.View):
 
         guild = interaction.guild
         member = guild.get_member(interaction.user.id)
-        is_staff = await self.bot.is_mod(member) or await self.bot.is_admin(member) or await self.bot.is_owner(member)
+        can_delete = await self.bot.is_owner(member) or interaction.channel.permissions_for(member).manage_messages
 
-        return is_og_user or is_staff
+        return is_og_user or can_delete
 
 
 class ParamsView(discord.ui.View):
@@ -157,28 +158,22 @@ class ParamsView(discord.ui.View):
 
 
 class HiresView(discord.ui.View):
-    def __init__(self,
-                 parent: ImageActions,
-                 button: discord.ui.Button,
-                 interaction: discord.Interaction,
-                 payload: dict,
-                 cache: defaultdict,
-                 generate_image,
-                 maxsize: int):
+    def __init__(self, parent: ImageActions, interaction: discord.Interaction, maxsize: int):
         super().__init__()
         self.src_view = parent
-        self.src_button = button
         self.src_interaction = interaction
-        self.payload = payload
-        self.generate_image = generate_image
-        upscalers = AUTO_COMPLETE_UPSCALERS + cache[interaction.guild.id].get("upscalers", [])
-        maxscale = ((maxsize*maxsize) / (payload["width"]*payload["height"]))**0.5
+        self.src_button = parent.button_upscale
+        self.payload = copy(parent.payload)
+        self.generate_image = parent.generate_image
+        upscalers = AUTO_COMPLETE_UPSCALERS + parent.cache[interaction.guild.id].get("upscalers", [])
+        maxscale = ((maxsize*maxsize) / (self.payload["width"]*self.payload["height"]))**0.5
+        scales = [num/100 for num in range(100, min(max(int(maxscale * 100) + 1, 101), 201), 25)]
         self.upscaler = upscalers[0]
-        self.scale = 1.5
+        self.scale = scales[-1]
         self.denoising = 0.5
-        self.adetailer = "adetailer" in cache[interaction.guild.id].get("scripts", [])
+        self.adetailer = "adetailer" in parent.cache[interaction.guild.id].get("scripts", [])
         self.add_item(UpscalerSelect(self, upscalers))
-        self.add_item(ScaleSelect(self, maxscale))
+        self.add_item(ScaleSelect(self, scales))
         self.add_item(DenoisingSelect(self))
         if self.adetailer:
             self.add_item(AdetailerSelect(self))
@@ -207,14 +202,19 @@ class HiresView(discord.ui.View):
         await self.src_interaction.delete_original_response()
         await self.generate_image(interaction, payload=self.payload)
 
+        self.src_button.disabled = False
+        if not self.src_view.is_finished():
+            try:
+                await self.src_interaction.message.edit(view=self.src_view)
+            except:
+                pass
+
 
 class UpscalerSelect(discord.ui.Select):
     def __init__(self, parent: HiresView, upscalers: list[str]):
         self.parent = parent
-        super().__init__(
-            options=[discord.SelectOption(label=name, default=i == 1)
-                     for i, name in enumerate(upscalers[:25])]
-        )
+        options = [discord.SelectOption(label=name, default=i == 1) for i, name in enumerate(upscalers[:25])]
+        super().__init__(options=options)
 
     async def callback(self, interaction: discord.Interaction):
         self.parent.upscaler = self.values[0]
@@ -224,13 +224,11 @@ class UpscalerSelect(discord.ui.Select):
 
 
 class ScaleSelect(discord.ui.Select):
-    def __init__(self, parent: HiresView, maxscale: float):
+    def __init__(self, parent: HiresView, scales: list[float]):
         self.parent = parent
-        maxscale = int(maxscale * 100) + 1
-        super().__init__(
-            options=[discord.SelectOption(label=f"x{num/100:.2f}", value=str(num/100), default=num == 200)
-                     for num in range(100, min(max(maxscale, 101), 201), 25)]
-        )
+        options = [discord.SelectOption(label=f"x{num:.2f}", value=str(num)) for num in scales]
+        options[-1].default = True
+        super().__init__(options=options)
 
     async def callback(self, interaction: discord.Interaction):
         self.parent.scale = float(self.values[0])
@@ -242,10 +240,9 @@ class ScaleSelect(discord.ui.Select):
 class DenoisingSelect(discord.ui.Select):
     def __init__(self, parent: HiresView):
         self.parent = parent
-        super().__init__(
-            options=[discord.SelectOption(label=f"Denoising: {num/100:.2f}", value=str(num/100), default=num == 50)
-                     for num in range(0, 100, 5)]
-        )
+        options = [discord.SelectOption(label=f"Denoising: {num / 100:.2f}", value=str(num / 100), default=num == 55)
+                   for num in range(0, 100, 5)]
+        super().__init__(options=options)
 
     async def callback(self, interaction: discord.Interaction):
         self.parent.denoising = float(self.values[0])

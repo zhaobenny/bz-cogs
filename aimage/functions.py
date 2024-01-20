@@ -45,6 +45,10 @@ class Functions(MixinMeta):
         guild = context.guild
         user = context.user if isinstance(context, discord.Interaction) else context.author
 
+        if self.generating[user.id]:
+            content = ":warning: You must wait for your current image to finish generating before you can request a new one."
+            return await self.send_response(context, content=content, ephemeral=True)
+
         endpoint, auth_str, nsfw = await self._get_endpoint(guild)
         if not endpoint:
             return await self.send_response(context, content=":warning: Endpoint not yet set for this server!")
@@ -80,6 +84,7 @@ class Functions(MixinMeta):
             payload["script_args"] = [True, True]
 
         try:
+            self.generating[user.id] = True
             image_data, info_string, is_nsfw = await self._post_sd_endpoint(endpoint + "txt2img", payload, auth_str)
             image_extension = "png"
         except Exception as error:
@@ -95,6 +100,8 @@ class Functions(MixinMeta):
                 else:
                     logger.exception(f"Failed request to Stable Diffusion endpoint in server {guild.id}")
                     return await self.send_response(context, content=":warning: Something went wrong!", ephemeral=True)
+        finally:
+            self.generating[user.id] = False
 
         if is_nsfw:
             return await self.send_response(context, content=f"🔞 {user.mention} generated a possible NSFW image with prompt: `{prompt}`", allowed_mentions=discord.AllowedMentions.none())
@@ -106,8 +113,8 @@ class Functions(MixinMeta):
 
         imagescanner = self.bot.get_cog("ImageScanner")
         if imagescanner and image_extension == "png":
-            if context.channel.id in imagescanner.scan_channels:
-                imagescanner.image_cache[msg.id] = ({1: info_string}, {1: image_data})
+            if context.channel.id in imagescanner.scan_channels:  # noqa
+                imagescanner.image_cache[msg.id] = ({1: info_string}, {1: image_data})  # noqa
                 await msg.add_reaction("🔎")
 
     async def generate_img2img(self,
@@ -131,6 +138,10 @@ class Functions(MixinMeta):
                                scale: float = 1):
         guild = context.guild
         user = context.user
+
+        if self.generating[user.id]:
+            content = ":warning: You must wait for your current image to finish generating before you can request a new one."
+            return await self.send_response(context, content=content, ephemeral=True)
 
         endpoint, auth_str, nsfw = await self._get_endpoint(guild)
         if not endpoint:
@@ -169,6 +180,7 @@ class Functions(MixinMeta):
             payload["script_args"] = [True, True]
 
         try:
+            self.generating[user.id] = True
             image_data, info_string, is_nsfw = await self._post_sd_endpoint(endpoint + "img2img", payload, auth_str)
             image_extension = "png"
         except Exception as error:
@@ -177,6 +189,8 @@ class Functions(MixinMeta):
             else:
                 logger.exception(f"Failed request to Stable Diffusion endpoint in server {guild.id}")
                 return await self.send_response(context, content=":warning: Something went wrong!", ephemeral=True)
+        finally:
+            self.generating[user.id] = False
 
         if is_nsfw:
             return await self.send_response(context, content=f"🔞 {user.mention} generated a possible NSFW image with prompt: `{prompt}`", allowed_mentions=discord.AllowedMentions.none())
@@ -188,8 +202,8 @@ class Functions(MixinMeta):
 
         imagescanner = self.bot.get_cog("ImageScanner")
         if imagescanner and image_extension == "png":
-            if context.channel.id in imagescanner.scan_channels:
-                imagescanner.image_cache[msg.id] = ({1: info_string}, {1: image_data})
+            if context.channel.id in imagescanner.scan_channels:  # noqa
+                imagescanner.image_cache[msg.id] = ({1: info_string}, {1: image_data})  # noqa
                 await msg.add_reaction("🔎")
 
     async def send_response(self, context: Union[commands.Context, discord.Interaction], **kwargs) -> discord.Message:

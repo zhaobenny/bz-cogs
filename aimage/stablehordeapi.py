@@ -16,9 +16,9 @@ class StableHordeAPI:
         self.api_key: str = api_key
         self.api: str = api
 
-    async def _request(self, url: str, method: str = 'GET', json=None, headers=None) -> aiohttp.ClientResponse:
+    async def _request(self, url: str, method: str = 'GET', json_body=None, headers=None) -> aiohttp.ClientResponse:
         """Request an url using choiced method"""
-        response = await self._session.request(method, url, json=json, headers=headers)
+        response = await self._session.request(method, url, json=json_body, headers=headers)
         return response
 
     async def txt2img_request(self, payload: dict) -> dict:
