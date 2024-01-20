@@ -224,7 +224,6 @@ class Settings(MixinMeta):
         await self.config.guild(ctx.guild).tiledvae.set(new)
         await ctx.send(f"Tiled VAE is now {'`disabled`' if not new else '`enabled`'}")
 
-
     @aimage.command(name="aihorde_mode")
     async def aihorde_mode(self, ctx: commands.Context):
         """

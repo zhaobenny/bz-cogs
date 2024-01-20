@@ -15,7 +15,8 @@ class MixinMeta(ABC):
     bot: Red
     config: Config
     session: ClientSession
-    autocomplete_cache: defaultdict
+    generating: defaultdict[int, bool]
+    autocomplete_cache: defaultdict[int, dict[str, list[str]]]
 
     def __init__(self, *args):
         pass
