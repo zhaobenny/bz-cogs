@@ -11,7 +11,7 @@ from redbot.core import commands
 from tenacity import retry, stop_after_attempt, wait_random
 
 from aimage.abc import MixinMeta
-from aimage.constants import ADETAILER_ARGS
+from aimage.constants import ADETAILER_ARGS, TILED_VAE_ARGS
 from aimage.helpers import delete_button_after, get_auth, round_to_nearest
 from aimage.stablehordeapi import StableHordeAPI
 from aimage.views import ImageActions
@@ -22,18 +22,20 @@ logger = logging.getLogger("red.bz_cogs.aimage")
 class Functions(MixinMeta):
     async def generate_image(self,
                              context: Union[commands.Context, discord.Interaction],
-                             prompt: str,
-                             lora: str = None,
-                             cfg: int = None,
+                             payload: dict = None,
+                             prompt: str = "",
                              negative_prompt: str = None,
-                             steps: int = None,
-                             seed: int = -1,
-                             sampler: str = None,
                              width: int = None,
                              height: int = None,
+                             cfg: int = None,
+                             sampler: str = None,
+                             steps: int = None,
+                             seed: int = -1,
+                             subseed: int = -1,
+                             subseed_strength: float = 0,
                              checkpoint: str = None,
                              vae: str = None,
-                             payload: dict = None):
+                             lora: str = ""):
 
         if isinstance(context, discord.Interaction):
             await context.response.defer(thinking=True)
@@ -41,23 +43,27 @@ class Functions(MixinMeta):
             await context.message.add_reaction("⏳")
 
         guild = context.guild
+        user = context.user if isinstance(context, discord.Interaction) else context.author
+
+        if self.generating[user.id]:
+            content = ":warning: You must wait for your current image to finish generating before you can request a new one."
+            return await self.send_response(context, content=content, ephemeral=True)
 
         endpoint, auth_str, nsfw = await self._get_endpoint(guild)
         if not endpoint:
-            return await self.sent_response(context, content=":warning: Endpoint not yet set for this server!")
+            return await self.send_response(context, content=":warning: Endpoint not yet set for this server!")
 
         if await self._contains_blacklisted_word(guild, prompt):
-            return self.sent_response(context, content=":warning: Prompt contains blacklisted words!")
-
-        if lora:
-            prompt = f"{lora} {prompt}"
+            return self.send_response(context, content=":warning: Prompt contains blacklisted words!")
 
         payload = payload or {
-            "prompt": prompt,
+            "prompt": prompt + " " + lora,
             "cfg_scale": cfg or await self.config.guild(guild).cfg(),
             "negative_prompt": negative_prompt or await self.config.guild(guild).negative_prompt(),
             "steps": steps or await self.config.guild(guild).sampling_steps(),
             "seed": seed,
+            "subseed": subseed,
+            "subseed_strength": subseed_strength,
             "sampler_name": sampler or await self.config.guild(guild).sampler(),
             "override_settings": {
                 "sd_model_checkpoint": checkpoint or await self.config.guild(guild).checkpoint(),
@@ -65,52 +71,150 @@ class Functions(MixinMeta):
             },
             "width": width or await self.config.guild(guild).width(),
             "height": height or await self.config.guild(guild).height(),
+            "alwayson_scripts": {}
         }
 
         if await self.config.guild(guild).adetailer():
-            payload["alwayson_scripts"] = ADETAILER_ARGS
+            payload["alwayson_scripts"].update(ADETAILER_ARGS)
+        if await self.config.guild(guild).tiledvae():
+            payload["alwayson_scripts"].update(TILED_VAE_ARGS)
 
         if not nsfw:
             payload["script_name"] = "CensorScript"
             payload["script_args"] = [True, True]
 
         try:
-            image_data, info_string, is_nsfw = await self._post_sd_endpoint(endpoint, payload, auth_str)
+            self.generating[user.id] = True
+            image_data, info_string, is_nsfw = await self._post_sd_endpoint(endpoint + "txt2img", payload, auth_str)
             image_extension = "png"
         except Exception as error:
             if await self.config.aihorde():
-                image_data, info_string, is_nsfw = await self._request_aihorde(context, nsfw, payload)
+                aihorde_result = await self._request_aihorde(context, nsfw, payload)
+                if isinstance(aihorde_result, discord.Message):
+                    return
+                image_data, info_string, is_nsfw = aihorde_result
                 image_extension = ".webp"
             else:
                 if isinstance(error, aiohttp.ClientConnectorError):
-                    return await self.sent_response(context, content=":warning: Timed out! Server is offline.", ephemeral=True)
+                    return await self.send_response(context, content=":warning: Timed out! Server is offline.", ephemeral=True)
                 else:
                     logger.exception(f"Failed request to Stable Diffusion endpoint in server {guild.id}")
-                    return await self.sent_response(context, content=":warning: Something went wrong!", ephemeral=True)
+                    return await self.send_response(context, content=":warning: Something went wrong!", ephemeral=True)
+        finally:
+            self.generating[user.id] = False
 
-        user = context.user if isinstance(
-            context, discord.Interaction) else context.author
         if is_nsfw:
-            return await self.sent_response(context, content=f"🔞 {user.mention} generated a possible NSFW image with prompt: `{prompt}`", allowed_mentions=discord.AllowedMentions.none())
+            return await self.send_response(context, content=f"🔞 {user.mention} generated a possible NSFW image with prompt: `{prompt}`", allowed_mentions=discord.AllowedMentions.none())
 
-        view = ImageActions(cog=self, image_info=info_string, payload=payload, author=user, channel=context.channel)
-        msg = await self.sent_response(context, file=discord.File(io.BytesIO(image_data), filename=f"image.{image_extension}"), view=view)
+        file = discord.File(io.BytesIO(image_data), filename=f"image.{image_extension}")
+        view = ImageActions(self, info_string, payload, user, context.channel)
+        msg = await self.send_response(context, file=file, view=view)
         asyncio.create_task(delete_button_after(msg))
 
         imagescanner = self.bot.get_cog("ImageScanner")
         if imagescanner and image_extension == "png":
-            if context.channel.id in imagescanner.scan_channels:
-                imagescanner.image_cache[msg.id] = ({1: info_string}, {1: image_data})
+            if context.channel.id in imagescanner.scan_channels:  # noqa
+                imagescanner.image_cache[msg.id] = ({1: info_string}, {1: image_data})  # noqa
                 await msg.add_reaction("🔎")
 
-    async def sent_response(self, context: Union[commands.Context, discord.Interaction], **kwargs):
+    async def generate_img2img(self,
+                               context: discord.Interaction,
+                               payload: dict = None,
+                               prompt: str = "",
+                               negative_prompt: str = None,
+                               width: int = None,
+                               height: int = None,
+                               cfg: int = None,
+                               sampler: str = None,
+                               steps: int = None,
+                               seed: int = -1,
+                               subseed: int = -1,
+                               subseed_strength: float = 0,
+                               checkpoint: str = None,
+                               vae: str = None,
+                               lora: str = "",
+                               image: bytes = None,
+                               denoising: float = None,
+                               scale: float = 1):
+        guild = context.guild
+        user = context.user
+
+        if self.generating[user.id]:
+            content = ":warning: You must wait for your current image to finish generating before you can request a new one."
+            return await self.send_response(context, content=content, ephemeral=True)
+
+        endpoint, auth_str, nsfw = await self._get_endpoint(guild)
+        if not endpoint:
+            return await self.send_response(context, content=":warning: Endpoint not yet set for this server!")
+
+        if await self._contains_blacklisted_word(guild, prompt):
+            return self.send_response(context, content=":warning: Prompt contains blacklisted words!")
+
+        payload = payload or {
+            "prompt": prompt + " " + lora,
+            "cfg_scale": cfg or await self.config.guild(guild).cfg(),
+            "negative_prompt": negative_prompt or await self.config.guild(guild).negative_prompt(),
+            "steps": steps or await self.config.guild(guild).sampling_steps(),
+            "seed": seed,
+            "subseed": subseed,
+            "subseed_strength": subseed_strength,
+            "sampler_name": sampler or await self.config.guild(guild).sampler(),
+            "override_settings": {
+                "sd_model_checkpoint": checkpoint or await self.config.guild(guild).checkpoint(),
+                "sd_vae": vae or await self.config.guild(guild).vae()
+            },
+            "width": int(scale * width),
+            "height": int(scale * height),
+            "init_images": [base64.b64encode(image).decode("utf8")],
+            "denoising_strength": denoising,
+            "alwayson_scripts": {}
+        }
+
+        if await self.config.guild(guild).adetailer():
+            payload["alwayson_scripts"].update(ADETAILER_ARGS)
+        if await self.config.guild(guild).tiledvae():
+            payload["alwayson_scripts"].update(TILED_VAE_ARGS)
+
+        if not nsfw:
+            payload["script_name"] = "CensorScript"
+            payload["script_args"] = [True, True]
+
+        try:
+            self.generating[user.id] = True
+            image_data, info_string, is_nsfw = await self._post_sd_endpoint(endpoint + "img2img", payload, auth_str)
+            image_extension = "png"
+        except Exception as error:
+            if isinstance(error, aiohttp.ClientConnectorError):
+                return await self.send_response(context, content=":warning: Timed out! Server is offline.", ephemeral=True)
+            else:
+                logger.exception(f"Failed request to Stable Diffusion endpoint in server {guild.id}")
+                return await self.send_response(context, content=":warning: Something went wrong!", ephemeral=True)
+        finally:
+            self.generating[user.id] = False
+
+        if is_nsfw:
+            return await self.send_response(context, content=f"🔞 {user.mention} generated a possible NSFW image with prompt: `{prompt}`", allowed_mentions=discord.AllowedMentions.none())
+
+        file = discord.File(io.BytesIO(image_data), filename=f"image.{image_extension}")
+        view = ImageActions(self, info_string, payload, user, context.channel)
+        msg = await self.send_response(context, file=file, view=view)
+        asyncio.create_task(delete_button_after(msg))
+
+        imagescanner = self.bot.get_cog("ImageScanner")
+        if imagescanner and image_extension == "png":
+            if context.channel.id in imagescanner.scan_channels:  # noqa
+                imagescanner.image_cache[msg.id] = ({1: info_string}, {1: image_data})  # noqa
+                await msg.add_reaction("🔎")
+
+    async def send_response(self, context: Union[commands.Context, discord.Interaction], **kwargs) -> discord.Message:
         if isinstance(context, discord.Interaction):
             return await context.followup.send(**kwargs)
-        try:
-            await context.message.remove_reaction("⏳", self.bot.user)
-        except:
-            pass
-        return await context.send(**kwargs)
+        else:
+            try:
+                await context.message.remove_reaction("⏳", self.bot.user)
+            except:
+                pass
+            return await context.send(**kwargs)
 
     async def _get_endpoint(self, guild: discord.Guild):
         endpoint: str = await self.config.guild(guild).endpoint()
@@ -135,9 +239,7 @@ class Functions(MixinMeta):
 
     @retry(wait=wait_random(min=2, max=3), stop=stop_after_attempt(2), reraise=True)
     async def _post_sd_endpoint(self, endpoint, payload, auth_str):
-        url = endpoint + "txt2img"
-
-        async with self.session.post(url=url, json=payload, auth=get_auth(auth_str)) as response:
+        async with self.session.post(url=endpoint, json=payload, auth=get_auth(auth_str)) as response:
             if response.status != 200:
                 response.raise_for_status()
             r = await response.json()
@@ -147,21 +249,13 @@ class Functions(MixinMeta):
             info = json.loads(r["info"])
             info_string = info.get("infotexts")[0]
             try:
-                is_nsfw = info.get("extra_generation_params",
-                                   {}).get("nsfw", [])[0]
-                if is_nsfw:
-                    # try to save you from cold boot attack
-                    del r["images"]
-                    r["images"] = []
-                    del image_data
-                    image_data = ""
+                is_nsfw = info.get("extra_generation_params", {}).get("nsfw", [])[0]
             except IndexError:
                 is_nsfw = False
 
             if logger.isEnabledFor(logging.DEBUG):
                 del r["images"]
-                logger.debug(
-                    f"Requested with parameters: {json.dumps(r, indent=4)}")
+                logger.debug(f"Requested with parameters: {json.dumps(r, indent=4)}")
 
         return image_data, info_string, is_nsfw
 
@@ -185,7 +279,7 @@ class Functions(MixinMeta):
         response = await client.txt2img_request(horde_payload)
         if response.get("errors", None):
             logger.error(response)
-            return await self.sent_response(context, content=":warning: Something went wrong with AI Horde!", ephemeral=True)
+            return await self.send_response(context, content=":warning: Something went wrong with AI Horde!", ephemeral=True)
         img_uuid = response["id"]
         done = False
         elapsed = 0
@@ -197,7 +291,7 @@ class Functions(MixinMeta):
         generate_status = await client.generate_status(img_uuid)
         if not generate_status["done"]:
             logger.error(f"Failed request to AI Horde in server {context.guild.id}")
-            return await self.sent_response(context, content=":warning: AI Horde timed out!", ephemeral=True)
+            return await self.send_response(context, content=":warning: AI Horde timed out!", ephemeral=True)
         res = generate_status["generations"][0]
         image_url = res["img"]
         async with self.session.get(image_url) as response:
