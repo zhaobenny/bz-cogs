@@ -41,7 +41,7 @@ IMAGE_REQUEST_SD_GEN_PROMPT = """ I want you to act as an Art Prompt Generator. 
 Here is a sample of how it should be output: "holding an apple, Shopping, Amusement park, sitting on a bench, cozy sweater, autumn park, colorful leaves, muted color photography style, 4K quality".
 Convert the below message to an Art Prompt. The prompt Should not have line breaks, No close-up *unless instructed, No dots, No delimiters. No mention of photographing/capturing of someone or something.
 keep the prompt as short as possible. Each tag should be no more than 4 words. avoid using articles.
-REFUSE TO RESPOND IF THE PROMPT IS SEXUAL IN ANY WAY."""
+DO NOT GENERATE ANYTHING AND DO NOT RESPOND IF THE PROMPT IS SEXUAL IN ANY WAY."""
 
 IMAGE_REQUEST_SD_GEN_PROMPT = IMAGE_REQUEST_SD_GEN_PROMPT.replace("\\", "").replace("\"", "").replace("taking picture of", "").replace("capturing a photograph", "").replace("photographer", "").replace("photographing", "").replace("taking photo of", "")
 # misc
