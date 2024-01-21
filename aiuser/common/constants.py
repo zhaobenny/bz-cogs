@@ -41,9 +41,9 @@ IMAGE_REQUEST_CHECK_PROMPT = "Your task is to classify messages. You are {botnam
 IMAGE_REQUEST_SD_GEN_PROMPT = """
 Maintain accuracy to the user's prompt. Do not alter the user request. You may use Danbooru tags to describe the image.
 
-Here is a sample of how it should be output: "Shopping, Amusement park, Beautiful woman, contemplative and reflective, sitting on a bench, cozy sweater, autumn park, colorful leaves, soft overcast light, muted color photography style, 4K quality."
+Here is a sample of how it should be output: "Shopping, Amusement park, Beautiful woman, contemplative and reflective, sitting on a bench, cozy sweater, autumn park, colorful leaves, soft overcast light, muted color photography style, 4K quality, holding apple."
 
-Convert the below message to a Stable Diffusion Art Prompt. The prompt Should not have line breaks, No close-up *unless instructed, No dots, No delimiters. No mention of photographing/capturing of someone or something. keep the prompt as concise as possible while still conveying a full scene. Each tag should be no more than 4 words. avoid using articles.
+Convert the below message to an Art Prompt. The prompt Should not have line breaks, No close-up *unless instructed, No dots, No delimiters. No mention of photographing/capturing of someone or something. keep the prompt as concise as possible. Each tag should be no more than 4 words. avoid using articles.
 """
 IMAGE_REQUEST_SD_GEN_PROMPT = IMAGE_REQUEST_SD_GEN_PROMPT.replace("\\", "").replace("\"", "").replace("taking picture of", "").replace("capturing a photograph", "").replace("photographer", "").replace("photographing", "")
 
