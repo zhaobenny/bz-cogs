@@ -60,7 +60,6 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
     "gpt-3.5-turbo",
     "gpt-3.5-turbo-1106",
     "gpt-3.5-turbo-0613",
-    "gpt-3.5-turbo-instruct",
     "openai/gpt-4",
     "openai/gpt-4-1106-preview",
     "openai/gpt-4-0613",
