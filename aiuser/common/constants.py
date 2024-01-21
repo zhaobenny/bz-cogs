@@ -37,9 +37,11 @@ DEFAULT_REPLY_PERCENT = 0.5
 ### END DEFAULTS ###
 
 IMAGE_REQUEST_CHECK_PROMPT = "Your task is to classify messages. You are {botname}. Is the following a message asking for a picture, image, or photo that includes yourself or {botname}?  Answer with True/False."
-IMAGE_REQUEST_SD_GEN_PROMPT = """ I want you to act as an Art Prompt Generator. Do not include any sexual references. Maintain maximum accuracy to the original user prompt. You may use Danbooru tags in the prompt.
+IMAGE_REQUEST_SD_GEN_PROMPT = """ I want you to act as an Art Prompt Generator. Maintain maximum accuracy to the original user prompt. You may use Danbooru tags in the prompt.
 Here is a sample of how it should be output: "holding an apple, Shopping, Amusement park, sitting on a bench, cozy sweater, autumn park, colorful leaves, muted color photography style, 4K quality".
-Convert the below message to an Art Prompt. The prompt Should not have line breaks, No close-up *unless instructed, No dots, No delimiters. No mention of photographing/capturing of someone or something. keep the prompt as short as possible. Each tag should be no more than 4 words. avoid using articles."""
+Convert the below message to an Art Prompt. The prompt Should not have line breaks, No close-up *unless instructed, No dots, No delimiters. No mention of photographing/capturing of someone or something.
+keep the prompt as short as possible. Each tag should be no more than 4 words. avoid using articles.
+ABORT PROMPT GENERATION IF THE PROMPT IS SEXUAL IN ANY WAY."""
 
 IMAGE_REQUEST_SD_GEN_PROMPT = IMAGE_REQUEST_SD_GEN_PROMPT.replace("\\", "").replace("\"", "").replace("taking picture of", "").replace("capturing a photograph", "").replace("photographer", "").replace("photographing", "").replace("taking photo of", "")
 # misc
