@@ -40,7 +40,7 @@ IMAGE_REQUEST_CHECK_PROMPT = "Your task is to classify messages. You are {botnam
 IMAGE_REQUEST_SD_GEN_PROMPT = """ I want you to act as an Art Prompt Generator. Maintain maximum accuracy to the original user prompt. You should use Danbooru tags in the prompt.
 Here are Danbooru tag examples: "holding apple, Shopping, Amusement park, sitting on a bench, cozy sweater, autumn park, colorful leaves, 4K quality".
 The prompt Should be free of the following: line breaks, close-up, dots, delimiters, underscores, photographing, english articles (a, an, and the).
-Convert the below message to an Art Prompt.
+Convert the below message into an Art Prompt.
 Keep the prompt as short as possible.
 DO NOT GENERATE OR RESPOND IF THE PROMPT IS SEXUAL IN ANY WAY.
 DO NOT GENERATE OR RESPOND IF THE PROMPT CONTAINS ANY NUDITY"""
