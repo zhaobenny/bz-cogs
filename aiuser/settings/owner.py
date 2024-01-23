@@ -143,3 +143,43 @@ class OwnerSettings(MixinMeta):
             title="Overwritten!",
             description="You will need to restart the bot for the changes to take effect.",
             color=await ctx.embed_color()))
+
+    @aiuserowner.command(name="prompt")
+    async def global_prompt(self, ctx: commands.Context, *, prompt: Optional[str]):
+
+        """ Set the global default prompt for aiuser.
+
+            Leave blank to delete the actual global prompt.
+        """
+        if not prompt and ctx.message.attachments:
+            if not ctx.message.attachments[0].filename.endswith(".txt"):
+                return await ctx.send(":warning: Invalid attachment. Must be a `.txt` file.")
+            prompt = (await ctx.message.attachments[0].read()).decode("utf-8")
+
+        if prompt and len(prompt) > await self.config.max_prompt_length() and not await ctx.bot.is_owner(ctx.author):
+            return await ctx.send(f":warning: Prompt too long. Max length is {await self.config.max_prompt_length()} characters.")
+
+        if not prompt:
+            await self.config.custom_text_prompt.set(None)
+            return await ctx.send(f"The global prompt is now reset to the default prompt")
+
+        await self.config.custom_text_prompt.set(prompt)
+
+        embed = discord.Embed(
+            title=f"The global prompt is now changed to:",
+            description=f"{self._truncate_prompt(prompt)}",
+            color=await ctx.embed_color())
+        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+        return await ctx.send(embed=embed)
+
+    async def get_tokens(self, ctx: commands.Context, prompt: str) -> int:
+        prompt = format_variables(ctx, prompt)  # to provide a better estimate
+        try:
+            encoding = tiktoken.encoding_for_model(await self.config.guild(ctx.guild).model())
+        except KeyError:
+            encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        return len(encoding.encode(prompt, disallowed_special=()))
+
+    @staticmethod
+    def _truncate_prompt(prompt: str) -> str:
+        return prompt[:1900] + "..." if len(prompt) > 1900 else prompt
