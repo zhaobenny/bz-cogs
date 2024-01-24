@@ -75,10 +75,7 @@ class PromptSettings(MixinMeta):
             title = f"The prompt for {ctx.channel.mention if channel_prompt else 'this server'} is:"
 
         if not prompt:
-            if self.config.custom_text_prompt:
-                prompt = self.config.custom_text_prompt
-            else:
-                prompt = DEFAULT_PROMPT
+            prompt = await self.config.custom_text_prompt() or DEFAULT_PROMPT
 
         embed = discord.Embed(
             title=title,
