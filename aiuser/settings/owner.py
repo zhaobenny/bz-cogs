@@ -10,8 +10,8 @@ from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
-from aiuser.common.utilities import _truncate_prompt, get_tokens
 from aiuser.abc import MixinMeta
+from aiuser.common.utilities import _truncate_prompt, get_tokens
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -151,12 +151,14 @@ class OwnerSettings(MixinMeta):
         """ Set the global default prompt for aiuser.
 
             Leave blank to delete the currently set global prompt, and use the build-in default prompt.
+
+            **Arguments**
+                - `prompt` The prompt to set.
         """
         if not prompt and ctx.message.attachments:
             if not ctx.message.attachments[0].filename.endswith(".txt"):
                 return await ctx.send(":warning: Invalid attachment. Must be a `.txt` file.")
             prompt = (await ctx.message.attachments[0].read()).decode("utf-8")
-
 
         if not prompt:
             await self.config.custom_text_prompt.set(None)
