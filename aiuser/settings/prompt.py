@@ -116,7 +116,7 @@ class PromptSettings(MixinMeta):
             description=_truncate_prompt(custom_prompt),
             color=await ctx.embed_color()
         )
-        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
+        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, custom_prompt))
         return embed
 
     async def _show_prompts(self, ctx, entities, entity_type):
