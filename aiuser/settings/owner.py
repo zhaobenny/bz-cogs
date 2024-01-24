@@ -10,6 +10,7 @@ from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
+from aiuser.common.utilities import _truncate_prompt, get_tokens
 from aiuser.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -165,19 +166,7 @@ class OwnerSettings(MixinMeta):
 
         embed = discord.Embed(
             title=f"The global prompt is now changed to:",
-            description=f"{self._truncate_prompt(prompt)}",
+            description=f"{_truncate_prompt(prompt)}",
             color=await ctx.embed_color())
-        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
         return await ctx.send(embed=embed)
-
-    async def get_tokens(self, ctx: commands.Context, prompt: str) -> int:
-        prompt = format_variables(ctx, prompt)  # to provide a better estimate
-        try:
-            encoding = tiktoken.encoding_for_model(await self.config.guild(ctx.guild).model())
-        except KeyError:
-            encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
-        return len(encoding.encode(prompt, disallowed_special=()))
-
-    @staticmethod
-    def _truncate_prompt(prompt: str) -> str:
-        return prompt[:1900] + "..." if len(prompt) > 1900 else prompt
