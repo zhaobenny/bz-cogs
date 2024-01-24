@@ -156,8 +156,6 @@ class OwnerSettings(MixinMeta):
                 return await ctx.send(":warning: Invalid attachment. Must be a `.txt` file.")
             prompt = (await ctx.message.attachments[0].read()).decode("utf-8")
 
-        if prompt and len(prompt) > await self.config.max_prompt_length() and not await ctx.bot.is_owner(ctx.author):
-            return await ctx.send(f":warning: Prompt too long. Max length is {await self.config.max_prompt_length()} characters.")
 
         if not prompt:
             await self.config.custom_text_prompt.set(None)
