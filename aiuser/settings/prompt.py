@@ -10,7 +10,7 @@ from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.abc import MixinMeta, aiuser
 from aiuser.common.constants import DEFAULT_PROMPT
-from aiuser.common.utilities import format_variables, get_tokens, _truncate_prompt
+from aiuser.common.utilities import get_tokens, _truncate_prompt
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -141,7 +141,7 @@ class PromptSettings(MixinMeta):
     @prompt_show.command(name="server", aliases=["guild"])
     async def show_server_prompt(self, ctx: commands.Context):
         """ Show the current server prompt """
-        prompt = await self.config.guild(ctx.guild).custom_text_prompt() or DEFAULT_PROMPT
+        prompt = await self.config.guild(ctx.guild).custom_text_prompt() or await self.config.custom_text_prompt() or DEFAULT_PROMPT
         embed = discord.Embed(
             title=f"The prompt for this server is:",
             description=_truncate_prompt(prompt),
