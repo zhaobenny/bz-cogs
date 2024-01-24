@@ -149,7 +149,7 @@ class OwnerSettings(MixinMeta):
 
         """ Set the global default prompt for aiuser.
 
-            Leave blank to delete the actual global prompt.
+            Leave blank to delete the currently set global prompt, and use the build-in default prompt.
         """
         if not prompt and ctx.message.attachments:
             if not ctx.message.attachments[0].filename.endswith(".txt"):
