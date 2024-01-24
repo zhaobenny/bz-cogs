@@ -10,7 +10,7 @@ from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.abc import MixinMeta, aiuser
 from aiuser.common.constants import DEFAULT_PROMPT
-from aiuser.common.utilities import get_tokens, _truncate_prompt
+from aiuser.common.utilities import get_tokens, truncate_prompt
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -78,7 +78,7 @@ class PromptSettings(MixinMeta):
 
         embed = discord.Embed(
             title=title,
-            description=_truncate_prompt(prompt),
+            description=truncate_prompt(prompt),
             color=await ctx.embed_color()
         )
         embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
@@ -113,7 +113,7 @@ class PromptSettings(MixinMeta):
 
         embed = discord.Embed(
             title=f"The prompt for {entity_type} {entity_name} is:",
-            description=_truncate_prompt(custom_prompt),
+            description=truncate_prompt(custom_prompt),
             color=await ctx.embed_color()
         )
         embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, custom_prompt))
@@ -144,7 +144,7 @@ class PromptSettings(MixinMeta):
         prompt = await self.config.guild(ctx.guild).custom_text_prompt() or await self.config.custom_text_prompt() or DEFAULT_PROMPT
         embed = discord.Embed(
             title=f"The prompt for this server is:",
-            description=_truncate_prompt(prompt),
+            description=truncate_prompt(prompt),
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
         await ctx.send(embed=embed)
@@ -165,7 +165,7 @@ class PromptSettings(MixinMeta):
         for preset, prompt in presets.items():
             page = discord.Embed(
                 title=f"Preset `{preset}`",
-                description=_truncate_prompt(prompt),
+                description=truncate_prompt(prompt),
                 color=await ctx.embed_color())
             page.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
             pages.append(page)
@@ -198,7 +198,7 @@ class PromptSettings(MixinMeta):
         await self.config.guild(ctx.guild).presets.set(json.dumps(presets))
         embed = discord.Embed(
             title=f"Added preset `{preset}`",
-            description=_truncate_prompt(prompt),
+            description=truncate_prompt(prompt),
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
         return await ctx.send(embed=embed)
@@ -220,7 +220,7 @@ class PromptSettings(MixinMeta):
         await self.config.guild(ctx.guild).presets.set(json.dumps(presets))
         embed = discord.Embed(
             title=f"Removed preset `{preset}`",
-            description=_truncate_prompt(prompt),
+            description=truncate_prompt(prompt),
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
@@ -265,7 +265,7 @@ class PromptSettings(MixinMeta):
 
         embed = discord.Embed(
             title=f"The prompt for this {mention_type} is now changed to:",
-            description=f"{_truncate_prompt(prompt)}",
+            description=f"{truncate_prompt(prompt)}",
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
         return await ctx.send(embed=embed)

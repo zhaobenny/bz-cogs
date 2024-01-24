@@ -11,7 +11,7 @@ from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.abc import MixinMeta
-from aiuser.common.utilities import _truncate_prompt, get_tokens
+from aiuser.common.utilities import get_tokens, truncate_prompt
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -168,7 +168,7 @@ class OwnerSettings(MixinMeta):
 
         embed = discord.Embed(
             title=f"The global prompt is now changed to:",
-            description=f"{_truncate_prompt(prompt)}",
+            description=f"{truncate_prompt(prompt)}",
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
         return await ctx.send(embed=embed)
