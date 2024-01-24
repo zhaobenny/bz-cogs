@@ -6,6 +6,7 @@ import re
 from datetime import datetime
 from typing import Callable, Coroutine
 
+import tiktoken
 from discord import Message
 from openai import AsyncOpenAI
 from redbot.core import Config, commands
@@ -108,3 +109,16 @@ async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolC
     if await config.guild(ctx.guild).function_calling_no_response():
         tools.append(NoResponseToolCall(config=config, ctx=ctx))
     return tools
+
+
+async def get_tokens(config: Config, ctx: commands.Context, prompt: str) -> int:
+    prompt = format_variables(ctx, prompt)  # to provide a better estimate
+    try:
+        encoding = tiktoken.encoding_for_model(await config.guild(ctx.guild).model())
+    except KeyError:
+        encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    return len(encoding.encode(prompt, disallowed_special=()))
+
+
+def truncate_prompt(prompt: str) -> str:
+    return prompt[:1900] + "..." if len(prompt) > 1900 else prompt

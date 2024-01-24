@@ -4,14 +4,13 @@ import logging
 from typing import Optional, Union
 
 import discord
-import tiktoken
 from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.abc import MixinMeta, aiuser
 from aiuser.common.constants import DEFAULT_PROMPT
-from aiuser.common.utilities import format_variables
+from aiuser.common.utilities import get_tokens, truncate_prompt
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -75,14 +74,14 @@ class PromptSettings(MixinMeta):
             title = f"The prompt for {ctx.channel.mention if channel_prompt else 'this server'} is:"
 
         if not prompt:
-            prompt = DEFAULT_PROMPT
+            prompt = await self.config.custom_text_prompt() or DEFAULT_PROMPT
 
         embed = discord.Embed(
             title=title,
-            description=self._truncate_prompt(prompt),
+            description=truncate_prompt(prompt),
             color=await ctx.embed_color()
         )
-        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
         await ctx.send(embed=embed)
 
     @prompt_show.command(name="members", aliases=["users"])
@@ -114,10 +113,10 @@ class PromptSettings(MixinMeta):
 
         embed = discord.Embed(
             title=f"The prompt for {entity_type} {entity_name} is:",
-            description=self._truncate_prompt(custom_prompt),
+            description=truncate_prompt(custom_prompt),
             color=await ctx.embed_color()
         )
-        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, custom_prompt))
+        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, custom_prompt))
         return embed
 
     async def _show_prompts(self, ctx, entities, entity_type):
@@ -142,12 +141,12 @@ class PromptSettings(MixinMeta):
     @prompt_show.command(name="server", aliases=["guild"])
     async def show_server_prompt(self, ctx: commands.Context):
         """ Show the current server prompt """
-        prompt = await self.config.guild(ctx.guild).custom_text_prompt() or DEFAULT_PROMPT
+        prompt = await self.config.guild(ctx.guild).custom_text_prompt() or await self.config.custom_text_prompt() or DEFAULT_PROMPT
         embed = discord.Embed(
             title=f"The prompt for this server is:",
-            description=self._truncate_prompt(prompt),
+            description=truncate_prompt(prompt),
             color=await ctx.embed_color())
-        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
         await ctx.send(embed=embed)
 
     @prompt.group(name="preset")
@@ -166,9 +165,9 @@ class PromptSettings(MixinMeta):
         for preset, prompt in presets.items():
             page = discord.Embed(
                 title=f"Preset `{preset}`",
-                description=self._truncate_prompt(prompt),
+                description=truncate_prompt(prompt),
                 color=await ctx.embed_color())
-            page.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+            page.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
             pages.append(page)
         if len(pages) == 1:
             return await ctx.send(embed=pages[0])
@@ -199,9 +198,9 @@ class PromptSettings(MixinMeta):
         await self.config.guild(ctx.guild).presets.set(json.dumps(presets))
         embed = discord.Embed(
             title=f"Added preset `{preset}`",
-            description=self._truncate_prompt(prompt),
+            description=truncate_prompt(prompt),
             color=await ctx.embed_color())
-        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
         return await ctx.send(embed=embed)
 
     @prompt_preset.command(name="remove", aliases=["rm", "delete"])
@@ -221,7 +220,7 @@ class PromptSettings(MixinMeta):
         await self.config.guild(ctx.guild).presets.set(json.dumps(presets))
         embed = discord.Embed(
             title=f"Removed preset `{preset}`",
-            description=self._truncate_prompt(prompt),
+            description=truncate_prompt(prompt),
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
@@ -266,9 +265,9 @@ class PromptSettings(MixinMeta):
 
         embed = discord.Embed(
             title=f"The prompt for this {mention_type} is now changed to:",
-            description=f"{self._truncate_prompt(prompt)}",
+            description=f"{truncate_prompt(prompt)}",
             color=await ctx.embed_color())
-        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
         return await ctx.send(embed=embed)
 
     def _get_mention_type(self, mention):
@@ -293,14 +292,3 @@ class PromptSettings(MixinMeta):
         else:
             raise ValueError("Invalid mention type provided")
 
-    async def get_tokens(self, ctx: commands.Context, prompt: str) -> int:
-        prompt = format_variables(ctx, prompt)  # to provide a better estimate
-        try:
-            encoding = tiktoken.encoding_for_model(await self.config.guild(ctx.guild).model())
-        except KeyError:
-            encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
-        return len(encoding.encode(prompt, disallowed_special=()))
-
-    @staticmethod
-    def _truncate_prompt(prompt: str) -> str:
-        return prompt[:1900] + "..." if len(prompt) > 1900 else prompt
