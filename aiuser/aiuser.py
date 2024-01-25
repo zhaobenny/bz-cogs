@@ -17,7 +17,9 @@ from aiuser.common.constants import (
     DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
     DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_PRESETS,
     DEFAULT_RANDOM_PROMPTS, DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT,
-    IMAGE_UPLOAD_LIMIT, MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
+    IMAGE_UPLOAD_LIMIT, MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH,
+    SINGULAR_MENTION_PATTERN,
+    URL_PATTERN)
 from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import is_embed_valid, is_using_openai_endpoint
 from aiuser.messages_list.entry import MessageEntry
@@ -50,7 +52,6 @@ class AIUser(
         self.ignore_regex: dict[int, re.Pattern] = {}
         self.override_prompt_start_time: dict[int, datetime] = {}
         self.cached_messages: Cache[int, MessageEntry] = Cache(limit=100)
-        self.url_pattern = re.compile(r"(https?://\S+)")
 
         default_global = {
             "custom_openai_endpoint": None,
@@ -217,8 +218,7 @@ class AIUser(
                 await ctx.react_quietly("💤")
             return
 
-        contains_url = self.url_pattern.search(ctx.message.content)
-        if contains_url:
+        if URL_PATTERN.search(ctx.message.content):
             ctx = await self.wait_for_embed(ctx)
 
         await self.send_response(ctx)
@@ -266,9 +266,31 @@ class AIUser(
         if (whitelisted_members or whitelisted_roles) and not ((ctx.author.id in whitelisted_members) or (ctx.author.roles and (set([role.id for role in ctx.author.roles]) & set(whitelisted_roles)))):
             return False
 
+        if not ctx.interaction and not self.is_good_text_message(ctx.message):
+            return False
+
         if not self.openai_client:
             await self.initialize_openai_client(ctx)
         if not self.openai_client:
+            return False
+
+        return True
+
+    def is_good_text_message(self, message: discord.Message) -> bool:
+        if SINGULAR_MENTION_PATTERN.match(message.content):
+            logger.debug(
+                f"Skipping singular mention message {message.id} in {message.guild.name}"
+            )
+            return False
+
+        if 1 <= len(message.content) < MIN_MESSAGE_LENGTH:
+            logger.debug(
+                f"Skipping short message {message.id} in {message.guild.name}")
+            return False
+
+        if len(message.content.split()) > MAX_MESSAGE_LENGTH:
+            logger.debug(
+                f"Skipping long message {message.id} in {message.guild.name}")
             return False
 
         return True

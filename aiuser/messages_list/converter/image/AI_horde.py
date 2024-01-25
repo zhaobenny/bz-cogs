@@ -67,8 +67,7 @@ async def request_ai_horde(payload, api_key):
 async def wait_for_response(session: aiohttp.ClientSession, session_id):
     while True:
         async with session.get(f"https://stablehorde.net/api/v2/interrogate/status/{session_id}") as response:
-            if response.status != 200:
-                response.raise_for_status()
+            response.raise_for_status()
 
             response = await response.json()
             if response["state"] == "done":

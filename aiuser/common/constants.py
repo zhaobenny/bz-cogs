@@ -1,3 +1,5 @@
+import re
+
 ### DEFAULTS ###
 
 DEFAULT_PROMPT = "You are {botname}. You are in a Discord text channel. \
@@ -36,21 +38,30 @@ DEFAULT_REPLY_PERCENT = 0.5
 
 ### END DEFAULTS ###
 
-IMAGE_REQUEST_CHECK_PROMPT = "Your task is to classify messages. You are {botname}. Is the following a message asking for a picture, image, or photo that includes yourself or {botname}?  Answer with True/False."
+IMAGE_REQUEST_CHECK_PROMPT = "As an AI, named {botname}, you are tasked to analyze messages directed towards you. Your role is to identify whether each specific message is asking you to send a picture of yourself or not. Messages can be phrased in a variety of ways, so you should look for key contextual clues such as requests for images, photographs, selfies, or other synonyms, but make sure it's specifically asking for a picture of 'you'. If the message explicitly requests a picture of {botname}, you are to respond with 'True'. If the message doesn't solicit a picture of 'you', then respond with 'False'."
 IMAGE_REQUEST_SD_GEN_PROMPT = """
 I want you to act as a Stable Diffusion Art Prompt Generator. The formula for a prompt is made of parts, the parts are indicated by brackets. The [Subject] is the person place or thing the image is focused on. [Emotions] is the emotional look the subject or scene might have. [Verb] is What the subject is doing, such as standing, jumping, working and other varied that match the subject. [Adjectives] like beautiful, rendered, realistic, tiny, colorful and other varied that match the subject. The [Environment] in which the subject is in, [Lighting] of the scene like moody, ambient, sunny, foggy and others that match the Environment and compliment the subject. [Photography type] like Polaroid, long exposure, monochrome, GoPro, fisheye, bokeh and others. And [Quality] like High definition, 4K, 8K, 64K UHD, SDR and other. The subject and environment should match and have the most emphasis.
-It is ok to omit one of the other formula parts. I will give you a [Subject], you will respond with a full prompt. Present the result as one full sentence, no line breaks, no delimiters, and keep it as concise as possible while still conveying a full scene.
+It is ok to omit one of the other formula parts. Each formula part should be less then four words.
 
-Here is a sample of how it should be output: "Beautiful woman, contemplative and reflective, sitting on a bench, cozy sweater, autumn park with colorful leaves, soft overcast light, muted color photography style, 4K quality."
+Here is a sample output: "Beautiful woman, contemplative and reflective, sitting on a bench, cozy sweater, autumn park with colorful leaves, soft overcast light, muted color photography style, 4K quality."
 
-Convert the below message to a Stable Diffusion Art Prompt.  The prompt should be a full sentence, no second person references, no line breaks, no delimiters, and keep it as concise as possible while still conveying a full scene.
+Convert the below message to a Stable Diffusion Art Prompt.  The prompt should have no second person references, no line breaks, no delimiters, and be kept as concise as possible while still conveying a full scene.
 """
+IMAGE_REQUEST_REPLY_PROMPT = "You sent the picture above. Respond accordingly."
+
+# regex patterns
+URL_PATTERN = re.compile(r"(https?://\S+)")
+YOUTUBE_URL_PATTERN = re.compile(r"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?(.+)")
+YOUTUBE_VIDEO_ID_PATTERN = re.compile(
+    r"(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/|v\/|t\/\S*?\/?)([a-zA-Z0-9_-]{11})")
+SINGULAR_MENTION_PATTERN = re.compile(r"^<@!?&?(\d+)>$")
+
 
 # misc
 MIN_MESSAGE_LENGTH = 5
 MAX_MESSAGE_LENGTH = 1000  # in words
 
-# local image captioning
+# image captioning
 IMAGE_UPLOAD_LIMIT = 2 * (1024 * 1024)  # 2 MB
 
 

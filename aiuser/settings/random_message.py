@@ -7,6 +7,7 @@ from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.abc import MixinMeta, aiuser
 from aiuser.common.constants import DEFAULT_RANDOM_PROMPTS
+from aiuser.common.utilities import get_tokens
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -92,7 +93,7 @@ class RandomMessageSettings(MixinMeta):
             title="Added topic to random message prompts:",
             description=f"{prompt}",
             color=await ctx.embed_color())
-        embed.add_field(name="Tokens", value=await self.get_tokens(ctx, prompt))
+        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
         return await ctx.send(embed=embed)
 
     @randommessage.command(name="remove", aliases=["rm", "delete"])

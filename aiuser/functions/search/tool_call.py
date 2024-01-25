@@ -1,8 +1,8 @@
 
 
-from aiuser.response.chat.functions.search.query import search_google
-from aiuser.response.chat.functions.tool_call import ToolCall
-from aiuser.response.chat.functions.types import (Function, Parameters,
+from aiuser.functions.search.query import search_google
+from aiuser.functions.tool_call import ToolCall
+from aiuser.functions.types import (Function, Parameters,
                                                   ToolCallSchema)
 
 

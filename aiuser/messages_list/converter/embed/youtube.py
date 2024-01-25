@@ -1,20 +1,18 @@
 
 import logging
-import re
 
 import aiohttp
 from discord import Message
-from redbot.core.bot import Red
 from tenacity import retry, stop_after_attempt, wait_random
+
+from aiuser.common.constants import YOUTUBE_VIDEO_ID_PATTERN
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
-YOUTUBE_URL_PATTERN = r"(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/|v\/|t\/\S*?\/?)([a-zA-Z0-9_-]{11})"
 YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3/videos?part=snippet&id={}&key={}"
 
 
-async def format_youtube_embed(bot: Red, message: Message):
-    api_key = (await bot.get_shared_api_tokens("youtube")).get("api_key")
+async def format_youtube_embed(api_key: str, message: Message):
     video_id = await get_video_id(message.content)
     author = message.author.display_name
 
@@ -31,7 +29,7 @@ async def format_youtube_embed(bot: Red, message: Message):
 
 
 async def get_video_id(url):
-    match = re.search(YOUTUBE_URL_PATTERN, url)
+    match = YOUTUBE_VIDEO_ID_PATTERN.search(url)
 
     if match:
         return match.group(1)
