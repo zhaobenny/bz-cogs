@@ -41,11 +41,12 @@ DEFAULT_REPLY_PERCENT = 0.5
 IMAGE_REQUEST_CHECK_PROMPT = "As an AI, named {botname}, you are tasked to analyze messages directed towards you. Your role is to identify whether each specific message is asking you to send a picture of yourself or not. Messages can be phrased in a variety of ways, so you should look for key contextual clues such as requests for images, photographs, selfies, or other synonyms, but make sure it's specifically asking for a picture of 'you'. If the message explicitly requests a picture of {botname}, you are to respond with 'True'. If the message doesn't solicit a picture of 'you', then respond with 'False'."
 IMAGE_REQUEST_SD_GEN_PROMPT = """ I want you to act as an Art Prompt Generator. Maintain maximum accuracy to the original user prompt. You should use Danbooru tags in the prompt.
 Here are Danbooru tag examples: "holding apple, Shopping, Amusement park, sitting on a bench, cozy sweater, autumn park, colorful leaves, 4K quality".
-THE PROMPT SHOULD NOT HAVE THE FOLLOWING: line breaks, close-up, dots, delimiters, underscores, photographing, english articles (a, an, and the).
 Convert the below message into an Art Prompt.
 Keep the prompt as short as possible.
 DO NOT GENERATE OR RESPOND IF THE PROMPT IS SEXUAL IN ANY WAY.
-DO NOT GENERATE OR RESPOND IF THE PROMPT CONTAINS ANY NUDITY."""
+DO NOT GENERATE OR RESPOND IF THE PROMPT CONTAINS ANY NUDITY
+THE PROMPT SHOULD NOT HAVE ANY OF THESE WORDS/ELEMENTS: line breaks, close-up, dots, delimiters, underscores, photographing, english articles (a, an, and the).
+"""
 
 IMAGE_REQUEST_REPLY_PROMPT = "You sent the picture above. Respond accordingly."
 
