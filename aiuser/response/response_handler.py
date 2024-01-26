@@ -5,8 +5,8 @@ import discord
 from redbot.core import commands
 
 from aiuser.abc import MixinMeta
-from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS, IMAGE_REQUEST_CHECK_PROMPT,
-                                     MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH)
+from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
+                                     IMAGE_REQUEST_CHECK_PROMPT)
 from aiuser.messages_list.messages import create_messages_list
 from aiuser.response.chat.openai import OpenAI_API_Generator
 from aiuser.response.chat.openai_funcs import OpenAI_Functions_API_Generator
@@ -25,8 +25,7 @@ class ResponseHandler(MixinMeta):
         if not ctx.interaction and await self.is_image_request(ctx.message):
             if await self.send_image(ctx):
                 return
-        if self.is_good_text_message(ctx.message) or ctx.interaction:
-            await self.send_message(ctx)
+        await self.send_message(ctx)
 
     async def send_message(self, ctx: commands.Context):
         message_list = await create_messages_list(self, ctx)
@@ -131,25 +130,3 @@ class ResponseHandler(MixinMeta):
                 f"Error while checking message for a image request", exc_info=True
             )
         return bool_response == "True"
-
-    @staticmethod
-    def is_good_text_message(message) -> bool:
-        mention_pattern = re.compile(r"^<@!?&?(\d+)>$")
-
-        if mention_pattern.match(message.content):
-            logger.debug(
-                f"Skipping singular mention message {message.id} in {message.guild.name}"
-            )
-            return False
-
-        if 1 <= len(message.content) < MIN_MESSAGE_LENGTH:
-            logger.debug(
-                f"Skipping short message {message.id} in {message.guild.name}")
-            return False
-
-        if len(message.content.split()) > MAX_MESSAGE_LENGTH:
-            logger.debug(
-                f"Skipping long message {message.id} in {message.guild.name}")
-            return False
-
-        return True

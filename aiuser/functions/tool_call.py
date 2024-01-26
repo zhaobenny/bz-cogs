@@ -3,7 +3,7 @@ from dataclasses import asdict
 
 from redbot.core import Config, commands
 
-from aiuser.response.chat.functions.types import ToolCallSchema
+from aiuser.functions.types import ToolCallSchema
 
 
 class ToolCall:

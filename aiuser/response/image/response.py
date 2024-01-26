@@ -5,7 +5,8 @@ import discord
 from redbot.core import commands
 
 from aiuser.abc import MixinMeta
-from aiuser.common.constants import IMAGE_REQUEST_SD_GEN_PROMPT
+from aiuser.common.constants import (IMAGE_REQUEST_REPLY_PROMPT,
+                                     IMAGE_REQUEST_SD_GEN_PROMPT)
 from aiuser.messages_list.messages import create_messages_list
 from aiuser.response.chat.openai import OpenAI_API_Generator
 from aiuser.response.chat.response import ChatResponse
@@ -42,10 +43,8 @@ class ImageResponse():
 
         message_list = await create_messages_list(self.cog, self.ctx)
         await message_list.add_history()
-        await message_list.add_system(
-            saved_caption, index=len(message_list) + 1)
-        await message_list.add_system(
-            "You are able to sent images. You sent the above image. Respond accordingly.", index=len(message_list) + 1)
+        await message_list.add_system(saved_caption, index=len(message_list) + 1)
+        await message_list.add_system(IMAGE_REQUEST_REPLY_PROMPT, index=len(message_list) + 1)
         chat = OpenAI_API_Generator(self.cog, self.ctx, message_list)
         response = ChatResponse(self.ctx, self.config, chat)
 

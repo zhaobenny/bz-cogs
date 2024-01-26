@@ -103,6 +103,7 @@ class MessagesList:
                 or role_prompt
                 or await self.config.channel(self.init_message.channel).custom_text_prompt()
                 or await self.config.guild(self.guild).custom_text_prompt()
+                or await self.config.custom_text_prompt()
                 or DEFAULT_PROMPT)
 
     async def check_if_add(self, message: Message, force: bool = False):

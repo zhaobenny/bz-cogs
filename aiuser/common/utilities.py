@@ -6,11 +6,13 @@ import re
 from datetime import datetime
 from typing import Callable, Coroutine
 
+import tiktoken
 from discord import Message
 from openai import AsyncOpenAI
 from redbot.core import Config, commands
+from aiuser.common.constants import YOUTUBE_URL_PATTERN
 
-from aiuser.response.chat.functions.tool_call import ToolCall
+from aiuser.functions.tool_call import ToolCall
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -77,10 +79,7 @@ def is_embed_valid(message: Message):
 
 
 def contains_youtube_link(content):
-    youtube_regex = (
-        r"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?(.+)"
-    )
-    match = re.search(youtube_regex, content)
+    match = YOUTUBE_URL_PATTERN.search(content)
     return bool(match)
 
 
@@ -93,10 +92,10 @@ def is_using_openrouter_endpoint(client: AsyncOpenAI):
 
 
 async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolCall]:
-    from aiuser.response.chat.functions.noresponse.tool_call import \
+    from aiuser.functions.noresponse.tool_call import \
         NoResponseToolCall
-    from aiuser.response.chat.functions.search.tool_call import SearchToolCall
-    from aiuser.response.chat.functions.weather.tool_call import (
+    from aiuser.functions.search.tool_call import SearchToolCall
+    from aiuser.functions.weather.tool_call import (
         IsDaytimeToolCall, LocalWeatherToolCall, LocationWeatherToolCall)
     tools = []
     if await config.guild(ctx.guild).function_calling_search():
@@ -108,3 +107,16 @@ async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolC
     if await config.guild(ctx.guild).function_calling_no_response():
         tools.append(NoResponseToolCall(config=config, ctx=ctx))
     return tools
+
+
+async def get_tokens(config: Config, ctx: commands.Context, prompt: str) -> int:
+    prompt = format_variables(ctx, prompt)  # to provide a better estimate
+    try:
+        encoding = tiktoken.encoding_for_model(await config.guild(ctx.guild).model())
+    except KeyError:
+        encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    return len(encoding.encode(prompt, disallowed_special=()))
+
+
+def truncate_prompt(prompt: str) -> str:
+    return prompt[:1900] + "..." if len(prompt) > 1900 else prompt

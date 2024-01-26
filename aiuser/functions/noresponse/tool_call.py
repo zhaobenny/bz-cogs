@@ -2,8 +2,8 @@
 
 import logging
 
-from aiuser.response.chat.functions.tool_call import ToolCall
-from aiuser.response.chat.functions.types import (Function, Parameters,
+from aiuser.functions.tool_call import ToolCall
+from aiuser.functions.types import (Function, Parameters,
                                                   ToolCallSchema)
 
 logger = logging.getLogger("red.bz_cogs.aiuser")

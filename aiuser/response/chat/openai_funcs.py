@@ -7,8 +7,8 @@ from redbot.core import commands
 from aiuser.abc import MixinMeta
 from aiuser.common.utilities import get_enabled_tools
 from aiuser.messages_list.messages import MessagesList
-from aiuser.response.chat.functions.tool_call import ToolCall
-from aiuser.response.chat.functions.types import ToolCallSchema
+from aiuser.functions.tool_call import ToolCall
+from aiuser.functions.types import ToolCallSchema
 from aiuser.response.chat.openai import OpenAI_API_Generator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")

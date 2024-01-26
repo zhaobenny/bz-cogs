@@ -1,11 +1,11 @@
 import logging
-import re
 
 from discord import Message
 
+from aiuser.common.constants import URL_PATTERN
+
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
-link_pattern = re.compile(r'(https?://\S+)')
 
 
 def format_text_content(message: Message):
@@ -19,7 +19,7 @@ def format_text_content(message: Message):
 
 def format_embed_text_content(message: Message):
     content = mention_to_text(message)
-    content = link_pattern.sub("", content)
+    content = URL_PATTERN.sub("", content)
     if not content or content == "" or content.isspace():
         return None
     if message.author.id == message.guild.me.id:

@@ -36,13 +36,12 @@ class RandomMessageTask(MixinMeta):
             if not await self.check_if_valid_for_random_message(guild, last):
                 return
 
-
             topics = await self.config.guild(guild).random_messages_prompts() or None
             if not topics:
                 return logger.warning(
                     f"No random message topics were found in {guild.name}, skipping")
 
-            prompt = await self.config.channel(channel).custom_text_prompt() or await self.config.guild(guild).custom_text_prompt() or DEFAULT_PROMPT
+            prompt = await self.config.channel(channel).custom_text_prompt() or await self.config.guild(guild).custom_text_prompt() or await self.config.custom_text_prompt() or DEFAULT_PROMPT
             message_list = await create_messages_list(self, ctx, prompt=prompt)
             topic = format_variables(
                 ctx, topics[random.randint(0, len(topics) - 1)])

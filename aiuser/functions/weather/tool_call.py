@@ -1,9 +1,9 @@
 from dataclasses import asdict
 
-from aiuser.response.chat.functions.tool_call import ToolCall
-from aiuser.response.chat.functions.types import (Function, Parameters,
+from aiuser.functions.tool_call import ToolCall
+from aiuser.functions.types import (Function, Parameters,
                                                   ToolCallSchema)
-from aiuser.response.chat.functions.weather.query import (get_local_weather,
+from aiuser.functions.weather.query import (get_local_weather,
                                                           get_weather,
                                                           is_daytime)
 

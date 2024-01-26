@@ -11,6 +11,7 @@ from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.abc import MixinMeta
+from aiuser.common.utilities import get_tokens, truncate_prompt
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -143,3 +144,31 @@ class OwnerSettings(MixinMeta):
             title="Overwritten!",
             description="You will need to restart the bot for the changes to take effect.",
             color=await ctx.embed_color()))
+
+    @aiuserowner.command(name="prompt")
+    async def global_prompt(self, ctx: commands.Context, *, prompt: Optional[str]):
+
+        """ Set the global default prompt for aiuser.
+
+            Leave blank to delete the currently set global prompt, and use the build-in default prompt.
+
+            **Arguments**
+                - `prompt` The prompt to set.
+        """
+        if not prompt and ctx.message.attachments:
+            if not ctx.message.attachments[0].filename.endswith(".txt"):
+                return await ctx.send(":warning: Invalid attachment. Must be a `.txt` file.")
+            prompt = (await ctx.message.attachments[0].read()).decode("utf-8")
+
+        if not prompt:
+            await self.config.custom_text_prompt.set(None)
+            return await ctx.send(f"The global prompt is now reset to the default prompt")
+
+        await self.config.custom_text_prompt.set(prompt)
+
+        embed = discord.Embed(
+            title=f"The global prompt is now changed to:",
+            description=f"{truncate_prompt(prompt)}",
+            color=await ctx.embed_color())
+        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
+        return await ctx.send(embed=embed)

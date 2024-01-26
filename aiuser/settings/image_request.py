@@ -84,7 +84,7 @@ class ImageRequestSettings(MixinMeta):
 
     @imagerequest.command(name="reduce_calls")
     async def image_request_reduce_calls(self, ctx: commands.Context):
-        """Toggle reduced LLM calls mode (mainly for trial OpenAI keys)
+        """ Disables a LLM check on validating image requests
 
         :warning: Will trigger image generation based ONLY on keywords instead of checking with the LLM
         """
