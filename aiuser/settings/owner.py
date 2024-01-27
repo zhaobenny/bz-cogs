@@ -11,7 +11,8 @@ from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.abc import MixinMeta
-from aiuser.common.utilities import get_tokens, truncate_prompt
+from aiuser.common.utilities import (get_tokens, is_using_openrouter_endpoint,
+                                     truncate_prompt)
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -55,27 +56,52 @@ class OwnerSettings(MixinMeta):
 
         Reset to official OpenAI endpoint with `[p]aiuseradmin endpoint clear`
         """
+
+        if url == "openrouter":
+            url = "https://openrouter.ai/api/v1/"
+
         if not url or url in ["clear", "reset"]:
             await self.config.custom_openai_endpoint.set(None)
-            await self.initialize_openai_client()
         else:
             await self.config.custom_openai_endpoint.set(url)
-            await self.initialize_openai_client()
+
+        await self.initialize_openai_client()
+
+        chat_model = "gpt-3.5-turbo"
+        image_model = "gpt-4-vision-preview"
+
+        if (is_using_openrouter_endpoint(self.openai_client)):
+            chat_model = "openai/gpt-3.5-turbo"
+            image_model = "openai/gpt-4-vision-preview"
 
         embed = discord.Embed(
             title="Bot Custom OpenAI endpoint", color=await ctx.embed_color()
         )
         embed.add_field(
-            name=":warning: Warning :warning:",
-            value="All model/parameters selections for each server may need changing.",
+            name="🔄 Reset",
+            value="All per server models has been reset to `gpt-3.5-turbo`",
             inline=False,
         )
+
+        guilds_with_parameters = []
+        for guild_id in await self.config.all_guilds():
+            await self.config.guild_from_id(guild_id).model.set(chat_model)
+            await self.config.guild_from_id(guild_id).scan_images_model.set(image_model)
+            if await self.config.guild_from_id(guild_id).parameters():
+                guilds_with_parameters.append(str(self.bot.get_guild(guild_id).name))
+
+        if guilds_with_parameters:
+            embed.add_field(
+                name=":warning: Caution",
+                value=f"Custom parameters have been set in the following guilds: `{', '.join(guilds_with_parameters)}`\nThey may not work with the new endpoint!",
+                inline=False,
+            )
 
         if url:
             embed.description = f"Endpoint set to {url}."
             embed.add_field(
-                name="Models",
-                value="Third party models may have undesirable results, compared to OpenAI.",
+                name="❗ Third Party Models",
+                value="Third party models may have undesirable results with this cog, compared to OpenAI's LLMs.",
                 inline=False,
             )
         else:

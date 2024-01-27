@@ -169,17 +169,22 @@ See full details [here](https://openrouter.ai/docs#models).
 
 Bot owners can set this globally using the following:
 ```
-[p]aiuserowner endpoint https://openrouter.ai/api/v1
+[p]aiuserowner endpoint openrouter
 ```
 
-Get an API key from OpenRouter and set it here:
+You **must** get an API key from OpenRouter and set it here:
 ```
 [p]set api openrouter api_key,INSERT_API_KEY
 ```
 
-Models will also need **changing** per server.
+Models may need **changing** per server.
 
 Some third party models may have undesirable results.
+
+Bot owners may also want to set [custom parameters](https://openrouter.ai/docs#llm-parameters) (per server). See:
+```
+[p]aiuser response parameters
+```
 
 ---
 
@@ -187,7 +192,7 @@ Some third party models may have undesirable results.
 
 ⚠️ For advanced users! ⚠️
 
-Other OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. gpt4all or text-generation-webui)
+Other OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. `gpt4all` or `text-generation-webui`)
 
 Compatibility may vary and is not guaranteed.
 
@@ -206,4 +211,3 @@ Bot owners may also want to set custom parameters (per server). See:
 ```
 [p]aiuser response parameters
 ```
-
