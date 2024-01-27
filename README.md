@@ -32,3 +32,6 @@ Or ping *@Define* in [#support_othercogs](https://discord.com/channels/240154543
 <a href="https://github.com/zhaobenny/bz-cogs/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=zhaobenny/bz-cogs" />
 </a>
+
+## License
+[MIT](https://github.com/zhaobenny/bz-cogs/blob/main/LICENSE)
