@@ -18,8 +18,7 @@ from aiuser.common.constants import (
     DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_PRESETS,
     DEFAULT_RANDOM_PROMPTS, DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT,
     IMAGE_UPLOAD_LIMIT, MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH,
-    SINGULAR_MENTION_PATTERN,
-    URL_PATTERN)
+    SINGULAR_MENTION_PATTERN, URL_PATTERN)
 from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import is_embed_valid, is_using_openai_endpoint
 from aiuser.messages_list.entry import MessageEntry
@@ -48,7 +47,6 @@ class AIUser(
         # cached options
         self.optindefault: dict[int, bool] = {}
         self.channels_whitelist: dict[int, list[int]] = {}
-        self.reply_percent: dict[int, float] = {}
         self.ignore_regex: dict[int, re.Pattern] = {}
         self.override_prompt_start_time: dict[int, datetime] = {}
         self.cached_messages: Cache[int, MessageEntry] = Cache(limit=100)
@@ -104,12 +102,15 @@ class AIUser(
         }
         default_channel = {
             "custom_text_prompt": None,
+            "reply_percent": None
         }
         default_role = {
             "custom_text_prompt": None,
+            "reply_percent": None
         }
         default_member = {
             "custom_text_prompt": None,
+            "reply_percent": None
         }
 
         self.config.register_member(**default_member)
@@ -126,7 +127,6 @@ class AIUser(
         for guild_id, config in all_config.items():
             self.optindefault[guild_id] = config["optin_by_default"]
             self.channels_whitelist[guild_id] = config["channels_whitelist"]
-            self.reply_percent[guild_id] = config["reply_percent"]
             pattern = config["ignore_regex"]
 
             self.ignore_regex[guild_id] = re.compile(pattern) if pattern else None
@@ -176,7 +176,7 @@ class AIUser(
             return await ctx.send(
                 "You're not allowed to use this command here.", ephemeral=True
             )
-        elif self.reply_percent.get(ctx.guild.id) == 1.0:
+        elif await self.get_percentage(ctx) == 1.0:
             pass
         elif not (await self.config.guild(ctx.guild).reply_to_mentions_replies()):
             return await ctx.send("This command is not enabled.", ephemeral=True)
@@ -203,9 +203,7 @@ class AIUser(
 
         if await self.is_bot_mentioned_or_replied(message):
             pass
-        elif random.random() > self.reply_percent.get(
-            message.guild.id, DEFAULT_REPLY_PERCENT
-        ):
+        elif random.random() > await self.get_percentage(ctx):
             return
 
         rate_limit_reset = datetime.strptime(await self.config.ratelimit_reset(), "%Y-%m-%d %H:%M:%S")
@@ -213,7 +211,7 @@ class AIUser(
             logger.debug(f"Want to respond but ratelimited until {rate_limit_reset.strftime('%Y-%m-%d %H:%M:%S')}")
             if (
                 await self.is_bot_mentioned_or_replied(message)
-                or self.reply_percent.get(message.guild.id, DEFAULT_REPLY_PERCENT) == 1.0
+                or await self.get_percentage(ctx) == 1.0
             ):
                 await ctx.react_quietly("💤")
             return
@@ -232,6 +230,27 @@ class AIUser(
                 break
             await asyncio.sleep(1)
         return ctx
+
+    async def get_percentage(self, ctx: commands.Context) -> bool:
+        role_percent = None
+        author = ctx.author
+
+        for role in author.roles:
+            if role.id in (await self.config.all_roles()):
+                role_percent = await self.config.role(role).reply_percent()
+                break
+
+        percentage = await self.config.member(author).reply_percent()
+        if percentage == None:
+            percentage = role_percent
+        if percentage == None:
+            percentage = await self.config.channel(ctx.channel).reply_percent()
+        if percentage == None:
+            percentage = await self.config.guild(ctx.guild).reply_percent()
+        if percentage == None:
+            percentage = DEFAULT_REPLY_PERCENT
+
+        return percentage
 
     async def is_common_valid_reply(self, ctx: commands.Context) -> bool:
         """Run some common checks to see if a message is valid for the bot to reply to"""

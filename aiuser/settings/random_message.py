@@ -7,7 +7,7 @@ from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.abc import MixinMeta, aiuser
 from aiuser.common.constants import DEFAULT_RANDOM_PROMPTS
-from aiuser.common.utilities import get_tokens
+from aiuser.settings.utilities import get_tokens
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

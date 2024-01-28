@@ -1,14 +1,14 @@
 import json
 import logging
-from typing import Union
+from typing import Optional, Union
 
 import discord
 from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.abc import MixinMeta
-from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS)
-
+from aiuser.common.constants import FUNCTION_CALLING_SUPPORTED_MODELS
+from aiuser.common.enums import MentionType
 from aiuser.common.utilities import (get_enabled_tools,
                                      is_using_openai_endpoint,
                                      is_using_openrouter_endpoint)
@@ -20,6 +20,7 @@ from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.random_message import RandomMessageSettings
 from aiuser.settings.response import ResponseSettings
 from aiuser.settings.triggers import TriggerSettings
+from aiuser.settings.utilities import get_config_attribute, get_mention_type
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -76,7 +77,7 @@ class Settings(
 
         main_embed.add_field(name="Model", inline=True, value=f"`{config['model']}`")
         main_embed.add_field(
-            name="Reply Percent",
+            name="Server Reply Percent",
             inline=True,
             value=f"`{config['reply_percent'] * 100:.2f}`%",
         )
@@ -224,18 +225,29 @@ class Settings(
 
     @aiuser.command()
     @checks.is_owner()
-    async def percent(self, ctx: commands.Context, percent: float):
-        """Change the bot's response chance
+    async def percent(self, ctx: commands.Context, mention: Optional[Union[discord.Member, discord.Role, discord.TextChannel, discord.VoiceChannel, discord.StageChannel]], percent: Optional[float]):
+        """Change the bot's response chance for a server (or a provided user, role, and channel)
+
+        If multiple percentage can be used, the most specific percentage will be used, eg. it will go for: member > role > channel > server
 
         **Arguments**
-            - `percent` A number between 0 and 100
+            - `mention` (Optional) A mention of a user, role, or channel
+            - `percent` (Optional) A number between 1 and 100, if omitted, will reset to using other percentages
         (Setting is per server)
         """
-        await self.config.guild(ctx.guild).reply_percent.set(percent / 100)
-        self.reply_percent[ctx.guild.id] = percent / 100
+        mention_type = get_mention_type(mention)
+        config_attr = get_config_attribute(self.config, mention_type, ctx, mention)
+        if not percent and mention_type == MentionType.SERVER:
+            return await ctx.send(":warning: No percent provided")
+        if percent:
+            await config_attr.reply_percent.set(percent / 100)
+            desc = f"{percent:.2f}%"
+        else:
+            await config_attr.reply_percent.set(None)
+            desc = "`Custom percent no longer set, will default to other percents`"
         embed = discord.Embed(
-            title="Chance that the bot will reply on this server is now:",
-            description=f"{percent:.2f}%",
+            title=f"Chance that the bot will reply on this {mention_type.name.lower()} is now:",
+            description=desc,
             color=await ctx.embed_color(),
         )
         return await ctx.send(embed=embed)
