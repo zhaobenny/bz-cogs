@@ -11,7 +11,8 @@ from redbot.core.utils.predicates import ReactionPredicate
 from aiuser.abc import MixinMeta, aiuser
 from aiuser.common.constants import DEFAULT_PROMPT
 from aiuser.common.enums import MentionType
-from aiuser.common.utilities import get_tokens, truncate_prompt
+from aiuser.settings.utilities import (get_config_attribute, get_mention_type,
+                                       get_tokens, truncate_prompt)
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -61,8 +62,8 @@ class PromptSettings(MixinMeta):
                 - `mention` *(Optional)* User or channel
         """
         if mention:
-            mention_type = self._get_mention_type(mention)
-            config_attr = self._get_config_attribute(mention_type, ctx, mention)
+            mention_type = get_mention_type(mention)
+            config_attr = get_config_attribute(self.config, mention_type, ctx, mention)
             prompt = await config_attr.custom_text_prompt()
             title = await self._get_embed_title(mention_type, mention)
         else:
@@ -112,7 +113,7 @@ class PromptSettings(MixinMeta):
     async def _get_custom_prompt(self, ctx, entity, mention_type: MentionType):
         custom_prompt = None
         if mention_type != MentionType.SERVER:
-            config_attr = self._get_config_attribute(mention_type, ctx, entity)
+            config_attr = get_config_attribute(self.config, mention_type, ctx, entity)
             custom_prompt = await config_attr.custom_text_prompt()
 
         if not custom_prompt:
@@ -256,45 +257,22 @@ class PromptSettings(MixinMeta):
         if prompt and prompt in presets:
             prompt = presets[prompt]
 
-        mention_type = self._get_mention_type(mention)
-        config_attr = self._get_config_attribute(mention_type, ctx, mention)
+        mention_type = get_mention_type(mention)
+        config_attr = get_config_attribute(self.config, mention_type, ctx, mention)
 
         if not config_attr:
             return await ctx.send(":warning: Invalid mention type provided.")
 
         if not prompt:
             await config_attr.custom_text_prompt.set(None)
-            return await ctx.send(f"The prompt for this {mention_type.name.lower()} has been reset.")
+            return await ctx.send(f"The prompt for this {mention_type.name.lower()} will no longer use a custom prompt.")
 
         await config_attr.custom_text_prompt.set(prompt)
         self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
 
         embed = discord.Embed(
-            title=f"This {mention_type.name.lower()} will no longer use a custom prompt.",
+            title=f"The {mention_type.name.lower()} will use the custom prompt:",
             description=f"{truncate_prompt(prompt)}",
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
         return await ctx.send(embed=embed)
-
-    def _get_mention_type(self, mention) -> MentionType:
-        if isinstance(mention, discord.Member):
-            return MentionType.USER
-        elif isinstance(mention, discord.Role):
-            return MentionType.ROLE
-        elif isinstance(mention, (discord.TextChannel, discord.VoiceChannel, discord.StageChannel)):
-            return MentionType.CHANNEL
-        else:
-            return MentionType.SERVER
-
-    def _get_config_attribute(self, mention_type: MentionType, ctx, mention):
-        if mention_type == MentionType.SERVER:
-            return self.config.guild(ctx.guild)
-        elif mention_type == MentionType.USER:
-            return self.config.member(mention)
-        elif mention_type == MentionType.ROLE:
-            return self.config.role(mention)
-        elif mention_type == MentionType.CHANNEL:
-            return self.config.channel(mention)
-        else:
-            raise ValueError("Invalid mention provided")
-
