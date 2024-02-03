@@ -79,7 +79,7 @@ class OwnerSettings(MixinMeta):
         )
         embed.add_field(
             name="🔄 Reset",
-            value="All per server models has been reset to `gpt-3.5-turbo`",
+            value="Per-server models have been set to use `gpt-3.5-turbo` for chat \n and `gpt-4-vision-preview` for LLM image scan mode.",
             inline=False,
         )
 

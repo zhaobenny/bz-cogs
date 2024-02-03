@@ -60,6 +60,7 @@ SINGULAR_MENTION_PATTERN = re.compile(r"^<@!?&?(\d+)>$")
 # misc
 MIN_MESSAGE_LENGTH = 5
 MAX_MESSAGE_LENGTH = 1000  # in words
+OPENROUTER_URL = "https://openrouter.ai/api/"
 
 # image captioning
 IMAGE_UPLOAD_LIMIT = 2 * (1024 * 1024)  # 2 MB
@@ -72,13 +73,15 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
     "gpt-4-0613",
     "gpt-3.5-turbo",
     "gpt-3.5-turbo-1106",
-    "gpt-3.5-turbo-0613"
+    "gpt-3.5-turbo-0613",
+    "gpt-3.5-turbo-0125",
     "openai/gpt-4",
     "openai/gpt-4-1106-preview",
     "openai/gpt-4-0613",
     "openai/gpt-3.5-turbo",
     "openai/gpt-3.5-turbo-1106",
     "openai/gpt-3.5-turbo-0613",
+    "openai/gpt-3.5-turbo-0125"
 ]
 VISION_SUPPORTED_MODELS = [
     "gpt-4-vision-preview",
