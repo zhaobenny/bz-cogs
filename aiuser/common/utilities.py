@@ -8,7 +8,7 @@ from typing import Callable, Coroutine
 from discord import Message
 from openai import AsyncOpenAI
 from redbot.core import Config, commands
-from aiuser.common.constants import YOUTUBE_URL_PATTERN
+from aiuser.common.constants import OPENROUTER_URL, YOUTUBE_URL_PATTERN
 
 from aiuser.functions.tool_call import ToolCall
 
@@ -86,7 +86,7 @@ def is_using_openai_endpoint(client: AsyncOpenAI):
 
 
 def is_using_openrouter_endpoint(client: AsyncOpenAI):
-    return str(client.base_url).startswith("https://openrouter.ai/api/")
+    return str(client.base_url).startswith(OPENROUTER_URL)
 
 
 async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolCall]:
