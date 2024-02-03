@@ -17,8 +17,7 @@ from aiuser.common.constants import (
     DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
     DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_PRESETS,
     DEFAULT_RANDOM_PROMPTS, DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT,
-    IMAGE_UPLOAD_LIMIT, MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH,
-    OPENROUTER_URL,
+    IMAGE_UPLOAD_LIMIT, MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH, OPENROUTER_URL,
     SINGULAR_MENTION_PATTERN, URL_PATTERN)
 from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import is_embed_valid, is_using_openai_endpoint
@@ -354,7 +353,7 @@ class AIUser(
             event_hooks={"request": [self._log_request_prompt], "response": [self._update_ratelimit_hook]})
 
         self.openai_client = AsyncOpenAI(
-            api_key=api_key, base_url=base_url, timeout=timeout, default_headers=headers, http_client=client
+            api_key=api_key or "sk-placeholderkey", base_url=base_url, timeout=timeout, default_headers=headers, http_client=client
         )
 
     async def _log_request_prompt(self, request: httpx.Request):
