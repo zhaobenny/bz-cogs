@@ -12,6 +12,7 @@ class Chat_Generator():
         self.openai_client = cog.openai_client
         self.msg_list = messages
         self.model = messages.model
+        self.can_reply = messages.can_reply
         self.messages = messages.get_json()
 
     def generate_message(self):

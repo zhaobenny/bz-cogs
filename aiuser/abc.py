@@ -35,3 +35,6 @@ class MixinMeta(ABC):
 
     def initialize_openai_client(self):
         pass
+
+    async def send_response(self, ctx: commands.Context, messages_list=None):
+        pass

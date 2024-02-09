@@ -7,7 +7,7 @@ from redbot.core import commands
 from aiuser.abc import MixinMeta
 from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
                                      IMAGE_REQUEST_CHECK_PROMPT)
-from aiuser.messages_list.messages import create_messages_list
+from aiuser.messages_list.messages import MessagesList, create_messages_list
 from aiuser.response.chat.openai import OpenAI_API_Generator
 from aiuser.response.chat.openai_funcs import OpenAI_Functions_API_Generator
 from aiuser.response.chat.response import ChatResponse
@@ -21,21 +21,24 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class ResponseHandler(MixinMeta):
-    async def send_response(self, ctx: commands.Context):
-        if not ctx.interaction and await self.is_image_request(ctx.message):
+    async def send_response(self, ctx: commands.Context, messages_list=None):
+        if (not messages_list and not ctx.interaction) and await self.is_image_request(ctx.message):
             if await self.send_image(ctx):
                 return
-        await self.send_message(ctx)
 
-    async def send_message(self, ctx: commands.Context):
-        message_list = await create_messages_list(self, ctx)
-        await message_list.add_history()
+        if not messages_list:
+            messages_list = await create_messages_list(self, ctx)
+            await messages_list.add_history()
+
+        await self.send_message(ctx, messages_list)
+
+    async def send_message(self, ctx: commands.Context, messages_list: MessagesList):
         chat = None
 
-        if await self.config.guild(ctx.guild).function_calling() and message_list.model in FUNCTION_CALLING_SUPPORTED_MODELS:
-            chat = OpenAI_Functions_API_Generator(self, ctx, message_list)
+        if await self.config.guild(ctx.guild).function_calling() and messages_list.model in FUNCTION_CALLING_SUPPORTED_MODELS:
+            chat = OpenAI_Functions_API_Generator(self, ctx, messages_list)
         else:
-            chat = OpenAI_API_Generator(self, ctx, message_list)
+            chat = OpenAI_API_Generator(self, ctx, messages_list)
 
         async with ctx.message.channel.typing():
             response = ChatResponse(ctx, self.config, chat)

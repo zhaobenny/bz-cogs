@@ -49,6 +49,7 @@ class MessagesList:
         self.messages_ids = set()
         self.tokens = 0
         self.model = None
+        self.can_reply = True
 
     def __len__(self):
         return len(self.messages)
