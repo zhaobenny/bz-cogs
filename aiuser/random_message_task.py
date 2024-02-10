@@ -9,8 +9,6 @@ from aiuser.abc import MixinMeta
 from aiuser.common.constants import DEFAULT_PROMPT
 from aiuser.common.utilities import format_variables
 from aiuser.messages_list.messages import create_messages_list
-from aiuser.response.chat.openai import OpenAI_API_Generator
-from aiuser.response.chat.response import ChatResponse
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -42,15 +40,15 @@ class RandomMessageTask(MixinMeta):
                     f"No random message topics were found in {guild.name}, skipping")
 
             prompt = await self.config.channel(channel).custom_text_prompt() or await self.config.guild(guild).custom_text_prompt() or await self.config.custom_text_prompt() or DEFAULT_PROMPT
-            message_list = await create_messages_list(self, ctx, prompt=prompt)
+            messages_list = await create_messages_list(self, ctx, prompt=prompt)
             topic = format_variables(
                 ctx, topics[random.randint(0, len(topics) - 1)])
             logger.debug(
                 f"Sending random message to #{channel.name} at {guild.name}")
-            await message_list.add_system(f"Using the persona above, follow these instructions: {topic}", index=len(message_list) + 1)
-            chat = OpenAI_API_Generator(self, ctx, message_list)
-            response = ChatResponse(ctx, self.config, chat)
-            return await response.send(standalone=True)
+            await messages_list.add_system(f"Using the persona above, follow these instructions: {topic}", index=len(messages_list) + 1)
+            messages_list.can_reply = False
+
+            return await self.send_response(ctx, messages_list)
 
     async def get_discord_context(self, guild_id: int, channels: list):
         guild = self.bot.get_guild(guild_id)

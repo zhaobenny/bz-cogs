@@ -18,8 +18,9 @@ class ChatResponse():
         self.config = config
         self.response = None
         self.chat = chat
+        self.can_reply = chat.can_reply
 
-    async def send(self, standalone=False):
+    async def send(self):
         message = self.ctx.message
 
         self.response = await self.chat.generate_message()
@@ -37,7 +38,7 @@ class ChatResponse():
                       for i in range(0, len(self.response), 2000)]
             for chunk in chunks:
                 await self.ctx.send(chunk)
-        elif not standalone and await self.is_reply():
+        elif self.can_reply and await self.is_reply():
             await message.reply(self.response, mention_author=False)
         elif self.ctx.interaction:
             await self.ctx.interaction.followup.send(self.response)
