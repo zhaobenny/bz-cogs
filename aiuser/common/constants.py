@@ -82,8 +82,7 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
     "openai/gpt-3.5-turbo",
     "openai/gpt-3.5-turbo-1106",
     "openai/gpt-3.5-turbo-0613",
-    "openai/gpt-3.5-turbo-0125",
-    "jondurbin/bagel-34b"
+    "openai/gpt-3.5-turbo-0125"
 ]
 VISION_SUPPORTED_MODELS = [
     "gpt-4-vision-preview",
