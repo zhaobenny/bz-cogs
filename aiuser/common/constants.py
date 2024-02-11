@@ -69,6 +69,7 @@ IMAGE_UPLOAD_LIMIT = 2 * (1024 * 1024)  # 2 MB
 # models
 FUNCTION_CALLING_SUPPORTED_MODELS = [
     "gpt-4",
+    "gpt-4-turbo-preview",
     "gpt-4-1106-preview",
     "gpt-4-0613",
     "gpt-3.5-turbo",
@@ -81,7 +82,8 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
     "openai/gpt-3.5-turbo",
     "openai/gpt-3.5-turbo-1106",
     "openai/gpt-3.5-turbo-0613",
-    "openai/gpt-3.5-turbo-0125"
+    "openai/gpt-3.5-turbo-0125",
+    "jondurbin/bagel-34b"
 ]
 VISION_SUPPORTED_MODELS = [
     "gpt-4-vision-preview",
