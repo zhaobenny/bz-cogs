@@ -109,6 +109,23 @@ class OwnerSettings(MixinMeta):
 
         await ctx.send(embed=embed)
 
+    @aiuserowner.command()
+    async def timeout(self, ctx: commands.Context, seconds: int):
+        """ Sets the request timeout to the OpenAI endpoint """
+
+        if seconds < 1:
+            return await ctx.send(":warning: Please enter a positive integer.")
+
+        await self.config.openai_endpoint_request_timeout.set(seconds)
+        await self.initialize_openai_client()
+        
+        embed = discord.Embed(
+            title="The request timeout is now:",
+            description=f"{seconds} seconds",
+            color=await ctx.embed_color(),
+        )
+        return await ctx.send(embed=embed)
+
     @aiuserowner.command(name="exportconfig")
     async def export_config(self, ctx: commands.Context):
         """Exports the current config to a json file
