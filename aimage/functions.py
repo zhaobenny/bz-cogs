@@ -40,6 +40,8 @@ class Functions(MixinMeta):
         logger.info("gh issue troubleshoot - start generate_image function")
         if isinstance(context, discord.Interaction):
             logger.info("gh issue troubleshoot - Deferring message")
+            logger.info(f"gh issue troubleshoot - object is {type(context)}")
+            logger.info(f"gh issue troubleshoot - {context.response}")
             await context.response.defer(thinking=True)
             logger.info("gh issue troubleshoot - Message deferred!")
         else:
