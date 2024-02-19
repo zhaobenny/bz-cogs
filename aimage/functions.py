@@ -3,6 +3,7 @@ import base64
 import io
 import json
 import logging
+import time
 from typing import Union
 
 import aiohttp
@@ -45,6 +46,7 @@ class Functions(MixinMeta):
             logger.info(f"gh issue troubleshoot - interaction created at {context.created_at}")
             logger.info(f"gh issue troubleshoot - interaction expires at {context.expires_at}")
             logger.info(f"gh issue troubleshoot - interaction is expired: {context.is_expired()}")
+            logger.info(f"gh issue troubleshoot - trying to defer at {time.time()}")
             await context.response.defer(thinking=True)
             logger.info("gh issue troubleshoot - Message deferred!")
         else:

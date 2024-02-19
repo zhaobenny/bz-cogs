@@ -1,6 +1,7 @@
 import asyncio
 import io
 import logging
+import time
 from collections import defaultdict
 from copy import copy
 from typing import List, Union
@@ -175,6 +176,9 @@ class AImage(Settings,
         """
         Generate an image using Stable Diffusion AI.
         """
+
+        logger.info(f"gh issue troubleshoot - imagine_app called at {time.time()}")
+
         ctx: commands.Context = await self.bot.get_context(interaction)  # noqa
 
         if not await self._can_run_command(ctx, "imagine"):
