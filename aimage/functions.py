@@ -52,7 +52,7 @@ class Functions(MixinMeta):
             return await self.send_response(context, content=":warning: Endpoint not yet set for this server!")
 
         if await self._contains_blacklisted_word(guild, prompt):
-            return self.send_response(context, content=":warning: Prompt contains blacklisted words!")
+            return await self.send_response(context, content=":warning: Prompt contains blacklisted words!")
 
         payload = payload or {
             "prompt": prompt + " " + lora,
@@ -146,7 +146,7 @@ class Functions(MixinMeta):
             return await self.send_response(context, content=":warning: Endpoint not yet set for this server!")
 
         if await self._contains_blacklisted_word(guild, prompt):
-            return self.send_response(context, content=":warning: Prompt contains blacklisted words!")
+            return await self.send_response(context, content=":warning: Prompt contains blacklisted words!")
 
         payload = payload or {
             "prompt": prompt + " " + lora,
