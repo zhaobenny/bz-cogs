@@ -41,7 +41,10 @@ class Functions(MixinMeta):
         if isinstance(context, discord.Interaction):
             logger.info("gh issue troubleshoot - Deferring message")
             logger.info(f"gh issue troubleshoot - object is {type(context)}")
-            logger.info(f"gh issue troubleshoot - {context.response}")
+            logger.info(f"gh issue troubleshoot - raw data {json.dumps(context.data, indent=4)}")
+            logger.info(f"gh issue troubleshoot - interaction created at {context.created_at}")
+            logger.info(f"gh issue troubleshoot - interaction expires at {context.expires_at}")
+            logger.info(f"gh issue troubleshoot - interaction is expired: {context.is_expired()}")
             await context.response.defer(thinking=True)
             logger.info("gh issue troubleshoot - Message deferred!")
         else:

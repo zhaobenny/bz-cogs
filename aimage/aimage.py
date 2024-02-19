@@ -175,21 +175,13 @@ class AImage(Settings,
         """
         Generate an image using Stable Diffusion AI.
         """
-
-        logger.info("gh issue troubleshoot - running get_context function")
-
         ctx: commands.Context = await self.bot.get_context(interaction)  # noqa
-
-        logger.info("gh issue troubleshoot - running _can_run_command function")
 
         if not await self._can_run_command(ctx, "imagine"):
             return await interaction.response.send_message("You do not have permission to do this.", ephemeral=True)
 
         if not self.autocomplete_cache[ctx.guild.id]:
-            logger.info("gh issue troubleshoot - calling _update_autocomplete_cache function")
             asyncio.create_task(self._update_autocomplete_cache(interaction))
-
-        logger.info("gh issue troubleshoot - calling generate_image function")
 
         await self.generate_image(interaction,
                                   prompt=prompt, negative_prompt=negative_prompt,
