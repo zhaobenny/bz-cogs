@@ -1,16 +1,16 @@
 import asyncio
 import io
 from collections import OrderedDict
-from typing import Optional
 from copy import copy
+from typing import Optional
 
 import discord
 from redbot.core.bot import Red
 
 from aimage.abc import MixinMeta
-from aimage.constants import (AUTO_COMPLETE_UPSCALERS, ADETAILER_ARGS,
-                              PARAM_GROUP_REGEX, PARAM_REGEX,
-                              PARAMS_BLACKLIST, VIEW_TIMEOUT)
+from aimage.constants import (ADETAILER_ARGS, AUTO_COMPLETE_UPSCALERS,
+                              PARAM_GROUP_REGEX, PARAM_REGEX, PARAMS_BLACKLIST,
+                              VIEW_TIMEOUT)
 from aimage.functions import delete_button_after
 
 
@@ -54,6 +54,7 @@ class ImageActions(discord.ui.View):
             await interaction.response.send_message(f'Parameters for this image:\n```yaml\n{self.info_string}```')
 
     async def regenerate_image(self, interaction: discord.Interaction):
+        await interaction.response.defer(thinking=True)
         params = self.get_params_dict()
         if params and float(params.get("Variation seed strength", 0)) > 0:
             self.payload["seed"] = int(params["Seed"])
@@ -63,7 +64,6 @@ class ImageActions(discord.ui.View):
         self.button_regenerate.disabled = True
         await interaction.message.edit(view=self)
         if self.payload.get("init_images", []):
-            await interaction.response.defer(thinking=True)
             await self.generate_img2img(interaction, payload=self.payload)
         else:
             await self.generate_image(interaction, payload=self.payload)
@@ -180,6 +180,7 @@ class HiresView(discord.ui.View):
 
     @discord.ui.button(emoji='⬆', label='Upscale', style=discord.ButtonStyle.blurple, row=4)
     async def upscale(self, interaction: discord.Interaction, _: discord.Button):
+        await interaction.response.defer(thinking=True)
         self.payload["enable_hr"] = True
         self.payload["hr_upscaler"] = self.upscaler
         self.payload["hr_scale"] = self.scale

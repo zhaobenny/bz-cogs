@@ -37,9 +37,7 @@ class Functions(MixinMeta):
                              vae: str = None,
                              lora: str = ""):
 
-        if isinstance(context, discord.Interaction):
-            await context.response.defer(thinking=True)
-        else:
+        if not isinstance(context, discord.Interaction):
             await context.message.add_reaction("⏳")
 
         guild = context.guild
