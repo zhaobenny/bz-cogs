@@ -37,9 +37,13 @@ class Functions(MixinMeta):
                              vae: str = None,
                              lora: str = ""):
 
+        logger.info("gh issue troubleshoot - start generate_image function")
         if isinstance(context, discord.Interaction):
+            logger.info("gh issue troubleshoot - Deferring message")
             await context.response.defer(thinking=True)
+            logger.info("gh issue troubleshoot - Message deferred!")
         else:
+            logger.info(f"gh issue troubleshoot - Not a discord.Interaction object, object is {type(context)}")
             await context.message.add_reaction("⏳")
 
         guild = context.guild
