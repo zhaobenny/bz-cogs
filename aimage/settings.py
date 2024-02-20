@@ -442,7 +442,7 @@ class Settings(MixinMeta):
         await ctx.send(f"Removed words `{words}` to global blacklist")
 
     @blacklist_owner.command(name="list", aliases=["show"])
-    async def blacklist_list(self, ctx: commands.Context):
+    async def blacklist_list_owner(self, ctx: commands.Context):
         """
         List all words in the blacklist
         """
