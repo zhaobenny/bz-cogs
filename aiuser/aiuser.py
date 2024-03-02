@@ -53,6 +53,7 @@ class AIUser(
 
         default_global = {
             "custom_openai_endpoint": None,
+            "openai_endpoint_request_timeout": 60,
             "optout": [],
             "optin": [],
             "ratelimit_reset": datetime(1990, 1, 1, 0, 1).strftime("%Y-%m-%d %H:%M:%S"),
@@ -347,7 +348,7 @@ class AIUser(
                     f'{api_type} API key not set for "aiuser" yet! Please set it with: [p]set api {api_type} api_key,API_KEY'
                 )
 
-        timeout = 60.0 if api_type == "openrouter" else 50.0
+        timeout = await self.config.openai_endpoint_request_timeout()
 
         client = httpx.AsyncClient(
             event_hooks={"request": [self._log_request_prompt], "response": [self._update_ratelimit_hook]})

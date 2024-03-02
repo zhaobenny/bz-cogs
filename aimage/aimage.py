@@ -1,9 +1,9 @@
-import io
 import asyncio
+import io
 import logging
 from collections import defaultdict
-from typing import List, Union
 from copy import copy
+from typing import List, Union
 
 import aiohttp
 import discord
@@ -12,7 +12,8 @@ from redbot.core import Config, app_commands, checks, commands
 from redbot.core.bot import Red
 
 from aimage.abc import CompositeMetaClass
-from aimage.constants import DEFAULT_BADWORDS_BLACKLIST, DEFAULT_NEGATIVE_PROMPT
+from aimage.constants import (DEFAULT_BADWORDS_BLACKLIST,
+                              DEFAULT_NEGATIVE_PROMPT)
 from aimage.functions import Functions
 from aimage.settings import Settings
 
@@ -174,9 +175,11 @@ class AImage(Settings,
         """
         Generate an image using Stable Diffusion AI.
         """
+        await interaction.response.defer(thinking=True)
+
         ctx: commands.Context = await self.bot.get_context(interaction)  # noqa
         if not await self._can_run_command(ctx, "imagine"):
-            return await interaction.response.send_message("You do not have permission to do this.", ephemeral=True)
+            return await interaction.followup.send("You do not have permission to do this.", ephemeral=True)
 
         if not self.autocomplete_cache[ctx.guild.id]:
             asyncio.create_task(self._update_autocomplete_cache(interaction))
@@ -217,17 +220,19 @@ class AImage(Settings,
         """
         Convert an image using Stable Diffusion AI.
         """
+        await interaction.response.defer(thinking=True)
+
         ctx: commands.Context = await self.bot.get_context(interaction)  # noqa
         if not await self._can_run_command(ctx, "imagine"):
-            return await interaction.response.send_message("You do not have permission to do this.", ephemeral=True)
+            return await interaction.followup.send("You do not have permission to do this.", ephemeral=True)
 
         if not image.content_type.startswith("image/"):
-            return await interaction.response.send_message("The file you uploaded is not a valid image.", ephemeral=True)
+            return await interaction.followup.send("The file you uploaded is not a valid image.", ephemeral=True)
 
         size = image.width*image.height*scale*scale
         maxsize = (await self.config.guild(ctx.guild).max_img2img())**2
         if size > maxsize:
-            return await interaction.response.send_message(
+            return await interaction.followup.send(
                 f"Max img2img size is {int(maxsize**0.5)}² pixels. "
                 f"Your image {'after resizing would be' if scale != 0 else 'is'} {int(size**0.5)}² pixels, which is too big.",
                 ephemeral=True)
@@ -235,7 +240,6 @@ class AImage(Settings,
         if not self.autocomplete_cache[ctx.guild.id]:
             asyncio.create_task(self._update_autocomplete_cache(interaction))
 
-        await interaction.response.defer()
         img = io.BytesIO()
         await image.save(img)
 
