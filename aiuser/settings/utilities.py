@@ -40,4 +40,8 @@ async def get_tokens(config: Config, ctx: commands.Context, prompt: str) -> int:
 
 
 def truncate_prompt(prompt: str) -> str:
-    return prompt[:1900] + "..." if len(prompt) > 1900 else prompt
+    if not prompt:
+        return "None"
+    if len(prompt) > 1900:
+        return prompt[:1900] + "..." 
+    return prompt
