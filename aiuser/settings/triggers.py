@@ -20,6 +20,16 @@ class TriggerSettings(MixinMeta):
         """
         pass
 
+    @trigger.command(name="minlength", aliases=["min_length"])
+    async def min_length(self, ctx: commands.Context, length: int):
+        """ Set the minimum length of messages that the bot will respond to"""
+        await self.config.guild(ctx.guild).messages_min_length.set(length)
+        embed = discord.Embed(
+            title="The minimum length is now:",
+            description=f"{length}",
+            color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
+
     @trigger.command(name="ignore", aliases=["ignoreregex"])
     async def ignore(self, ctx: commands.Context, *, regex_pattern: Optional[str]):
         """ Messages matching this regex won't be replied to or seen, by the bot """

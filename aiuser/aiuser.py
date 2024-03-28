@@ -15,10 +15,10 @@ from aiuser.abc import CompositeMetaClass
 from aiuser.common.cache import Cache
 from aiuser.common.constants import (
     DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
-    DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_PRESETS,
-    DEFAULT_RANDOM_PROMPTS, DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT,
-    IMAGE_UPLOAD_LIMIT, MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH, OPENROUTER_URL,
-    SINGULAR_MENTION_PATTERN, URL_PATTERN)
+    DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_MIN_MESSAGE_LENGTH,
+    DEFAULT_PRESETS, DEFAULT_RANDOM_PROMPTS, DEFAULT_REMOVE_PATTERNS,
+    DEFAULT_REPLY_PERCENT, IMAGE_UPLOAD_LIMIT, MAX_MESSAGE_LENGTH,
+    OPENROUTER_URL, SINGULAR_MENTION_PATTERN, URL_PATTERN)
 from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import is_embed_valid, is_using_openai_endpoint
 from aiuser.messages_list.entry import MessageEntry
@@ -68,6 +68,7 @@ class AIUser(
             "reply_percent": DEFAULT_REPLY_PERCENT,
             "messages_backread": 10,
             "messages_backread_seconds": 60 * 120,
+            "messages_min_length": DEFAULT_MIN_MESSAGE_LENGTH,
             "reply_to_mentions_replies": False,
             "scan_images": False,
             "scan_images_mode": ScanImageMode.AI_HORDE.value,
@@ -165,7 +166,7 @@ class AIUser(
         self,
         inter: discord.Interaction,
         *,
-        text: app_commands.Range[str, MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH],
+        text: app_commands.Range[str, 0, MAX_MESSAGE_LENGTH],
     ):
         """Talk directly to this bot's AI. Ask it anything you want!"""
         await inter.response.defer()
@@ -286,7 +287,7 @@ class AIUser(
         if (whitelisted_members or whitelisted_roles) and not ((ctx.author.id in whitelisted_members) or (ctx.author.roles and (set([role.id for role in ctx.author.roles]) & set(whitelisted_roles)))):
             return False
 
-        if not ctx.interaction and not self.is_good_text_message(ctx.message):
+        if not ctx.interaction and not await self.is_good_text_message(ctx.message):
             return False
 
         if not self.openai_client:
@@ -296,16 +297,16 @@ class AIUser(
 
         return True
 
-    def is_good_text_message(self, message: discord.Message) -> bool:
+    async def is_good_text_message(self, message: discord.Message) -> bool:
         if SINGULAR_MENTION_PATTERN.match(message.content):
             logger.debug(
                 f"Skipping singular mention message {message.id} in {message.guild.name}"
             )
             return False
 
-        if 1 <= len(message.content) < MIN_MESSAGE_LENGTH:
+        if 1 <= len(message.content) < (await self.config.guild(message.guild).messages_min_length()):
             logger.debug(
-                f"Skipping short message {message.id} in {message.guild.name}")
+                f"Skipping too short message {message.id} in {message.guild.name}")
             return False
 
         if len(message.content.split()) > MAX_MESSAGE_LENGTH:
