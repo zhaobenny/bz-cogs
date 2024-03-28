@@ -35,6 +35,7 @@ DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS = [
     "image", "images", "picture", "pictures", "photo", "photos", "photograph", "photographs"]
 DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS = ["yourself", "you"]
 DEFAULT_REPLY_PERCENT = 0.5
+DEFAULT_MIN_MESSAGE_LENGTH = 2
 
 ### END DEFAULTS ###
 
@@ -58,7 +59,6 @@ SINGULAR_MENTION_PATTERN = re.compile(r"^<@!?&?(\d+)>$")
 
 
 # misc
-MIN_MESSAGE_LENGTH = 5
 MAX_MESSAGE_LENGTH = 1000  # in words
 OPENROUTER_URL = "https://openrouter.ai/api/"
 
