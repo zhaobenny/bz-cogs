@@ -268,8 +268,14 @@ class AIUser(
             or ctx.channel.id not in self.channels_whitelist[ctx.guild.id]
         ):
             return False
-        if not await self.bot.ignored_channel_or_guild(ctx):
+
+        try:
+            if not await self.bot.ignored_channel_or_guild(ctx):
+                return False
+        except:
+            logger.debug("Exception in checking if ignored channel or guild", exc_info=True)
             return False
+
         if not await self.bot.allowed_by_whitelist_blacklist(ctx.author):
             return False
         if (ctx.author.id in await self.config.optout()):

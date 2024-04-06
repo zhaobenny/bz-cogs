@@ -70,8 +70,13 @@ class RandomMessageTask(MixinMeta):
     async def check_if_valid_for_random_message(self, guild: discord.Guild, last: discord.Message):
         if await self.bot.cog_disabled_in_guild(self, guild):
             return False
-        if not (await self.bot.ignored_channel_or_guild(last)):
+
+        try:
+            if not (await self.bot.ignored_channel_or_guild(last)):
+                return False
+        except:
             return False
+
         if not await self.config.guild(guild).random_messages_enabled():
             return False
         if random.random() > await self.config.guild(guild).random_messages_percent():
