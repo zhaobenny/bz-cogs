@@ -1,5 +1,6 @@
 import json
 import logging
+import random
 from dataclasses import asdict
 from datetime import datetime, timedelta
 
@@ -175,12 +176,13 @@ class MessagesList:
         if not await self._is_valid_time_gap(self.init_message, past_messages[0], max_seconds_gap):
             return
 
-        users = await self._get_unopted_users(past_messages)
+        users = await self._get_unopted_users(past_messages[:10])
 
         await self._process_past_messages(past_messages, max_seconds_gap)
 
         if users and not await self.config.guild(self.guild).optin_disable_embed():
-            await self._send_optin_embed(users)
+            if (random.random() <= 0.33) or (len(users) > 3):
+                await self._send_optin_embed(users)
 
     async def _get_past_messages(self, limit, start_time):
         return [
@@ -193,13 +195,13 @@ class MessagesList:
             )
         ]
 
-    async def _get_unopted_users(self, past_messages):
+    async def _get_unopted_users(self, messages):
         users = set()
 
         if await self.config.guild(self.guild).optin_by_default():
             return users
 
-        for message in past_messages:
+        for message in messages:
             if (
                 (not message.author.bot)
                 and (message.author.id not in await self.config.optin())
@@ -228,7 +230,7 @@ class MessagesList:
             color=await self.bot.get_embed_color(self.init_message),
         )
         view = OptView(self.config)
-        embed.description = f"Hey there, looks like {users} have not opted in or out of AI User! \n Please opt in/out of sending your messages/images to OpenAI/external party. \n This embed will stop showing up if all users chatting have opted in or out."
+        embed.description = f"{users}\nPlease select whether you want to opt into your Discord messages being sent to OpenAI or an external party, as part of this bot.\nThis message will disappear if all users in the chat have made a choice."
         await self.init_message.channel.send(embed=embed, view=view)
 
     def get_json(self):
