@@ -68,7 +68,7 @@ class PromptSettings(MixinMeta):
             title = await self._get_embed_title(mention_type, mention)
         else:
             channel_prompt = await self.config.channel(ctx.channel).custom_text_prompt()
-            prompt = channel_prompt or await self.config.guild(ctx.guild).custom_text_prompt()
+            prompt = channel_prompt or await self.config.guild(ctx.guild).custom_text_prompt() or DEFAULT_PROMPT
             title = f"The prompt for {ctx.channel.mention if channel_prompt else 'this server'} is:"
 
         if mention and not prompt:
@@ -183,16 +183,16 @@ class PromptSettings(MixinMeta):
         await SimpleMenu(pages).start(ctx)
 
     @prompt_preset.command(name="add", aliases=["a"])
-    async def add_preset(self, ctx: commands.Context, prompt: str):
+    async def add_preset(self, ctx: commands.Context, *, prompt: str):
         """ Add a new preset to the presets list
 
             **Arguments**
-                - `prompt` The prompt to set. Use `|` to separate the preset name from the prompt at the start. eg. `preset_name|prompt_text`
+                - `prompt` The prompt to set. Use `|` to separate the preset name (no spaces) from the prompt at the start. eg. `preset_name|prompt_text`
         """
         presets = json.loads(await self.config.guild(ctx.guild).presets())
         split = prompt.split("|", 1)
         if not len(split) == 2:
-            return await ctx.send("Invalid format. Use `|` to separate the preset name from the prompt at the start. eg. `preset_name|prompt text`")
+            return await ctx.send("Invalid format. Use `|` to separate the preset name (no spaces) from the prompt at the start. eg. `preset_name|prompt text`")
         preset, prompt = split
         for channel in ctx.guild.channels:
             if channel.name.lower() == preset.lower():
