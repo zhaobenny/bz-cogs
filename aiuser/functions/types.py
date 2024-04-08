@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 @dataclass(frozen=True)
 class Parameters:
     properties: dict
-    required: list[str] = field(default_factory=list)
+    required: list = field(default_factory=list)
     type: str = "object"
 
 
@@ -23,5 +23,3 @@ class ToolCallSchema:
 
     def __hash__(self):
         return hash(self.function.name + self.function.description)
-
-

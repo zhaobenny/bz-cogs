@@ -8,8 +8,8 @@ from typing import Callable, Coroutine
 from discord import Message
 from openai import AsyncOpenAI
 from redbot.core import Config, commands
-from aiuser.common.constants import OPENROUTER_URL, YOUTUBE_URL_PATTERN
 
+from aiuser.common.constants import OPENROUTER_URL, YOUTUBE_URL_PATTERN
 from aiuser.functions.tool_call import ToolCall
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -89,12 +89,12 @@ def is_using_openrouter_endpoint(client: AsyncOpenAI):
     return str(client.base_url).startswith(OPENROUTER_URL)
 
 
-async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolCall]:
-    from aiuser.functions.noresponse.tool_call import \
-        NoResponseToolCall
+async def get_enabled_tools(config: Config, ctx: commands.Context) -> list:
+    from aiuser.functions.noresponse.tool_call import NoResponseToolCall
     from aiuser.functions.search.tool_call import SearchToolCall
-    from aiuser.functions.weather.tool_call import (
-        IsDaytimeToolCall, LocalWeatherToolCall, LocationWeatherToolCall)
+    from aiuser.functions.weather.tool_call import (IsDaytimeToolCall,
+                                                    LocalWeatherToolCall,
+                                                    LocationWeatherToolCall)
     tools = []
     if await config.guild(ctx.guild).function_calling_search():
         tools.append(SearchToolCall(config=config, ctx=ctx))
