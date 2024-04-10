@@ -5,4 +5,4 @@ from typing import Literal, Union
 @dataclass(frozen=True)
 class MessageEntry:
     role: Literal['user', 'assistant', 'system']
-    content: Union[str, list[dict]]
+    content: Union[str, list]
