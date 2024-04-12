@@ -145,7 +145,12 @@ class MessagesList:
         for entry in converted:
             self.messages.insert(index or 0, entry)
             self.messages_ids.add(message.id)
-            await self._add_tokens(entry.content)
+            for item in entry.content:
+                if isinstance(item, dict):
+                    if item.get("type") == "text":
+                        await self._add_tokens(item.get("text"))
+                else:
+                    await self._add_tokens(item)
 
         # TODO: proper reply chaining
         if (
@@ -258,7 +263,7 @@ class MessagesList:
             limit = 31000
         if "100k" in model or "claude" in model:
             limit = 99000
-        model = model.split("/")[-1]
+        model = model.split("/")[-1].split(":")[0]
         if model in OTHER_MODELS_LIMITS:
             limit = OTHER_MODELS_LIMITS.get(model, limit)
         return limit

@@ -367,8 +367,8 @@ class AIUser(
     async def _log_request_prompt(self, request: httpx.Request):
         if not logger.isEnabledFor(logging.DEBUG):
             return
-
-        if request.url.path != "/v1/chat/completions":
+        endpoint = request.url.path.split("/")[-1]
+        if endpoint != "completions":
             return
 
         bytes = await request.aread()
@@ -376,6 +376,17 @@ class AIUser(
         messages = request.get("messages", {})
         if not messages:
             return
+
+        # truncate messages image uri
+        last = messages[-1]
+        if isinstance(last.get("content"), list):
+            for content_item in last['content']:
+                if 'image_url' in content_item:
+                    image_url = content_item['image_url']['url']
+                    point = image_url.find(";base64,") + len(";base64,")
+                    short_data = image_url[point:point+20] + "..."
+                    content_item['image_url']['url'] = f"data:{image_url[:point]}{short_data}"
+
         logger.debug(
             f"Senting request with prompt: \n{json.dumps(messages, indent=4)}"
         )
