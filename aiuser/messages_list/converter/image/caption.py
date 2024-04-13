@@ -1,4 +1,5 @@
 
+import base64
 import logging
 from io import BytesIO
 
@@ -44,9 +45,15 @@ async def process_image(cog: MixinMeta, message: Message, image: Image, mode: Sc
             logger.exception("Local image scanning dependencies not installed, check cog README for instructions")
             return None
     elif mode == ScanImageMode.LLM:
-        content = [{"type": "image", "image_url": message.attachments[0].url}]
+        content = []
         if message.content != "":
             content.append({"type": "text", "text": format_text_content(message)})
+        attachment = message.attachments[0]
+        bytes = await attachment.read()
+        content.append(
+            {"type": "image_url", "image_url": {
+             "url": f"data:{attachment.content_type};base64,{base64.b64encode(bytes).decode()}"}
+             })
         return content
     else:
         return None
