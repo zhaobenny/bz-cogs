@@ -212,7 +212,7 @@ class HiresView(discord.ui.View):
 
 
 class UpscalerSelect(discord.ui.Select):
-    def __init__(self, parent: HiresView, upscalers: list[str]):
+    def __init__(self, parent: HiresView, upscalers: list):
         self.parent = parent
         options = [discord.SelectOption(label=name, default=i == 1) for i, name in enumerate(upscalers[:25])]
         super().__init__(options=options)
@@ -225,7 +225,7 @@ class UpscalerSelect(discord.ui.Select):
 
 
 class ScaleSelect(discord.ui.Select):
-    def __init__(self, parent: HiresView, scales: list[float]):
+    def __init__(self, parent: HiresView, scales: list):
         self.parent = parent
         options = [discord.SelectOption(label=f"x{num:.2f}", value=str(num)) for num in scales]
         options[-1].default = True

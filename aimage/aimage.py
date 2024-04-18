@@ -98,10 +98,10 @@ class AImage(Settings,
         return await self.object_autocomplete(interaction, current, "vaes")
 
     @staticmethod
-    def filter_list(options: list[str], current: str):
+    def filter_list(options: list, current: str):
         results = []
 
-        ratios = [(item, fuzz.partial_ratio(current.lower(), item.lower().removeprefix("<lora:"))) for item in options]
+        ratios = [(item, fuzz.partial_ratio(current.lower(), item.lower())) for item in options]
 
         sorted_options = sorted(ratios, key=lambda x: x[1], reverse=True)
 
