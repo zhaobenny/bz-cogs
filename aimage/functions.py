@@ -25,6 +25,7 @@ class Functions(MixinMeta):
                              payload: dict = None,
                              prompt: str = "",
                              negative_prompt: str = None,
+                             style: str = None,
                              width: int = None,
                              height: int = None,
                              cfg: int = None,
@@ -57,6 +58,7 @@ class Functions(MixinMeta):
         payload = payload or {
             "prompt": prompt + " " + lora,
             "negative_prompt": negative_prompt or await self.config.guild(guild).negative_prompt(),
+            "styles": style.split(", ") if style else [],
             "cfg_scale": cfg or await self.config.guild(guild).cfg(),
             "steps": steps or await self.config.guild(guild).sampling_steps(),
             "seed": seed,
@@ -120,6 +122,7 @@ class Functions(MixinMeta):
                                payload: dict = None,
                                prompt: str = "",
                                negative_prompt: str = None,
+                               style: str = None,
                                width: int = None,
                                height: int = None,
                                cfg: int = None,
@@ -151,6 +154,7 @@ class Functions(MixinMeta):
         payload = payload or {
             "prompt": prompt + " " + lora,
             "negative_prompt": negative_prompt or await self.config.guild(guild).negative_prompt(),
+            "styles": style.split(", ") if style else [],
             "cfg_scale": cfg or await self.config.guild(guild).cfg(),
             "steps": steps or await self.config.guild(guild).sampling_steps(),
             "seed": seed,

@@ -105,6 +105,22 @@ class AImage(Settings,
 
         return await self.object_autocomplete(interaction, current, choices)
 
+    async def style_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+        choices = self.autocomplete_cache[interaction.guild_id].get("styles") or []
+
+        if current:
+            current_styles = current.split(",")
+            if any(part in current_styles for part in choices):
+                new_choices = []
+                for choice in choices:
+                    choice_parts = choice.split(", ")
+                    if any(part in current_styles for part in choice_parts):
+                        continue
+                    new_choices.append(current + ", " + choice)
+            choices = new_choices
+
+        return await self.object_autocomplete(interaction, current, choices)
+
     async def checkpoint_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
         choices = self.autocomplete_cache[interaction.guild_id].get("checkpoints") or []
         return await self.object_autocomplete(interaction, current, choices)
@@ -128,6 +144,7 @@ class AImage(Settings,
     _parameter_descriptions = {
         "prompt": "The prompt to generate an image from.",
         "negative_prompt": "Undesired terms go here.",
+        "style": "Style to use",
         "cfg": "Sets the intensity of the prompt, 7 is common.",
         "sampler": "The algorithm which guides image generation.",
         "steps": "How many sampling steps, 20-30 is common.",
@@ -143,7 +160,8 @@ class AImage(Settings,
         "sampler": samplers_autocomplete,
         "lora": loras_autocomplete,
         "checkpoint": checkpoint_autocomplete,
-        "vae": vae_autocomplete
+        "vae": vae_autocomplete,
+        "style": style_autocomplete,
     }
 
     @commands.command()
@@ -175,6 +193,7 @@ class AImage(Settings,
         interaction: discord.Interaction,
         prompt: str,
         negative_prompt: str = None,
+        style: str = None,
         width: app_commands.Range[int, 256, 1536] = None,
         height: app_commands.Range[int, 256, 1536] = None,
         cfg: app_commands.Range[float, 1, 30] = None,
@@ -200,7 +219,7 @@ class AImage(Settings,
             asyncio.create_task(self._update_autocomplete_cache(interaction))
 
         await self.generate_image(interaction,
-                                  prompt=prompt, negative_prompt=negative_prompt,
+                                  prompt=prompt, negative_prompt=negative_prompt, style=style,
                                   width=width, height=height, cfg=cfg, sampler=sampler, steps=steps,
                                   seed=seed, subseed=variation_seed, subseed_strength=variation,
                                   checkpoint=checkpoint, vae=vae, lora=lora)
@@ -220,8 +239,9 @@ class AImage(Settings,
             image: discord.Attachment,
             denoising: app_commands.Range[float, 0, 1],
             prompt: str,
-            scale: app_commands.Range[float, 0.5, 2.0] = 1,
             negative_prompt: str = None,
+            style: str = None,
+            scale: app_commands.Range[float, 0.5, 2.0] = 1,
             cfg: app_commands.Range[float, 1, 30] = None,
             sampler: str = None,
             steps: app_commands.Range[int, 1, 150] = None,
@@ -259,7 +279,7 @@ class AImage(Settings,
         await image.save(img)
 
         await self.generate_img2img(interaction,
-                                    image=img.read(), prompt=prompt, negative_prompt=negative_prompt,
+                                    image=img.read(), prompt=prompt, negative_prompt=negative_prompt, style=style,
                                     denoising=denoising, scale=scale, width=image.width, height=image.height,
                                     cfg=cfg, sampler=sampler, steps=steps,
                                     seed=seed, subseed=variation_seed, subseed_strength=variation,
@@ -307,6 +327,10 @@ class AImage(Settings,
         if data := await self._fetch_data(guild, "samplers"):
             choices = [choice["name"] for choice in data]
             self.autocomplete_cache[guild.id]["samplers"] = choices
+
+        if data := await self._fetch_data(guild, "prompt-styles"):
+            choices = [choice["name"] for choice in data]
+            self.autocomplete_cache[guild.id]["styles"] = choices
 
         logger.debug(
             f"Ran a update to get possible autocomplete terms in server {guild.id}")
