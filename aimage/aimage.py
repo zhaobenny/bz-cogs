@@ -12,7 +12,8 @@ from redbot.core import Config, app_commands, checks, commands
 from redbot.core.bot import Red
 
 from aimage.abc import CompositeMetaClass
-from aimage.constants import (DEFAULT_BADWORDS_BLACKLIST,
+from aimage.constants import (AUTO_COMPLETE_SAMPLERS,
+                              DEFAULT_BADWORDS_BLACKLIST,
                               DEFAULT_NEGATIVE_PROMPT)
 from aimage.functions import Functions
 from aimage.settings import Settings
@@ -71,14 +72,13 @@ class AImage(Settings,
     async def cog_unload(self):
         await self.session.close()
 
-    async def object_autocomplete(self, interaction: discord.Interaction, current: str, object_type: str) -> List[app_commands.Choice[str]]:
-        choices = self.autocomplete_cache[interaction.guild_id].get(object_type) or []
+    async def object_autocomplete(self, interaction: discord.Interaction, current: str, choices: list) -> List[app_commands.Choice[str]]:
 
         if not choices:
             await self._update_autocomplete_cache(interaction)
+            return []
 
-        if current:
-            choices = self.filter_list(choices, current)
+        choices = self.filter_list(choices, current)
 
         return [
             app_commands.Choice(name=choice, value=choice)
@@ -86,16 +86,32 @@ class AImage(Settings,
         ]
 
     async def samplers_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
-        return await self.object_autocomplete(interaction, current, "samplers")
+        choices = self.autocomplete_cache[interaction.guild_id].get("samplers") or AUTO_COMPLETE_SAMPLERS
+        return await self.object_autocomplete(interaction, current, choices)
 
     async def loras_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
-        return await self.object_autocomplete(interaction, current, "loras")
+        choices = self.autocomplete_cache[interaction.guild_id].get("loras") or []
+
+        if current:
+            current_loras = current.split(" ")
+            if any(part in current_loras for part in choices):  # TODO: currently only works with lora value of 1
+                new_choices = []
+                for choice in choices:
+                    choice_parts = choice.split(" ")
+                    if any(part in current_loras for part in choice_parts):
+                        continue
+                    new_choices.append(current + " " + choice)
+                choices = new_choices
+
+        return await self.object_autocomplete(interaction, current, choices)
 
     async def checkpoint_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
-        return await self.object_autocomplete(interaction, current, "checkpoints")
+        choices = self.autocomplete_cache[interaction.guild_id].get("checkpoints") or []
+        return await self.object_autocomplete(interaction, current, choices)
 
     async def vae_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
-        return await self.object_autocomplete(interaction, current, "vaes")
+        choices = self.autocomplete_cache[interaction.guild_id].get("vaes") or []
+        return await self.object_autocomplete(interaction, current, choices)
 
     @staticmethod
     def filter_list(options: list, current: str):
@@ -107,7 +123,6 @@ class AImage(Settings,
 
         for item, _ in sorted_options:
             results.append(item)
-
         return results
 
     _parameter_descriptions = {
@@ -121,7 +136,7 @@ class AImage(Settings,
         "variation_seed": "This subseed guides the variation, -1 for random.",
         "checkpoint": "The main AI model used to generate the image.",
         "vae": "The VAE converts the final details of the image.",
-        "lora": "Shortcut to insert a LoRA into the prompt.",
+        "lora": "Shortcut to insert LoRA into the prompt.",
     }
 
     _parameter_autocompletes = {
