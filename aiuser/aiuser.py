@@ -37,7 +37,9 @@ class AIUser(
     commands.Cog,
     metaclass=CompositeMetaClass,
 ):
-    """Utilize OpenAI to reply to messages and images in approved channels."""
+    """
+        Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
+    """
 
     def __init__(self, bot):
         super().__init__()

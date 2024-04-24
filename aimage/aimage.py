@@ -25,7 +25,7 @@ class AImage(Settings,
              Functions,
              commands.Cog,
              metaclass=CompositeMetaClass):
-    """ Generate images using a A1111 endpoint """
+    """ Generate AI images using a A1111 endpoint """
 
     def __init__(self, bot):
         super().__init__()

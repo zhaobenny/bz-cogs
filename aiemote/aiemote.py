@@ -18,6 +18,8 @@ logger = logging.getLogger("red.bz_cogs.aiemote")
 
 
 class AIEmote(commands.Cog):
+    """ Human-like Discord reacts to messages powered by OpenAI. """
+
     MATCH_DISCORD_EMOJI_REGEX = r"<a?:[A-Za-z0-9]+:[0-9]+>"
 
     def __init__(self, bot):
