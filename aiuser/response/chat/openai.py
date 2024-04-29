@@ -69,10 +69,10 @@ class OpenAI_API_Generator(Chat_Generator):
             return response
         except httpx.ReadTimeout:
             logger.error(f"Failed request to LLM endpoint. Timed out.")
-            await self.ctx.react_quietly("💤")
+            await self.ctx.react_quietly("💤", message="`aiuser` request timed out")
         except openai.RateLimitError:
-            await self.ctx.react_quietly("💤")
-        except:
+            await self.ctx.react_quietly("💤", message="`aiuser` request ratelimited")
+        except Exception:
             logger.exception(f"Failed API request(s) to LLM endpoint")
-            await self.ctx.react_quietly("⚠️")
+            await self.ctx.react_quietly("⚠️", message="`aiuser` request failed")
         return None

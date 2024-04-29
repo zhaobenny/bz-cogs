@@ -128,8 +128,6 @@ class ResponseHandler(MixinMeta):
                 max_tokens=1,
             )
             bool_response = response.choices[0].message.content
-        except:
-            logger.error(
-                f"Error while checking message for a image request", exc_info=True
-            )
+        except Exception:
+            logger.exception(f"Error while checking message for a image request")
         return bool_response == "True"

@@ -120,9 +120,6 @@ class ImageScanSettings(MixinMeta):
         **Arguments**
             - `model_name` Name of a compatible model
         """
-        if not self.openai_client:
-            await self.initalize_openai(ctx)
-
         await ctx.message.add_reaction("🔄")
         models = [model.id for model in (await self.openai_client.models.list()).data]
         models = list(set(models) & set(VISION_SUPPORTED_MODELS))  # only show supported models
