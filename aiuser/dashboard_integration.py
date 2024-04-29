@@ -4,8 +4,10 @@ import discord
 from redbot.core import commands
 from redbot.core.bot import Red
 
+from aiuser.abc import MixinMeta
+from aiuser.common.utilities import is_using_openai_endpoint
 
-# This decorator is required because the cog Dashboard may load after the third party when the bot is started.
+
 def dashboard_page(*args, **kwargs):
     def decorator(func: typing.Callable):
         func.__dashboard_decorator_params__ = (args, kwargs)
@@ -13,44 +15,79 @@ def dashboard_page(*args, **kwargs):
     return decorator
 
 
-class DashboardIntegration:
+class DashboardIntegration(MixinMeta):
     bot: Red
 
     @commands.Cog.listener()
-    # ``on_dashboard_cog_add`` is triggered by the Dashboard cog automatically.
     async def on_dashboard_cog_add(self, dashboard_cog: commands.Cog) -> None:
-        dashboard_cog.rpc.third_parties_handler.add_third_party(self)  # Add the third party to Dashboard.
+        dashboard_cog.rpc.third_parties_handler.add_third_party(self)
 
-    # Create a default page for the third party (``name=None``). It will be available at the URL ``/third-party/MyCog``.
-    @dashboard_page(name=None, description="Send **Hello** to a user!", methods=("GET", "POST"), is_owner=True)
-    # The kwarg ``user`` means that Red-Dashboard will request a connection from a bot user with OAuth from Discord.
-    async def send_hello(self, user: discord.User, **kwargs) -> typing.Dict[str, typing.Any]:
+    @dashboard_page(name=None, methods=("GET"), is_owner=True, hidden=True)
+    async def show_config(self, **kwargs):
+        return {
+            "status": 0,
+            "web_content": {
+                "source": "Not implemented yet.",
+            },
+        }
+
+    @dashboard_page(name="bot_owner_server_config", description="Bot owner specific configuration for a server", methods=("GET", "POST"), is_owner=True)
+    async def send_hello(self, guild: discord.Guild, **kwargs):
         import wtforms
 
-        class Form(kwargs["Form"]):  # Create a WTForms form.
+        class Form(kwargs["Form"]):
             def __init__(self):
-                super().__init__(prefix="send_hello_form_")
-            user: wtforms.IntegerField = wtforms.IntegerField(
-                "User:", validators=[wtforms.validators.InputRequired(), kwargs["DpyObjectConverter"](discord.User)])
-            message: wtforms.TextAreaField = wtforms.TextAreaField(
-                "Message:", validators=[wtforms.validators.InputRequired(), wtforms.validators.Length(max=2000)], default="Hello World!")
-            submit: wtforms.SubmitField = wtforms.SubmitField("Send Hello!")
+                super().__init__(prefix="bot_owner_server_config_")
+
+            percent = wtforms.FloatField("General Percent",
+                                         validators=[
+                                             wtforms.validators.InputRequired(),
+                                             wtforms.validators.NumberRange(min=0, max=10000)
+                                         ])
+            model: wtforms.SelectFieldBase = wtforms.SelectField(
+                "Model", choices=[])
+            whitelist = wtforms.SelectMultipleField(
+                "Whitelisted Channels", choices=[(channel.id, channel.name) for channel in guild.text_channels])
+            reply_to_mentions = wtforms.BooleanField("Always respond to mentions/replies")
+
+            submit: wtforms.SubmitField = wtforms.SubmitField("Save")
 
         form: Form = Form()
-        # Check if the form is valid, run validators and retrieve the Discord objects.
-        if form.validate_on_submit() and await form.validate_dpy_converters():
-            # Thanks to the ``DpyObjectConverter`` validator, the user object is directly retrieved.
-            recipient = form.user.data
+
+        form.reply_to_mentions.default = await self.config.guild(guild).reply_to_mentions_replies()
+
+        form.percent.default = await self.config.guild(guild).reply_percent() * 100
+
+        models_list = await self.openai_client.models.list()
+        if is_using_openai_endpoint(self.openai_client):
+            models = [
+                model.id for model in models_list.data if "gpt" in model.id]
+        else:
+            models = [model.id for model in models_list.data]
+
+        form.model.default = await self.config.guild(guild).model()
+        form.model.choices = [(model, model) for model in models]
+
+        form.whitelist.default = [str(id) for id in await self.config.guild(guild).channels_whitelist()]
+
+        if form.validate_on_submit():
+            pecentage = form.percent.data
+            model = form.model.data
+            new_whitelist = [int(id) for id in form.whitelist.data]
+            print(new_whitelist)
             try:
-                await recipient.send(form.message.data)
-            except discord.Forbidden:
+                await self.config.guild(guild).reply_percent.set(pecentage / 100)
+                await self.config.guild(guild).model.set(model)
+                await self.config.guild(guild).channels_whitelist.set(new_whitelist)
+                self.channels_whitelist[guild.id] = new_whitelist
+            except Exception:
                 return {
                     "status": 0,
-                    "notifications": [{"message": f"Hello could not be sent to {recipient.display_name}!", "category": "error"}],
+                    "notifications": [{"message": f"Something went wrong while saving the config!", "category": "error"}],
                 }
             return {
                 "status": 0,
-                "notifications": [{"message": f"Hello sent to {recipient.display_name} with success!", "category": "success"}],
+                "notifications": [{"message": f"Saved config!", "category": "success"}],
                 "redirect_url": kwargs["request_url"],
             }
 
@@ -59,16 +96,4 @@ class DashboardIntegration:
         return {
             "status": 0,
             "web_content": {"source": source, "form": form},
-        }
-
-    # Create a page nammed "guild" for the third party. It will be available at the URL ``/dashboard/<guild_id>/third-party/MyCog/guild``.
-    @dashboard_page(name="guild", description="Get basic details about a __guild__!")
-    # The kwarg ``guild`` means that Red-Dashboard will ask for the choice of a guild among those to which the user has access.
-    async def guild_page(self, user: discord.User, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
-        return {
-            "status": 0,
-            "web_content": {  # Return a web content with the text variable ``title_content``.
-                "source": '<h4>You are in the guild "{{ guild.name }}" ({{ guild.id }})!</h4>',
-                "guild": {"name": guild.name, "id": guild.id},
-            },
         }

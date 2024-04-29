@@ -317,9 +317,7 @@ class Settings(
         **Arguments**
             - `model` The model to use eg. `gpt-4`
         """
-        if not self.openai_client:
-            await self.initalize_openai(ctx)
-
+        
         await ctx.message.add_reaction("🔄")
         models_list = await self.openai_client.models.list()
         await ctx.message.remove_reaction("🔄", ctx.me)
