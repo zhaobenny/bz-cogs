@@ -37,7 +37,9 @@ class AIUser(
     commands.Cog,
     metaclass=CompositeMetaClass,
 ):
-    """Utilize OpenAI to reply to messages and images in approved channels."""
+    """
+        Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
+    """
 
     def __init__(self, bot):
         super().__init__()
@@ -193,7 +195,7 @@ class AIUser(
 
         try:
             await self.send_response(ctx)
-        except:
+        except Exception:
             await ctx.send(":warning: Error in generating response!", ephemeral=True)
 
     @commands.Cog.listener()
@@ -215,7 +217,7 @@ class AIUser(
                 await self.is_bot_mentioned_or_replied(message)
                 or await self.get_percentage(ctx) == 1.0
             ):
-                await ctx.react_quietly("💤")
+                await ctx.react_quietly("💤", message="`aiuser` is ratedlimited")
             return
 
         if URL_PATTERN.search(ctx.message.content):
@@ -272,7 +274,7 @@ class AIUser(
         try:
             if not await self.bot.ignored_channel_or_guild(ctx):
                 return False
-        except:
+        except Exception:
             logger.debug("Exception in checking if ignored channel or guild", exc_info=True)
             return False
 

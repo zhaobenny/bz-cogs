@@ -26,7 +26,10 @@ class OwnerSettings(MixinMeta):
 
     @aiuserowner.command(name="maxpromptlength")
     async def max_prompt_length(self, ctx: commands.Context, length: int):
-        """Sets the maximum character length of a prompt that can set by admins in any server."""
+        """Sets the maximum character length of a prompt that can set by admins in any server.
+
+            (Does not apply to already set prompts, only new ones)
+        """
         if length < 1:
             return await ctx.send("Please enter a positive integer.")
         await self.config.max_prompt_length.set(length)
@@ -39,7 +42,10 @@ class OwnerSettings(MixinMeta):
 
     @aiuserowner.command(name="maxtopiclength")
     async def max_random_prompt_length(self, ctx: commands.Context, length: int):
-        """Sets the maximum character length of a random prompt that can set by any server."""
+        """Sets the maximum character length of a random prompt that can set by any server.
+
+            (Does not apply to already set prompts, only new ones)
+        """
         if length < 1:
             return await ctx.send("Please enter a positive integer.")
         await self.config.max_random_prompt_length.set(length)

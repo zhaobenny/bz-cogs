@@ -51,7 +51,7 @@ async def get_endpoint_data(url, params):
 async def get_weather(location: str, days=1):
     try:
         lat, lon = await find_lat_lon(location)
-    except:
+    except Exception:
         logger.exception(f"Failed request to determine lat/lon for location {location}")
         return f"Unable to find weather for the location {location}"
     return await request_weather(lat, lon, location, days=days)
@@ -79,7 +79,7 @@ async def is_daytime(config: Config, ctx: commands.Context):
             return "Use the following information about your location to generate your response: It's daytime."
         else:
             return "Use the following information about your location to generate your response: It's nighttime."
-    except:
+    except Exception:
         logger.exception("Failed request to open-meteo.com")
         return "Unknown if it's daytime or nighttime."
 
@@ -118,7 +118,7 @@ async def request_weather(lat, lon, location, days=1):
             res += handle_multiple_days(data)
 
         return res
-    except:
+    except Exception:
         logger.exception("Failed request to open-meteo.com")
         return f"Could not get weather data at {location}"
 
@@ -141,7 +141,6 @@ async def find_lat_lon(location: str):
         "language": "en",
         "format": "json"
     }
-
 
     response = await get_endpoint_data(METEO_GEOCODE_URL, params)
 

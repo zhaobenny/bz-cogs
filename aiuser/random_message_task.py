@@ -25,7 +25,7 @@ class RandomMessageTask(MixinMeta):
         for guild_id, channels in self.channels_whitelist.items():
             try:
                 last, ctx = await self.get_discord_context(guild_id, channels)
-            except:
+            except Exception:
                 continue
 
             guild = last.guild
@@ -74,7 +74,7 @@ class RandomMessageTask(MixinMeta):
         try:
             if not (await self.bot.ignored_channel_or_guild(last)):
                 return False
-        except:
+        except Exception:
             return False
 
         if not await self.config.guild(guild).random_messages_enabled():
