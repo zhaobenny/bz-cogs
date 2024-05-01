@@ -5,6 +5,7 @@ import re
 from datetime import datetime, timezone
 
 from redbot.core import Config, commands
+from discord import AllowedMentions
 
 from aiuser.common.utilities import to_thread
 from aiuser.response.chat.generator import Chat_Generator
@@ -39,11 +40,11 @@ class ChatResponse():
             for chunk in chunks:
                 await self.ctx.send(chunk)
         elif self.can_reply and await self.is_reply():
-            await message.reply(self.response, mention_author=False)
+            await message.reply(self.response, mention_author=False, allowed_mentions=AllowedMentions.none())
         elif self.ctx.interaction:
-            await self.ctx.interaction.followup.send(self.response)
+            await self.ctx.interaction.followup.send(self.response, allowed_mentions=AllowedMentions.none())
         else:
-            await self.ctx.send(self.response)
+            await self.ctx.send(self.response, allowed_mentions=AllowedMentions.none())
         return True
 
     async def remove_patterns_from_response(self) -> str:

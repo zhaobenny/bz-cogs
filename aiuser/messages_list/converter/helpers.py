@@ -11,14 +11,14 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 def format_text_content(message: Message):
     if not message.content or message.content == "" or message.content.isspace():
         return None
-    content = mention_to_text(message)
+    content = message.content
     if message.author.id == message.guild.me.id:
         return f'{content}'
     return f'User "{message.author.display_name}" said: {content}'
 
 
 def format_embed_text_content(message: Message):
-    content = mention_to_text(message)
+    content = message.content
     content = URL_PATTERN.sub("", content)
     if not content or content == "" or content.isspace():
         return None
