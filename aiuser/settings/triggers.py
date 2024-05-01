@@ -39,7 +39,7 @@ class TriggerSettings(MixinMeta):
             return await ctx.send("The ignore regex has been cleared.")
         try:
             self.ignore_regex[ctx.guild.id] = re.compile(regex_pattern)
-        except:
+        except Exception:
             return await ctx.send("Sorry, but that regex pattern seems to be invalid.")
         await self.config.guild(ctx.guild).ignore_regex.set(regex_pattern)
         embed = discord.Embed(

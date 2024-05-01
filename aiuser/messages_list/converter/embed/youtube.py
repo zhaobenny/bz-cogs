@@ -21,7 +21,7 @@ async def format_youtube_embed(api_key: str, message: Message):
 
     try:
         video_title, channel_title, description = await get_video_details(api_key, video_id)
-    except:
+    except Exception:
         logger.error(f"Failed request to Youtube API", exc_info=True)
         return None
 

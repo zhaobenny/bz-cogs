@@ -37,7 +37,7 @@ class Settings(
     MixinMeta,
 ):
     @commands.group(aliases=["ai_user"])
-    @commands.bot_has_permissions(embed_links=True)
+    @commands.bot_has_permissions(embed_links=True, add_reactions=True)
     @commands.guild_only()
     async def aiuser(self, _):
         """Utilize OpenAI to reply to messages and images in approved channels and by opt-in users"""
@@ -317,7 +317,6 @@ class Settings(
         **Arguments**
             - `model` The model to use eg. `gpt-4`
         """
-        
         await ctx.message.add_reaction("🔄")
         models_list = await self.openai_client.models.list()
         await ctx.message.remove_reaction("🔄", ctx.me)

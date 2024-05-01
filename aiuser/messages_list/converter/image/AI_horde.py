@@ -32,7 +32,7 @@ async def process_image_ai_horde(cog: MixinMeta, message: Message, image: Image)
     }
     try:
         caption = await request_ai_horde(payload, api_key)
-    except:
+    except Exception:
         logger.exception(f"Failed request to AI Horde")
 
     logger.info(

@@ -34,7 +34,7 @@ class SerperQuery:
                     data = await response.json()
                     return await self.process_search_results(data)
 
-        except:
+        except Exception:
             logger.exception("Failed request to serper.io")
             return "An error occured while searching Google."
 
@@ -55,7 +55,7 @@ class SerperQuery:
             text_content = await self.scrape_page(link)
             return f"Use the following relevant information to generate your response: {text_content}"
 
-        except:
+        except Exception:
             logger.debug(f"Failed scraping URL {link}", exc_info=True)
             knowledge_graph = data.get("knowledgeGraph", {})
             return f"Use the following relevant information to generate your response: {self.format_knowledge_graph(knowledge_graph) if knowledge_graph else first_result.get('snippet')}"

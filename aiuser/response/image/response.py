@@ -34,7 +34,7 @@ class ImageResponse():
             if image is None:
                 return False
 
-        except:
+        except Exception:
             logger.exception(f"Error while attempting to generate image")
             return False
 
@@ -98,5 +98,5 @@ class ImageResponse():
         for emoji in emojis:
             try:
                 await self.message.remove_reaction(emoji, self.ctx.me)
-            except:
+            except Exception:
                 pass

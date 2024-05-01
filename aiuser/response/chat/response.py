@@ -78,7 +78,7 @@ class ChatResponse():
         for pattern in patterns:
             try:
                 patterns.append(re.compile(pattern, re.IGNORECASE))
-            except:
+            except Exception:
                 logger.warning(
                     f"Failed to compile regex pattern \"{pattern}\" for response \"{self.response}\", continuing...", exc_info=True)
 
@@ -101,7 +101,7 @@ class ChatResponse():
         message = self.ctx.message
         try:
             await self.ctx.fetch_message(message.id)
-        except:
+        except Exception:
             return False
 
         time_diff = datetime.now(timezone.utc) - message.created_at
@@ -113,7 +113,7 @@ class ChatResponse():
             async for last_message in message.channel.history(limit=1):
                 if last_message.author == message.guild.me:
                     return True
-        except:
+        except Exception:
             pass
 
         return False
