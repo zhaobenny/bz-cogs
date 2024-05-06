@@ -376,7 +376,7 @@ class Settings(
     async def optin(self, ctx: commands.Context):
         """Opt in of sending your messages / images to OpenAI or another endpoint (bot-wide)
 
-        This will allow the bot to reply to your messages or using your messages.
+        This will allow the bot to reply to your messages or use your messages.
         """
         optin = await self.config.optin()
         if ctx.author.id in await self.config.optin():
