@@ -90,6 +90,19 @@ class FunctionCallingSettings(MixinMeta):
 
         await self.toggle_function_helper(ctx, tool_names, "Search")
 
+    @functions.command(name="scrape")
+    async def toggle_scrape_function(self, ctx: commands.Context):
+        """
+        Enable/disable the functionality for the LLM to open URLs in messages
+
+        (May not be called if the link generated an Discord embed)
+        """
+        from aiuser.functions.scrape.tool_call import ScrapeToolCall
+
+        tool_names = [ScrapeToolCall.function_name]
+
+        await self.toggle_function_helper(ctx, tool_names, "Scrape")
+
     @functions.command(name="weather")
     async def toggle_weather_function(self, ctx: commands.Context):
         """ Enable/disable a group of functions to getting weather using Open-Meteo

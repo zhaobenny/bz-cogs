@@ -91,6 +91,7 @@ def is_using_openrouter_endpoint(client: AsyncOpenAI):
 
 async def get_enabled_tools(config: Config, ctx: commands.Context) -> list:
     from aiuser.functions.noresponse.tool_call import NoResponseToolCall
+    from aiuser.functions.scrape.tool_call import ScrapeToolCall
     from aiuser.functions.search.tool_call import SearchToolCall
     from aiuser.functions.weather.tool_call import (IsDaytimeToolCall,
                                                     LocalWeatherToolCall,
@@ -101,7 +102,8 @@ async def get_enabled_tools(config: Config, ctx: commands.Context) -> list:
         LocationWeatherToolCall.function_name: LocationWeatherToolCall,
         LocalWeatherToolCall.function_name: LocalWeatherToolCall,
         IsDaytimeToolCall.function_name: IsDaytimeToolCall,
-        NoResponseToolCall.function_name: NoResponseToolCall
+        NoResponseToolCall.function_name: NoResponseToolCall,
+        ScrapeToolCall.function_name: ScrapeToolCall,
     }
 
     enabled_tool_names: list = await config.guild(ctx.guild).function_calling_functions()
