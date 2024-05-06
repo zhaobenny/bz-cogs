@@ -122,7 +122,6 @@ class ResponseSettings(MixinMeta):
 
         await ctx.send(embed=embed)
 
-
     @response.group()
     @checks.is_owner()
     async def history(self, _):
@@ -135,7 +134,10 @@ class ResponseSettings(MixinMeta):
 
     @history.command(name="backread", aliases=["messages", "size"])
     async def history_backread(self, ctx: commands.Context, new_value: int):
-        """ Set max amount of messages to be used """
+        """ Set max amount of messages to be used as context
+
+            (Increasing the number of messages will increase the cost of the response)
+        """
         await self.config.guild(ctx.guild).messages_backread.set(new_value)
         embed = discord.Embed(
             title="The number of previous messages used for context on this server is now:",
@@ -145,7 +147,7 @@ class ResponseSettings(MixinMeta):
 
     @history.command(name="time", aliases=["gap"])
     async def history_time(self, ctx: commands.Context, new_value: int):
-        """ Set max time (s) allowed between messages to be used
+        """ Set max time (sec) messages can be apart before no more can be added
 
             eg. if set to 60, once messsages are more than 60 seconds apart, more messages will not be added.
 
@@ -373,4 +375,3 @@ class ResponseSettings(MixinMeta):
                 embed.add_field(name=key, value=f"```{json.dumps(value, indent=4)}```", inline=False)
 
         await ctx.send(embed=embed)
-

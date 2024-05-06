@@ -21,6 +21,7 @@ from aiuser.common.constants import (
     OPENROUTER_URL, SINGULAR_MENTION_PATTERN, URL_PATTERN)
 from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import is_embed_valid, is_using_openai_endpoint
+from aiuser.dashboard_integration import DashboardIntegration
 from aiuser.messages_list.entry import MessageEntry
 from aiuser.random_message_task import RandomMessageTask
 from aiuser.response.response_handler import ResponseHandler
@@ -31,6 +32,7 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 class AIUser(
+    DashboardIntegration,
     Settings,
     ResponseHandler,
     RandomMessageTask,
