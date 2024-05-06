@@ -95,13 +95,22 @@ async def get_enabled_tools(config: Config, ctx: commands.Context) -> list:
     from aiuser.functions.weather.tool_call import (IsDaytimeToolCall,
                                                     LocalWeatherToolCall,
                                                     LocationWeatherToolCall)
+
+    tool_classes = {
+        SearchToolCall.function_name: SearchToolCall,
+        LocationWeatherToolCall.function_name: LocationWeatherToolCall,
+        LocalWeatherToolCall.function_name: LocalWeatherToolCall,
+        IsDaytimeToolCall.function_name: IsDaytimeToolCall,
+        NoResponseToolCall.function_name: NoResponseToolCall
+    }
+
+    enabled_tool_names: list = await config.guild(ctx.guild).function_calling_functions()
+
     tools = []
-    if await config.guild(ctx.guild).function_calling_search():
-        tools.append(SearchToolCall(config=config, ctx=ctx))
-    if await config.guild(ctx.guild).function_calling_weather():
-        tools.append(LocationWeatherToolCall(config=config, ctx=ctx))
-        tools.append(LocalWeatherToolCall(config=config, ctx=ctx))
-        tools.append(IsDaytimeToolCall(config=config, ctx=ctx))
-    if await config.guild(ctx.guild).function_calling_no_response():
-        tools.append(NoResponseToolCall(config=config, ctx=ctx))
+
+    for tool_name in enabled_tool_names:
+        tool_class = tool_classes.get(tool_name)
+        if tool_class:
+            tools.append(tool_class(config=config, ctx=ctx))
+
     return tools

@@ -60,23 +60,35 @@ class FunctionCallingSettings(MixinMeta):
         )
         await ctx.send(embed=embed)
 
-    @functions.command(name="search")
-    async def toggle_search_function(self, ctx: commands.Context):
-        """ Enable/disable searching/scraping the Internet using Serper.dev """
+    async def toggle_function_helper(self, ctx: commands.Context, tool_names: list, embed_title: str):
+        enabled_tools: list = await self.config.guild(ctx.guild).function_calling_functions()
 
-        if (not (await self.bot.get_shared_api_tokens("serper")).get("api_key")):
-            return await ctx.send(f"Serper.dev key not set! Set it using `{ctx.clean_prefix}set api serper api_key,APIKEY`.")
+        if tool_names[0] not in enabled_tools:
+            enabled_tools.extend(tool_names)
+        else:
+            for tool in tool_names:
+                enabled_tools.remove(tool)
 
-        current_value = not await self.config.guild(ctx.guild).function_calling_search()
-
-        await self.config.guild(ctx.guild).function_calling_search.set(current_value)
+        await self.config.guild(ctx.guild).function_calling_functions.set(enabled_tools)
 
         embed = discord.Embed(
-            title="Search function calling now set to:",
-            description=f"{current_value}",
+            title=f"{embed_title} function calling now set to:",
+            description=f"{tool_names[0] in enabled_tools}",
             color=await ctx.embed_color(),
         )
         await ctx.send(embed=embed)
+
+    @functions.command(name="search")
+    async def toggle_search_function(self, ctx: commands.Context):
+        """ Enable/disable searching/scraping the Internet using Serper.dev """
+        if (not (await self.bot.get_shared_api_tokens("serper")).get("api_key")):
+            return await ctx.send(f"Serper.dev key not set! Set it using `{ctx.clean_prefix}set api serper api_key,APIKEY`.")
+
+        from aiuser.functions.search.tool_call import SearchToolCall
+
+        tool_names = [SearchToolCall.function_name]
+
+        await self.toggle_function_helper(ctx, tool_names, "Search")
 
     @functions.command(name="weather")
     async def toggle_weather_function(self, ctx: commands.Context):
@@ -84,17 +96,13 @@ class FunctionCallingSettings(MixinMeta):
 
             See [Open-Meteo terms](https://open-meteo.com/en/terms) for their free API
         """
+        from aiuser.functions.weather.tool_call import (
+            IsDaytimeToolCall, LocalWeatherToolCall, LocationWeatherToolCall)
 
-        current_value = not await self.config.guild(ctx.guild).function_calling_weather()
+        tool_names = [IsDaytimeToolCall.function_name,
+                      LocalWeatherToolCall.function_name, LocationWeatherToolCall.function_name]
 
-        await self.config.guild(ctx.guild).function_calling_weather.set(current_value)
-
-        embed = discord.Embed(
-            title="Weather function calling now set to:",
-            description=f"{current_value}",
-            color=await ctx.embed_color(),
-        )
-        await ctx.send(embed=embed)
+        await self.toggle_function_helper(ctx, tool_names, "Weather")
 
     @functions.command(name="noresponse")
     async def toggle_ignore_function(self, ctx: commands.Context):
@@ -103,13 +111,8 @@ class FunctionCallingSettings(MixinMeta):
 
         Temperamental, may require additional prompting to work better.
         """
-        current_value = not await self.config.guild(ctx.guild).function_calling_no_response()
+        from aiuser.functions.noresponse.tool_call import NoResponseToolCall
 
-        await self.config.guild(ctx.guild).function_calling_no_response.set(current_value)
+        tool_names = [NoResponseToolCall.function_name]
 
-        embed = discord.Embed(
-            title="No response function calling now set to:",
-            description=f"{current_value}",
-            color=await ctx.embed_color(),
-        )
-        await ctx.send(embed=embed)
+        await self.toggle_function_helper(ctx, tool_names, "No response")

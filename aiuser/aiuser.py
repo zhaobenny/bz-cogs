@@ -101,10 +101,8 @@ class AIUser(
             "image_requests_trigger_words": DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS,
             "image_requests_second_person_trigger_words": DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
             "function_calling": False,
-            "function_calling_search": False,
-            "function_calling_weather": False,
+            "function_calling_functions": [],
             "function_calling_default_location": [49.24966, -123.11934],
-            "function_calling_no_response": False
         }
         default_channel = {
             "custom_text_prompt": None,
