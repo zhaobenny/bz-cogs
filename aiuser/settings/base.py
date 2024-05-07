@@ -232,14 +232,14 @@ class Settings(
 
         **Arguments**
             - `mention` (Optional) A mention of a user, role, or channel
-            - `percent` (Optional) A number between 1 and 100, if omitted, will reset to using other percentages
+            - `percent` (Optional) A number between 0 and 100, if omitted, will reset to using other percentages
         (Setting is per server)
         """
         mention_type = get_mention_type(mention)
         config_attr = get_config_attribute(self.config, mention_type, ctx, mention)
-        if not percent and mention_type == MentionType.SERVER:
+        if percent == None and mention_type == MentionType.SERVER:
             return await ctx.send(":warning: No percent provided")
-        if percent:
+        if percent or mention_type == MentionType.SERVER:
             await config_attr.reply_percent.set(percent / 100)
             desc = f"{percent:.2f}%"
         else:
