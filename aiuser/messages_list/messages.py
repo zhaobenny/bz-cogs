@@ -171,7 +171,7 @@ class MessagesList:
         limit = await self.config.guild(self.guild).messages_backread()
         max_seconds_gap = await self.config.guild(self.guild).messages_backread_seconds()
         start_time: datetime = (
-            self.start_time + timedelta(seconds=1) if self.start_time else None
+            self.start_time - timedelta(seconds=1) if self.start_time else None
         )
 
         past_messages = await self._get_past_messages(limit, start_time)
