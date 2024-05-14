@@ -69,6 +69,7 @@ IMAGE_UPLOAD_LIMIT = 2 * (1024 * 1024)  # 2 MB
 # models
 FUNCTION_CALLING_SUPPORTED_MODELS = [
     "gpt-4",
+    "gpt-4o",
     "gpt-4-turbo",
     "gpt-4-1106-preview",
     "gpt-4-0613",
@@ -77,6 +78,7 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
     "gpt-3.5-turbo-0613",
     "gpt-3.5-turbo-0125",
     "openai/gpt-4",
+    "openai/gpt-4o",
     "openai/gpt-4-turbo",
     "openai/gpt-4-1106-preview",
     "openai/gpt-4-0613",
@@ -86,8 +88,10 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
     "openai/gpt-3.5-turbo-0125"
 ]
 VISION_SUPPORTED_MODELS = [
+    "gpt-4o",
     "gpt-4-turbo",
     "gpt-4-vision-preview",
+    "openai/gpt-4o",
     "openai/gpt-4-turbo",
     "openai/gpt-4-vision-preview",
     "google/gemini-pro-1.5",
@@ -97,6 +101,8 @@ VISION_SUPPORTED_MODELS = [
     "anthropic/claude-3-haiku:beta",
     "anthropic/claude-3-sonnet:beta",
     "anthropic/claude-3-opus:beta",
+    "fireworks/firellava-13b",
+    "liuhaotian/llava-yi-34b"
 ]
 OTHER_MODELS_LIMITS = {
     "gemini-pro-1.5": 3998000,
@@ -108,6 +114,7 @@ OTHER_MODELS_LIMITS = {
     "gpt-4-vision-preview": 123000,
     "gpt-4-turbo": 123000,
     "gpt-4-turbo-preview": 123000,
+    "gpt-4o": 123000,
     "command-r-plus": 123000,
     "claude-2": 98000,
     "claude-instant-v1": 98000,
@@ -130,11 +137,14 @@ OTHER_MODELS_LIMITS = {
     "nous-hermes-2-mixtral-8x7b-dpo": 31000,
     "nous-hermes-2-mixtral-8x7b-sft": 31000,
     "dbrx-instruct": 31000,
+    "qwen-110b-chat": 31000,
+    "qwen-72b-chat": 31000,
     "mistral-tiny": 28000,
     "mistral-small": 28000,
     "mistral-medium": 28000,
     "mistral-large": 28000,
     "soliloquy-l3": 21000,
+    "llama-3-lumimaid-8b": 21000,
     "sonar-small-chat": 18000,
     "sonar-medium-chat": 18000,
     "gemini-pro-vision": 15000,
