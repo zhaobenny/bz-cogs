@@ -306,7 +306,7 @@ class AIUser(
         return True
 
     async def is_good_text_message(self, message: discord.Message) -> bool:
-        if SINGULAR_MENTION_PATTERN.match(message.content):
+        if SINGULAR_MENTION_PATTERN.match(message.content) and not (await self.is_bot_mentioned_or_replied(message)):
             logger.debug(
                 f"Skipping singular mention message {message.id} in {message.guild.name}"
             )
