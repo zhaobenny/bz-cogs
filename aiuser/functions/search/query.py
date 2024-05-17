@@ -2,8 +2,8 @@ import json
 import logging
 
 import aiohttp
-from bs4 import BeautifulSoup
 from redbot.core import commands
+from trafilatura import extract
 
 from aiuser.common.utilities import contains_youtube_link
 
@@ -72,26 +72,12 @@ class SerperQuery:
             async with session.get(link) as response:
                 response.raise_for_status()
                 html_content = await response.text()
-                text_content = self.find_best_text(html_content)
+                text_content = extract(html_content)
 
-                if len(text_content) > 2000:
-                    text_content = text_content[:2000]
+                if len(text_content) > 5000:
+                    text_content = text_content[:5000] + "..."
 
                 return text_content
-
-    def find_best_text(self, html_content: str):
-        def get_text_content(tag):
-            return tag.get_text(separator=" ", strip=True) if tag else ""
-
-        soup = BeautifulSoup(html_content, 'html.parser')
-        paragraph_tags = soup.find_all('p') or []
-
-        paragraph_text = " ".join([get_text_content(tag) for tag in paragraph_tags if len(get_text_content(tag)) > 100])
-
-        if not paragraph_text or len(paragraph_text) < 300:
-            return soup.get_text(separator=" ", strip=True)
-
-        return paragraph_text
 
     def format_knowledge_graph(self, knowledge_graph: dict) -> str:
         title = knowledge_graph.get("title", "")

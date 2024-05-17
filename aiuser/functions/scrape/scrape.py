@@ -1,6 +1,7 @@
 import logging
+
 import aiohttp
-from bs4 import BeautifulSoup
+from trafilatura import extract
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -15,25 +16,14 @@ async def scrape_page(link: str):
     async with aiohttp.ClientSession(headers=headers) as session:
         async with session.get(link) as response:
             response.raise_for_status()
+            content_type = response.headers.get('Content-Type', '').lower()
+            if not 'text/html' in content_type:
+                raise ValueError("Content type is not text/html")
+
             html_content = await response.text()
-            text_content = find_best_text(html_content)
+            res = "Link content: " + extract(html_content)
 
-            if len(text_content) > 2000:
-                text_content = text_content[:2000]
+            if len(res) > 5000:
+                res = res[:5000] + "..."
 
-            return text_content
-
-
-def find_best_text(html_content: str):
-    def get_text_content(tag):
-        return tag.get_text(separator=" ", strip=True) if tag else ""
-
-    soup = BeautifulSoup(html_content, 'html.parser')
-    paragraph_tags = soup.find_all('p') or []
-
-    paragraph_text = " ".join([get_text_content(tag) for tag in paragraph_tags if len(get_text_content(tag)) > 100])
-
-    if not paragraph_text or len(paragraph_text) < 300:
-        return soup.get_text(separator=" ", strip=True)
-
-    return paragraph_text
+            return res
