@@ -4,8 +4,8 @@ import random
 import re
 from datetime import datetime, timezone
 
-from redbot.core import Config, commands
 from discord import AllowedMentions
+from redbot.core import Config, commands
 
 from aiuser.common.utilities import to_thread
 from aiuser.response.chat.generator import Chat_Generator
@@ -51,7 +51,7 @@ class ChatResponse():
 
         @to_thread(timeout=5)
         def substitute(pattern: re.Pattern, response):
-            response = (pattern.sub('', response).strip(' \n":'))
+            response = (pattern.sub('', response))
             return response
 
         patterns = await self.config.guild(self.ctx.guild).removelist_regexes()
@@ -83,7 +83,9 @@ class ChatResponse():
                 logger.warning(
                     f"Failed to compile regex pattern \"{pattern}\" for response \"{self.response}\", continuing...", exc_info=True)
 
-        response = self.response.strip(' "')
+        response = self.response
+        response = response.strip(' \n')
+
         for pattern in patterns:
             try:
                 response = await substitute(pattern, response)
@@ -91,8 +93,7 @@ class ChatResponse():
                 logger.warning(
                     f"Timed out after {5} seconds while applying regex pattern \"{pattern.pattern}\" in response \"{self.response}\" \
                         Please check the regex pattern for catastrophic backtracking. Continuing...")
-            if response.count('"') == 1:
-                response = response.replace('"', '')
+                
         self.response = response
 
     async def is_reply(self):
