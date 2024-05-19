@@ -63,7 +63,7 @@ MAX_MESSAGE_LENGTH = 1000  # in words
 OPENROUTER_URL = "https://openrouter.ai/api/"
 
 # image captioning
-IMAGE_UPLOAD_LIMIT = 2 * (1024 * 1024)  # 2 MB
+IMAGE_UPLOAD_LIMIT = 10 * (1024 * 1024)  # 10 MB
 
 
 # models
