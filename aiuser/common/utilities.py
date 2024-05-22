@@ -30,16 +30,20 @@ def to_thread(timeout=300):
     return decorator
 
 
-def format_variables(ctx: commands.Context, text: str):
+async def format_variables(ctx: commands.Context, text: str):
     """
     Insert supported variables into string if they are present
     """
     botname = ctx.message.guild.me.nick or ctx.bot.user.display_name
+    app_info = await ctx.bot.application_info()
+    botowner = app_info.owner.name
     authorname = ctx.message.author.display_name
     authortoprole = ctx.message.author.top_role.name
+    authormention = ctx.message.author.mention
 
     servername = ctx.guild.name
     channelname = ctx.message.channel.name
+    channeltopic = ctx.message.channel.topic
     currentdate = datetime.today().strftime("%Y/%m/%d")
     currentweekday = datetime.today().strftime("%A")
     currenttime = datetime.today().strftime("%H:%M")
@@ -51,11 +55,14 @@ def format_variables(ctx: commands.Context, text: str):
     try:
         res = text.format(
             botname=botname,
+            botowner=botowner,
             authorname=authorname,
             authortoprole=authortoprole,
+            authormention=authormention,
             servername=servername,
             serveremojis=serveremojis,
             channelname=channelname,
+            channeltopic=channeltopic,
             currentdate=currentdate,
             currentweekday=currentweekday,
             currenttime=currenttime,

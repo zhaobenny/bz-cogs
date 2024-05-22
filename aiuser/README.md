@@ -146,11 +146,14 @@ Admins also manage topics here:
 Prompts and topics can include certain variables by including one of the following placeholders:
 
 - `{botname}` - the bot's current nickname or username
+- `{botowner}` - the bot owner's username
 - `{authorname}` - the author of the message the bot is activated on
 - `{authortoprole}` - the author's highest role
+- `{authormention}` - the author's mention in string format
 - `{serveremojis}` - all of the server emojis, in a string format (eg. `<:emoji:12345> <:emoji2:78912>`)
 - `{servername}` - the server name
-- `{channelname}` - the channel name
+- `{channelname}` - the current channel name
+- `{channeltopic}` - the current channel description/topic
 - `{currentdate}` - the current date eg. 2023/08/31 (based on host timezone)
 - `{currentweekday}` - the current weekday eg. Monday (based on host timezone)
 - `{currenttime}` - the current 24-hour time eg. 21:59 (based on host timezone)

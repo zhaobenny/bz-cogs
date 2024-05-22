@@ -3,6 +3,7 @@ import base64
 import logging
 from io import BytesIO
 from typing import Optional
+
 from discord import Message
 from PIL import Image
 

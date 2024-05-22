@@ -41,7 +41,7 @@ class RandomMessageTask(MixinMeta):
 
             prompt = await self.config.channel(channel).custom_text_prompt() or await self.config.guild(guild).custom_text_prompt() or await self.config.custom_text_prompt() or DEFAULT_PROMPT
             messages_list = await create_messages_list(self, ctx, prompt=prompt)
-            topic = format_variables(
+            topic = await format_variables(
                 ctx, topics[random.randint(0, len(topics) - 1)])
             logger.debug(
                 f"Sending random message to #{channel.name} at {guild.name}")

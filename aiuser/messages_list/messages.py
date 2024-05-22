@@ -71,7 +71,7 @@ class MessagesList:
 
         bot_prompt = prompt or await self._pick_prompt()
 
-        await self.add_system(format_variables(self.ctx, bot_prompt))
+        await self.add_system(await format_variables(self.ctx, bot_prompt))
 
         if await self._check_if_inital_img():
             self.model = await self.config.guild(self.guild).scan_images_model()
