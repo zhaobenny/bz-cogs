@@ -2,7 +2,6 @@
 import base64
 import logging
 from io import BytesIO
-from typing import Optional
 
 from discord import Message
 from PIL import Image
@@ -35,7 +34,7 @@ async def transcribe_image(cog: MixinMeta, message: Message):
     return content
 
 
-async def process_image(cog: MixinMeta, message: Message, image: Image, mode: ScanImageMode) -> Optional[list[dict]]:
+async def process_image(cog: MixinMeta, message: Message, image: Image, mode: ScanImageMode):
     if mode == ScanImageMode.AI_HORDE:
         return await process_image_ai_horde(cog, message, image)
     elif mode == ScanImageMode.LOCAL:

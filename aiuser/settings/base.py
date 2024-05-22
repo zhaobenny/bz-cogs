@@ -13,6 +13,7 @@ from aiuser.common.utilities import (get_enabled_tools,
                                      is_using_openai_endpoint,
                                      is_using_openrouter_endpoint)
 from aiuser.settings.functions import FunctionCallingSettings
+from aiuser.settings.history import HistorySettings
 from aiuser.settings.image_request import ImageRequestSettings
 from aiuser.settings.image_scan import ImageScanSettings
 from aiuser.settings.owner import OwnerSettings
@@ -29,6 +30,7 @@ class Settings(
     PromptSettings,
     ImageScanSettings,
     ImageRequestSettings,
+    HistorySettings,
     ResponseSettings,
     TriggerSettings,
     OwnerSettings,

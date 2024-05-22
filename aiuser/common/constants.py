@@ -58,11 +58,7 @@ YOUTUBE_VIDEO_ID_PATTERN = re.compile(
 SINGULAR_MENTION_PATTERN = re.compile(r"^<@!?&?(\d+)>$")
 
 
-# misc
-MAX_MESSAGE_LENGTH = 1000  # in words
 OPENROUTER_URL = "https://openrouter.ai/api/"
-
-# image captioning
 IMAGE_UPLOAD_LIMIT = 10 * (1024 * 1024)  # 10 MB
 
 
@@ -94,6 +90,7 @@ VISION_SUPPORTED_MODELS = [
     "openai/gpt-4o",
     "openai/gpt-4-turbo",
     "openai/gpt-4-vision-preview",
+    "google/gemini-flash-1.5",
     "google/gemini-pro-1.5",
     "anthropic/claude-3-haiku",
     "anthropic/claude-3-sonnet",
@@ -105,6 +102,7 @@ VISION_SUPPORTED_MODELS = [
     "liuhaotian/llava-yi-34b"
 ]
 OTHER_MODELS_LIMITS = {
+    "gemini-flash-1.5": 2797000,
     "gemini-pro-1.5": 3998000,
     "claude-3-haiku": 198000,
     "claude-3-opus": 198000,
@@ -153,27 +151,8 @@ OTHER_MODELS_LIMITS = {
     "rwkv-5-3b-ai-town": 9000,
     "sonar-small-online": 8000,
     "sonar-medium-online": 8000,
-    "fimbulvetr-11b-v2": 7000,
+    "openchat-7b": 7000,
+    "cinematika-7b": 7000,
+    "gemma-7b-it": 7000,
     "llama-3-8b-instruct": 7000,
-    "llama-3-70b-instruct": 7000,
-    "noromaid-mixtral-8x7b-instruct": 7000,
-    "bagel-34b": 7000,
-    "pplx-7b-chat": 7000,
-    "noromaid-20b": 7000,
-    "palm-2-chat-bison": 7000,
-    "claude-v1": 7000,
-    "claude-1.2": 7000,
-    "claude-instant-1.0": 7000,
-    "codellama-34b-instruct": 6000,
-    "synthia-70b": 6000,
-    "mistral-7b-instruct": 6000,
-    "mistral-7b-openorca": 6000,
-    "mythalion-13b": 6000,
-    "xwin-lm-70b": 6000,
-    "goliath-120b": 6000,
-    "weaver": 6000,
-    "palm-2-codechat-bison": 6000,
-    "openchat-7b": 6000,
-    "gemma-7b-it": 6000,
-    "nous-hermes-2-mistral-7b-dpo": 6000,
 }

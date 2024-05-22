@@ -17,7 +17,7 @@ from aiuser.common.constants import (
     DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
     DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_MIN_MESSAGE_LENGTH,
     DEFAULT_PRESETS, DEFAULT_RANDOM_PROMPTS, DEFAULT_REMOVE_PATTERNS,
-    DEFAULT_REPLY_PERCENT, IMAGE_UPLOAD_LIMIT, MAX_MESSAGE_LENGTH,
+    DEFAULT_REPLY_PERCENT, IMAGE_UPLOAD_LIMIT,
     OPENROUTER_URL, SINGULAR_MENTION_PATTERN, URL_PATTERN)
 from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import is_embed_valid, is_using_openai_endpoint
@@ -73,10 +73,10 @@ class AIUser(
             "messages_backread": 10,
             "messages_backread_seconds": 60 * 120,
             "messages_min_length": DEFAULT_MIN_MESSAGE_LENGTH,
-            "reply_to_mentions_replies": False,
+            "reply_to_mentions_replies": True,
             "scan_images": False,
             "scan_images_mode": ScanImageMode.AI_HORDE.value,
-            "scan_images_model": "gpt-4-vision-preview",
+            "scan_images_model": "gpt-4o",
             "max_image_size": IMAGE_UPLOAD_LIMIT,
             "model": "gpt-3.5-turbo",
             "custom_text_prompt": None,
@@ -168,7 +168,7 @@ class AIUser(
         self,
         inter: discord.Interaction,
         *,
-        text: app_commands.Range[str, 0, MAX_MESSAGE_LENGTH],
+        text: app_commands.Range[str, 1, 2000],
     ):
         """Talk directly to this bot's AI. Ask it anything you want!"""
         await inter.response.defer()
@@ -315,11 +315,6 @@ class AIUser(
         if 1 <= len(message.content) < (await self.config.guild(message.guild).messages_min_length()):
             logger.debug(
                 f"Skipping too short message {message.id} in {message.guild.name}")
-            return False
-
-        if len(message.content.split()) > MAX_MESSAGE_LENGTH:
-            logger.debug(
-                f"Skipping long message {message.id} in {message.guild.name}")
             return False
 
         return True

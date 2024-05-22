@@ -143,21 +143,25 @@ class MessagesList:
             return
 
         for entry in converted:
+            if self.tokens > self.token_limit:
+                return
+
             self.messages.insert(index or 0, entry)
             self.messages_ids.add(message.id)
-            for item in entry.content:
-                if isinstance(item, dict):
+
+            if isinstance(entry.content, list):
+                for item in entry.content:
+                    if not isinstance(item, dict):
+                        continue
                     if item.get("type") == "text":
                         await self._add_tokens(item.get("text"))
-                else:
-                    await self._add_tokens(item)
+                    elif item.get("type") == "image_url":
+                        self.tokens += 255  # TODO: calculate actual image token cost
+            else:
+                await self._add_tokens(entry.content)
 
         # TODO: proper reply chaining
-        if (
-            message.reference
-            and isinstance(message.reference.resolved, discord.Message)
-            and message.author.id != self.bot.user.id
-        ):
+        if message.reference and isinstance(message.reference.resolved, discord.Message) and message.author.id != self.bot.user.id:
             await self.add_msg(message.reference.resolved, index=0)
 
     async def add_system(self, content: str, index: int = None):

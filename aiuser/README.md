@@ -10,11 +10,6 @@ Bot owners can change the percentage of eligible messages to reply to:
 [p]aiuser percent <PERCENT>
 ```
 
-Bot owners can also manage/enable function calling (eg. using web searches or weather data for responses) using:
-```
-[p]aiuser functions
-```
-
 Users will also have to opt-in (bot-wide) into having their messages used:
 ```
 [p]aiuser optin
@@ -25,10 +20,9 @@ Admins can modify prompt settings in:
 [p]aiuser prompt
 ```
 
-Optionally, enable slash (/chat) command using:
+Bot owners can also manage/enable function calling (eg. opening links or performing Google searches) using:
 ```
-[p]slash enablecog aiuser
-[p]slash sync
+[p]aiuser functions
 ```
 
 Some additional settings are restricted to bot owner only.
@@ -56,7 +50,7 @@ Bot owners can see settings here:
 
 ### Supported-LLM mode
 
-This mode is superior in performance but not in cost. It will use the selected LLM from this command:
+This mode is superior in performance, but may cost more. It will use the selected LLM from this command:
 ```
 [p]aiuser imagescan model <MODEL_NAME>
 ```
@@ -165,12 +159,11 @@ Remove list regex patterns only support `{authorname}` (will use authors of last
 
 ### OpenRouter
 
-[OpenRouter](https://openrouter.ai) is compatible as a custom OpenAI endpoint.
+[OpenRouter](https://openrouter.ai) is compatible as a custom OpenAI endpoint. (provides Gemini, Claude, open source LLMs, etc)
 
-OpenRouter has unfiltered open source models, Claude, and PaLM available for a cost.
 See full details [here](https://openrouter.ai/docs#models).
 
-Bot owners can set this globally using the following:
+Bot owners can set this globally using the following shortcut:
 ```
 [p]aiuserowner endpoint openrouter
 ```
@@ -195,7 +188,7 @@ Bot owners may also want to set [custom parameters](https://openrouter.ai/docs#l
 
 ⚠️ For advanced users! ⚠️
 
-Other OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. `gpt4all` or `text-generation-webui`)
+Other OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. `ollama` or `text-generation-webui`)
 
 Compatibility may vary and is not guaranteed.
 
