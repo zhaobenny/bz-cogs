@@ -81,7 +81,15 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
     "openai/gpt-3.5-turbo",
     "openai/gpt-3.5-turbo-1106",
     "openai/gpt-3.5-turbo-0613",
-    "openai/gpt-3.5-turbo-0125"
+    "openai/gpt-3.5-turbo-0125",
+    "google/gemini-flash-1.5",
+    "google/gemini-pro-1.5",
+    "anthropic/claude-3-haiku",
+    "anthropic/claude-3-sonnet",
+    "anthropic/claude-3-opus",
+    "anthropic/claude-3-haiku:beta",
+    "anthropic/claude-3-sonnet:beta",
+    "anthropic/claude-3-opus:beta"
 ]
 VISION_SUPPORTED_MODELS = [
     "gpt-4o",
@@ -114,6 +122,7 @@ OTHER_MODELS_LIMITS = {
     "gpt-4-turbo-preview": 123000,
     "gpt-4o": 123000,
     "command-r-plus": 123000,
+    "phi-3-medium-128k-instruct": 123000,
     "claude-2": 98000,
     "claude-instant-v1": 98000,
     "command-r": 98000,

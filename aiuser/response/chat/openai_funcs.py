@@ -6,9 +6,9 @@ from redbot.core import commands
 
 from aiuser.abc import MixinMeta
 from aiuser.common.utilities import get_enabled_tools
-from aiuser.messages_list.messages import MessagesList
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import ToolCallSchema
+from aiuser.messages_list.messages import MessagesList
 from aiuser.response.chat.openai import OpenAI_API_Generator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -27,7 +27,7 @@ class OpenAI_Functions_API_Generator(OpenAI_API_Generator):
         self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
         self.available_tools_schemas = [tool.schema for tool in self.enabled_tools]
 
-        while self.completion is None:
+        while not self.completion:
             if self.available_tools_schemas:
                 kwargs["tools"] = [asdict(schema) for schema in self.available_tools_schemas]
 
