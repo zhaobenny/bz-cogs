@@ -1,6 +1,6 @@
 import logging
 
-from discord import Message
+from discord import Message, MessageType
 
 from aiuser.common.constants import URL_PATTERN
 
@@ -8,6 +8,8 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 def format_text_content(message: Message):
+    if message.type != MessageType.default:
+        return message.system_content
     if not message.content or message.content == "" or message.content.isspace():
         return None
     content = mention_to_text(message)
