@@ -34,17 +34,19 @@ class ChatResponse():
         if not self.response:
             return False
 
+        allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[message.author])
+
         if len(self.response) >= 2000:
-            chunks = [self.response[i:i+2000]
+            chunks = [self.response[i:i + 2000]
                       for i in range(0, len(self.response), 2000)]
             for chunk in chunks:
-                await self.ctx.send(chunk)
+                await self.ctx.send(chunk, allowed_mentions=allowed_mentions)
         elif self.can_reply and await self.is_reply():
-            await message.reply(self.response, mention_author=False, allowed_mentions=AllowedMentions.none())
+            await message.reply(self.response, mention_author=False, allowed_mentions=allowed_mentions)
         elif self.ctx.interaction:
-            await self.ctx.interaction.followup.send(self.response, allowed_mentions=AllowedMentions.none())
+            await self.ctx.interaction.followup.send(self.response, allowed_mentions=allowed_mentions)
         else:
-            await self.ctx.send(self.response, allowed_mentions=AllowedMentions.none())
+            await self.ctx.send(self.response, allowed_mentions=allowed_mentions)
         return True
 
     async def remove_patterns_from_response(self) -> str:
