@@ -9,10 +9,6 @@ DEFAULT_BADWORDS_BLACKLIST = ["blood", "bloodbath", "crucifixion", "bloody", "fl
 VIEW_TIMEOUT = 5 * 60
 
 AUTO_COMPLETE_SAMPLERS = [
-    "DPM++ 2M Karras",
-    "DPM++ SDE Karras",
-    "DPM++ 2M SDE Exponential",
-    "DPM++ 2M SDE Karras",
     "Euler a",
     "Euler",
     "LMS",

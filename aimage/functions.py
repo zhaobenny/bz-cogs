@@ -84,9 +84,14 @@ class Functions(MixinMeta):
             payload["script_args"] = [True, True]
 
         try:
+            await self._verify_parameters(guild, payload)
             self.generating[user.id] = True
             image_data, info_string, is_nsfw = await self._post_sd_endpoint(endpoint + "txt2img", payload, auth_str)
             image_extension = "png"
+        except ValueError as error:
+            return await self.send_response(context, content=f":warning: {error}", ephemeral=True)
+        except aiohttp.ClientResponseError:
+            return await self.send_response(context, content=":warning: Timed out! Could not connect to server.", ephemeral=True)
         except Exception as error:
             if await self.config.aihorde():
                 aihorde_result = await self._request_aihorde(context, nsfw, payload)
@@ -182,15 +187,17 @@ class Functions(MixinMeta):
             payload["script_args"] = [True, True]
 
         try:
+            await self._verify_parameters(guild, payload)
             self.generating[user.id] = True
             image_data, info_string, is_nsfw = await self._post_sd_endpoint(endpoint + "img2img", payload, auth_str)
             image_extension = "png"
+        except ValueError as error:
+            return await self.send_response(context, content=f":warning: {error}", ephemeral=True)
+        except aiohttp.ClientResponseError:
+            return await self.send_response(context, content=":warning: Timed out! Could not connect to server.", ephemeral=True)
         except Exception as error:
-            if isinstance(error, aiohttp.ClientConnectorError):
-                return await self.send_response(context, content=":warning: Timed out! Server is offline.", ephemeral=True)
-            else:
-                logger.exception(f"Failed request to Stable Diffusion endpoint in server {guild.id}")
-                return await self.send_response(context, content=":warning: Something went wrong!", ephemeral=True)
+            logger.exception(f"Failed request to Stable Diffusion endpoint in server {guild.id}")
+            return await self.send_response(context, content=":warning: Something went wrong!", ephemeral=True)
         finally:
             self.generating[user.id] = False
 
@@ -218,27 +225,6 @@ class Functions(MixinMeta):
                 pass
             return await context.send(**kwargs)
 
-    async def _get_endpoint(self, guild: discord.Guild):
-        endpoint: str = await self.config.guild(guild).endpoint()
-        auth: str = await self.config.guild(guild).auth()
-        nsfw: bool = await self.config.guild(guild).nsfw()
-        if not endpoint:
-            endpoint = await self.config.endpoint()
-            auth = await self.config.auth()
-            nsfw = await self.config.nsfw() and nsfw
-        return endpoint, auth, nsfw
-
-    async def _contains_blacklisted_word(self, guild: discord.Guild, prompt: str):
-        endpoint = await self.config.guild(guild).endpoint()
-        if endpoint:
-            blacklist = await self.config.guild(guild).words_blacklist()
-        else:
-            blacklist = await self.config.words_blacklist()
-
-        if any(word in prompt.lower() for word in blacklist):
-            return True
-        return False
-
     @retry(wait=wait_random(min=2, max=3), stop=stop_after_attempt(2), reraise=True)
     async def _post_sd_endpoint(self, endpoint, payload, auth_str):
         async with self.session.post(url=endpoint, json=payload, auth=get_auth(auth_str), raise_for_status=True) as response:
@@ -259,6 +245,24 @@ class Functions(MixinMeta):
 
         return image_data, info_string, is_nsfw
 
+    async def _get_endpoint(self, guild: discord.Guild):
+        endpoint: str = await self.config.guild(guild).endpoint()
+        auth: str = await self.config.guild(guild).auth()
+        nsfw: bool = await self.config.guild(guild).nsfw()
+        if not endpoint:
+            endpoint = await self.config.endpoint()
+            auth = await self.config.auth()
+            nsfw = await self.config.nsfw() and nsfw
+        return endpoint, auth, nsfw
+
+    async def _verify_parameters(self, guild, payload):
+        data = await self._fetch_data(guild, "samplers")
+        if not data:
+            return
+        samplers = [choice["name"] for choice in data]
+        if payload["sampler_name"] not in samplers:
+            raise ValueError(f"Invalid sampler name: `{payload['sampler_name']}`")
+        
     async def _request_aihorde(self, context: Union[commands.Context, discord.Interaction], is_allowed_nsfw: bool, payload: dict):
         logger.info(f"Using fallback AI Horde to generate image in server {context.guild.id}")
         api_key = (await self.bot.get_shared_api_tokens("ai-horde")).get("api_key") or "0000000000"
@@ -299,6 +303,17 @@ class Functions(MixinMeta):
         info_string = f"{payload['prompt']}\nAI Horde image. Seed: {res['seed']}, Model: {res['model']}"
         is_nsfw = False
         return image_data, info_string, is_nsfw
+
+    async def _contains_blacklisted_word(self, guild: discord.Guild, prompt: str):
+        endpoint = await self.config.guild(guild).endpoint()
+        if endpoint:
+            blacklist = await self.config.guild(guild).words_blacklist()
+        else:
+            blacklist = await self.config.words_blacklist()
+
+        if any(word in prompt.lower() for word in blacklist):
+            return True
+        return False
 
     async def _fetch_data(self, guild: discord.Guild, endpoint_suffix):
         res = None

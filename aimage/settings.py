@@ -14,7 +14,7 @@ class Settings(MixinMeta):
     @checks.bot_has_permissions(embed_links=True, add_reactions=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def aimage(self, _: commands.Context):
-        """Manage AI Image cog settings"""
+        """ Manage AI Image cog settings for this server """
         pass
 
     @aimage.command(name="config")
@@ -27,7 +27,11 @@ class Settings(MixinMeta):
 
         embed = discord.Embed(title="AImage Config", color=await ctx.embed_color())
         embed.add_field(name="Endpoint", value=f"{config['endpoint']}", inline=False)
-        embed.add_field(name="Default Negative Prompt", value=f"`{config['negative_prompt']}`", inline=False)
+
+        if config["negative_prompt"] > 1024:
+            negative_prompt = config["negative_prompt"][:1020] + "..."
+
+        embed.add_field(name="Default Negative Prompt", value=f"`{negative_prompt}`", inline=False)
         embed.add_field(name="Default Checkpoint", value=f"`{config['checkpoint']}`")
         embed.add_field(name="Default VAE", value=f"`{config['vae']}`")
         embed.add_field(name="Default Sampler", value=f"`{config['sampler']}`")
@@ -52,7 +56,7 @@ class Settings(MixinMeta):
     @aimage.command(name="endpoint")
     async def endpoint(self, ctx: commands.Context, endpoint: str):
         """
-        Set the endpoint URL for AI Image (include `/sdapi/v1/`)
+        Set the endpoint URL for AI Image (include `/sdapi/v1/` only)
         """
         if not endpoint:
             endpoint = None
@@ -152,10 +156,10 @@ class Settings(MixinMeta):
         await self.config.guild(ctx.guild).max_img2img.set(resolution)
         await ctx.tick()
 
-    @aimage.command(name="checkpoint")
+    @aimage.command(name="checkpoint", aliases=["model"])
     async def checkpoint(self, ctx: commands.Context, *, checkpoint: str):
         """
-        Set the default checkpoint used for generating images.
+        Set the default checkpoint / model used for generating images.
         """
         await ctx.message.add_reaction("🔄")
         data = await self._fetch_data(ctx.guild, "sd-models")
@@ -342,10 +346,12 @@ class Settings(MixinMeta):
     @aimageowner.command(name="endpoint")
     async def endpoint_owner(self, ctx: commands.Context, endpoint: str):
         """
-        Set a global endpoint URL for AI Image (include `/sdapi/v1/`)
+        Set a global endpoint URL for AI Image (include `/sdapi/v1/` only)
 
         Will be used if no guild endpoint is set
         """
+        if not endpoint.endswith("/"):
+            endpoint += "/"
         await self.config.endpoint.set(endpoint)
         await ctx.tick()
 
