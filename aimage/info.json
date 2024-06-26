@@ -3,8 +3,8 @@
         "zhaobenny",
         "hollowstrawberry"
     ],
-    "description": "Use a self-provided AUTOMATIC1111 endpoint to generate images through Discord",
-    "install_msg": "This cog will require your own AUTOMATIC1111-compatible endpoint to be configured.\nSee `[p]aimage` or `[p]aimageowner` for settings first. To generate, use `[p]imagine`\nSlash is available and recommended, do `[p]slash enablecog aimage`, then `[p]slash sync`",
+    "description": "Enables the generation of Stable Diffusion images in Discord using a provided AUTOMATIC1111 stable-diffusion-webui endpoint",
+    "install_msg": "This cog will require an AUTOMATIC1111-like endpoint with API mode enabled. (See cog `README.md`)\nYou must set an endpoint URL using the `endpoint` command in either `[p]aimage` or `[p]aimageowner`\nSlash commands are **highly recommended** , enable via `[p]slash enablecog aimage`, then `[p]slash sync`",
     "short": "A1111 Stable Diffusion image generation in Discord",
     "permissions": [
         "send_messages",
