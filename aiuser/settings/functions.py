@@ -31,7 +31,7 @@ class FunctionCallingSettings(MixinMeta):
         if current_value:
             model = await self.config.guild(ctx.guild).model()
             if model not in FUNCTION_CALLING_SUPPORTED_MODELS:
-                return await ctx.send(f":warning: Currently selected model, `{model}`, does not support function calling. Set a comptaible model first!")
+                return await ctx.send(f":warning: Currently selected model, `{model}` is not whitelisted for function calling. Set a compatible model first!")
 
         await self.config.guild(ctx.guild).function_calling.set(current_value)
 

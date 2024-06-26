@@ -86,10 +86,12 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
     "google/gemini-pro-1.5",
     "anthropic/claude-3-haiku",
     "anthropic/claude-3-sonnet",
+    "anthropic/claude-3.5-sonnet",
     "anthropic/claude-3-opus",
     "anthropic/claude-3-haiku:beta",
     "anthropic/claude-3-sonnet:beta",
-    "anthropic/claude-3-opus:beta"
+    "anthropic/claude-3-opus:beta",
+    "anthropic/claude-3.5-sonnet:beta"
 ]
 VISION_SUPPORTED_MODELS = [
     "gpt-4o",
@@ -102,10 +104,12 @@ VISION_SUPPORTED_MODELS = [
     "google/gemini-pro-1.5",
     "anthropic/claude-3-haiku",
     "anthropic/claude-3-sonnet",
+    "anthropic/claude-3.5-sonnet",
     "anthropic/claude-3-opus",
     "anthropic/claude-3-haiku:beta",
     "anthropic/claude-3-sonnet:beta",
     "anthropic/claude-3-opus:beta",
+    "anthropic/claude-3.5-sonnet:beta",
     "fireworks/firellava-13b",
     "liuhaotian/llava-yi-34b"
 ]
@@ -115,6 +119,7 @@ OTHER_MODELS_LIMITS = {
     "claude-3-haiku": 198000,
     "claude-3-opus": 198000,
     "claude-3-sonnet": 198000,
+    "claude-3.5-sonnet": 198000,
     "claude-2.1": 198000,
     "gpt-4-1106-preview": 123000,
     "gpt-4-vision-preview": 123000,

@@ -66,7 +66,7 @@ class OwnerSettings(MixinMeta):
         if url == "openrouter":
             url = "https://openrouter.ai/api/v1/"
 
-        if not url or url in ["clear", "reset"]:
+        if not url or url in ["clear", "reset", "openai"]:
             await self.config.custom_openai_endpoint.set(None)
         else:
             await self.config.custom_openai_endpoint.set(url)
