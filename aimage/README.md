@@ -12,7 +12,7 @@ Supports txt2img and img2img functionality.
 [p]slash sync
 ```
 
-The non-slash command is `[p]aimage`, and is very limited in functionality.
+The non-slash command is `[p]imagine`, and is very limited in functionality.
 
 # Settings ⚙️
 
