@@ -3,7 +3,7 @@ import json
 import logging
 import random
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import discord
 import httpx
@@ -17,8 +17,8 @@ from aiuser.common.constants import (
     DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
     DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_MIN_MESSAGE_LENGTH,
     DEFAULT_PRESETS, DEFAULT_RANDOM_PROMPTS, DEFAULT_REMOVE_PATTERNS,
-    DEFAULT_REPLY_PERCENT, IMAGE_UPLOAD_LIMIT,
-    OPENROUTER_URL, SINGULAR_MENTION_PATTERN, URL_PATTERN)
+    DEFAULT_REPLY_PERCENT, IMAGE_UPLOAD_LIMIT, OPENROUTER_URL,
+    SINGULAR_MENTION_PATTERN, URL_PATTERN)
 from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import is_embed_valid, is_using_openai_endpoint
 from aiuser.dashboard_integration import DashboardIntegration
@@ -103,6 +103,8 @@ class AIUser(
             "function_calling": False,
             "function_calling_functions": [],
             "function_calling_default_location": [49.24966, -123.11934],
+            "conversation_reply_percent": 0,
+            "conversation_reply_time": 20,
         }
         default_channel = {
             "custom_text_prompt": None,
@@ -205,7 +207,7 @@ class AIUser(
         if not await self.is_common_valid_reply(ctx):
             return
 
-        if await self.is_bot_mentioned_or_replied(message):
+        if await self.is_bot_mentioned_or_replied(message) or await self.is_in_conversation(ctx):
             pass
         elif random.random() > await self.get_percentage(ctx):
             return
@@ -253,7 +255,6 @@ class AIUser(
             percentage = await self.config.guild(ctx.guild).reply_percent()
         if percentage == None:
             percentage = DEFAULT_REPLY_PERCENT
-
         return percentage
 
     async def is_common_valid_reply(self, ctx: commands.Context) -> bool:
@@ -323,6 +324,21 @@ class AIUser(
         if not (await self.config.guild(message.guild).reply_to_mentions_replies()):
             return False
         return self.bot.user in message.mentions
+
+    async def is_in_conversation(self, ctx: commands.Context) -> bool:
+        reply_percent = await self.config.guild(ctx.guild).conversation_reply_percent()
+        reply_time_seconds = await self.config.guild(ctx.guild).conversation_reply_time()
+
+        if reply_percent == 0 or reply_time_seconds == 0:
+            return False
+
+        cutoff_time = datetime.now(tz=timezone.utc) - timedelta(seconds=reply_time_seconds)
+
+        async for message in ctx.channel.history(limit=10):
+            if message.author.id == self.bot.user.id and message.created_at > cutoff_time:
+                return random.random() < reply_percent
+
+        return False
 
     async def initialize_openai_client(self, ctx: commands.Context = None):
         base_url = await self.config.custom_openai_endpoint()
