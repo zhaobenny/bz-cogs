@@ -66,6 +66,7 @@ IMAGE_UPLOAD_LIMIT = 10 * (1024 * 1024)  # 10 MB
 FUNCTION_CALLING_SUPPORTED_MODELS = [
     "gpt-4",
     "gpt-4o",
+    "gpt-4o-mini",
     "gpt-4-turbo",
     "gpt-4-1106-preview",
     "gpt-4-0613",
@@ -75,6 +76,7 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
     "gpt-3.5-turbo-0125",
     "openai/gpt-4",
     "openai/gpt-4o",
+    "openai/gpt-4o-mini",
     "openai/gpt-4-turbo",
     "openai/gpt-4-1106-preview",
     "openai/gpt-4-0613",
@@ -95,9 +97,11 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
 ]
 VISION_SUPPORTED_MODELS = [
     "gpt-4o",
+    "gpt-4o-mini",
     "gpt-4-turbo",
     "gpt-4-vision-preview",
     "openai/gpt-4o",
+    "openai/gpt-4o-mini",
     "openai/gpt-4-turbo",
     "openai/gpt-4-vision-preview",
     "google/gemini-flash-1.5",
@@ -126,6 +130,7 @@ OTHER_MODELS_LIMITS = {
     "gpt-4-turbo": 123000,
     "gpt-4-turbo-preview": 123000,
     "gpt-4o": 123000,
+    "gpt-4o-mini": 123000,
     "command-r-plus": 123000,
     "phi-3-medium-128k-instruct": 123000,
     "claude-2": 98000,

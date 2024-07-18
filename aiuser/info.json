@@ -3,7 +3,7 @@
         "zhaobenny"
     ],
     "description": "Human-like Discord interactions powered by OpenAI (+ other LLMs) for messages (and images)",
-    "install_msg": "See cog README for additional setup. \nQuick startup guide for OpenAI: \n1. Set (preferably paid) OpenAI key using [p]set api openai api_key,INSERT_API_KEY \n2. [p]aiuser add <#CHANNEL_NAME> \n3. [p]aiuser optin to opt yourself into getting messages used (other users will need to do the same)",
+    "install_msg": "See cog README for additional setup. \nQuick startup guide for OpenAI: \n1. Set (preferably paid) OpenAI key using `[p]set api openai api_key,INSERT_API_KEY` \n2. `[p]aiuser add <#CHANNEL_NAME>` \n3. `[p]aiuser optin` to opt yourself into getting messages used (other users will need to do the same)",
     "short": "Human-like user behavior powered by LLMs.",
     "permissions": [
         "read_messages",
@@ -20,7 +20,7 @@
         "trafilatura",
         "aiohttp"
     ],
-    "end_user_data_statement": "This cog does not autonomously store data or metadata concerning users. With user consent, chat messages/images may be forwarded to OpenAI or third parties to produce responses. For further details, please consult: https://openai.com/policies/privacy-policy, https://openrouter.ai/privacy, https://stablehorde.net/privacy, and relevant third-party privacy policies.",
+    "end_user_data_statement": "This cog does not autonomously store data or metadata concerning users. With user consent, chat messages/images may be forwarded to OpenAI or third parties to produce LLM responses. For further details, please consult: https://openai.com/policies/privacy-policy, https://openrouter.ai/privacy, https://stablehorde.net/privacy, and relevant third-party privacy policies.",
     "tags": [
         "openai",
         "chatgpt",

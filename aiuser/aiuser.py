@@ -335,7 +335,7 @@ class AIUser(
         cutoff_time = datetime.now(tz=timezone.utc) - timedelta(seconds=reply_time_seconds)
 
         async for message in ctx.channel.history(limit=10):
-            if message.author.id == self.bot.user.id and message.created_at > cutoff_time:
+            if message.author.id == self.bot.user.id and len(message.embeds) == 0 and message.created_at > cutoff_time:
                 return random.random() < reply_percent
 
         return False
