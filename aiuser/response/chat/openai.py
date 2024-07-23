@@ -29,11 +29,9 @@ class OpenAI_API_Generator(Chat_Generator):
             logit_bias = json.loads(await self.config.guild(self.ctx.guild).weights() or "{}")
             kwargs["logit_bias"] = logit_bias
 
-        if self.model in VISION_SUPPORTED_MODELS:
+        if kwargs.get("logit_bias") and self.model in VISION_SUPPORTED_MODELS:
             logger.warning(f"logit_bias is currently not supported for for model {self.model}, removing...")
             del kwargs["logit_bias"]
-            if kwargs.get("max_tokens") is None:
-                kwargs["max_tokens"] = 500
 
         return kwargs
 
