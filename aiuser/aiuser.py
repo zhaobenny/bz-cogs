@@ -93,7 +93,7 @@ class AIUser(
             "random_messages_prompts": DEFAULT_RANDOM_PROMPTS,
             "presets": json.dumps(DEFAULT_PRESETS),
             "image_requests": False,
-            "image_requests_endpoint": None,
+            "image_requests_endpoint": "dall-e-2",
             "image_requests_parameters": None,
             "image_requests_preprompt": "",
             "image_requests_subject": "woman",

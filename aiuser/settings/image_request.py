@@ -71,8 +71,11 @@ class ImageRequestSettings(MixinMeta):
 
     @imagerequest.command(name="endpoint")
     async def image_request_endpoint(self, ctx: commands.Context, url: str):
-        """Set compatible image generation endpoint (eg. for local A1111 include `/sdapi/v1/txt2img`)"""
-        if not url.endswith("/"):
+        """Set compatible image generation endpoint (eg. for local A1111 include `/sdapi/v1/txt2img`)
+
+           If set to `dall-e-3` or `dall-e-2`, image requests will use OpenAI's DALL·E models at 1024x1024 SD resolution.
+        """
+        if not url.startswith("dall-e") and not url.endswith("/"):
             url += "/"
         await self.config.guild(ctx.guild).image_requests_endpoint.set(url)
         embed = discord.Embed(
