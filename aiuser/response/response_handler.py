@@ -5,11 +5,9 @@ import discord
 from redbot.core import commands
 
 from aiuser.abc import MixinMeta
-from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
-                                     IMAGE_REQUEST_CHECK_PROMPT)
-from aiuser.messages_list.messages import MessagesList, create_messages_list
-from aiuser.response.chat.openai import OpenAI_API_Generator
-from aiuser.response.chat.openai_funcs import OpenAI_Functions_API_Generator
+from aiuser.common.constants import IMAGE_REQUEST_CHECK_PROMPT
+from aiuser.messages_list.messages import create_messages_list
+from aiuser.response.chat.openai import OpenAIAPIGenerator
 from aiuser.response.chat.response import ChatResponse
 from aiuser.response.image.generic import GenericImageGenerator
 from aiuser.response.image.modal import ModalImageGenerator
@@ -21,27 +19,16 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class ResponseHandler(MixinMeta):
-    async def send_response(self, ctx: commands.Context, messages_list=None):
+    async def create_response(self, ctx: commands.Context, messages_list=None):
         if (not messages_list and not ctx.interaction) and await self.is_image_request(ctx.message):
             if await self.send_image(ctx):
                 return
 
-        if not messages_list:
-            messages_list = await create_messages_list(self, ctx)
-            await messages_list.add_history()
-
-        await self.send_message(ctx, messages_list)
-
-    async def send_message(self, ctx: commands.Context, messages_list: MessagesList):
-        chat = None
-
-        if await self.config.guild(ctx.guild).function_calling() and messages_list.model in FUNCTION_CALLING_SUPPORTED_MODELS:
-            chat = OpenAI_Functions_API_Generator(self, ctx, messages_list)
-        else:
-            chat = OpenAI_API_Generator(self, ctx, messages_list)
+        messages_list = messages_list or await create_messages_list(self, ctx)
 
         async with ctx.message.channel.typing():
-            response = ChatResponse(ctx, self.config, chat)
+            chat_generator = OpenAIAPIGenerator(self, ctx, messages_list)
+            response = ChatResponse(ctx, self.config, chat_generator)
             await response.send()
 
     async def send_image(self, ctx: commands.Context):

@@ -332,12 +332,12 @@ class Settings(
         if model == "list":
             return await self._paginate_models(ctx, models)
 
-        if await self.config.guild(ctx.guild).function_calling() and model not in FUNCTION_CALLING_SUPPORTED_MODELS:
-            return await ctx.send(":warning: Can not select model that with no build-in support for function calling!\nSwitch function calling off using `[p]aiuser functions toggle` or select a model that supports function calling.")
-
         if model not in models:
             await ctx.send(":warning: Not a valid model!")
             return await self._paginate_models(ctx, models)
+
+        if await self.config.guild(ctx.guild).function_calling() and model not in FUNCTION_CALLING_SUPPORTED_MODELS:
+            return await ctx.send(":warning: Can not select model that with no build-in support for function calling!\nSwitch function calling off using `[p]aiuser functions toggle` or select a model that supports function calling.")
 
         await self.config.guild(ctx.guild).model.set(model)
         embed = discord.Embed(

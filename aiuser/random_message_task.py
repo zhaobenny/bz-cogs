@@ -40,7 +40,7 @@ class RandomMessageTask(MixinMeta):
                     f"No random message topics were found in {guild.name}, skipping")
 
             prompt = await self.config.channel(channel).custom_text_prompt() or await self.config.guild(guild).custom_text_prompt() or await self.config.custom_text_prompt() or DEFAULT_PROMPT
-            messages_list = await create_messages_list(self, ctx, prompt=prompt)
+            messages_list = await create_messages_list(self, ctx, prompt=prompt, history=False)
             topic = await format_variables(
                 ctx, topics[random.randint(0, len(topics) - 1)])
             logger.debug(
@@ -48,7 +48,7 @@ class RandomMessageTask(MixinMeta):
             await messages_list.add_system(f"Using the persona above, follow these instructions: {topic}", index=len(messages_list) + 1)
             messages_list.can_reply = False
 
-            return await self.send_response(ctx, messages_list)
+            return await self.create_response(ctx, messages_list)
 
     async def get_discord_context(self, guild_id: int, channels: list):
         guild = self.bot.get_guild(guild_id)

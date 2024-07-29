@@ -51,7 +51,7 @@ class TriggerSettings(MixinMeta):
     @checks.is_owner()
     @trigger.command(name="conversation_reply_percent")
     async def conversation_reply_percent(self, ctx: commands.Context, percent: int):
-        """ Set the percentage chance of the bot continuing to reply within `conversation_reply_time` time frame"""
+        """ Set a different percentage chance of the bot continuing to reply within `conversation_reply_time` time frame"""
         if percent < 0 or percent > 100:
             return await ctx.send("Please enter a number between 0 and 100")
         await self.config.guild(ctx.guild).conversation_reply_percent.set(percent / 100)

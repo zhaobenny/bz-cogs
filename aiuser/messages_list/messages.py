@@ -23,11 +23,13 @@ OPTIN_EMBED_TITLE = ":information_source: AI User Opt-In / Opt-Out"
 
 
 async def create_messages_list(
-    cog: MixinMeta, ctx: commands.Context, prompt: str = None
+    cog: MixinMeta, ctx: commands.Context, prompt: str = None, history: bool = True
 ):
     """to manage messages in ChatML format"""
     thread = MessagesList(cog, ctx)
     await thread._init(prompt=prompt)
+    if history:
+        await thread.add_history()
     return thread
 
 

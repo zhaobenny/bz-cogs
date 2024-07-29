@@ -8,13 +8,13 @@ from discord import AllowedMentions
 from redbot.core import Config, commands
 
 from aiuser.common.utilities import to_thread
-from aiuser.response.chat.generator import Chat_Generator
+from aiuser.response.chat.generator import ChatGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class ChatResponse():
-    def __init__(self, ctx: commands.Context, config: Config, chat: Chat_Generator):
+    def __init__(self, ctx: commands.Context, config: Config, chat: ChatGenerator):
         self.ctx = ctx
         self.config = config
         self.response = None
@@ -95,7 +95,7 @@ class ChatResponse():
                 logger.warning(
                     f"Timed out after {5} seconds while applying regex pattern \"{pattern.pattern}\" in response \"{self.response}\" \
                         Please check the regex pattern for catastrophic backtracking. Continuing...")
-                
+
         self.response = response
 
     async def is_reply(self):

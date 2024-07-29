@@ -196,7 +196,7 @@ class AIUser(
             )
 
         try:
-            await self.send_response(ctx)
+            await self.create_response(ctx)
         except Exception:
             await ctx.send(":warning: Error in generating response!", ephemeral=True)
 
@@ -225,7 +225,7 @@ class AIUser(
         if URL_PATTERN.search(ctx.message.content):
             ctx = await self.wait_for_embed(ctx)
 
-        await self.send_response(ctx)
+        await self.create_response(ctx)
 
     async def wait_for_embed(self, ctx: commands.Context):
         """Wait for possible embed to be valid"""
