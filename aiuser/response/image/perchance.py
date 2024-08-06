@@ -4,8 +4,9 @@ import io
 import json
 import logging
 import random
-import perchance as pc
+
 import aiohttp
+import perchance as pc
 from PIL import Image
 from tenacity import retry, stop_after_attempt, stop_after_delay, wait_random
 
@@ -17,6 +18,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 class PerchanceGenerator(ImageGenerator):
     async def generate_image(self, caption):
         # eg. https://perchance.org/ai-text-to-image-generator
+        # requires "pip install perchance"
 
         url = await self.config.guild(self.ctx.guild).image_requests_endpoint()
         self.model = url.split("/")[-2]
