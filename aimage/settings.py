@@ -28,8 +28,9 @@ class Settings(MixinMeta):
         embed = discord.Embed(title="AImage Config", color=await ctx.embed_color())
         embed.add_field(name="Endpoint", value=f"{config['endpoint']}", inline=False)
 
-        if config["negative_prompt"] > 1024:
-            negative_prompt = config["negative_prompt"][:1020] + "..."
+        negative_prompt = config["negative_prompt"]
+        if len(negative_prompt) > 1024:
+            negative_prompt =  negative_prompt[:1020] + "..."
 
         embed.add_field(name="Default Negative Prompt", value=f"`{negative_prompt}`", inline=False)
         embed.add_field(name="Default Checkpoint", value=f"`{config['checkpoint']}`")
