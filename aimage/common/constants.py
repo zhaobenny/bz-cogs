@@ -1,12 +1,18 @@
 import re
+from enum import Enum
+
+
+class API_Type(Enum):
+    AUTOMATIC1111 = "Automatic1111"
+
+
+VIEW_TIMEOUT = 5 * 60
 
 DEFAULT_NEGATIVE_PROMPT = "(worst quality, low quality:1.4)"
 
 # taken from https://www.greataiprompts.com/imageprompt/list-of-banned-words-in-midjourney/
 DEFAULT_BADWORDS_BLACKLIST = ["blood", "bloodbath", "crucifixion", "bloody", "flesh", "bruises", "car crash", "corpse", "crucified", "cutting", "decapitate", "infested", "gruesome", "kill", "infected", "sadist", "slaughter", "teratoma", "tryphophobia", "wound", "cronenberg", "khorne", "cannibal", "cannibalism", "visceral", "guts", "bloodshot", "gory", "killing", "surgery", "vivisection", "massacre", "hemoglobin", "suicide", "female body parts", "ahegao", "pinup", "ballgag", "playboy", "bimbo", "pleasure", "bodily fluids", "pleasures", "boudoir", "rule34", "brothel", "seducing", "dominatrix", "seductive", "erotic seductive", "fuck", "sensual", "hardcore", "sexy", "hentai", "shag", "horny", "shibari", "incest", "smut", "jav", "succubus", "jerk off king at pic", "thot", "kinbaku", "transparent", "legs spread", "twerk", "making love", "voluptuous", "naughty", "wincest", "orgy", "sultry",
                               "xxx", "bondage", "bdsm", "dog collar", "slavegirl", "transparent and translucent", "arse", "labia", "ass", "mammaries", "human centipede", "badonkers", "minge", "massive chests", "big ass", "mommy milker", "booba", "nipple", "booty", "oppai", "bosom", "organs", "breasts", "ovaries", "busty", "penis", "clunge", "phallus", "crotch", "sexy female", "dick", "skimpy", "girth", "thick", "honkers", "vagina", "hooters", "veiny", "knob", "no clothes", "speedo", "au naturale", "no shirt", "bare chest", "nude", "barely dressed", "bra", "risqué", "clear", "scantily clad", "cleavage", "stripped", "full frontal unclothed", "invisible clothes", "wearing nothing", "lingerie with no shirt", "naked", "without clothes on", "negligee", "zero clothes", "taboo", "fascist", "nazi", "prophet mohammed", "slave", "coon", "honkey", "arrested", "jail", "handcuffs", "drugs", "cocaine", "heroin", "meth", "crack"]
-
-VIEW_TIMEOUT = 5 * 60
 
 AUTO_COMPLETE_SAMPLERS = [
     "Euler a",

@@ -3,8 +3,8 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aimage.abc import MixinMeta
-from aimage.constants import AUTO_COMPLETE_SAMPLERS
-from aimage.helpers import get_auth
+from aimage.common.constants import AUTO_COMPLETE_SAMPLERS
+from aimage.common.helpers import get_auth
 
 
 class Settings(MixinMeta):
@@ -30,7 +30,7 @@ class Settings(MixinMeta):
 
         negative_prompt = config["negative_prompt"]
         if len(negative_prompt) > 1024:
-            negative_prompt =  negative_prompt[:1020] + "..."
+            negative_prompt = negative_prompt[:1020] + "..."
 
         embed.add_field(name="Default Negative Prompt", value=f"`{negative_prompt}`", inline=False)
         embed.add_field(name="Default Checkpoint", value=f"`{config['checkpoint']}`")
@@ -64,7 +64,6 @@ class Settings(MixinMeta):
         elif not endpoint.endswith("/"):
             endpoint += "/"
         await self.config.guild(ctx.guild).endpoint.set(endpoint)
-        await ctx.tick()
 
     @aimage.command(name="nsfw")
     async def nsfw(self, ctx: commands.Context):
@@ -229,15 +228,6 @@ class Settings(MixinMeta):
         await self.config.guild(ctx.guild).tiledvae.set(new)
         await ctx.send(f"Tiled VAE is now {'`disabled`' if not new else '`enabled`'}")
 
-    @aimage.command(name="aihorde_mode")
-    async def aihorde_mode(self, ctx: commands.Context):
-        """
-        Whether the aihorde fallback, if enabled, should use a generalist model or an anime model.
-        """
-        new = not await self.config.guild(ctx.guild).aihorde_anime()
-        await self.config.guild(ctx.guild).aihorde_anime.set(new)
-        await ctx.send(f"aihorde mode is now {'`generalist`' if not new else '`anime`'}")
-
     @aimage.group(name="blacklist")
     async def blacklist(self, _: commands.Context):
         """
@@ -316,171 +306,8 @@ class Settings(MixinMeta):
         await self.config.guild(ctx.guild).words_blacklist.set([])
         await ctx.tick()
 
-    @commands.group(name="aimageowner")
-    @checks.bot_has_permissions(embed_links=True, add_reactions=True)
+    @aimage.command()
     @checks.is_owner()
-    async def aimageowner(self, _: commands.Context):
-        """Manage AI Image owner settings"""
-        pass
-
-    @aimageowner.command(name="config")
-    async def config_owner(self, ctx: commands.Context):
-        """
-        Show the current AI Image config
-        """
-        config = await self.config.get_raw()
-
-        embed = discord.Embed(title="Global AImage Config", color=await ctx.embed_color())
-        embed.add_field(name="Endpoint", value=config["endpoint"])
-        embed.add_field(name="NSFW allowed",
-                        value=config["nsfw"], inline=False)
-        blacklist = ", ".join(config["words_blacklist"])
-        if len(blacklist) > 1024:
-            blacklist = blacklist[:1020] + "..."
-        elif not blacklist:
-            blacklist = "None"
-        embed.add_field(name="Blacklisted words",
-                        value=blacklist, inline=False)
-
-        return await ctx.send(embed=embed)
-
-    @aimageowner.command(name="endpoint")
-    async def endpoint_owner(self, ctx: commands.Context, endpoint: str):
-        """
-        Set a global endpoint URL for AI Image (include `/sdapi/v1/` only)
-
-        Will be used if no guild endpoint is set
-        """
-        if not endpoint.endswith("/"):
-            endpoint += "/"
-        await self.config.endpoint.set(endpoint)
-        await ctx.tick()
-
-    @aimageowner.command(name="auth")
-    async def auth_owner(self, ctx: commands.Context, auth: str):
-        """
-        Set the API auth username:password in that format.
-
-        Will be used if no guild endpoint is set
-        """
-        try:
-            await ctx.message.delete()
-        except:
-            pass
-        await self.config.auth.set(auth)
-        await ctx.send("✅ Auth set.")
-
-    @aimageowner.command(name="nsfw")
-    async def nsfw_owner(self, ctx: commands.Context):
-        """
-        Toggles filtering of NSFW images for global endpoint
-        """
-
-        nsfw = await self.config.nsfw()
-        if nsfw:
-            await ctx.message.add_reaction("🔄")
-            endpoint = await self.config.endpoint()
-            auth_str = await self.config.auth()
-            async with self.session.get(endpoint + "scripts", auth=get_auth(auth_str)) as res:
-                if res.status != 200:
-                    await ctx.message.remove_reaction("🔄", ctx.me)
-                    return await ctx.send(":warning: Couldn't request Stable Diffusion endpoint!")
-                res = await res.json()
-                if "censorscript" not in res.get("txt2img", []):
-                    await ctx.message.remove_reaction("🔄", ctx.me)
-                    return await ctx.send(":warning: Compatible censor script is not installed on A1111, install [this.](https://github.com/IOMisaka/sdapi-scripts)")
-            await ctx.message.remove_reaction("🔄", ctx.me)
-        await self.config.nsfw.set(not nsfw)
-        await ctx.send(f"NSFW filtering is now {'`disabled`' if not nsfw else '`enabled`'}")
-
-    @aimageowner.command(name="aihorde")
-    async def aihorde_owner(self, ctx: commands.Context):
-        """
-        Whether to use aihorde (a crowdsourced volunteer service) as a fallback for generations.
-        Set your AI Horde API key with [p]set api ai-horde api_key,API_KEY
-        """
-        new = not await self.config.aihorde()
-        await self.config.aihorde.set(new)
-        await ctx.send(f"aihorde fallback is now {'`disabled`' if not new else '`enabled`'}")
-
-    @aimageowner.group(name="blacklist")
-    async def blacklist_owner(self, _: commands.Context):
-        """
-        Manage the blacklist of words that will be rejected in prompts when using the global endpoint
-        """
-        pass
-
-    @blacklist_owner.command(name="add")
-    async def blacklist_add_owner(self, ctx: commands.Context, *words: str):
-        """
-        Add words to the global blacklist
-
-        (Separate multiple inputs with spaces, and use quotes (\"\") if needed)
-        """
-        current_words = await self.config.words_blacklist()
-        added = []
-        for word in words:
-            if word not in current_words:
-                added.append(word)
-                current_words.append(word)
-        if not added:
-            return await ctx.send("No words added")
-
-        await self.config.words_blacklist.set(current_words)
-        return await ctx.send(f"Added words `{', '.join(added)}` to the blacklist")
-
-    @blacklist_owner.command(name="remove")
-    async def blacklist_remove_owner(self, ctx: commands.Context, *words: str):
-        """
-        Remove words from the global blacklist
-
-        (Separate multiple inputs with spaces, and use quotes (\"\") if needed)
-        """
-        current_words = await self.config.words_blacklist()
-        removed = []
-        for word in words:
-            if word in current_words:
-                removed.append(word)
-                current_words.remove(word)
-        if not removed:
-            return await ctx.send("No words removed")
-
-        await self.config.words_blacklist.set(current_words)
-        await ctx.send(f"Removed words `{words}` to global blacklist")
-
-    @blacklist_owner.command(name="list", aliases=["show"])
-    async def blacklist_list_owner(self, ctx: commands.Context):
-        """
-        List all words in the blacklist
-        """
-        current_words = await self.config.words_blacklist()
-
-        if not current_words:
-            return await ctx.send("No words in global blacklist")
-
-        pages = []
-
-        for i in range(0, len(current_words), 10):
-            embed = discord.Embed(title="Blacklisted words for global endpoint",
-                                  color=await ctx.embed_color())
-            embed.description = "\n".join(current_words[i:i+10])
-            pages.append(embed)
-
-        if len(pages) == 1:
-            return await ctx.send(embed=pages[0])
-
-        for i, page in enumerate(pages):
-            page.set_footer(text=f"Page {i+1} of {len(pages)}")
-
-    @blacklist_owner.command(name="clear")
-    async def blacklist_clear_owner(self, ctx: commands.Context):
-        """
-        Clear the global blacklist to nothing!
-        """
-        await self.config.words_blacklist.set([])
-        await ctx.tick()
-
-    @aimageowner.command()
     @checks.bot_in_a_guild()
     async def forcesync(self, ctx: commands.Context):
         """

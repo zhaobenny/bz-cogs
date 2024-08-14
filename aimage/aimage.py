@@ -12,17 +12,18 @@ from redbot.core import Config, app_commands, checks, commands
 from redbot.core.bot import Red
 
 from aimage.abc import CompositeMetaClass
-from aimage.constants import (AUTO_COMPLETE_SAMPLERS,
-                              DEFAULT_BADWORDS_BLACKLIST,
-                              DEFAULT_NEGATIVE_PROMPT)
-from aimage.functions import Functions
+from aimage.common.constants import (AUTO_COMPLETE_SAMPLERS,
+                                     DEFAULT_BADWORDS_BLACKLIST,
+                                     DEFAULT_NEGATIVE_PROMPT, API_Type)
+from aimage.common.params import ImageGenParams
+from aimage.image_handler import ImageHandler
 from aimage.settings import Settings
 
 logger = logging.getLogger("red.bz_cogs.aimage")
 
 
 class AImage(Settings,
-             Functions,
+             ImageHandler,
              commands.Cog,
              metaclass=CompositeMetaClass):
     """ Generate AI images using a A1111 endpoint """
@@ -32,16 +33,9 @@ class AImage(Settings,
         self.bot: Red = bot
         self.config = Config.get_conf(self, identifier=75567113)
 
-        default_global = {
-            "endpoint": None,
-            "auth": None,
-            "nsfw": True,
-            "words_blacklist": DEFAULT_BADWORDS_BLACKLIST,
-            "aihorde": True,
-        }
-
         default_guild = {
             "endpoint": None,
+            "api_type": API_Type.AUTOMATIC1111.value,
             "nsfw": True,
             "words_blacklist": DEFAULT_BADWORDS_BLACKLIST,
             "negative_prompt": DEFAULT_NEGATIVE_PROMPT,
@@ -56,7 +50,6 @@ class AImage(Settings,
             "height": 512,
             "max_img2img": 1536,
             "auth": None,
-            "aihorde_anime": False,
         }
 
         self.session = aiohttp.ClientSession()
@@ -64,7 +57,6 @@ class AImage(Settings,
         self.autocomplete_cache = defaultdict(dict)
 
         self.config.register_guild(**default_guild)
-        self.config.register_global(**default_global)
 
     async def red_delete_data_for_user(self, **kwargs):
         return
@@ -129,7 +121,7 @@ class AImage(Settings,
         choices = self.autocomplete_cache[interaction.guild_id].get("vaes") or []
         return await self.object_autocomplete(interaction, current, choices)
 
-    @staticmethod
+    @ staticmethod
     def filter_list(options: list, current: str):
         results = []
 
@@ -164,10 +156,10 @@ class AImage(Settings,
         "style": style_autocomplete,
     }
 
-    @commands.command()
-    @commands.cooldown(1, 10, commands.BucketType.default)
-    @checks.bot_has_permissions(attach_files=True)
-    @checks.bot_in_a_guild()
+    @ commands.command()
+    @ commands.cooldown(1, 10, commands.BucketType.default)
+    @ checks.bot_has_permissions(attach_files=True)
+    @ checks.bot_in_a_guild()
     async def imagine(self, ctx: commands.Context, *, prompt: str):
         """
         Generate an image
@@ -178,16 +170,17 @@ class AImage(Settings,
         if not self.autocomplete_cache[ctx.guild.id]:
             asyncio.create_task(self._update_autocomplete_cache(ctx))
 
-        await self.generate_image(ctx, prompt=prompt)
+        params = ImageGenParams(prompt=prompt)
+        await self.generate_image(ctx, params=params)
 
-    @app_commands.command(name="imagine")
-    @app_commands.describe(width="Default image width is 512, or 1024 for SDXL.",
-                           height="Default image height is 512, or 1024 for SDXL.",
-                           **_parameter_descriptions)
-    @app_commands.autocomplete(**_parameter_autocompletes)
-    @app_commands.checks.cooldown(1, 10, key=None)
-    @app_commands.checks.bot_has_permissions(attach_files=True)
-    @app_commands.guild_only()
+    @ app_commands.command(name="imagine")
+    @ app_commands.describe(width="Default image width is 512, or 1024 for SDXL.",
+                            height="Default image height is 512, or 1024 for SDXL.",
+                            **_parameter_descriptions)
+    @ app_commands.autocomplete(**_parameter_autocompletes)
+    @ app_commands.checks.cooldown(1, 10, key=None)
+    @ app_commands.checks.bot_has_permissions(attach_files=True)
+    @ app_commands.guild_only()
     async def imagine_app(
         self,
         interaction: discord.Interaction,
@@ -207,7 +200,7 @@ class AImage(Settings,
         lora: str = "",
     ):
         """
-        Generate an image using Stable Diffusion AI.
+        Generate an image using AI.
         """
         await interaction.response.defer(thinking=True)
 
@@ -218,21 +211,34 @@ class AImage(Settings,
         if not self.autocomplete_cache[ctx.guild.id]:
             asyncio.create_task(self._update_autocomplete_cache(interaction))
 
-        await self.generate_image(interaction,
-                                  prompt=prompt, negative_prompt=negative_prompt, style=style,
-                                  width=width, height=height, cfg=cfg, sampler=sampler, steps=steps,
-                                  seed=seed, subseed=variation_seed, subseed_strength=variation,
-                                  checkpoint=checkpoint, vae=vae, lora=lora)
+        params = ImageGenParams(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            style=style,
+            width=width,
+            height=height,
+            cfg=cfg,
+            sampler=sampler,
+            steps=steps,
+            seed=seed,
+            variation=variation,
+            variation_seed=variation_seed,
+            checkpoint=checkpoint,
+            vae=vae,
+            lora=lora
+        )
 
-    @app_commands.command(name="reimagine")
-    @app_commands.describe(image="The image to reimagine with AI.",
-                           denoising="How much the image should change. Try around 0.6",
-                           scale="Resizes the image up or down, 0.5 to 2.0.",
-                           **_parameter_descriptions)
-    @app_commands.autocomplete(**_parameter_autocompletes)
-    @app_commands.checks.cooldown(1, 10, key=None)
-    @app_commands.checks.bot_has_permissions(attach_files=True)
-    @app_commands.guild_only()
+        await self.generate_image(interaction, params=params)
+
+    @ app_commands.command(name="reimagine")
+    @ app_commands.describe(image="The image to reimagine with AI.",
+                            denoising="How much the image should change. Try around 0.6",
+                            scale="Resizes the image up or down, 0.5 to 2.0.",
+                            **_parameter_descriptions)
+    @ app_commands.autocomplete(**_parameter_autocompletes)
+    @ app_commands.checks.cooldown(1, 10, key=None)
+    @ app_commands.checks.bot_has_permissions(attach_files=True)
+    @ app_commands.guild_only()
     async def reimagine_app(
             self,
             interaction: discord.Interaction,
@@ -253,7 +259,7 @@ class AImage(Settings,
             lora: str = "",
     ):
         """
-        Convert an image using Stable Diffusion AI.
+        Convert an image using AI.
         """
         await interaction.response.defer(thinking=True)
 
@@ -275,15 +281,27 @@ class AImage(Settings,
         if not self.autocomplete_cache[ctx.guild.id]:
             asyncio.create_task(self._update_autocomplete_cache(interaction))
 
-        img = io.BytesIO()
-        await image.save(img)
+        params = ImageGenParams(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            style=style,
+            cfg=cfg,
+            sampler=sampler,
+            steps=steps,
+            seed=seed,
+            variation=variation,
+            variation_seed=variation_seed,
+            checkpoint=checkpoint,
+            vae=vae,
+            lora=lora,
+            # img2img
+            height=image.height*scale,
+            width=image.width*scale,
+            init_image=await image.read(),
+            denoising=denoising,
+        )
 
-        await self.generate_img2img(interaction,
-                                    image=img.read(), prompt=prompt, negative_prompt=negative_prompt, style=style,
-                                    denoising=denoising, scale=scale, width=image.width, height=image.height,
-                                    cfg=cfg, sampler=sampler, steps=steps,
-                                    seed=seed, subseed=variation_seed, subseed_strength=variation,
-                                    checkpoint=checkpoint, vae=vae, lora=lora)
+        await self.generate_img2img(interaction, params=params)
 
     async def _can_run_command(self, ctx: commands.Context, command_name: str) -> bool:
         prefix = await self.bot.get_prefix(ctx.message)
@@ -298,39 +316,8 @@ class AImage(Settings,
             can = False
         return can
 
+    async def get_api_type(self, ctx: Union[commands.Context, discord.Interaction]):
+        api_type = await self.config.guild(ctx.guild).api_type()
+
     async def _update_autocomplete_cache(self, ctx: Union[commands.Context, discord.Interaction]):
-        guild = ctx.guild
-
-        if not await self._check_endpoint_online(guild):
-            return
-
-        if data := await self._fetch_data(guild, "upscalers"):
-            choices = [choice["name"] for choice in data]
-            self.autocomplete_cache[guild.id]["upscalers"] = choices
-
-        if data := await self._fetch_data(guild, "scripts"):
-            choices = [choice for choice in data["txt2img"]]
-            self.autocomplete_cache[guild.id]["scripts"] = choices
-
-        if data := await self._fetch_data(guild, "loras"):
-            choices = [f"<lora:{choice['name']}:1>" for choice in data]
-            self.autocomplete_cache[guild.id]["loras"] = choices
-
-        if data := await self._fetch_data(guild, "sd-models"):
-            choices = [choice["model_name"] for choice in data]
-            self.autocomplete_cache[guild.id]["checkpoints"] = choices
-
-        if data := await self._fetch_data(guild, "sd-vae"):
-            choices = [choice["model_name"] for choice in data]
-            self.autocomplete_cache[guild.id]["vaes"] = choices
-
-        if data := await self._fetch_data(guild, "samplers"):
-            choices = [choice["name"] for choice in data]
-            self.autocomplete_cache[guild.id]["samplers"] = choices
-
-        if data := await self._fetch_data(guild, "prompt-styles"):
-            choices = [choice["name"] for choice in data]
-            self.autocomplete_cache[guild.id]["styles"] = choices
-
-        logger.debug(
-            f"Ran a update to get possible autocomplete terms in server {guild.id}")
+        logger.debug(f"Ran a update to get possible autocomplete terms in server {ctx.guild.id}")
