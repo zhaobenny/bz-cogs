@@ -91,6 +91,7 @@ class Functions(MixinMeta):
         except ValueError as error:
             return await self.send_response(context, content=f":warning: {error}", ephemeral=True)
         except aiohttp.ClientResponseError:
+            logger.exception(f"Failed request to Stable Diffusion endpoint in server {guild.id}")
             return await self.send_response(context, content=":warning: Timed out! Could not connect to server.", ephemeral=True)
         except Exception as error:
             if await self.config.aihorde():
@@ -262,7 +263,7 @@ class Functions(MixinMeta):
         samplers = [choice["name"] for choice in data]
         if payload["sampler_name"] not in samplers:
             raise ValueError(f"Invalid sampler name: `{payload['sampler_name']}`")
-        
+
     async def _request_aihorde(self, context: Union[commands.Context, discord.Interaction], is_allowed_nsfw: bool, payload: dict):
         logger.info(f"Using fallback AI Horde to generate image in server {context.guild.id}")
         api_key = (await self.bot.get_shared_api_tokens("ai-horde")).get("api_key") or "0000000000"
