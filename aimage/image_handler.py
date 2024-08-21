@@ -1,6 +1,7 @@
 import asyncio
 import io
 import logging
+import random
 from typing import Union
 
 import aiohttp
@@ -40,15 +41,12 @@ class ImageHandler(MixinMeta):
 
         try:
             self.generating[user.id] = True
-            api = A1111(self, context)
-            await api._init()
+            api = await self.get_api_instance(context)
             generate_func = getattr(api, generate_method)
             response: ImageResponse = await generate_func(params, payload)
         except ValueError as error:
-            return await send_response(context, content=f":warning: {error}", ephemeral=True)
+            return await send_response(context, content=f":warning: Invalid parameter: {error}", ephemeral=True)
         except aiohttp.ClientResponseError as error:
-            if error.status == 422:
-                return await send_response(context, content=f":warning: Invalid parameter used in request!", ephemeral=True)
             logger.exception(f"Failed request in server {guild.id}")
             return await send_response(context, content=":warning: Timed out! Bad response from server!", ephemeral=True)
         except aiohttp.ClientConnectorError:
@@ -69,6 +67,9 @@ class ImageHandler(MixinMeta):
         view = ImageActions(self, response.info_string, response.payload, user, context.channel)
         msg = await send_response(context, file=file, view=view)
         asyncio.create_task(delete_button_after(msg))
+
+        if (random.random() > 0.51):  # update only half the time
+            asyncio.create_task(self._update_autocomplete_cache(context))
 
         imagescanner = self.bot.get_cog("ImageScanner")
         if imagescanner and response.extension == "png":

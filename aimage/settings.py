@@ -1,10 +1,14 @@
+import asyncio
+from typing import Optional
+
 import discord
 from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aimage.abc import MixinMeta
-from aimage.common.constants import AUTO_COMPLETE_SAMPLERS
-from aimage.common.helpers import get_auth
+from aimage.common.constants import AUTO_COMPLETE_SAMPLERS, API_Type
+from aimage.common.helpers import delete_button_after
+from aimage.views.api_type import APITypeView
 
 
 class Settings(MixinMeta):
@@ -31,8 +35,8 @@ class Settings(MixinMeta):
         negative_prompt = config["negative_prompt"]
         if len(negative_prompt) > 1024:
             negative_prompt = negative_prompt[:1020] + "..."
-
         embed.add_field(name="Default Negative Prompt", value=f"`{negative_prompt}`", inline=False)
+
         embed.add_field(name="Default Checkpoint", value=f"`{config['checkpoint']}`")
         embed.add_field(name="Default VAE", value=f"`{config['vae']}`")
         embed.add_field(name="Default Sampler", value=f"`{config['sampler']}`")
@@ -64,6 +68,9 @@ class Settings(MixinMeta):
         elif not endpoint.endswith("/"):
             endpoint += "/"
         await self.config.guild(ctx.guild).endpoint.set(endpoint)
+        await self.config.guild(ctx.guild).api_type.set(API_Type.AUTOMATIC1111.value)
+        msg = await ctx.send("Endpoint set. Select what type of API this endpoint is ⤵️ ", view=APITypeView(self, ctx))
+        asyncio.create_task(delete_button_after(msg))
 
     @aimage.command(name="nsfw")
     async def nsfw(self, ctx: commands.Context):
@@ -74,19 +81,22 @@ class Settings(MixinMeta):
         nsfw = await self.config.guild(ctx.guild).nsfw()
         if nsfw:
             await ctx.message.add_reaction("🔄")
-            data = await self._fetch_data(ctx.guild, "scripts") or {}
+            await self._update_autocomplete_cache(ctx)
+            data = self.autocomplete_cache[ctx.guild.id].get("scripts") or []
             await ctx.message.remove_reaction("🔄", ctx.me)
-            if "censorscript" not in data.get("txt2img", []):
-                return await ctx.send(":warning: Compatible censor script is not installed in A1111, install [this.](<https://github.com/IOMisaka/sdapi-scripts>)")
+            if "censorscript" not in data:
+                return await ctx.send(":warning: Compatible censor script is not installed in A1111, install [CensorScript.py](<https://github.com/IOMisaka/sdapi-scripts>).")
 
         await self.config.guild(ctx.guild).nsfw.set(not nsfw)
         await ctx.send(f"NSFW filtering is now {'`disabled`' if not nsfw else '`enabled`'}")
 
     @aimage.command(name="negative_prompt")
-    async def negative_prompt(self, ctx: commands.Context, *, negative_prompt: str):
+    async def negative_prompt(self, ctx: commands.Context, *, negative_prompt: Optional[str]):
         """
         Set the default negative prompt
         """
+        if not negative_prompt:
+            negative_prompt = ""
         await self.config.guild(ctx.guild).negative_prompt.set(negative_prompt)
         await ctx.tick()
 
@@ -112,12 +122,9 @@ class Settings(MixinMeta):
         Set the default sampler
         """
         await ctx.message.add_reaction("🔄")
-        data = await self._fetch_data(ctx.guild, "samplers")
+        await self._update_autocomplete_cache(ctx)
+        samplers = self.autocomplete_cache[ctx.guild.id].get("samplers") or AUTO_COMPLETE_SAMPLERS
         await ctx.message.remove_reaction("🔄", ctx.me)
-        if not data:
-            samplers = AUTO_COMPLETE_SAMPLERS
-        else:
-            samplers = [choice["name"] for choice in data]
 
         if sampler not in samplers:
             return await ctx.send(f":warning: Sampler must be one of: `{', '.join(samplers)}`")
@@ -162,8 +169,8 @@ class Settings(MixinMeta):
         Set the default checkpoint / model used for generating images.
         """
         await ctx.message.add_reaction("🔄")
-        data = await self._fetch_data(ctx.guild, "sd-models")
-        data = [choice["model_name"] for choice in data]
+        await self._update_autocomplete_cache(ctx)
+        data = self.autocomplete_cache[ctx.guild.id].get("checkpoints") or []
         await ctx.message.remove_reaction("🔄", ctx.me)
         if checkpoint not in data:
             return await ctx.send(f":warning: Invalid checkpoint. Pick one of these:\n`{', '.join(data)}`")
@@ -176,8 +183,8 @@ class Settings(MixinMeta):
         Set the default vae used for generating images.
         """
         await ctx.message.add_reaction("🔄")
-        data = await self._fetch_data(ctx.guild, "sd-vae")
-        data = [choice["model_name"] for choice in data]
+        await self._update_autocomplete_cache(ctx)
+        data = self.autocomplete_cache[ctx.guild.id].get("vaes") or []
         await ctx.message.remove_reaction("🔄", ctx.me)
         if vae not in data:
             return await ctx.send(f":warning: Invalid vae. Pick one of these:\n`{', '.join(data)}`")
@@ -187,11 +194,11 @@ class Settings(MixinMeta):
     @aimage.command(name="auth")
     async def auth(self, ctx: commands.Context, *, auth: str):
         """
-        Set the API auth username:password in that format.
+        Sets the account from A1111 host flag `--api-auth` in this format `username:password` 
         """
         try:
             await ctx.message.delete()
-        except:
+        except Exception:
             pass
         await self.config.guild(ctx.guild).auth.set(auth)
         await ctx.send("✅ Auth set.")
@@ -199,14 +206,15 @@ class Settings(MixinMeta):
     @aimage.command(name="adetailer")
     async def adetailer(self, ctx: commands.Context):
         """
-        Whether to use face adetailer on generated pictures, which improves quality.
+        Whether to use face `adetailer` A1111 extension on generated pictures, which improves quality.
         """
         new = not await self.config.guild(ctx.guild).adetailer()
         if new:
             await ctx.message.add_reaction("🔄")
-            data = await self._fetch_data(ctx.guild, "scripts") or {}
+            await self._update_autocomplete_cache(ctx)
+            data = self.autocomplete_cache[ctx.guild.id].get("scripts") or []
             await ctx.message.remove_reaction("🔄", ctx.me)
-            if "adetailer" not in data.get("txt2img", []):
+            if "adetailer" not in data:
                 return await ctx.send(":warning: The ADetailer script is not installed in A1111, install [this.](<https://github.com/Bing-su/adetailer>)")
 
         await self.config.guild(ctx.guild).adetailer.set(new)
@@ -215,14 +223,15 @@ class Settings(MixinMeta):
     @aimage.command(name="tiledvae")
     async def tiledvae(self, ctx: commands.Context):
         """
-        Whether to use tiled vae on generated pictures, which is used to prevent out of memory errors.
+        Whether to use tiled vae on generated pictures from A1111 hosts, which is used to prevent out of memory errors.
         """
         new = not await self.config.guild(ctx.guild).tiledvae()
         if new:
             await ctx.message.add_reaction("🔄")
-            data = await self._fetch_data(ctx.guild, "scripts") or {}
+            await self._update_autocomplete_cache(ctx)
+            data = self.autocomplete_cache[ctx.guild.id].get("scripts") or []
             await ctx.message.remove_reaction("🔄", ctx.me)
-            if "tiled vae" not in data.get("txt2img", []):
+            if "tiled vae" not in data:
                 return await ctx.send(":warning: The Tiled VAE script is not installed in A1111, install [this.](<https://github.com/pkuliyi2015/multidiffusion-upscaler-for-automatic1111>)")
 
         await self.config.guild(ctx.guild).tiledvae.set(new)
@@ -311,9 +320,14 @@ class Settings(MixinMeta):
     @checks.bot_in_a_guild()
     async def forcesync(self, ctx: commands.Context):
         """
-        Force sync slash commands (mainly for development usage)
+        Resync slash commands / host image generators 
+
+        (Mainly a debug tool)
         """
+        await ctx.message.add_reaction("🔄")
+        await self._update_autocomplete_cache(ctx)
         self.bot.tree.copy_global_to(
             guild=discord.Object(id=ctx.guild.id))
         synced = await ctx.bot.tree.sync(guild=ctx.guild)
+        await ctx.message.remove_reaction("🔄", ctx.me)
         await ctx.send(f"Force synced {len(synced)} commands")

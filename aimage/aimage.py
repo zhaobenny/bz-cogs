@@ -208,9 +208,6 @@ class AImage(Settings,
         if not await self._can_run_command(ctx, "imagine"):
             return await interaction.followup.send("You do not have permission to do this.", ephemeral=True)
 
-        if not self.autocomplete_cache[ctx.guild.id]:
-            asyncio.create_task(self._update_autocomplete_cache(interaction))
-
         params = ImageGenParams(
             prompt=prompt,
             negative_prompt=negative_prompt,
@@ -278,9 +275,6 @@ class AImage(Settings,
                 f"Your image {'after resizing would be' if scale != 0 else 'is'} {int(size**0.5)}² pixels, which is too big.",
                 ephemeral=True)
 
-        if not self.autocomplete_cache[ctx.guild.id]:
-            asyncio.create_task(self._update_autocomplete_cache(interaction))
-
         params = ImageGenParams(
             prompt=prompt,
             negative_prompt=negative_prompt,
@@ -316,8 +310,15 @@ class AImage(Settings,
             can = False
         return can
 
-    async def get_api_type(self, ctx: Union[commands.Context, discord.Interaction]):
+    async def get_api_instance(self, ctx: Union[commands.Context, discord.Interaction]):
         api_type = await self.config.guild(ctx.guild).api_type()
+        if api_type == API_Type.AUTOMATIC1111.value:
+            from aimage.apis.a1111 import A1111
+            instance = A1111(self, ctx)
+        await instance._init()
+        return instance
 
     async def _update_autocomplete_cache(self, ctx: Union[commands.Context, discord.Interaction]):
+        api = await self.get_api_instance(ctx)
+        await api.update_autocomplete_cache(self.autocomplete_cache)
         logger.debug(f"Ran a update to get possible autocomplete terms in server {ctx.guild.id}")
