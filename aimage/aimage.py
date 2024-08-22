@@ -315,10 +315,17 @@ class AImage(Settings,
         if api_type == API_Type.AUTOMATIC1111.value:
             from aimage.apis.a1111 import A1111
             instance = A1111(self, ctx)
+        elif api_type == API_Type.AIHorde.value:
+            from aimage.apis.aihorde import AIHorde
+            instance = AIHorde(self, ctx)
         await instance._init()
         return instance
 
     async def _update_autocomplete_cache(self, ctx: Union[commands.Context, discord.Interaction]):
         api = await self.get_api_instance(ctx)
-        await api.update_autocomplete_cache(self.autocomplete_cache)
-        logger.debug(f"Ran a update to get possible autocomplete terms in server {ctx.guild.id}")
+        try:
+            logger.debug(f"Ran a update to get possible autocomplete terms in server {ctx.guild.id}")
+            await api.update_autocomplete_cache(self.autocomplete_cache)
+        except NotImplementedError:
+            logger.debug(f"Autocomplete terms is not supported by the api in server {ctx.guild.id}")
+            pass

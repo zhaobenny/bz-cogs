@@ -28,7 +28,7 @@ async def delete_button_after(msg: discord.Message):
     await asyncio.sleep(VIEW_TIMEOUT)
     try:
         await msg.edit(view=None)
-    except:
+    except Exception:
         return
 
 

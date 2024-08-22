@@ -47,13 +47,13 @@ class ImageHandler(MixinMeta):
         except ValueError as error:
             return await send_response(context, content=f":warning: Invalid parameter: {error}", ephemeral=True)
         except aiohttp.ClientResponseError as error:
-            logger.exception(f"Failed request in server {guild.id}")
-            return await send_response(context, content=":warning: Timed out! Bad response from server!", ephemeral=True)
+            logger.exception(f"Failed request in host {guild.id}")
+            return await send_response(context, content=":warning: Timed out! Bad response from host!", ephemeral=True)
         except aiohttp.ClientConnectorError:
             logger.exception(f"Failed request in server {guild.id}")
-            return await send_response(context, content=":warning: Timed out! Could not reach server!", ephemeral=True)
+            return await send_response(context, content=":warning: Timed out! Could not reach host!", ephemeral=True)
         except NotImplementedError:
-            return await send_response(context, content=":warning: This method is not supported by the server!", ephemeral=True)
+            return await send_response(context, content=":warning: This method is not supported by the host!", ephemeral=True)
         except Exception:
             logger.exception(f"Failed request in server {guild.id}")
             return await send_response(context, content=":warning: Something went wrong!", ephemeral=True)

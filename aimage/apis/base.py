@@ -17,7 +17,7 @@ class BaseAPI():
 
     async def _init(self, *args, **kwargs):
         # for class variables that need to be await initialized
-        raise NotImplementedError
+        pass
 
     async def generate_image(self, *args, **kwargs) -> ImageResponse:
         raise NotImplementedError

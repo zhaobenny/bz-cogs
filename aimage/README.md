@@ -12,26 +12,19 @@ Supports txt2img and img2img functionality.
 [p]slash sync
 ```
 
-The non-slash command is `[p]imagine`, and is very limited in functionality.
+The non-slash command is `[p]imagine`, and is limited in functionality.
 
 # Settings ⚙️
 
 All settings are located here:
 ```
 [p]aimage # per server
-[p]aimageowner # bot wide
 ```
 
 NSFW filter is disabled by default, you can enable it by installing/enabling [this script](https://github.com/IOMisaka/sdapi-scripts) in A1111 then using:
 ```
 [p]aimage nsfw
 ```
-
-## AI Horde 🤖
-
-The cog will fall back to using AI Horde (a crowdsourced volunteer service) if no endpoints are available by default. (Some parameters are not supported by AI Horde, and are ignored silently)
-
-This can be toggled using `[p]aimageowner aihorde`.
 
 # Credits 👏
 

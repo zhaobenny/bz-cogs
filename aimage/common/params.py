@@ -1,7 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Optional
-
-from discord import app_commands
 
 
 @dataclass

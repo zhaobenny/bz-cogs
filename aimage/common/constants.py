@@ -4,6 +4,7 @@ from enum import Enum
 
 class API_Type(Enum):
     AUTOMATIC1111 = "Automatic1111"
+    AIHorde = "AI Horde"
 
 
 DEFAULT_NEGATIVE_PROMPT = "(worst quality, low quality:1.4)"
