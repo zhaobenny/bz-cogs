@@ -2,14 +2,17 @@ import base64
 import json
 import logging
 from enum import Enum
+from typing import Union
 
-import aiohttp
+import discord
+from redbot.core import commands
 from tenacity import retry, stop_after_attempt, wait_random
 
+from aimage.abc import MixinMeta
 from aimage.apis.base import BaseAPI
 from aimage.apis.response import ImageResponse
 from aimage.common.constants import ADETAILER_ARGS, TILED_VAE_ARGS
-from aimage.common.helpers import get_auth, send_response
+from aimage.common.helpers import get_auth
 from aimage.common.params import ImageGenParams
 
 logger = logging.getLogger("red.bz_cogs.aimage")
@@ -30,10 +33,35 @@ cache_mapping = {
     "prompt-styles": "styles"
 }
 
+A1111_SAMPLERS = [
+    "DPM++ 2M",
+    "DPM++ SDE",
+    "DPM++ 2M SDE",
+    "DPM++ 2M SDE Heun",
+    "DPM++ 2S a",
+    "DPM++ 3M SDE",
+    "Euler a",
+    "Euler",
+    "LMS",
+    "Heun",
+    "DPM2",
+    "DPM2 a",
+    "DPM fast",
+    "DPM adaptive",
+    "Restart",
+    "DDIM",
+    "DDIM CFG++",
+    "PLMS",
+    "UniPC",
+    "LCM",
+    "DDPM"
+]
+
 
 class A1111(BaseAPI):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, cog: MixinMeta, context: Union[commands.Context, discord.Interaction]):
+        super().__init__(cog, context)
+        cog.autocomplete_cache[self.guild.id]["samplers"] = A1111_SAMPLERS
 
     async def _init(self):
         self.endpoint = await self.config.guild(self.guild).endpoint()

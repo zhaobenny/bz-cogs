@@ -12,8 +12,7 @@ from redbot.core import Config, app_commands, checks, commands
 from redbot.core.bot import Red
 
 from aimage.abc import CompositeMetaClass
-from aimage.common.constants import (AUTO_COMPLETE_SAMPLERS,
-                                     DEFAULT_BADWORDS_BLACKLIST,
+from aimage.common.constants import (DEFAULT_BADWORDS_BLACKLIST,
                                      DEFAULT_NEGATIVE_PROMPT, API_Type)
 from aimage.common.params import ImageGenParams
 from aimage.image_handler import ImageHandler
@@ -78,7 +77,7 @@ class AImage(Settings,
         ]
 
     async def samplers_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
-        choices = self.autocomplete_cache[interaction.guild_id].get("samplers") or AUTO_COMPLETE_SAMPLERS
+        choices = self.autocomplete_cache[interaction.guild_id].get("samplers") or []
         return await self.object_autocomplete(interaction, current, choices)
 
     async def loras_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:

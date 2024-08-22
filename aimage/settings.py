@@ -6,7 +6,7 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aimage.abc import MixinMeta
-from aimage.common.constants import AUTO_COMPLETE_SAMPLERS, API_Type
+from aimage.common.constants import API_Type
 from aimage.common.helpers import delete_button_after
 from aimage.views.api_type import APITypeView
 
@@ -123,7 +123,7 @@ class Settings(MixinMeta):
         """
         await ctx.message.add_reaction("🔄")
         await self._update_autocomplete_cache(ctx)
-        samplers = self.autocomplete_cache[ctx.guild.id].get("samplers") or AUTO_COMPLETE_SAMPLERS
+        samplers = self.autocomplete_cache[ctx.guild.id].get("samplers") or []
         await ctx.message.remove_reaction("🔄", ctx.me)
 
         if sampler not in samplers:
@@ -320,7 +320,7 @@ class Settings(MixinMeta):
     @checks.bot_in_a_guild()
     async def forcesync(self, ctx: commands.Context):
         """
-        Resync slash commands / host image generators 
+        Resync slash commands / image generators 
 
         (Mainly a debug tool)
         """

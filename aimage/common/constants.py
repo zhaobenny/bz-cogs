@@ -14,31 +14,6 @@ DEFAULT_BADWORDS_BLACKLIST = ["blood", "bloodbath", "crucifixion", "bloody", "fl
                               "xxx", "bondage", "bdsm", "dog collar", "slavegirl", "transparent and translucent", "arse", "labia", "ass", "mammaries", "human centipede", "badonkers", "minge", "massive chests", "big ass", "mommy milker", "booba", "nipple", "booty", "oppai", "bosom", "organs", "breasts", "ovaries", "busty", "penis", "clunge", "phallus", "crotch", "sexy female", "dick", "skimpy", "girth", "thick", "honkers", "vagina", "hooters", "veiny", "knob", "no clothes", "speedo", "au naturale", "no shirt", "bare chest", "nude", "barely dressed", "bra", "risqué", "clear", "scantily clad", "cleavage", "stripped", "full frontal unclothed", "invisible clothes", "wearing nothing", "lingerie with no shirt", "naked", "without clothes on", "negligee", "zero clothes", "taboo", "fascist", "nazi", "prophet mohammed", "slave", "coon", "honkey", "arrested", "jail", "handcuffs", "drugs", "cocaine", "heroin", "meth", "crack"]
 VIEW_TIMEOUT = 5 * 60
 
-AUTO_COMPLETE_SAMPLERS = [
-    "DPM++ 2M",
-    "DPM++ SDE",
-    "DPM++ 2M SDE",
-    "DPM++ 2M SDE Heun",
-    "DPM++ 2S a",
-    "DPM++ 3M SDE",
-    "Euler a",
-    "Euler",
-    "LMS",
-    "Heun",
-    "DPM2",
-    "DPM2 a",
-    "DPM fast",
-    "DPM adaptive",
-    "Restart",
-    "DDIM",
-    "DDIM CFG++",
-    "PLMS",
-    "UniPC",
-    "LCM",
-    "DDPM"
-]
-
-
 AUTO_COMPLETE_UPSCALERS = [
     "Latent",
     "Latent (nearest-exact)",
