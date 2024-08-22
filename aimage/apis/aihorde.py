@@ -1,17 +1,22 @@
 
 
 import asyncio
+import logging
 import random
 import sys
 from typing import Union
 
 import discord
 from redbot.core import commands
+from redbot.core.bot import Red
 
 from aimage.abc import MixinMeta
 from aimage.apis.base import BaseAPI
 from aimage.apis.response import ImageResponse
 from aimage.common.params import ImageGenParams
+
+logger = logging.getLogger("red.bz_cogs.aimage")
+
 
 AI_HORDE_SAMPLERS = ["k_dpm_2", "k_dpmpp_2s_a", "k_dpm_adaptive", "k_dpm_2_a", "k_dpm_fast",
                      "k_euler_a", "k_lms", "DDIM", "k_euler", "k_dpmpp_sde", "lcm", "dpmsolver", "k_heun", "k_dpmpp_2m"]
@@ -22,10 +27,12 @@ class AIHorde(BaseAPI):
     def __init__(self, cog: MixinMeta, context: Union[commands.Context, discord.Interaction]):
         super().__init__(cog, context)
         cog.autocomplete_cache[self.guild.id]["samplers"] = AI_HORDE_SAMPLERS
+        self.bot: Red = cog.bot
 
     async def _init(self):
         self.endpoint = await self.config.guild(self.guild).endpoint()
-        self.headers = {'apikey': "0000000000"}
+        api_key = (await self.bot.get_shared_api_tokens("aihorde")).get("apikey") or "0000000000"
+        self.headers = {'apikey': api_key}
 
     async def update_autocomplete_cache(self, cache):
         # models only supported
@@ -35,7 +42,6 @@ class AIHorde(BaseAPI):
             res = await res.json()
             cache[self.guild.id]["checkpoints"] = [model['name']
                                                    for model in sorted(res, key=lambda x: x['count'], reverse=True)]
-
         except Exception:
             pass
 
@@ -43,19 +49,20 @@ class AIHorde(BaseAPI):
         if payload:
             payload["params"]["seed"] = str(random.randint(-sys.maxsize - 1, sys.maxsize))
         elif params and params.seed == -1:
-            params.seed = random.randint(random.randint(-sys.maxsize - 1, sys.maxsize))
+            params.seed = (random.randint(-sys.maxsize - 1, sys.maxsize))
 
+        # TODO: lora support
         payload = payload or {
             "prompt": params.prompt,
             "params": {
                 "sampler_name": params.sampler or await self.config.guild(self.guild).sampler(),
                 "cfg_scale": params.cfg or await self.config.guild(self.guild).cfg(),
                 "seed":  str(params.seed),
-                "width": self.round_to_nearest(params.width or await self.config.guild(self.guild).width(), 16),
-                "height": self.round_to_nearest(params.height or await self.config.guild(self.guild).height(), 16),
-                "seed_variation": params.variation_seed or 1,
+                "width": self._round_to_nearest(params.width or await self.config.guild(self.guild).width(), 16),
+                "height": self._round_to_nearest(params.height or await self.config.guild(self.guild).height(), 16),
             },
             "nsfw": ((await self.config.guild(self.guild).nsfw())),
+            "censor_nsfw": (not (await self.config.guild(self.guild).nsfw())),
             "steps": params.steps or await self.config.guild(self.guild).sampling_steps(),
             "models": [params.checkpoint or await self.config.guild(self.guild).checkpoint()],
         }
@@ -63,16 +70,17 @@ class AIHorde(BaseAPI):
 
         if res.status == 400:
             res = await res.json()
-            raise ValueError(res["message"])
+            raise ValueError(f"{res['message']}: `{str(res.get('errors'))}`")
 
         res.raise_for_status()
 
         res = await res.json()
+        logger.debug("AI Horde inital response: %s", res)
         uuid = res["id"]
         await self._wait_for_image(uuid)
         res = await self._get_image(uuid)
         image = await (await self.session.get(res['img'])).read()
-        return ImageResponse(data=image, info_string=f"{payload['prompt']}\nAI Horde image. Seed: {payload['params'].get('seed')}, Model: {payload['models'][0]}", payload=payload, extension="webp")
+        return ImageResponse(data=image, info_string=self._construct_infostring(payload), payload=payload, extension="webp")
 
     # TODO: img2img
 
@@ -96,5 +104,10 @@ class AIHorde(BaseAPI):
         return res["generations"][0]
 
     @staticmethod
-    def round_to_nearest(x, base):
+    def _construct_infostring(payload: dict):
+        params = payload["params"]
+        return f"{payload['prompt']}\n`AI Horde image` Steps: {payload['steps']}, Samplers: {params['sampler_name']}, CFG Scale: {params['cfg_scale']}, Seed: {params['seed']}, Model: {payload['models'][0]}"
+
+    @staticmethod
+    def _round_to_nearest(x, base):
         return int(base * round(x/base))

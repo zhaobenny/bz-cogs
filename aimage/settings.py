@@ -61,7 +61,7 @@ class Settings(MixinMeta):
     @aimage.command(name="endpoint")
     async def endpoint(self, ctx: commands.Context, endpoint: str):
         """
-        Set the endpoint URL for AI Image (include `/sdapi/v1/` only)
+        Set the endpoint URL for AI Image (eg. `https://localhost/sdapi/v1/` or `https://aihorde.net/api/`)
         """
         if not endpoint:
             endpoint = None
@@ -75,7 +75,7 @@ class Settings(MixinMeta):
     @aimage.command(name="nsfw")
     async def nsfw(self, ctx: commands.Context):
         """
-        Toggles filtering of NSFW images
+        Toggles filtering of NSFW images (A1111 only)
         """
 
         nsfw = await self.config.guild(ctx.guild).nsfw()
