@@ -1,4 +1,5 @@
 from abc import ABC
+from typing import Union
 
 import discord
 from aiohttp import ClientSession
@@ -20,19 +21,14 @@ class MixinMeta(ABC):
     def __init__(self, *args):
         pass
 
-    async def _get_endpoint(self, guild: discord.Guild):
-        """ Gets the correct endpoint for the guild """
-        pass
-
-    async def _fetch_data(self, guild: discord.Guild, endpoint_suffix: str):
-        """ Helper function to fetch data from Stable Diffusion endpoint """
-        pass
-
-    async def get_auth(self, auth_str: str):
-        pass
-
     async def generate_image(self, *args, **kwargs):
         pass
 
     async def generate_img2img(self, *args, **kwargs):
+        pass
+
+    async def get_api_instance(self, ctx: Union[commands.Context, discord.Interaction]):
+        pass
+
+    async def _update_autocomplete_cache(self, ctx: Union[commands.Context, discord.Interaction]):
         pass
