@@ -105,6 +105,7 @@ class AIUser(
             "function_calling_default_location": [49.24966, -123.11934],
             "conversation_reply_percent": 0,
             "conversation_reply_time": 20,
+            "custom_model_tokens_limit": None,
         }
         default_channel = {
             "custom_text_prompt": None,

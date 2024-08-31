@@ -20,7 +20,7 @@ class FunctionCallingSettings(MixinMeta):
     async def toggle_function_calling(self, ctx: commands.Context):
         """Toggle functions calling
 
-        Requires a model that supports function calling
+        Requires a model that is whitelisted for function calling
         If enabled, the LLM will call functions to generate responses when needed
         This will generate additional API calls and token usage!
 

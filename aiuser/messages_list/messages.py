@@ -62,7 +62,7 @@ class MessagesList:
 
     async def _init(self, prompt=None):
         self.model = await self.config.guild(self.guild).model()
-        self.token_limit = self._get_token_limit(self.model)
+        self.token_limit = await self.config.guild(self.guild).custom_model_tokens_limit() or self._get_token_limit(self.model)
         try:
             self._encoding = tiktoken.encoding_for_model(self.model)
         except KeyError:
@@ -269,6 +269,8 @@ class MessagesList:
             limit = 31000
         if "100k" in model or "claude" in model:
             limit = 99000
+        if "llama-3.1" in model:
+            limit = 123000
         model = model.split("/")[-1].split(":")[0]
         if model in OTHER_MODELS_LIMITS:
             limit = OTHER_MODELS_LIMITS.get(model, limit)

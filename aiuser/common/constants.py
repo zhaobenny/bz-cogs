@@ -113,9 +113,7 @@ VISION_SUPPORTED_MODELS = [
     "anthropic/claude-3-haiku:beta",
     "anthropic/claude-3-sonnet:beta",
     "anthropic/claude-3-opus:beta",
-    "anthropic/claude-3.5-sonnet:beta",
-    "fireworks/firellava-13b",
-    "liuhaotian/llava-yi-34b"
+    "anthropic/claude-3.5-sonnet:beta"
 ]
 OTHER_MODELS_LIMITS = {
     "gemini-flash-1.5": 2797000,
@@ -133,6 +131,8 @@ OTHER_MODELS_LIMITS = {
     "gpt-4o-mini": 123000,
     "command-r-plus": 123000,
     "phi-3-medium-128k-instruct": 123000,
+    "mistral-nemo": 123000,
+    "deepseek-coder": 123000,
     "claude-2": 98000,
     "claude-instant-v1": 98000,
     "command-r": 98000,
@@ -140,6 +140,7 @@ OTHER_MODELS_LIMITS = {
     "mixtral-8x22b-instruct": 60000,
     "wizardlm-2-8x22b": 60000,
     "zephyr-orpo-141b-a35b": 60000,
+    "wizardlm-2-7b": 31000,
     "dolphin-mixtral-8x7b": 31000,
     "toppy-m-7b": 31000,
     "nous-capybara-34b": 31000,
@@ -166,10 +167,9 @@ OTHER_MODELS_LIMITS = {
     "sonar-medium-chat": 18000,
     "gemini-pro-vision": 15000,
     "gpt-3.5-turbo-1106": 12000,
-    "rwkv-5-world-3b": 9000,
-    "rwkv-5-3b-ai-town": 9000,
     "sonar-small-online": 8000,
     "sonar-medium-online": 8000,
+    "gemma-2-9b-it": 7000,
     "openchat-7b": 7000,
     "cinematika-7b": 7000,
     "gemma-7b-it": 7000,
