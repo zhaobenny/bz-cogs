@@ -41,7 +41,7 @@ async def get_tokens(config: Config, ctx: commands.Context, prompt: str) -> int:
     return len(encoding.encode(prompt, disallowed_special=()))
 
 
-def truncate_prompt(prompt: str) -> str:
-    if len(prompt) > 1900:
-        return prompt[:1900] + "..."
+def truncate_prompt(prompt: str, limit: int = 1900) -> str:
+    if len(prompt) > limit:
+        return prompt[:limit] + "..."
     return prompt

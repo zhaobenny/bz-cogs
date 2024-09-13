@@ -14,10 +14,11 @@ from redbot.core.bot import Red
 from aiuser.abc import CompositeMetaClass
 from aiuser.common.cache import Cache
 from aiuser.common.constants import (
+    DEFAULT_IMAGE_REQUEST_SD_GEN_PROMPT,
     DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
-    DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_MIN_MESSAGE_LENGTH,
-    DEFAULT_PRESETS, DEFAULT_RANDOM_PROMPTS, DEFAULT_REMOVE_PATTERNS,
-    DEFAULT_REPLY_PERCENT, IMAGE_UPLOAD_LIMIT, OPENROUTER_URL,
+    DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_IMAGE_UPLOAD_LIMIT,
+    DEFAULT_MIN_MESSAGE_LENGTH, DEFAULT_PRESETS, DEFAULT_RANDOM_PROMPTS,
+    DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT, OPENROUTER_URL,
     SINGULAR_MENTION_PATTERN, URL_PATTERN)
 from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import is_embed_valid, is_using_openai_endpoint
@@ -77,7 +78,7 @@ class AIUser(
             "scan_images": False,
             "scan_images_mode": ScanImageMode.AI_HORDE.value,
             "scan_images_model": "gpt-4o",
-            "max_image_size": IMAGE_UPLOAD_LIMIT,
+            "max_image_size": DEFAULT_IMAGE_UPLOAD_LIMIT,
             "model": "gpt-3.5-turbo",
             "custom_text_prompt": None,
             "channels_whitelist": [],
@@ -95,6 +96,7 @@ class AIUser(
             "image_requests": False,
             "image_requests_endpoint": "dall-e-2",
             "image_requests_parameters": None,
+            "image_requests_sd_gen_prompt": DEFAULT_IMAGE_REQUEST_SD_GEN_PROMPT,
             "image_requests_preprompt": "",
             "image_requests_subject": "woman",
             "image_requests_reduced_llm_calls": False,
