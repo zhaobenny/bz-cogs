@@ -94,7 +94,11 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
     "anthropic/claude-3-haiku:beta",
     "anthropic/claude-3-sonnet:beta",
     "anthropic/claude-3-opus:beta",
-    "anthropic/claude-3.5-sonnet:beta"
+    "anthropic/claude-3.5-sonnet:beta",
+    "qwen/qwen-2.5-72b-instruct",
+    "mistralai/mistral-nemo",
+    "mistralai/mistral-7b-instruct",
+    "mistralai/mistral-large",
 ]
 VISION_SUPPORTED_MODELS = [
     "gpt-4o",
@@ -115,6 +119,10 @@ VISION_SUPPORTED_MODELS = [
     "anthropic/claude-3-sonnet:beta",
     "anthropic/claude-3-opus:beta",
     "anthropic/claude-3.5-sonnet:beta"
+    "qwen/qwen-2-vl-72b-instruct",
+    "qwen/qwen-2.5-72b-instruct",
+    "mistralai/pixtral-12b",
+    "mistralai/pixtral-12b:free"
 ]
 OTHER_MODELS_LIMITS = {
     "gemini-flash-1.5": 2797000,
@@ -134,6 +142,7 @@ OTHER_MODELS_LIMITS = {
     "phi-3-medium-128k-instruct": 123000,
     "mistral-nemo": 123000,
     "deepseek-coder": 123000,
+    "qwen/qwen-2-vl-72b-instruct": 123000,
     "claude-2": 98000,
     "claude-instant-v1": 98000,
     "command-r": 98000,
