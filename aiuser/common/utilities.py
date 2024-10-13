@@ -48,6 +48,8 @@ async def format_variables(ctx: commands.Context, text: str):
     currentweekday = datetime.today().strftime("%A")
     currenttime = datetime.today().strftime("%H:%M")
 
+    randomnumber = random.randint(0, 100)
+
     serveremojis = [str(e) for e in ctx.message.guild.emojis]
     random.shuffle(serveremojis)
     serveremojis = ' '.join(serveremojis)
@@ -66,6 +68,7 @@ async def format_variables(ctx: commands.Context, text: str):
             currentdate=currentdate,
             currentweekday=currentweekday,
             currenttime=currenttime,
+            randomnumber=randomnumber,
         )
         return res
     except KeyError:

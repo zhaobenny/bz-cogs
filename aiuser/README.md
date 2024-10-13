@@ -135,9 +135,9 @@ Admins also manage topics here:
 ```
 ---
 
-## Prompt/Topics Variables  📝
+## Prompt/Topics Dynamic Variables  📝
 
-Prompts and topics can include certain variables by including one of the following placeholders:
+Prompts and topics can include certain dynamic variables by including one of the following strings:
 
 - `{botname}` - the bot's current nickname or username
 - `{botowner}` - the bot owner's username
@@ -151,6 +151,7 @@ Prompts and topics can include certain variables by including one of the followi
 - `{currentdate}` - the current date eg. 2023/08/31 (based on host timezone)
 - `{currentweekday}` - the current weekday eg. Monday (based on host timezone)
 - `{currenttime}` - the current 24-hour time eg. 21:59 (based on host timezone)
+- `{randomnumber}` - a random number between 0 - 100
 
 
 Remove list regex patterns only support `{authorname}` (will use authors of last 10 messages) and `{botname}` placeholders.
