@@ -33,8 +33,8 @@ class Settings(MixinMeta):
         embed.add_field(name="Endpoint", value=f"{config['endpoint']}", inline=False)
 
         negative_prompt = config["negative_prompt"]
-        if len(negative_prompt) > 1024:
-            negative_prompt = negative_prompt[:1020] + "..."
+        if len(negative_prompt) > 1000:
+            negative_prompt = negative_prompt[:1000] + "..."
         embed.add_field(name="Default Negative Prompt", value=f"`{negative_prompt}`", inline=False)
 
         embed.add_field(name="Default Checkpoint", value=f"`{config['checkpoint']}`")
@@ -49,8 +49,9 @@ class Settings(MixinMeta):
         embed.add_field(name="Max img2img size", value=f"`{config['max_img2img']}`²")
 
         blacklist = ", ".join(config["words_blacklist"])
-        if len(blacklist) > 1024:
-            blacklist = blacklist[:1020] + "..."
+
+        if len(blacklist) > 1000:
+            blacklist = blacklist[:1000] + "..."
         elif not blacklist:
             blacklist = "None"
         embed.add_field(name="Blacklisted words",
