@@ -3,7 +3,8 @@ import discord
 from redbot.core import checks, commands
 
 from aiuser.abc import MixinMeta, aiuser
-from aiuser.common.constants import FUNCTION_CALLING_SUPPORTED_MODELS
+from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
+                                     OPENROUTER_URL)
 
 
 class FunctionCallingSettings(MixinMeta):
@@ -20,15 +21,16 @@ class FunctionCallingSettings(MixinMeta):
     async def toggle_function_calling(self, ctx: commands.Context):
         """Toggle functions calling
 
-        Requires a model that is whitelisted for function calling
+        Requires a model that is whitelisted or supported for function calling
         If enabled, the LLM will call functions to generate responses when needed
         This will generate additional API calls and token usage!
 
         """
 
         current_value = not await self.config.guild(ctx.guild).function_calling()
+        custom_endpoint = await self.config.custom_openai_endpoint()
 
-        if current_value:
+        if current_value and (not custom_endpoint or custom_endpoint.startswith(OPENROUTER_URL)):
             model = await self.config.guild(ctx.guild).model()
             if model not in FUNCTION_CALLING_SUPPORTED_MODELS:
                 return await ctx.send(f":warning: Currently selected model, `{model}` is not whitelisted for function calling. Set a compatible model first!")
