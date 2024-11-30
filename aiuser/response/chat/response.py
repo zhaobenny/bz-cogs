@@ -7,10 +7,12 @@ from datetime import datetime, timezone
 from discord import AllowedMentions
 from redbot.core import Config, commands
 
+from aiuser.common.constants import REGEX_RUN_TIMEOUT
 from aiuser.common.utilities import to_thread
 from aiuser.response.chat.generator import ChatGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
+
 
 
 class ChatResponse():
@@ -51,10 +53,14 @@ class ChatResponse():
 
     async def remove_patterns_from_response(self) -> str:
 
-        @to_thread(timeout=5)
+        @to_thread(timeout=REGEX_RUN_TIMEOUT)
         def substitute(pattern: re.Pattern, response):
             response = (pattern.sub('', response))
             return response
+
+        @to_thread(timeout=REGEX_RUN_TIMEOUT)
+        def compile(pattern: re.Pattern):
+            return re.compile(pattern)
 
         patterns = await self.config.guild(self.ctx.guild).removelist_regexes()
 
@@ -77,10 +83,13 @@ class ChatResponse():
             for author in authors:
                 patterns.append(pattern.replace(r'{authorname}', author))
 
-        patterns = []
+        complied_patterns = []
         for pattern in patterns:
             try:
-                patterns.append(re.compile(pattern, re.IGNORECASE))
+                complied_patterns.append(await compile(pattern))
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"Timed out after {REGEX_RUN_TIMEOUT} seconds while compiling regex pattern \"{pattern}\", continuing...")
             except Exception:
                 logger.warning(
                     f"Failed to compile regex pattern \"{pattern}\" for response \"{self.response}\", continuing...", exc_info=True)
@@ -88,12 +97,12 @@ class ChatResponse():
         response = self.response
         response = response.strip(' \n')
 
-        for pattern in patterns:
+        for pattern in complied_patterns:
             try:
                 response = await substitute(pattern, response)
             except asyncio.TimeoutError:
                 logger.warning(
-                    f"Timed out after {5} seconds while applying regex pattern \"{pattern.pattern}\" in response \"{self.response}\" \
+                    f"Timed out after {REGEX_RUN_TIMEOUT} seconds while applying regex pattern \"{pattern.pattern}\" in response \"{self.response}\" \
                         Please check the regex pattern for catastrophic backtracking. Continuing...")
 
         self.response = response

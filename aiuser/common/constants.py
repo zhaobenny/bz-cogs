@@ -58,6 +58,7 @@ YOUTUBE_URL_PATTERN = re.compile(r"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|you
 YOUTUBE_VIDEO_ID_PATTERN = re.compile(
     r"(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/|v\/|t\/\S*?\/?)([a-zA-Z0-9_-]{11})")
 SINGULAR_MENTION_PATTERN = re.compile(r"^<@!?&?(\d+)>$")
+REGEX_RUN_TIMEOUT = 5
 
 
 OPENROUTER_URL = "https://openrouter.ai/api/"
