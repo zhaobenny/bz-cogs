@@ -241,7 +241,7 @@ class MessagesList:
             color=await self.bot.get_embed_color(self.init_message),
         )
         view = OptView(self.config)
-        embed.description = f"{users}\nPlease select whether you want to opt into your Discord messages being sent to OpenAI or an external party, as part of this bot.\nThis will allow the bot to reply to your messages or use your messages.\nThis message will disappear if all users in the chat have made a choice."
+        embed.description = f"{users}\nPlease choose whether to allow a subset of your Discord messages from any server with the bot, to be sent to OpenAI or an external party.\nThis will allow the bot to reply to your messages or use your messages.\nThis message will disappear if all current chatters have made a choice."
         await self.init_message.channel.send(embed=embed, view=view)
 
     def get_json(self):
