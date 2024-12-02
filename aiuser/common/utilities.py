@@ -2,8 +2,9 @@ import asyncio
 import functools
 import logging
 import random
+import struct
 from datetime import datetime
-from typing import Callable, Coroutine
+from typing import Callable, Coroutine, List
 
 from discord import Message
 from openai import AsyncOpenAI
@@ -126,3 +127,8 @@ async def get_enabled_tools(config: Config, ctx: commands.Context) -> list:
             tools.append(tool_class(config=config, ctx=ctx))
 
     return tools
+
+
+def serialize_f32(vector: List[float]) -> bytes:
+    """Serializes a list of floats into a compact "raw bytes" format."""
+    return struct.pack("%sf" % len(vector), *vector)

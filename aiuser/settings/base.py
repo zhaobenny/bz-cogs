@@ -16,6 +16,7 @@ from aiuser.settings.functions import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
 from aiuser.settings.image_request import ImageRequestSettings
 from aiuser.settings.image_scan import ImageScanSettings
+from aiuser.settings.memory import MemorySettings
 from aiuser.settings.owner import OwnerSettings
 from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.random_message import RandomMessageSettings
@@ -36,6 +37,7 @@ class Settings(
     OwnerSettings,
     RandomMessageSettings,
     FunctionCallingSettings,
+    MemorySettings,
     MixinMeta,
 ):
     @commands.group(aliases=["ai_user"])

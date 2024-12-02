@@ -5,14 +5,18 @@ from dataclasses import asdict
 from datetime import datetime, timedelta
 
 import discord
+import sqlite_vec
 import tiktoken
 from discord import Message
+from pysqlite3 import dbapi2 as sqlite3
 from redbot.core import commands
+from redbot.core.data_manager import cog_data_path
+from sentence_transformers import SentenceTransformer
 
 from aiuser.abc import MixinMeta
 from aiuser.common.constants import DEFAULT_PROMPT, OTHER_MODELS_LIMITS
 from aiuser.common.enums import ScanImageMode
-from aiuser.common.utilities import format_variables
+from aiuser.common.utilities import format_variables, serialize_f32
 from aiuser.messages_list.converter.converter import MessageConverter
 from aiuser.messages_list.entry import MessageEntry
 from aiuser.messages_list.opt_view import OptView
@@ -53,6 +57,7 @@ class MessagesList:
         self.tokens = 0
         self.model = None
         self.can_reply = True
+        self.cog_data_path = cog_data_path(cog)
 
     def __len__(self):
         return len(self.messages)
@@ -191,9 +196,50 @@ class MessagesList:
 
         await self._process_past_messages(past_messages, max_seconds_gap)
 
+        await self.insert_relevant_memory()
+
         if users and not await self.config.guild(self.guild).optin_disable_embed():
             if (random.random() <= 0.33) or (len(users) > 3):
                 await self._send_optin_embed(users)
+
+    async def insert_relevant_memory(self):
+        memory_content = await self.fetch_relevant_memory()
+        if memory_content:
+            await self.add_system(
+            f"Looking into your memory bank, the following most relevant memory was found: {memory_content}", index=len(self.messages_ids))
+
+    async def fetch_relevant_memory(self, threshold: float = 1.1):
+        """Fetch the most relevant memory based on a similarity threshold."""
+        # Load the SentenceTransformer model
+        model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", cache_folder=self.cog_data_path)
+
+        # Extract the query from the initial message and generate the embedding
+        query = self.init_message.content
+        query_embedding = model.encode(query)
+
+        # Connect to the SQLite database
+        db_path = self.cog_data_path / "embeddings.db"  # Replace with your actual DB path
+        db = sqlite3.connect(db_path)
+        db.enable_load_extension(True)
+        sqlite_vec.load(db)
+        db.enable_load_extension(False)
+
+        memory = db.execute(
+            """
+              SELECT
+                rowid, memory_name, memory_text, 
+                distance
+              FROM memories
+              WHERE memory_vector MATCH ? and k=1
+              ORDER BY distance
+            """,
+            [serialize_f32(query_embedding)]
+        ).fetchall()
+
+        print(query)
+        print(memory)
+
+        return memory[0][2] if memory and memory[0][3] < threshold else ""
 
     async def _get_past_messages(self, limit, start_time):
         return [
