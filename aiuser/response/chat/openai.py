@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 import openai
-from redbot.core import commands
+from redbot.core import Config, commands
 
 from aiuser.abc import MixinMeta
 from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
@@ -20,7 +20,13 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 class OpenAIHandler():
     def __init__(self, cog: MixinMeta, ctx: commands.Context, messages: MessagesList):
-        super().__init__(cog, ctx, messages)
+        self.ctx: commands.Context = ctx
+        self.config: Config = cog.config
+        self.bot = cog.bot
+        self.msg_list = messages
+        self.model = messages.model
+        self.can_reply = messages.can_reply
+        self.messages = messages.get_json()
         self.openai_client = cog.openai_client
         self.enabled_tools: List[ToolCall] = []
         self.available_tools_schemas: List[ToolCallSchema] = []
@@ -46,7 +52,7 @@ class OpenAIHandler():
         self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
         self.available_tools_schemas = [tool.schema for tool in self.enabled_tools]
 
-    async def create_completion(self, kwargs: Dict[str, Any]):
+    async def execute_model_request(self, kwargs: Dict[str, Any]):
         if "gpt-3.5-turbo-instruct" in self.model:
             prompt = "\n".join(message["content"] for message in self.messages)
             response = await self.openai_client.completions.create(
@@ -62,25 +68,8 @@ class OpenAIHandler():
 
             return response.choices[0].message.content, tools_calls
 
-    async def request_openai(self) -> Optional[str]:
-        kwargs = await self.get_custom_parameters()
-        await self.setup_tools()
 
-        while not self.completion:
-            if self.available_tools_schemas:
-                kwargs["tools"] = [asdict(schema) for schema in self.available_tools_schemas]
-
-            self.completion, tool_calls = await self.create_completion(kwargs)
-
-            if tool_calls and not self.completion:
-                await self.handle_tool_calls(tool_calls)
-            else:
-                break
-
-        logger.debug(f'Generated response in {self.ctx.guild.name}: "{self.completion}"')
-        return self.completion
-
-    async def handle_tool_calls(self, tool_calls: List[Any]):
+    async def process_tool_calls(self, tool_calls: List[Any]):
         for tool_call in tool_calls:
             function = tool_call.function
             arguments = json.loads(function.arguments)
@@ -101,7 +90,22 @@ class OpenAIHandler():
 
     async def generate_message(self) -> Optional[str]:
         try:
-            return await self.request_openai()
+            kwargs = await self.get_custom_parameters()
+            await self.setup_tools()
+
+            while not self.completion:
+                if self.available_tools_schemas:
+                    kwargs["tools"] = [asdict(schema) for schema in self.available_tools_schemas]
+
+                self.completion, tool_calls = await self.execute_model_request(kwargs)
+
+                if tool_calls and not self.completion:
+                    await self.process_tool_calls(tool_calls)
+                else:
+                    break
+
+            logger.debug(f'Generated response in {self.ctx.guild.name}: "{self.completion}"')
+            return self.completion
         except httpx.ReadTimeout:
             logger.error("Failed request to LLM endpoint. Timed out.")
             await self.ctx.react_quietly("💤", message="`aiuser` request timed out")
