@@ -14,12 +14,11 @@ from aiuser.common.utilities import get_enabled_tools
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import ToolCallSchema
 from aiuser.messages_list.messages import MessagesList
-from aiuser.response.chat.generator import ChatGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class OpenAIAPIGenerator(ChatGenerator):
+class OpenAIHandler():
     def __init__(self, cog: MixinMeta, ctx: commands.Context, messages: MessagesList):
         super().__init__(cog, ctx, messages)
         self.openai_client = cog.openai_client

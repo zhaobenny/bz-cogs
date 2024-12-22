@@ -9,14 +9,14 @@ from redbot.core import Config, commands
 
 from aiuser.common.constants import REGEX_RUN_TIMEOUT
 from aiuser.common.utilities import to_thread
-from aiuser.response.chat.generator import ChatGenerator
+from aiuser.response.chat.openai import OpenAIHandler
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 
 class ChatResponse():
-    def __init__(self, ctx: commands.Context, config: Config, chat: ChatGenerator):
+    def __init__(self, ctx: commands.Context, config: Config, chat: OpenAIHandler):
         self.ctx = ctx
         self.config = config
         self.response = None
