@@ -1,7 +1,6 @@
 
-from dataclasses import asdict
-
 from redbot.core import Config, commands
+from redbot.core.bot import Red
 
 from aiuser.functions.types import ToolCallSchema
 
@@ -13,7 +12,7 @@ class ToolCall:
     def __init__(self, config: Config, ctx: commands.Context):
         self.config = config
         self.ctx = ctx
-        self.bot = ctx.bot
+        self.bot: Red = ctx.bot
 
     def run(self, arguments: dict, available_tools: list):
         self.remove_tool_from_available(available_tools)

@@ -131,3 +131,15 @@ class FunctionCallingSettings(MixinMeta):
         tool_names = [NoResponseToolCall.function_name]
 
         await self.toggle_function_helper(ctx, tool_names, "No response")
+
+    @functions.command(name="wolframalpha")
+    async def toggle_wolfram_alpha_function(self, ctx: commands.Context):
+        """ Enable/disable the functionality for the LLM to ask Wolfram Alpha about math, exchange rates, or the weather."""
+        from aiuser.functions.wolframalpha.tool_call import WolframAlphaFunctionCall
+
+        if (not (await self.bot.get_shared_api_tokens("wolfram_alpha")).get("app_id")):
+            return await ctx.send(f"Wolfram Alpha app id not set! Set it using `{ctx.clean_prefix}set api wolfram_alpha app_id,APPID`.")
+
+        tool_names = [WolframAlphaFunctionCall.function_name]
+
+        await self.toggle_function_helper(ctx, tool_names, "Wolfram Alpha")
