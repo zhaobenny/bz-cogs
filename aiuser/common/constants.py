@@ -112,6 +112,11 @@ VISION_SUPPORTED_MODELS = [
     "openai/gpt-4-vision-preview",
     "google/gemini-flash-1.5",
     "google/gemini-pro-1.5",
+    "google/gemini-flash-1.5-8b",
+    "x-ai/grok-vision-beta",
+    "x-ai/grok-2-vision-1212",
+    "amazon/nova-lite-v1",
+    "amazon/nova-pro-v1",
     "anthropic/claude-3-haiku",
     "anthropic/claude-3-sonnet",
     "anthropic/claude-3.5-sonnet",
@@ -122,8 +127,12 @@ VISION_SUPPORTED_MODELS = [
     "anthropic/claude-3.5-sonnet:beta"
     "qwen/qwen-2-vl-72b-instruct",
     "qwen/qwen-2.5-72b-instruct",
+    "qwen/qvq-72b-preview",
     "mistralai/pixtral-12b",
-    "mistralai/pixtral-12b:free"
+    "mistralai/pixtral-12b:free",
+    "mistralai/pixtral-large-2411",
+    "meta-llama/llama-3.2-90b-vision-instruct",
+    "meta-llama/llama-3.2-11b-vision-instruct"
 ]
 OTHER_MODELS_LIMITS = {
     "gemini-flash-1.5": 2797000,
@@ -139,6 +148,8 @@ OTHER_MODELS_LIMITS = {
     "gpt-4-turbo-preview": 123000,
     "gpt-4o": 123000,
     "gpt-4o-mini": 123000,
+    "x-ai/grok-vision-beta": 7800,
+    "grok-2-vision-1212": 31000,
     "command-r-plus": 123000,
     "phi-3-medium-128k-instruct": 123000,
     "mistral-nemo": 123000,
@@ -170,6 +181,7 @@ OTHER_MODELS_LIMITS = {
     "dbrx-instruct": 31000,
     "qwen-110b-chat": 31000,
     "qwen-72b-chat": 31000,
+    "qvq-72b-preview": 123000,
     "llama-3.1-70b-instruct": 31000,
     "mistral-tiny": 28000,
     "mistral-small": 28000,
@@ -181,6 +193,16 @@ OTHER_MODELS_LIMITS = {
     "sonar-medium-chat": 18000,
     "magnum-v4-72b": 15000,
     "gemini-pro-vision": 15000,
+    "gemini-2.0-flash-exp": 1000000,
+    "gemini-2.0-flash-thinking-exp": 36000,
+    "learnlm-1.5-pro-experimental": 38000,
+    "gemini-exp-1206": 2000000,
+    "gemini-exp-1121": 38000,
+    "gemini-flash-1.5-8b": 960000,
+    "nova-lite-v1": 280000,
+    "nova-pro-v1": 280000,
+    "pixtral-12b": 3800,
+    "pixtral-large-2411": 120000,
     "gpt-3.5-turbo-1106": 12000,
     "sonar-small-online": 8000,
     "sonar-medium-online": 8000,
@@ -189,4 +211,6 @@ OTHER_MODELS_LIMITS = {
     "cinematika-7b": 7000,
     "gemma-7b-it": 7000,
     "llama-3-8b-instruct": 7000,
+    "llama-3.2-90b-vision-instruct": 120000,
+    "llama-3.2-11b-vision-instruct": 120000
 }
