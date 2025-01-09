@@ -68,8 +68,16 @@ class Settings(MixinMeta):
             endpoint = None
         elif not endpoint.endswith("/"):
             endpoint += "/"
+
+        valid_endings = ['/sdapi/v1/', '/api/']
+
+        is_valid = endpoint and any(endpoint.endswith(ending) for ending in valid_endings)
+        if endpoint and not is_valid:
+            await ctx.send(f"⚠️ Endpoint URL does not end with `/sdapi/v1/` or `/api/`. Continuing anyways...")
+
         await self.config.guild(ctx.guild).endpoint.set(endpoint)
         await self.config.guild(ctx.guild).api_type.set(API_Type.AUTOMATIC1111.value)
+
         msg = await ctx.send("Endpoint set. Select what type of API this endpoint is ⤵️ ", view=APITypeView(self, ctx))
         asyncio.create_task(delete_button_after(msg))
 
