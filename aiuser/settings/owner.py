@@ -68,6 +68,7 @@ class OwnerSettings(MixinMeta):
 
         if not url or url in ["clear", "reset", "openai"]:
             await self.config.custom_openai_endpoint.set(None)
+            url = None
         else:
             await self.config.custom_openai_endpoint.set(url)
 

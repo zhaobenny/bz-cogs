@@ -363,12 +363,12 @@ class AIUser(
             if ctx:
                 error_message = (
                     f"{api_type} API key not set for `aiuser`. "
-                    f"Please set it with `{ctx.clean_prefix}set api {api_type} api_key,API_KEY`"
+                    f"Please set it with `{ctx.clean_prefix}set api {api_type} api_key,[API_KEY_HERE]`"
                 )
                 return await ctx.send(error_message)
             else:
                 return logger.error(
-                    f'{api_type} API key not set for "aiuser" yet! Please set it with: [p]set api {api_type} api_key,API_KEY'
+                    f'{api_type} API key not set for "aiuser" yet! Please set it with: [p]set api {api_type} api_key,[API_KEY_HERE]'
                 )
 
         timeout = await self.config.openai_endpoint_request_timeout()
