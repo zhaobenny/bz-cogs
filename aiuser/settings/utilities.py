@@ -11,7 +11,7 @@ def get_mention_type(mention) -> MentionType:
         return MentionType.USER
     elif isinstance(mention, discord.Role):
         return MentionType.ROLE
-    elif isinstance(mention, (discord.TextChannel, discord.VoiceChannel, discord.StageChannel)):
+    elif isinstance(mention, (discord.TextChannel, discord.VoiceChannel, discord.StageChannel, discord.ForumChannel)):
         return MentionType.CHANNEL
     else:
         return MentionType.SERVER

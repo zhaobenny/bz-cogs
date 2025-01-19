@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Coroutine
 
+import discord
 from discord import Message
 from openai import AsyncOpenAI
 from redbot.core import Config, commands
@@ -45,12 +46,16 @@ async def format_variables(ctx: commands.Context, text: str):
 
     servername = ctx.guild.name
     channelname = ctx.message.channel.name
-    channeltopic = ctx.message.channel.topic
     currentdate = datetime.today().strftime("%Y/%m/%d")
     currentweekday = datetime.today().strftime("%A")
     currenttime = datetime.today().strftime("%H:%M")
 
     randomnumber = random.randint(0, 100)
+
+    if isinstance(ctx.message.channel, discord.Thread):
+        channeltopic = ctx.message.channel.parent.topic
+    else:
+        channeltopic = ctx.message.channel.topic
 
     serveremojis = [str(e) for e in ctx.message.guild.emojis]
     random.shuffle(serveremojis)
