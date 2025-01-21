@@ -181,8 +181,19 @@ class Settings(MixinMeta):
         await self._update_autocomplete_cache(ctx)
         data = self.autocomplete_cache[ctx.guild.id].get("checkpoints") or []
         await ctx.message.remove_reaction("🔄", ctx.me)
+        
         if checkpoint not in data:
-            return await ctx.send(f":warning: Invalid checkpoint. Pick one of these:\n`{', '.join(data)}`")
+            checkpoints = []
+
+            remaining_length = 1900
+            for cp in data:
+                if len(cp) + 2 <= remaining_length:
+                    checkpoints.append(cp)
+                    remaining_length -= (len(cp) + 2)
+                else:
+                    break
+            return await ctx.send(f":warning: Invalid checkpoint. Pick one of these:`\n{', '.join(checkpoints)}`")
+
         await self.config.guild(ctx.guild).checkpoint.set(checkpoint)
         await ctx.tick()
 
@@ -196,7 +207,17 @@ class Settings(MixinMeta):
         data = self.autocomplete_cache[ctx.guild.id].get("vaes") or []
         await ctx.message.remove_reaction("🔄", ctx.me)
         if vae not in data:
-            return await ctx.send(f":warning: Invalid vae. Pick one of these:\n`{', '.join(data)}`")
+            vaes = []
+
+            remaining_length = 1900
+            for vae in data:
+                if len(vae) + 2 <= remaining_length:
+                    vaes.append(vae)
+                    remaining_length -= (len(vae) + 2)
+                else:
+                    break
+            return await ctx.send(f":warning: Invalid vae. Pick one of these:\n`{', '.join(vaes)}`")
+
         await self.config.guild(ctx.guild).vae.set(vae)
         await ctx.tick()
 
