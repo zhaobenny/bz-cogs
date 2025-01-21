@@ -269,7 +269,9 @@ class AIUser(
         if ctx.author.bot or not self.channels_whitelist.get(ctx.guild.id, []):
             return False
 
-        if not ctx.interaction and isinstance(ctx.channel, discord.Thread) and ctx.channel.parent.id not in self.channels_whitelist[ctx.guild.id]:
+        if not ctx.interaction and (isinstance(ctx.channel, discord.Thread) and ctx.channel.parent.id not in self.channels_whitelist[ctx.guild.id]):
+            return False
+        if (not isinstance(ctx.channel, discord.Thread) and ctx.channel.id not in self.channels_whitelist[ctx.guild.id]):
             return False
 
         try:
