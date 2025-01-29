@@ -26,6 +26,7 @@ Here is a sample output: "Beautiful woman, contemplative and reflective, sitting
 Convert the below message to a Stable Diffusion Art Prompt.  The prompt should have no second person references, no line breaks, no delimiters, and be kept as concise as possible while still conveying a full scene.
 """
 DEFAULT_REMOVE_PATTERNS = [
+    r'<think>[\s\S]*?<\/think>',  # for thinking LLMs
     r'^As an AI language model,?',
     r'^(User )?"?{botname}"? (said|says|respond(ed|s)|replie[ds])( to [^":]+)?:?',
     r'^As "?{botname}"?, (I|you)( might| would| could)? (respond|reply|say)( with)?( something like)?:?',

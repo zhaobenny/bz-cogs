@@ -100,6 +100,7 @@ class ChatResponse():
         for pattern in complied_patterns:
             try:
                 response = await substitute(pattern, response)
+                response = response.strip(' \n')
             except asyncio.TimeoutError:
                 logger.warning(
                     f"Timed out after {REGEX_RUN_TIMEOUT} seconds while applying regex pattern \"{pattern.pattern}\" in response \"{self.response}\" \
