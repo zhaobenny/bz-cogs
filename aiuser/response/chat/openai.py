@@ -9,6 +9,7 @@ from redbot.core import commands
 
 from aiuser.abc import MixinMeta
 from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
+                                     UNSUPPORTED_LOGIT_BIAS_MODELS,
                                      VISION_SUPPORTED_MODELS)
 from aiuser.common.utilities import get_enabled_tools
 from aiuser.functions.tool_call import ToolCall
@@ -35,7 +36,7 @@ class OpenAIAPIGenerator(ChatGenerator):
             weights = await self.config.guild(self.ctx.guild).weights()
             kwargs["logit_bias"] = json.loads(weights or "{}")
 
-        if kwargs.get("logit_bias") and self.model in VISION_SUPPORTED_MODELS:
+        if kwargs.get("logit_bias") and self.model in VISION_SUPPORTED_MODELS or self.model in UNSUPPORTED_LOGIT_BIAS_MODELS:
             logger.warning(f"logit_bias is not supported for model {self.model}, removing...")
             del kwargs["logit_bias"]
 

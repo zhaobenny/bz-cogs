@@ -325,7 +325,11 @@ class Settings(
 
         if is_using_openai_endpoint(self.openai_client):
             models = [
-                model.id for model in models_list.data if "gpt" in model.id]
+                model.id for model in models_list.data
+                if ("gpt" in model.id or "o3" in model.id.lower())
+                and "audio" not in model.id.lower()
+                and "realtime" not in model.id.lower()
+            ]
         else:
             models = [model.id for model in models_list.data]
 

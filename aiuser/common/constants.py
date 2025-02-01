@@ -67,7 +67,6 @@ OPENROUTER_URL = "https://openrouter.ai/api/"
 
 # models
 FUNCTION_CALLING_SUPPORTED_MODELS = [
-    "o1",
     "o3-mini",
     "gpt-4",
     "gpt-4o",
@@ -79,7 +78,6 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
     "gpt-3.5-turbo-1106",
     "gpt-3.5-turbo-0613",
     "gpt-3.5-turbo-0125",
-    "openai/o1",
     "openai/o3-mini",
     "openai/gpt-4",
     "openai/gpt-4o",
@@ -107,13 +105,11 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
     "mistralai/mistral-large",
 ]
 VISION_SUPPORTED_MODELS = [
-    "o1",
     "o3-mini",
     "gpt-4o",
     "gpt-4o-mini",
     "gpt-4-turbo",
     "gpt-4-vision-preview",
-    "openai/o1",
     "openai/o3-mini",
     "openai/gpt-4o",
     "openai/gpt-4o-mini",
@@ -142,6 +138,11 @@ VISION_SUPPORTED_MODELS = [
     "mistralai/pixtral-large-2411",
     "meta-llama/llama-3.2-90b-vision-instruct",
     "meta-llama/llama-3.2-11b-vision-instruct"
+]
+UNSUPPORTED_LOGIT_BIAS_MODELS = [
+    "openai/o3-mini",
+    "o3-mini",
+    "o3-mini-2025-01-31"
 ]
 OTHER_MODELS_LIMITS = {
     "gemini-flash-1.5": 2797000,
