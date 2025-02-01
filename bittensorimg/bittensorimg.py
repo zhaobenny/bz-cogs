@@ -128,7 +128,7 @@ class BitTensorImg(commands.Cog):
         await interaction.response.defer(thinking=True)
 
         try:
-            if provider == "19sn":
+            if provider == "sn19":
                 image_bytes = await self._generate_image_nineteen(
                     prompt, steps, guidance_scale, height, width, negative_prompt
                 )
