@@ -67,6 +67,8 @@ OPENROUTER_URL = "https://openrouter.ai/api/"
 
 # models
 FUNCTION_CALLING_SUPPORTED_MODELS = [
+    "o1",
+    "o3-mini",
     "gpt-4",
     "gpt-4o",
     "gpt-4o-mini",
@@ -77,6 +79,8 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
     "gpt-3.5-turbo-1106",
     "gpt-3.5-turbo-0613",
     "gpt-3.5-turbo-0125",
+    "openai/o1",
+    "openai/o3-mini",
     "openai/gpt-4",
     "openai/gpt-4o",
     "openai/gpt-4o-mini",
@@ -103,10 +107,14 @@ FUNCTION_CALLING_SUPPORTED_MODELS = [
     "mistralai/mistral-large",
 ]
 VISION_SUPPORTED_MODELS = [
+    "o1",
+    "o3-mini",
     "gpt-4o",
     "gpt-4o-mini",
     "gpt-4-turbo",
     "gpt-4-vision-preview",
+    "openai/o1",
+    "openai/o3-mini",
     "openai/gpt-4o",
     "openai/gpt-4o-mini",
     "openai/gpt-4-turbo",
@@ -138,6 +146,8 @@ VISION_SUPPORTED_MODELS = [
 OTHER_MODELS_LIMITS = {
     "gemini-flash-1.5": 2797000,
     "gemini-pro-1.5": 3998000,
+    "o1": 198000,
+    "o3-mini": 198000,
     "claude-3-haiku": 198000,
     "claude-3-opus": 198000,
     "claude-3-sonnet": 198000,
@@ -149,6 +159,10 @@ OTHER_MODELS_LIMITS = {
     "gpt-4-turbo-preview": 123000,
     "gpt-4o": 123000,
     "gpt-4o-mini": 123000,
+    "o1-preview": 123000,
+    "o1-mini": 123000,
+    "deepseek-r1": 123000,
+    "deepseek-chat": 123000,
     "x-ai/grok-vision-beta": 7800,
     "grok-2-vision-1212": 31000,
     "command-r-plus": 123000,
