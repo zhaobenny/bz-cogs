@@ -155,16 +155,17 @@ class BitTensorImg(commands.Cog):
         complete_emoji = "✅"
         error_emoji = "❌"
         credits_emoji = "💳"
-
+        api_key_name = "INVALID"
         await ctx.message.add_reaction(thinking_emoji)
 
         try:
             if provider == "nineteen":
+                api_key_name = "sn19"
                 image_bytes = await self._generate_image_nineteen(prompt)
                 api_key_name = "sn19"
             elif provider == "chutes":
-                image_bytes = await self._generate_image_chutes(prompt)
                 api_key_name = "chutes"
+                image_bytes = await self._generate_image_chutes(prompt)
             else:
                 raise ValueError(f"Invalid provider: {provider}")
 

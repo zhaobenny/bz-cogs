@@ -1,7 +1,7 @@
 {
   "author": ["zhaobenny"],
   "description": "Enables the AI generation of images using some select BitTensor subnets providers",
-  "install_msg": "See `[p]help BitTensorImg`\n A slash command can be enabled - see `[p]slash`",
+  "install_msg": "See `[p]help BitTensorImg` after loading cog.\nA slash command can be enabled - see `[p]slash`",
   "short": "wrapper around select BitTensor subnets image gen providers for Discord",
   "permissions": ["send_messages", "attach_files"],
   "requirements": ["aiohttp"],
