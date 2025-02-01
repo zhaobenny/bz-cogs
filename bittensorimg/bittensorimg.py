@@ -118,7 +118,7 @@ class BitTensorImg(commands.Cog):
         self,
         interaction: discord.Interaction,
         prompt: str,
-        provider: str = "19sn",
+        provider: str = "sn19",
         steps: app_commands.Range[int, 1, 50] = 8,
         guidance_scale: app_commands.Range[float, 1, 20] = 3,
         height: app_commands.Range[int, 256, 1024] = 1024,
