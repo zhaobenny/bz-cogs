@@ -10,12 +10,14 @@ from redbot.core.bot import Red
 
 log = logging.getLogger("red.bz_cogs.bitensorimggen")
 
+NINETEEN_API_URL = "https://api.nineteen.ai/v1/text-to-image"
+CHUTES_API_URL = "https://chutes-flux-1-dev.chutes.ai/generate"
+NINETEEN = "sn19"
+CHUTES = "chutes"
+
 
 class BitTensorImg(commands.Cog):
     """Generate images using select BitTensor subnets with image generation capabilities."""
-
-    NINETEEN_API_URL = "https://api.nineteen.ai/v1/text-to-image"
-    CHUTES_API_URL = "https://chutes-flux-1-schnell.chutes.ai/generate"
 
     def __init__(self, bot: Red):
         self.bot = bot
@@ -29,18 +31,18 @@ class BitTensorImg(commands.Cog):
 
     async def _get_api_key(self, provider: str):
         """Get the API key from shared API tokens."""
-        if provider == "sn19":
-            return (await self.bot.get_shared_api_tokens('sn19')).get('api_key')
-        elif provider == "chutes":
-            return (await self.bot.get_shared_api_tokens('chutes')).get('api_key')
+        if provider == NINETEEN:
+            return (await self.bot.get_shared_api_tokens(NINETEEN)).get('api_key')
+        elif provider == CHUTES:
+            return (await self.bot.get_shared_api_tokens(CHUTES)).get('api_key')
         return None
 
-    async def _generate_image_nineteen(self, prompt: str, steps: int = 8, cfg_scale: float = 3,
+    async def _generate_image_nineteen(self, prompt: str, steps: int = 20, cfg_scale: float = 7.5,
                                        height: int = 1024, width: int = 1024, negative_prompt: str = ""):
-        """Generate image using Nineteen.ai API."""
-        api_key = await self._get_api_key("sn19")
+        """Generate image using sn19.ai API."""
+        api_key = await self._get_api_key(NINETEEN)
         if not api_key:
-            raise ValueError("No API key set for Nineteen.ai")
+            raise ValueError("No API key set for sn19.ai")
 
         headers = {
             "Content-Type": "application/json",
@@ -58,19 +60,19 @@ class BitTensorImg(commands.Cog):
             "negative_prompt": negative_prompt,
         }
 
-        async with self.session.post(self.NINETEEN_API_URL, headers=headers, json=data) as response:
+        async with self.session.post(NINETEEN_API_URL, headers=headers, json=data) as response:
             if response.status == 200:
                 res = await response.json()
                 image_data = res["image_b64"]
                 return base64.b64decode(image_data)
             else:
                 error_text = await response.text()
-                raise Exception(f"Nineteen.ai API error: {response.status} - {error_text}")
+                raise Exception(f"sn19.ai API error: {response.status} - {error_text}")
 
-    async def _generate_image_chutes(self, prompt: str, steps: int = 50, guidance_scale: float = 7.5,
+    async def _generate_image_chutes(self, prompt: str, steps: int = 20, guidance_scale: float = 7.5,
                                      height: int = 1024, width: int = 1024, negative_prompt: str = ""):
         """Generate image using Chutes API."""
-        api_key = await self._get_api_key("chutes")
+        api_key = await self._get_api_key(CHUTES)
         if not api_key:
             raise ValueError("No API key set for Chutes")
 
@@ -79,20 +81,20 @@ class BitTensorImg(commands.Cog):
             "Authorization": f"Bearer {api_key}",
         }
 
+        if negative_prompt:
+            log.debug("Chutes does not support negative prompts, ignoring")
+
         data = {
             "prompt": prompt,
-            "negative_prompt": negative_prompt,
             "guidance_scale": guidance_scale,
             "width": width,
             "height": height,
             "num_inference_steps": steps
         }
 
-        async with self.session.post(self.CHUTES_API_URL, headers=headers, json=data) as response:
+        async with self.session.post(CHUTES_API_URL, headers=headers, json=data) as response:
             if response.status == 200:
-                res = await response.json()
-                image_data = res["image"]
-                return base64.b64decode(image_data)
+                return await response.read()
             else:
                 error_text = await response.text()
                 raise Exception(f"Chutes API error: {response.status} - {error_text}")
@@ -108,8 +110,8 @@ class BitTensorImg(commands.Cog):
         negative_prompt="Things to avoid in the image"
     )
     @app_commands.choices(provider=[
-        app_commands.Choice(name="Nineteen.ai", value="sn19"),
-        app_commands.Choice(name="Chutes", value="chutes")
+        app_commands.Choice(name="Nineteen", value=NINETEEN),
+        app_commands.Choice(name="Chutes", value=CHUTES)
     ])
     @commands.bot_has_permissions(attach_files=True)
     @app_commands.checks.cooldown(1, 10)
@@ -118,21 +120,21 @@ class BitTensorImg(commands.Cog):
         self,
         interaction: discord.Interaction,
         prompt: str,
-        provider: str = "sn19",
-        steps: app_commands.Range[int, 1, 50] = 8,
-        guidance_scale: app_commands.Range[float, 1, 20] = 3,
-        height: app_commands.Range[int, 256, 1024] = 1024,
-        width: app_commands.Range[int, 256, 1024] = 1024,
+        provider: str = NINETEEN,
+        steps: app_commands.Range[int, 1, 100] = 8,
+        guidance_scale: app_commands.Range[float, 1, 10] = 3,
+        height: app_commands.Range[int, 1024, 1920] = 1024,
+        width: app_commands.Range[int, 1024, 1080] = 1024,
         negative_prompt: str = "",
     ):
         await interaction.response.defer(thinking=True)
-
+        image_bytes = None
         try:
-            if provider == "sn19":
+            if provider == NINETEEN:
                 image_bytes = await self._generate_image_nineteen(
                     prompt, steps, guidance_scale, height, width, negative_prompt
                 )
-            elif provider == "chutes":
+            elif provider == CHUTES:
                 image_bytes = await self._generate_image_chutes(
                     prompt, steps, guidance_scale, height, width, negative_prompt
                 )
@@ -143,12 +145,12 @@ class BitTensorImg(commands.Cog):
             await interaction.followup.send(file=file)
         except ValueError as e:
             await interaction.followup.send(
-                f"No API key set for {provider}! Use `[p]set api {'sn19' if provider.value == 'sn19' else 'chutes'} api_key,[YOUR_API_KEY_HERE]`",
+                f"No API key set for {provider}! Use `[p]set api {NINETEEN if provider == NINETEEN else CHUTES} api_key,[YOUR_API_KEY_HERE]`",
                 ephemeral=True
             )
         except Exception as e:
-            log.error(f"Error: {e}")
-            await interaction.followup.send(f"Failed to generate image using {provider}.", ephemeral=True)
+            log.error(f"{e}")
+            await interaction.followup.send(f"Failed to generate image using `{provider}`.\n`{e}`", ephemeral=True)
 
     async def _handle_command(self, ctx: commands.Context, prompt: str, provider: str):
         thinking_emoji = "🤔"
@@ -159,12 +161,12 @@ class BitTensorImg(commands.Cog):
         await ctx.message.add_reaction(thinking_emoji)
 
         try:
-            if provider == "nineteen":
-                api_key_name = "sn19"
+            if provider == NINETEEN:
+                api_key_name = NINETEEN
                 image_bytes = await self._generate_image_nineteen(prompt)
-                api_key_name = "sn19"
-            elif provider == "chutes":
-                api_key_name = "chutes"
+                api_key_name = NINETEEN
+            elif provider == CHUTES:
+                api_key_name = CHUTES
                 image_bytes = await self._generate_image_chutes(prompt)
             else:
                 raise ValueError(f"Invalid provider: {provider}")
@@ -185,6 +187,7 @@ class BitTensorImg(commands.Cog):
                 await ctx.message.add_reaction(credits_emoji)
             else:
                 await ctx.message.add_reaction(error_emoji)
+                await ctx.message.channel.send(f"Failed to generate image using `{provider}`.\n`{e}`")
             log.error(f"{e}")
 
     @commands.command(name="19gen")
@@ -193,7 +196,7 @@ class BitTensorImg(commands.Cog):
     @commands.bot_has_permissions(attach_files=True, add_reactions=True)
     async def nineteen_gen(self, ctx: commands.Context, *, prompt: str):
         """Generate an image using Nineteen"""
-        await self._handle_command(ctx, prompt, "nineteen")
+        await self._handle_command(ctx, prompt, NINETEEN)
 
     @commands.command(name="chutesgen")
     @commands.guild_only()
@@ -201,4 +204,4 @@ class BitTensorImg(commands.Cog):
     @commands.bot_has_permissions(attach_files=True, add_reactions=True)
     async def chutes_gen(self, ctx: commands.Context, *, prompt: str):
         """Generate an image using Chutes"""
-        await self._handle_command(ctx, prompt, "chutes")
+        await self._handle_command(ctx, prompt, CHUTES)
