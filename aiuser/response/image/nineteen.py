@@ -1,11 +1,9 @@
-import asyncio
 import base64
 import io
-import json
 import logging
-import random
+
 import aiohttp
-from tenacity import retry, stop_after_attempt, stop_after_delay, wait_random
+
 from aiuser.response.image.generator import ImageGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -37,19 +35,11 @@ class NineteenGenerator(ImageGenerator):
             "Authorization": f"Bearer {api_key}",
         }
 
-        data = {
-            "prompt": caption,
-            "model": "flux-schnell-text-to-image",
-            "steps": 20,
-            "cfg_scale": 7.5,
-            "height": 1024,
-            "width": 1024,
-            "negative_prompt": "nsfw, lowres, bad anatomy, bad hands, missing fingers, deformed_face, jpeg artifacts, signature, blurry, artist name, deformed",
-        }
+        payload = await self._prepare_payload(caption)
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                NINETEEN_API_URL, headers=headers, json=data
+                NINETEEN_API_URL, headers=headers, json=payload
             ) as response:
                 if response.status == 200:
                     res = await response.json()
