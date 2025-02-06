@@ -52,7 +52,7 @@ class ResponseHandler(MixinMeta):
         contains_image_words = any(word in message_content for word in trigger_words)
         contains_second_person = any(word in message_content for word in second_person_words)
         mentioned_me = displayname in message_content or message.guild.me.id in message.raw_mentions
-        replied_to_me = message.reference and message.reference.resolved.author.id == message.guild.me.id
+        replied_to_me = message.reference and message.reference.resolved and message.reference.resolved.author.id == message.guild.me.id
 
         skip_llm_check = await self.config.guild(message.guild).image_requests_reduced_llm_calls()
 

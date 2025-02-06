@@ -20,7 +20,7 @@ class DalleImageGenerator(ImageGenerator):
     async def generate_image(self, caption):
         response = await self.client.images.generate(
             model=self.model,
-            prompt=caption,
+            prompt=f"{await self.config.guild(self.ctx.guild).image_requests_preprompt()} {caption}",
             response_format="b64_json",
             n=1,
             size="1024x1024",

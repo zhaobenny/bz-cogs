@@ -8,7 +8,9 @@ import openai
 from redbot.core import commands
 
 from aiuser.abc import MixinMeta
-from aiuser.common.constants import FUNCTION_CALLING_SUPPORTED_MODELS, VISION_SUPPORTED_MODELS
+from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
+                                     UNSUPPORTED_LOGIT_BIAS_MODELS,
+                                     VISION_SUPPORTED_MODELS)
 from aiuser.common.utilities import get_enabled_tools
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import ToolCallSchema
@@ -34,7 +36,7 @@ class OpenAIAPIGenerator(ChatGenerator):
             weights = await self.config.guild(self.ctx.guild).weights()
             kwargs["logit_bias"] = json.loads(weights or "{}")
 
-        if kwargs.get("logit_bias") and self.model in VISION_SUPPORTED_MODELS:
+        if kwargs.get("logit_bias") and self.model in VISION_SUPPORTED_MODELS or self.model in UNSUPPORTED_LOGIT_BIAS_MODELS:
             logger.warning(f"logit_bias is not supported for model {self.model}, removing...")
             del kwargs["logit_bias"]
 
@@ -46,7 +48,7 @@ class OpenAIAPIGenerator(ChatGenerator):
         self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
         self.available_tools_schemas = [tool.schema for tool in self.enabled_tools]
 
-    async def create_completion(self, kwargs: Dict[str, Any]) -> str:
+    async def create_completion(self, kwargs: Dict[str, Any]):
         if "gpt-3.5-turbo-instruct" in self.model:
             prompt = "\n".join(message["content"] for message in self.messages)
             response = await self.openai_client.completions.create(
@@ -57,7 +59,10 @@ class OpenAIAPIGenerator(ChatGenerator):
             response = await self.openai_client.chat.completions.create(
                 model=self.model, messages=self.msg_list.get_json(), **kwargs
             )
-            return response.choices[0].message.content, response.choices[0].message.tool_calls
+
+            tools_calls = response.choices[0].message.tool_calls or []
+
+            return response.choices[0].message.content, tools_calls
 
     async def request_openai(self) -> Optional[str]:
         kwargs = await self.get_custom_parameters()

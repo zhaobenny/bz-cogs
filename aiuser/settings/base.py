@@ -9,6 +9,7 @@ from redbot.core.utils.menus import SimpleMenu
 from aiuser.abc import MixinMeta
 from aiuser.common.constants import FUNCTION_CALLING_SUPPORTED_MODELS
 from aiuser.common.enums import MentionType
+from aiuser.common.types import COMPATIBLE_CHANNELS, COMPATIBLE_MENTIONS
 from aiuser.common.utilities import (get_enabled_tools,
                                      is_using_openai_endpoint,
                                      is_using_openrouter_endpoint)
@@ -24,7 +25,6 @@ from aiuser.settings.triggers import TriggerSettings
 from aiuser.settings.utilities import get_config_attribute, get_mention_type
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
-
 
 class Settings(
     PromptSettings,
@@ -227,7 +227,7 @@ class Settings(
 
     @aiuser.command()
     @checks.is_owner()
-    async def percent(self, ctx: commands.Context, mention: Optional[Union[discord.Member, discord.Role, discord.TextChannel, discord.VoiceChannel, discord.StageChannel]], percent: Optional[float]):
+    async def percent(self, ctx: commands.Context, mention: Optional[COMPATIBLE_MENTIONS], percent: Optional[float]):
         """Change the bot's response chance for a server (or a provided user, role, and channel)
 
         If multiple percentage can be used, the most specific percentage will be used, eg. it will go for: member > role > channel > server
@@ -259,7 +259,7 @@ class Settings(
     async def add(
         self,
         ctx: commands.Context,
-        channel: Union[discord.TextChannel, discord.VoiceChannel, discord.StageChannel],
+        channel: COMPATIBLE_CHANNELS,
     ):
         """Adds a channel to the whitelist
 
@@ -286,7 +286,7 @@ class Settings(
     async def remove(
         self,
         ctx: commands.Context,
-        channel: Union[discord.TextChannel, discord.VoiceChannel, discord.StageChannel],
+        channel: COMPATIBLE_CHANNELS,
     ):
         """Remove a channel from the whitelist
 
@@ -325,7 +325,11 @@ class Settings(
 
         if is_using_openai_endpoint(self.openai_client):
             models = [
-                model.id for model in models_list.data if "gpt" in model.id]
+                model.id for model in models_list.data
+                if ("gpt" in model.id or "o3" in model.id.lower())
+                and "audio" not in model.id.lower()
+                and "realtime" not in model.id.lower()
+            ]
         else:
             models = [model.id for model in models_list.data]
 
@@ -337,7 +341,7 @@ class Settings(
             return await self._paginate_models(ctx, models)
 
         if await self.config.guild(ctx.guild).function_calling() and model not in FUNCTION_CALLING_SUPPORTED_MODELS:
-            return await ctx.send(":warning: Can not select model that with no build-in support for function calling!\nSwitch function calling off using `[p]aiuser functions toggle` or select a model that supports function calling.")
+            return await ctx.send(":warning: Can not select model not whitelisted for function calling!\nSwitch function calling off using `[p]aiuser functions toggle` or select a model that supports function calling.")
 
         await self.config.guild(ctx.guild).model.set(model)
         embed = discord.Embed(

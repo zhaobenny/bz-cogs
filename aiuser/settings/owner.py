@@ -68,6 +68,7 @@ class OwnerSettings(MixinMeta):
 
         if not url or url in ["clear", "reset", "openai"]:
             await self.config.custom_openai_endpoint.set(None)
+            url = None
         else:
             await self.config.custom_openai_endpoint.set(url)
 
@@ -85,7 +86,7 @@ class OwnerSettings(MixinMeta):
         )
         embed.add_field(
             name="🔄 Reset",
-            value="Per-server models have been set to use `gpt-3.5-turbo` for chat \n and `gpt-4o for LLM image scan mode.",
+            value="Per-server models have been set to use `gpt-3.5-turbo` for chat \n and `gpt-4o` for LLM image scan mode.",
             inline=False,
         )
 

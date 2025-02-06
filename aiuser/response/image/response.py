@@ -5,8 +5,7 @@ import discord
 from redbot.core import commands
 
 from aiuser.abc import MixinMeta
-from aiuser.common.constants import (IMAGE_REQUEST_REPLY_PROMPT,
-                                     IMAGE_REQUEST_SD_GEN_PROMPT)
+from aiuser.common.constants import IMAGE_REQUEST_REPLY_PROMPT
 from aiuser.messages_list.messages import create_messages_list
 from aiuser.response.chat.openai import OpenAIAPIGenerator
 from aiuser.response.chat.response import ChatResponse
@@ -75,7 +74,7 @@ class ImageResponse():
         response = await self.cog.openai_client.chat.completions.create(
             model=await self.config.guild(self.message.guild).model(),
             messages=[
-                {"role": "system", "content": IMAGE_REQUEST_SD_GEN_PROMPT},
+                {"role": "system", "content": await self.config.guild(self.message.guild).image_requests_sd_gen_prompt()},
                 {"role": "user", "content": request}
             ],
         )

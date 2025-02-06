@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import Optional, Union
+from typing import Optional
 
 import discord
 from redbot.core import checks, commands
@@ -11,6 +11,7 @@ from redbot.core.utils.predicates import ReactionPredicate
 from aiuser.abc import MixinMeta, aiuser
 from aiuser.common.constants import DEFAULT_PROMPT
 from aiuser.common.enums import MentionType
+from aiuser.common.types import COMPATIBLE_MENTIONS
 from aiuser.settings.utilities import (get_config_attribute, get_mention_type,
                                        get_tokens, truncate_prompt)
 
@@ -56,7 +57,7 @@ class PromptSettings(MixinMeta):
             return await confirm.edit(embed=discord.Embed(title="All prompts have been reset to default.", color=await ctx.embed_color()))
 
     @prompt.group(name="show", invoke_without_command=True)
-    async def prompt_show(self, ctx: commands.Context, mention: Optional[Union[discord.Member, discord.Role, discord.TextChannel, discord.VoiceChannel, discord.StageChannel]]):
+    async def prompt_show(self, ctx: commands.Context, mention: Optional[COMPATIBLE_MENTIONS]):
         """ Show the prompt for the server (or provided user/channel)
             **Arguments**
                 - `mention` *(Optional)* User or channel
@@ -232,7 +233,7 @@ class PromptSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @prompt.command(name="set", aliases=["custom", "customize"])
-    async def prompt_custom(self, ctx: commands.Context, mention: Optional[Union[discord.Member, discord.Role, discord.TextChannel, discord.VoiceChannel, discord.StageChannel]], *, prompt: Optional[str]):
+    async def prompt_custom(self, ctx: commands.Context, mention: Optional[COMPATIBLE_MENTIONS], *, prompt: Optional[str]):
         """ Set a custom prompt or preset for the server (or provided channel/role/member)
 
             If multiple prompts can be used, the most specific prompt will be used, eg. it will go for: member > role > channel > server

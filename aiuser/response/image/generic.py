@@ -27,6 +27,8 @@ class GenericImageGenerator(ImageGenerator):
             async with session.post(url=url, json=payload) as response:
                 response.raise_for_status()
                 r = await response.json()
-                image_data = base64.b64decode(r["images"][0])
-
+                if "data" in r and "b64_json" in r["data"][0]:
+                    image_data = base64.b64decode(r["data"][0]["b64_json"])
+                else:
+                    image_data = base64.b64decode(r["images"][0])
         return io.BytesIO(image_data)

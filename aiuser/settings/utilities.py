@@ -11,7 +11,7 @@ def get_mention_type(mention) -> MentionType:
         return MentionType.USER
     elif isinstance(mention, discord.Role):
         return MentionType.ROLE
-    elif isinstance(mention, (discord.TextChannel, discord.VoiceChannel, discord.StageChannel)):
+    elif isinstance(mention, (discord.TextChannel, discord.VoiceChannel, discord.StageChannel, discord.ForumChannel)):
         return MentionType.CHANNEL
     else:
         return MentionType.SERVER
@@ -41,7 +41,7 @@ async def get_tokens(config: Config, ctx: commands.Context, prompt: str) -> int:
     return len(encoding.encode(prompt, disallowed_special=()))
 
 
-def truncate_prompt(prompt: str) -> str:
-    if len(prompt) > 1900:
-        return prompt[:1900] + "..."
+def truncate_prompt(prompt: str, limit: int = 1900) -> str:
+    if len(prompt) > limit:
+        return prompt[:limit] + "..."
     return prompt

@@ -1,5 +1,6 @@
 
 import logging
+from typing import Optional
 
 import discord
 from redbot.core import checks, commands
@@ -24,12 +25,26 @@ class HistorySettings(MixinMeta):
     async def history_backread(self, ctx: commands.Context, new_value: int):
         """ Set max amount of messages to be used as context
 
-            (Increasing the number of messages will increase the cost of the response)
+            (Increasing the number of messages will increase the cost of the response, messages will be added until the LLM's token limit is reached)
         """
         await self.config.guild(ctx.guild).messages_backread.set(new_value)
         embed = discord.Embed(
             title="The number of previous messages used for context on this server is now:",
             description=f"{new_value}",
+            color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
+
+    @history.command(name="customtokenlimit")
+    async def history_maxtokens(self, ctx: commands.Context, new_value: Optional[int]):
+        """
+        Set a LLM's custom maximum context limit (for local LLMs or those not listed in `aiuser/common/constants.py`.).
+
+        If not set, a safe default or saved limit from `aiuser/common/constants.py` is used.
+        """
+        await self.config.guild(ctx.guild).custom_model_tokens_limit.set(new_value)
+        embed = discord.Embed(
+            title="The custom token limit for this server is now:",
+            description=f"{new_value} \n\n-# The limit may need changing for different models.",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 

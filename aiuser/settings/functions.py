@@ -3,7 +3,8 @@ import discord
 from redbot.core import checks, commands
 
 from aiuser.abc import MixinMeta, aiuser
-from aiuser.common.constants import FUNCTION_CALLING_SUPPORTED_MODELS
+from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
+                                     OPENROUTER_URL)
 
 
 class FunctionCallingSettings(MixinMeta):
@@ -20,15 +21,16 @@ class FunctionCallingSettings(MixinMeta):
     async def toggle_function_calling(self, ctx: commands.Context):
         """Toggle functions calling
 
-        Requires a model that supports function calling
+        Requires a model that is whitelisted or supported for function calling
         If enabled, the LLM will call functions to generate responses when needed
         This will generate additional API calls and token usage!
 
         """
 
         current_value = not await self.config.guild(ctx.guild).function_calling()
+        custom_endpoint = await self.config.custom_openai_endpoint()
 
-        if current_value:
+        if current_value and (not custom_endpoint or custom_endpoint.startswith(OPENROUTER_URL)):
             model = await self.config.guild(ctx.guild).model()
             if model not in FUNCTION_CALLING_SUPPORTED_MODELS:
                 return await ctx.send(f":warning: Currently selected model, `{model}` is not whitelisted for function calling. Set a compatible model first!")
@@ -129,3 +131,15 @@ class FunctionCallingSettings(MixinMeta):
         tool_names = [NoResponseToolCall.function_name]
 
         await self.toggle_function_helper(ctx, tool_names, "No response")
+
+    @functions.command(name="wolframalpha")
+    async def toggle_wolfram_alpha_function(self, ctx: commands.Context):
+        """ Enable/disable the functionality for the LLM to ask Wolfram Alpha about math, exchange rates, or the weather."""
+        from aiuser.functions.wolframalpha.tool_call import WolframAlphaFunctionCall
+
+        if (not (await self.bot.get_shared_api_tokens("wolfram_alpha")).get("app_id")):
+            return await ctx.send(f"Wolfram Alpha app id not set! Set it using `{ctx.clean_prefix}set api wolfram_alpha app_id,APPID`.")
+
+        tool_names = [WolframAlphaFunctionCall.function_name]
+
+        await self.toggle_function_helper(ctx, tool_names, "Wolfram Alpha")

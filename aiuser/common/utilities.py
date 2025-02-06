@@ -1,10 +1,13 @@
 import asyncio
 import functools
+import importlib
 import logging
 import random
 from datetime import datetime
+from pathlib import Path
 from typing import Callable, Coroutine
 
+import discord
 from discord import Message
 from openai import AsyncOpenAI
 from redbot.core import Config, commands
@@ -43,10 +46,16 @@ async def format_variables(ctx: commands.Context, text: str):
 
     servername = ctx.guild.name
     channelname = ctx.message.channel.name
-    channeltopic = ctx.message.channel.topic
     currentdate = datetime.today().strftime("%Y/%m/%d")
     currentweekday = datetime.today().strftime("%A")
     currenttime = datetime.today().strftime("%H:%M")
+
+    randomnumber = random.randint(0, 100)
+
+    if isinstance(ctx.message.channel, discord.Thread):
+        channeltopic = ctx.message.channel.parent.topic
+    else:
+        channeltopic = ctx.message.channel.topic
 
     serveremojis = [str(e) for e in ctx.message.guild.emojis]
     random.shuffle(serveremojis)
@@ -66,6 +75,7 @@ async def format_variables(ctx: commands.Context, text: str):
             currentdate=currentdate,
             currentweekday=currentweekday,
             currenttime=currenttime,
+            randomnumber=randomnumber,
         )
         return res
     except KeyError:
@@ -97,29 +107,18 @@ def is_using_openrouter_endpoint(client: AsyncOpenAI):
 
 
 async def get_enabled_tools(config: Config, ctx: commands.Context) -> list:
-    from aiuser.functions.noresponse.tool_call import NoResponseToolCall
-    from aiuser.functions.scrape.tool_call import ScrapeToolCall
-    from aiuser.functions.search.tool_call import SearchToolCall
-    from aiuser.functions.weather.tool_call import (IsDaytimeToolCall,
-                                                    LocalWeatherToolCall,
-                                                    LocationWeatherToolCall)
+    functions_dir = Path(__file__).parent.parent / 'functions'
 
-    tool_classes = {
-        SearchToolCall.function_name: SearchToolCall,
-        LocationWeatherToolCall.function_name: LocationWeatherToolCall,
-        LocalWeatherToolCall.function_name: LocalWeatherToolCall,
-        IsDaytimeToolCall.function_name: IsDaytimeToolCall,
-        NoResponseToolCall.function_name: NoResponseToolCall,
-        ScrapeToolCall.function_name: ScrapeToolCall,
-    }
+    for item in functions_dir.iterdir():
+        if item.is_dir() and not item.name.startswith('__'):
+            try:
+                importlib.import_module(f'aiuser.functions.{item.name}.tool_call')
+            except ImportError:
+                continue
 
-    enabled_tool_names: list = await config.guild(ctx.guild).function_calling_functions()
+    enabled_tools = await config.guild(ctx.guild).function_calling_functions()
+    tool_classes = {cls.function_name: cls for cls in ToolCall.__subclasses__()}
 
-    tools = []
-
-    for tool_name in enabled_tool_names:
-        tool_class = tool_classes.get(tool_name)
-        if tool_class:
-            tools.append(tool_class(config=config, ctx=ctx))
-
-    return tools
+    return [tool_classes[name](config=config, ctx=ctx)
+            for name in enabled_tools
+            if name in tool_classes]

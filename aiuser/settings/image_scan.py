@@ -5,7 +5,7 @@ import discord
 from redbot.core import checks, commands
 
 from aiuser.abc import MixinMeta, aiuser
-from aiuser.common.constants import VISION_SUPPORTED_MODELS
+from aiuser.common.constants import OPENROUTER_URL, VISION_SUPPORTED_MODELS
 from aiuser.common.enums import ScanImageMode
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -120,14 +120,18 @@ class ImageScanSettings(MixinMeta):
         **Arguments**
             - `model_name` Name of a compatible model
         """
-        await ctx.message.add_reaction("🔄")
-        models = [model.id for model in (await self.openai_client.models.list()).data]
-        models = list(set(models) & set(VISION_SUPPORTED_MODELS))  # only show supported models
-        await ctx.message.remove_reaction("🔄", ctx.me)
 
-        if model_name not in models:
-            await ctx.send(":warning: Not a valid model!")
-            return await self._paginate_models(ctx, models)
+        custom_endpoint = await self.config.custom_openai_endpoint()
+
+        if (not custom_endpoint or custom_endpoint.startswith(OPENROUTER_URL)):
+            await ctx.message.add_reaction("🔄")
+            models = [model.id for model in (await self.openai_client.models.list()).data]
+            models = list(set(models) & set(VISION_SUPPORTED_MODELS))  # only show supported models
+            await ctx.message.remove_reaction("🔄", ctx.me)
+
+            if model_name not in models:
+                await ctx.send(":warning: Not a valid model!")
+                return await self._paginate_models(ctx, models)
 
         await self.config.guild(ctx.guild).scan_images_model.set(model_name)
         embed = discord.Embed(

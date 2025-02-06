@@ -2,6 +2,8 @@ import logging
 
 from redbot.core import commands, config
 
+from aiuser.common.constants import IMAGE_REQUEST_AIHORDE_URL
+from aiuser.response.image.aihorde import AIHordeGenerator
 from aiuser.response.image.dalle import DalleImageGenerator
 from aiuser.response.image.generic import GenericImageGenerator
 from aiuser.response.image.modal import ModalImageGenerator
@@ -28,6 +30,9 @@ async def get_image_generator(ctx: commands.Context, config: config):
         return DalleImageGenerator(ctx, config, sd_endpoint, api_key)
     elif sd_endpoint.startswith("https://waifus-api.nemusona.com/"):
         return NemusonaGenerator(ctx, config)
+    elif sd_endpoint.startswith("https://perchance.org/ai-text-to-image-generator"):
+        from aiuser.response.image.perchance import PerchanceGenerator
+        return PerchanceGenerator(ctx, config)
     elif sd_endpoint.endswith("imggen.modal.run/"):
         auth_token = (await ctx.bot.get_shared_api_tokens("modal-img-gen")).get("token")
         return ModalImageGenerator(ctx, config, auth_token)
@@ -36,5 +41,8 @@ async def get_image_generator(ctx: commands.Context, config: config):
     elif sd_endpoint.startswith("https://api.runpod.ai/v2/"):
         api_key = (await ctx.bot.get_shared_api_tokens("runpod")).get("apikey")
         return RunPodGenerator(ctx, config, api_key)
+    elif sd_endpoint.startswith(IMAGE_REQUEST_AIHORDE_URL):
+        api_key = (await ctx.bot.get_shared_api_tokens("aihorde")).get("apikey")
+        return AIHordeGenerator(ctx, config, api_key)
     else:
         return GenericImageGenerator(ctx, config)
