@@ -2,11 +2,14 @@ import logging
 
 from redbot.core import commands, config
 
+from aiuser.common.constants import IMAGE_REQUEST_AIHORDE_URL
+from aiuser.response.image.aihorde import AIHordeGenerator
 from aiuser.response.image.dalle import DalleImageGenerator
 from aiuser.response.image.generic import GenericImageGenerator
 from aiuser.response.image.modal import ModalImageGenerator
 from aiuser.response.image.nemusona import NemusonaGenerator
 from aiuser.response.image.runpod import RunPodGenerator
+from aiuser.response.image.nineteen import NineteenGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -29,12 +32,19 @@ async def get_image_generator(ctx: commands.Context, config: config):
         return NemusonaGenerator(ctx, config)
     elif sd_endpoint.startswith("https://perchance.org/ai-text-to-image-generator"):
         from aiuser.response.image.perchance import PerchanceGenerator
+
         return PerchanceGenerator(ctx, config)
     elif sd_endpoint.endswith("imggen.modal.run/"):
         auth_token = (await ctx.bot.get_shared_api_tokens("modal-img-gen")).get("token")
         return ModalImageGenerator(ctx, config, auth_token)
+    elif sd_endpoint.startswith("https://api.nineteen.ai/v1/text-to-image/"):
+
+        return NineteenGenerator(ctx, config)
     elif sd_endpoint.startswith("https://api.runpod.ai/v2/"):
         api_key = (await ctx.bot.get_shared_api_tokens("runpod")).get("apikey")
         return RunPodGenerator(ctx, config, api_key)
+    elif sd_endpoint.startswith(IMAGE_REQUEST_AIHORDE_URL):
+        api_key = (await ctx.bot.get_shared_api_tokens("aihorde")).get("apikey")
+        return AIHordeGenerator(ctx, config, api_key)
     else:
         return GenericImageGenerator(ctx, config)
