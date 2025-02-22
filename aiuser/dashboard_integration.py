@@ -5,7 +5,7 @@ from redbot.core import commands
 from redbot.core.bot import Red
 
 from aiuser.abc import MixinMeta
-from aiuser.common.utilities import is_using_openai_endpoint
+from aiuser.utils.utilities import is_using_openai_endpoint
 
 
 def dashboard_page(*args, **kwargs):
