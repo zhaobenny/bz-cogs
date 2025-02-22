@@ -12,16 +12,16 @@ from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
 from aiuser.abc import CompositeMetaClass
-from aiuser.common.cache import Cache
-from aiuser.common.constants import (
+from aiuser.utils.cache import Cache
+from aiuser.utils.constants import (
     DEFAULT_IMAGE_REQUEST_SD_GEN_PROMPT,
     DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
     DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_IMAGE_UPLOAD_LIMIT,
     DEFAULT_MIN_MESSAGE_LENGTH, DEFAULT_PRESETS, DEFAULT_RANDOM_PROMPTS,
     DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT, OPENROUTER_URL,
     SINGULAR_MENTION_PATTERN, URL_PATTERN)
-from aiuser.common.enums import ScanImageMode
-from aiuser.common.utilities import is_embed_valid, is_using_openai_endpoint
+from aiuser.utils.enums import ScanImageMode
+from aiuser.utils.utilities import is_embed_valid, is_using_openai_endpoint
 from aiuser.dashboard_integration import DashboardIntegration
 from aiuser.messages_list.entry import MessageEntry
 from aiuser.random_message_task import RandomMessageTask
