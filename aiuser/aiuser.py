@@ -12,21 +12,23 @@ from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
 from aiuser.abc import CompositeMetaClass
+from aiuser.dashboard_integration import DashboardIntegration
+from aiuser.messages_list.entry import MessageEntry
+from aiuser.random_message_task import RandomMessageTask
+from aiuser.response.response_handler import ResponseHandler
+from aiuser.settings.base import Settings
 from aiuser.utils.cache import Cache
 from aiuser.utils.constants import (
     DEFAULT_IMAGE_REQUEST_SD_GEN_PROMPT,
     DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
     DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_IMAGE_UPLOAD_LIMIT,
     DEFAULT_MIN_MESSAGE_LENGTH, DEFAULT_PRESETS, DEFAULT_RANDOM_PROMPTS,
-    DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT, OPENROUTER_URL,
+    DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT,
     SINGULAR_MENTION_PATTERN, URL_PATTERN)
 from aiuser.utils.enums import ScanImageMode
-from aiuser.utils.utilities import is_embed_valid, is_using_openai_endpoint
-from aiuser.dashboard_integration import DashboardIntegration
-from aiuser.messages_list.entry import MessageEntry
-from aiuser.random_message_task import RandomMessageTask
-from aiuser.response.response_handler import ResponseHandler
-from aiuser.settings.base import Settings
+from .utils.openai_utils import setup_openai_client
+
+from aiuser.utils.utilities import is_embed_valid
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -129,7 +131,7 @@ class AIUser(
         self.config.register_global(**default_global)
 
     async def cog_load(self):
-        await self.initialize_openai_client()
+        self.openai_client = await setup_openai_client(self.bot, self.config)
 
         all_config = await self.config.all_guilds()
 
@@ -163,7 +165,7 @@ class AIUser(
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, _):
         if service_name in ["openai", "openrouter"]:
-            await self.initialize_openai_client()
+            await setup_openai_client(self.bot, self.config)
 
     @app_commands.command(name="chat")
     @app_commands.describe(text="The prompt you want to send to the AI.")
@@ -302,7 +304,7 @@ class AIUser(
             return False
 
         if not self.openai_client:
-            await self.initialize_openai_client(ctx)
+            await setup_openai_client(self.bot, self.config)
         if not self.openai_client:
             return False
 
@@ -341,136 +343,3 @@ class AIUser(
                 return random.random() < reply_percent
 
         return False
-
-    async def initialize_openai_client(self, ctx: commands.Context = None):
-        base_url = await self.config.custom_openai_endpoint()
-        api_type = "openai"
-        api_key = None
-        headers = None
-
-        if base_url and str(base_url).startswith(OPENROUTER_URL):
-            api_type = "openrouter"
-            api_key = (await self.bot.get_shared_api_tokens(api_type)).get("api_key")
-            headers = {
-                "HTTP-Referer": "https://aiuser.zhao.gg",
-                "X-Title": "aiuser",
-            }
-        else:
-            api_key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
-
-        if not api_key and (not base_url or api_type == "openrouter"):
-            if ctx:
-                error_message = (
-                    f"{api_type} API key not set for `aiuser`. "
-                    f"Please set it with `{ctx.clean_prefix}set api {api_type} api_key,[API_KEY_HERE]`"
-                )
-                return await ctx.send(error_message)
-            else:
-                return logger.error(
-                    f'{api_type} API key not set for "aiuser" yet! Please set it with: [p]set api {api_type} api_key,[API_KEY_HERE]'
-                )
-
-        timeout = await self.config.openai_endpoint_request_timeout()
-
-        client = httpx.AsyncClient(
-            event_hooks={"request": [self._log_request_prompt], "response": [self._update_ratelimit_hook]})
-
-        self.openai_client = AsyncOpenAI(
-            api_key=api_key or "sk-placeholderkey", base_url=base_url, timeout=timeout, default_headers=headers, http_client=client
-        )
-
-    async def _log_request_prompt(self, request: httpx.Request):
-        if not logger.isEnabledFor(logging.DEBUG):
-            return
-        endpoint = request.url.path.split("/")[-1]
-        if endpoint != "completions":
-            return
-
-        bytes = await request.aread()
-        request = json.loads(bytes.decode('utf-8'))
-        messages = request.get("messages", {})
-        if not messages:
-            return
-
-        # truncate messages image uri
-        last = messages[-1]
-        if isinstance(last.get("content"), list):
-            for content_item in last['content']:
-                if 'image_url' in content_item:
-                    image_url = content_item['image_url']['url']
-                    point = image_url.find(";base64,") + len(";base64,")
-                    short_data = image_url[point:point+20] + "..."
-                    content_item['image_url']['url'] = f"data:{image_url[:point]}{short_data}"
-
-        logger.debug(
-            f"Senting request with prompt: \n{json.dumps(messages, indent=4)}"
-        )
-
-    async def _update_ratelimit_hook(self, response: httpx.Response):
-        if not is_using_openai_endpoint(self.openai_client):
-            return
-
-        headers = response.headers
-
-        remaining_requests = headers.get(
-            "x-ratelimit-remaining-requests") or 1
-        remaining_tokens = headers.get(
-            "x-ratelimit-remaining-tokens") or 1
-
-        timestamp = datetime.now()
-
-        if remaining_requests == 0:
-            # x-ratelimit-reset-requests uses per day instead of per minute for free accounts
-            request_reset_time = self._extract_time_delta(
-                headers.get("x-ratelimit-reset-requests")
-            )
-            timestamp = max(timestamp, datetime.now() + request_reset_time)
-        elif remaining_tokens == 0:
-            tokens_reset_time = self._extract_time_delta(
-                headers.get("x-ratelimit-reset-tokens")
-            )
-            timestamp = max(timestamp, datetime.now() + tokens_reset_time)
-
-        if remaining_requests == 0 or remaining_tokens == 0:
-            logger.warning(
-                f"OpenAI ratelimit reached! Next ratelimit reset at {await self.config.ratelimit_reset()}. (Try a non-trial key)"
-            )
-            await self.config.ratelimit_reset.set(
-                timestamp.strftime("%Y-%m-%d %H:%M:%S")
-            )
-
-    def _extract_time_delta(self, time_str):
-        """for openai's ratelimit time format"""
-
-        days, hours, minutes, seconds = 0, 0, 0, 0
-
-        if time_str[-2:] == "ms":
-            time_str = time_str[:-2]
-            seconds += 1
-
-        components = time_str.split("d")
-        if len(components) > 1:
-            days = float(components[0])
-            time_str = components[1]
-
-        components = time_str.split("h")
-        if len(components) > 1:
-            hours = float(components[0])
-            time_str = components[1]
-
-        components = time_str.split("m")
-        if len(components) > 1:
-            minutes = float(components[0])
-            time_str = components[1]
-
-        components = time_str.split("s")
-        if len(components) > 1:
-            seconds = float(components[0])
-            time_str = components[1]
-
-        return timedelta(
-            days=days,
-            hours=hours,
-            minutes=minutes,
-            seconds=seconds + random.randint(2, 5),
-        )
