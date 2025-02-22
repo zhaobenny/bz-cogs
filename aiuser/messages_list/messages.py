@@ -9,7 +9,7 @@ import tiktoken
 from discord import Message
 from redbot.core import commands
 
-from aiuser.abc import MixinMeta
+from aiuser.types.abc import MixinMeta
 from aiuser.common.constants import DEFAULT_PROMPT, OTHER_MODELS_LIMITS
 from aiuser.common.enums import ScanImageMode
 from aiuser.common.utilities import format_variables

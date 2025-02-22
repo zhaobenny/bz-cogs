@@ -4,7 +4,7 @@ import re
 import discord
 from redbot.core import commands
 
-from aiuser.abc import MixinMeta
+from aiuser.types.abc import MixinMeta
 from aiuser.common.constants import IMAGE_REQUEST_CHECK_PROMPT
 from aiuser.messages_list.messages import create_messages_list
 from aiuser.response.chat.openai import OpenAIAPIGenerator

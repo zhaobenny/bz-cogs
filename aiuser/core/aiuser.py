@@ -10,7 +10,7 @@ from openai import AsyncOpenAI
 from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
-from aiuser.abc import CompositeMetaClass
+from aiuser.types.abc import CompositeMetaClass
 from aiuser.dashboard_integration import DashboardIntegration
 from aiuser.messages_list.entry import MessageEntry
 from aiuser.random_message_task import RandomMessageTask
@@ -24,7 +24,7 @@ from aiuser.utils.constants import (
     DEFAULT_MIN_MESSAGE_LENGTH, DEFAULT_PRESETS, DEFAULT_RANDOM_PROMPTS,
     DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT,
     SINGULAR_MENTION_PATTERN, URL_PATTERN)
-from aiuser.utils.enums import ScanImageMode
+from aiuser.types.enums import ScanImageMode
 from ..utils.openai_utils import setup_openai_client
 
 from aiuser.utils.utilities import is_embed_valid

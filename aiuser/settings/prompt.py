@@ -8,7 +8,7 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
-from aiuser.abc import MixinMeta, aiuser
+from aiuser.types.abc import MixinMeta, aiuser
 from aiuser.common.constants import DEFAULT_PROMPT
 from aiuser.common.enums import MentionType
 from aiuser.common.types import COMPATIBLE_MENTIONS

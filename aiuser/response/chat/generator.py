@@ -1,7 +1,7 @@
 
 from redbot.core import Config, commands
 
-from aiuser.abc import MixinMeta
+from aiuser.types.abc import MixinMeta
 from aiuser.messages_list.messages import MessagesList
 
 

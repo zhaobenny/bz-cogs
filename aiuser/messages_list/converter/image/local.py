@@ -6,7 +6,7 @@ from PIL import Image
 from redbot.core.data_manager import cog_data_path
 from transformers import BlipForConditionalGeneration, BlipProcessor
 
-from aiuser.abc import MixinMeta
+from aiuser.types.abc import MixinMeta
 from aiuser.common.utilities import to_thread
 
 logger = logging.getLogger("red.bz_cogs.aiuser")

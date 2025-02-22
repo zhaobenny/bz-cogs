@@ -1,7 +1,7 @@
 
 from discord import Message
 
-from aiuser.abc import MixinMeta
+from aiuser.types.abc import MixinMeta
 from aiuser.common.constants import URL_PATTERN
 from aiuser.common.utilities import contains_youtube_link
 from aiuser.functions.scrape.tool_call import ScrapeToolCall

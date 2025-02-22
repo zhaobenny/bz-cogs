@@ -4,7 +4,7 @@ import logging
 import discord
 from redbot.core import checks, commands
 
-from aiuser.abc import MixinMeta, aiuser
+from aiuser.types.abc import MixinMeta, aiuser
 from aiuser.common.constants import OPENROUTER_URL, VISION_SUPPORTED_MODELS
 from aiuser.common.enums import ScanImageMode
 

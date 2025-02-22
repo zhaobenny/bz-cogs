@@ -7,7 +7,7 @@ import httpx
 import openai
 from redbot.core import commands
 
-from aiuser.abc import MixinMeta
+from aiuser.types.abc import MixinMeta
 from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
                                      UNSUPPORTED_LOGIT_BIAS_MODELS,
                                      VISION_SUPPORTED_MODELS)

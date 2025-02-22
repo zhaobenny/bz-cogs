@@ -6,7 +6,7 @@ from io import BytesIO
 from discord import Message
 from PIL import Image
 
-from aiuser.abc import MixinMeta
+from aiuser.types.abc import MixinMeta
 from aiuser.common.enums import ScanImageMode
 from aiuser.messages_list.converter.helpers import format_text_content
 from aiuser.messages_list.converter.image.AI_horde import \

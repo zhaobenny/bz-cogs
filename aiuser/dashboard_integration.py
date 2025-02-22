@@ -4,7 +4,7 @@ import discord
 from redbot.core import commands
 from redbot.core.bot import Red
 
-from aiuser.abc import MixinMeta
+from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import is_using_openai_endpoint
 
 
