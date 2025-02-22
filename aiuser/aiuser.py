@@ -6,7 +6,6 @@ import re
 from datetime import datetime, timedelta, timezone
 
 import discord
-import httpx
 from openai import AsyncOpenAI
 from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
@@ -165,7 +164,7 @@ class AIUser(
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, _):
         if service_name in ["openai", "openrouter"]:
-            await setup_openai_client(self.bot, self.config)
+            self.openai_client = await setup_openai_client(self.bot, self.config)
 
     @app_commands.command(name="chat")
     @app_commands.describe(text="The prompt you want to send to the AI.")
@@ -232,16 +231,6 @@ class AIUser(
 
         await self.create_response(ctx)
 
-    async def wait_for_embed(self, ctx: commands.Context):
-        """Wait for possible embed to be valid"""
-        start_time = asyncio.get_event_loop().time()
-        while not is_embed_valid(ctx.message):
-            ctx.message = await ctx.channel.fetch_message(ctx.message.id)
-            if asyncio.get_event_loop().time() - start_time >= 3:
-                break
-            await asyncio.sleep(1)
-        return ctx
-
     async def get_percentage(self, ctx: commands.Context) -> bool:
         role_percent = None
         author = ctx.author
@@ -304,7 +293,7 @@ class AIUser(
             return False
 
         if not self.openai_client:
-            await setup_openai_client(self.bot, self.config)
+            self.openai_client = await setup_openai_client(self.bot, self.config)
         if not self.openai_client:
             return False
 
@@ -343,3 +332,13 @@ class AIUser(
                 return random.random() < reply_percent
 
         return False
+
+    async def wait_for_embed(self, ctx: commands.Context):
+        """Wait for possible embed to be valid"""
+        start_time = asyncio.get_event_loop().time()
+        while not is_embed_valid(ctx.message):
+            ctx.message = await ctx.channel.fetch_message(ctx.message.id)
+            if asyncio.get_event_loop().time() - start_time >= 3:
+                break
+            await asyncio.sleep(1)
+        return ctx
