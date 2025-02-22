@@ -25,7 +25,7 @@ from aiuser.utils.constants import (
     DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT,
     SINGULAR_MENTION_PATTERN, URL_PATTERN)
 from aiuser.utils.enums import ScanImageMode
-from .utils.openai_utils import setup_openai_client
+from ..utils.openai_utils import setup_openai_client
 
 from aiuser.utils.utilities import is_embed_valid
 
