@@ -10,6 +10,7 @@ from openai import AsyncOpenAI
 from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
+from aiuser.core.validators import is_common_valid_reply
 from aiuser.types.abc import CompositeMetaClass
 from aiuser.dashboard_integration import DashboardIntegration
 from aiuser.messages_list.entry import MessageEntry
@@ -208,7 +209,7 @@ class AIUser(
     async def on_message_without_command(self, message: discord.Message):
         ctx: commands.Context = await self.bot.get_context(message)
 
-        if not await self.is_common_valid_reply(ctx):
+        if not await is_common_valid_reply(self, ctx):
             return
 
         if await self.is_bot_mentioned_or_replied(message) or await self.is_in_conversation(ctx):
@@ -250,73 +251,6 @@ class AIUser(
         if percentage == None:
             percentage = DEFAULT_REPLY_PERCENT
         return percentage
-
-    async def is_common_valid_reply(self, ctx: commands.Context) -> bool:
-        """Run some common checks to see if a message is valid for the bot to reply to"""
-        if not ctx.guild:
-            return False
-        if await self.bot.cog_disabled_in_guild(self, ctx.guild):
-            return False
-        if ctx.author.bot or not self.channels_whitelist.get(ctx.guild.id, []):
-            return False
-
-        if not ctx.interaction and (isinstance(ctx.channel, discord.Thread) and ctx.channel.parent.id not in self.channels_whitelist[ctx.guild.id]):
-            return False
-        if (not isinstance(ctx.channel, discord.Thread) and ctx.channel.id not in self.channels_whitelist[ctx.guild.id]):
-            return False
-
-        try:
-            if not await self.bot.ignored_channel_or_guild(ctx):
-                return False
-        except Exception:
-            logger.debug("Exception in checking if ignored channel or guild", exc_info=True)
-            return False
-
-        if not await self.bot.allowed_by_whitelist_blacklist(ctx.author):
-            return False
-        if (ctx.author.id in await self.config.optout()):
-            return False
-        if (
-            not self.optindefault.get(ctx.guild.id)
-            and (ctx.author.id not in await self.config.optin())
-        ):
-            return False
-        if self.ignore_regex.get(ctx.guild.id) and self.ignore_regex[ctx.guild.id].search(ctx.message.content):
-            return False
-
-        whitelisted_roles = await self.config.guild(ctx.guild).roles_whitelist()
-        whitelisted_members = await self.config.guild(ctx.guild).members_whitelist()
-        if (whitelisted_members or whitelisted_roles) and not ((ctx.author.id in whitelisted_members) or (ctx.author.roles and (set([role.id for role in ctx.author.roles]) & set(whitelisted_roles)))):
-            return False
-
-        if not ctx.interaction and not await self.is_good_text_message(ctx.message):
-            return False
-
-        if not self.openai_client:
-            self.openai_client = await setup_openai_client(self.bot, self.config)
-        if not self.openai_client:
-            return False
-
-        return True
-
-    async def is_good_text_message(self, message: discord.Message) -> bool:
-        if SINGULAR_MENTION_PATTERN.match(message.content) and not (await self.is_bot_mentioned_or_replied(message)):
-            logger.debug(
-                f"Skipping singular mention message {message.id} in {message.guild.name}"
-            )
-            return False
-
-        if 1 <= len(message.content) < (await self.config.guild(message.guild).messages_min_length()):
-            logger.debug(
-                f"Skipping too short message {message.id} in {message.guild.name}")
-            return False
-
-        return True
-
-    async def is_bot_mentioned_or_replied(self, message: discord.Message) -> bool:
-        if not (await self.config.guild(message.guild).reply_to_mentions_replies()):
-            return False
-        return self.bot.user in message.mentions
 
     async def is_in_conversation(self, ctx: commands.Context) -> bool:
         reply_percent = await self.config.guild(ctx.guild).conversation_reply_percent()

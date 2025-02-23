@@ -33,8 +33,5 @@ class MixinMeta(ABC):
         self.channels_whitelist: dict[int, list[int]]
         self.openai_client: AsyncOpenAI
 
-    def initialize_openai_client(self):
-        pass
-
     async def create_response(self, ctx: commands.Context, messages_list=None):
         pass
