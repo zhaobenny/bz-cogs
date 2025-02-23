@@ -10,7 +10,7 @@ from openai import AsyncOpenAI
 from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
-from aiuser.core.validators import is_common_valid_reply
+from aiuser.core.validators import is_bot_mentioned_or_replied, is_common_valid_reply
 from aiuser.types.abc import CompositeMetaClass
 from aiuser.dashboard_integration import DashboardIntegration
 from aiuser.messages_list.entry import MessageEntry
@@ -221,7 +221,7 @@ class AIUser(
         if rate_limit_reset > datetime.now():
             logger.debug(f"Want to respond but ratelimited until {rate_limit_reset.strftime('%Y-%m-%d %H:%M:%S')}")
             if (
-                await self.is_bot_mentioned_or_replied(message)
+                await is_bot_mentioned_or_replied(self, message)
                 or await self.get_percentage(ctx) == 1.0
             ):
                 await ctx.react_quietly("💤", message="`aiuser` is ratedlimited")

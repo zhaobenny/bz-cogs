@@ -92,22 +92,3 @@ async def is_bot_mentioned_or_replied(cog: MixinMeta, message: discord.Message) 
     if not await cog.config.guild(message.guild).reply_to_mentions_replies():
         return False
     return cog.bot.user in message.mentions
-
-
-async def is_in_conversation(cog: MixinMeta, ctx: commands.Context) -> bool:
-    """Check if message is part of ongoing conversation"""
-    reply_percent = await cog.config.guild(ctx.guild).conversation_reply_percent()
-    reply_time_seconds = await cog.config.guild(ctx.guild).conversation_reply_time()
-
-    if reply_percent == 0 or reply_time_seconds == 0:
-        return False
-
-    cutoff_time = datetime.now(tz=timezone.utc) - timedelta(seconds=reply_time_seconds)
-
-    async for message in ctx.channel.history(limit=10):
-        if (message.author.id == cog.bot.user.id and
-            len(message.embeds) == 0 and
-                message.created_at > cutoff_time):
-            return random.random() < reply_percent
-
-    return False
