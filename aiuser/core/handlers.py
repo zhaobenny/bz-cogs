@@ -54,7 +54,7 @@ async def handle_message(cog: MixinMeta, message: discord.Message):
     if not (await is_valid_message(cog, ctx)):
         return
 
-    if await is_bot_mentioned_or_replied(message) or await is_in_conversation(cog, ctx):
+    if await is_bot_mentioned_or_replied(cog, message) or await is_in_conversation(cog, ctx):
         pass
     elif random.random() > await get_percentage(cog, ctx):
         return

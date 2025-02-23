@@ -10,7 +10,7 @@ from openai import AsyncOpenAI
 from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
-from aiuser.core.validators import (is_bot_mentioned_or_replied, is_valid_message)
+from aiuser.core.handlers import handle_message, handle_slash_command
 from aiuser.dashboard_integration import DashboardIntegration
 from aiuser.messages_list.entry import MessageEntry
 from aiuser.random_message_task import RandomMessageTask
@@ -24,8 +24,7 @@ from aiuser.utils.constants import (
     DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
     DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_IMAGE_UPLOAD_LIMIT,
     DEFAULT_MIN_MESSAGE_LENGTH, DEFAULT_PRESETS, DEFAULT_RANDOM_PROMPTS,
-    DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT,
-    URL_PATTERN)
+    DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT)
 from aiuser.utils.utilities import is_embed_valid
 
 from .openai_utils import setup_openai_client
@@ -171,6 +170,10 @@ class AIUser(
     @app_commands.describe(text="The prompt you want to send to the AI.")
     @app_commands.checks.cooldown(1, 30)
     @app_commands.checks.cooldown(1, 5, key=None)
+    @app_commands.command(name="chat")
+    @app_commands.describe(text="The prompt you want to send to the AI.")
+    @app_commands.checks.cooldown(1, 30)
+    @app_commands.checks.cooldown(1, 5, key=None)
     async def slash_command(
         self,
         inter: discord.Interaction,
@@ -178,101 +181,8 @@ class AIUser(
         text: app_commands.Range[str, 1, 2000],
     ):
         """Talk directly to this bot's AI. Ask it anything you want!"""
-        await inter.response.defer()
-
-        ctx = await commands.Context.from_interaction(inter)
-        ctx.message.content = text
-
-        if not (await is_valid_message(self, ctx)):
-            return await ctx.send(
-                "You're not allowed to use this command here.", ephemeral=True
-            )
-        elif await self.get_percentage(ctx) == 1.0:
-            pass
-        elif not (await self.config.guild(ctx.guild).reply_to_mentions_replies()):
-            return await ctx.send("This command is not enabled.", ephemeral=True)
-
-        rate_limit_reset = datetime.strptime(
-            await self.config.ratelimit_reset(), "%Y-%m-%d %H:%M:%S"
-        )
-        if rate_limit_reset > datetime.now():
-            return await ctx.send(
-                "The command is currently being ratelimited!", ephemeral=True
-            )
-
-        try:
-            await self.create_response(ctx)
-        except Exception:
-            await ctx.send(":warning: Error in generating response!", ephemeral=True)
+        await handle_slash_command(self, inter, text)
 
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
-        ctx: commands.Context = await self.bot.get_context(message)
-
-        if not (await is_valid_message(self, ctx)):
-            return
-
-        if await is_bot_mentioned_or_replied(message) or await self.is_in_conversation(ctx):
-            pass
-        elif random.random() > await self.get_percentage(ctx):
-            return
-
-        rate_limit_reset = datetime.strptime(await self.config.ratelimit_reset(), "%Y-%m-%d %H:%M:%S")
-        if rate_limit_reset > datetime.now():
-            logger.debug(f"Want to respond but ratelimited until {rate_limit_reset.strftime('%Y-%m-%d %H:%M:%S')}")
-            if (
-                await is_bot_mentioned_or_replied(self, message)
-                or await self.get_percentage(ctx) == 1.0
-            ):
-                await ctx.react_quietly("💤", message="`aiuser` is ratedlimited")
-            return
-
-        if URL_PATTERN.search(ctx.message.content):
-            ctx = await self.wait_for_embed(ctx)
-
-        await self.create_response(ctx)
-
-    async def get_percentage(self, ctx: commands.Context) -> bool:
-        role_percent = None
-        author = ctx.author
-
-        for role in author.roles:
-            if role.id in (await self.config.all_roles()):
-                role_percent = await self.config.role(role).reply_percent()
-                break
-
-        percentage = await self.config.member(author).reply_percent()
-        if percentage == None:
-            percentage = role_percent
-        if percentage == None:
-            percentage = await self.config.channel(ctx.channel).reply_percent()
-        if percentage == None:
-            percentage = await self.config.guild(ctx.guild).reply_percent()
-        if percentage == None:
-            percentage = DEFAULT_REPLY_PERCENT
-        return percentage
-
-    async def is_in_conversation(self, ctx: commands.Context) -> bool:
-        reply_percent = await self.config.guild(ctx.guild).conversation_reply_percent()
-        reply_time_seconds = await self.config.guild(ctx.guild).conversation_reply_time()
-
-        if reply_percent == 0 or reply_time_seconds == 0:
-            return False
-
-        cutoff_time = datetime.now(tz=timezone.utc) - timedelta(seconds=reply_time_seconds)
-
-        async for message in ctx.channel.history(limit=10):
-            if message.author.id == self.bot.user.id and len(message.embeds) == 0 and message.created_at > cutoff_time:
-                return random.random() < reply_percent
-
-        return False
-
-    async def wait_for_embed(self, ctx: commands.Context):
-        """Wait for possible embed to be valid"""
-        start_time = asyncio.get_event_loop().time()
-        while not is_embed_valid(ctx.message):
-            ctx.message = await ctx.channel.fetch_message(ctx.message.id)
-            if asyncio.get_event_loop().time() - start_time >= 3:
-                break
-            await asyncio.sleep(1)
-        return ctx
+        await handle_message(self, message)
