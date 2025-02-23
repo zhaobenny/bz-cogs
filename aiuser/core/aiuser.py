@@ -10,25 +10,25 @@ from openai import AsyncOpenAI
 from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
-from aiuser.core.validators import is_bot_mentioned_or_replied, is_common_valid_reply
-from aiuser.types.abc import CompositeMetaClass
+from aiuser.core.validators import (is_bot_mentioned_or_replied, is_valid_message)
 from aiuser.dashboard_integration import DashboardIntegration
 from aiuser.messages_list.entry import MessageEntry
 from aiuser.random_message_task import RandomMessageTask
 from aiuser.response.response_handler import ResponseHandler
 from aiuser.settings.base import Settings
+from aiuser.types.abc import CompositeMetaClass
+from aiuser.types.enums import ScanImageMode
 from aiuser.utils.cache import Cache
 from aiuser.utils.constants import (
     DEFAULT_IMAGE_REQUEST_SD_GEN_PROMPT,
     DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
     DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_IMAGE_UPLOAD_LIMIT,
     DEFAULT_MIN_MESSAGE_LENGTH, DEFAULT_PRESETS, DEFAULT_RANDOM_PROMPTS,
-    DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT,
-    SINGULAR_MENTION_PATTERN, URL_PATTERN)
-from aiuser.types.enums import ScanImageMode
-from .openai_utils import setup_openai_client
-
+    DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT, SINGULAR_MENTION_PATTERN,
+    URL_PATTERN)
 from aiuser.utils.utilities import is_embed_valid
+
+from .openai_utils import setup_openai_client
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -183,7 +183,7 @@ class AIUser(
         ctx = await commands.Context.from_interaction(inter)
         ctx.message.content = text
 
-        if not await self.is_common_valid_reply(ctx):
+        if not (await is_valid_message(self, ctx)):
             return await ctx.send(
                 "You're not allowed to use this command here.", ephemeral=True
             )
@@ -209,10 +209,10 @@ class AIUser(
     async def on_message_without_command(self, message: discord.Message):
         ctx: commands.Context = await self.bot.get_context(message)
 
-        if not await is_common_valid_reply(self, ctx):
+        if not (await is_valid_message(self, ctx)):
             return
 
-        if await self.is_bot_mentioned_or_replied(message) or await self.is_in_conversation(ctx):
+        if await is_bot_mentioned_or_replied(message) or await self.is_in_conversation(ctx):
             pass
         elif random.random() > await self.get_percentage(ctx):
             return

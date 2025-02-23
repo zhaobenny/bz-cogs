@@ -1,7 +1,5 @@
-# validators.py
 import logging
-import random
-from datetime import datetime, timedelta, timezone
+from typing import Tuple
 
 import discord
 from redbot.core import commands
@@ -13,76 +11,119 @@ from aiuser.utils.constants import SINGULAR_MENTION_PATTERN
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-async def is_common_valid_reply(cog: MixinMeta, ctx: commands.Context) -> bool:
-    """Run some common checks to see if a message is valid for the bot to reply to"""
-    if not ctx.guild:
-        return False
-    if await cog.bot.cog_disabled_in_guild(cog, ctx.guild):
-        return False
-    if ctx.author.bot or not cog.channels_whitelist.get(ctx.guild.id, []):
-        return False
+async def check_openai_client(cog: MixinMeta) -> Tuple[bool, str]:
+    """Validate and setup OpenAI client"""
+    if not cog.openai_client:
+        cog.openai_client = await setup_openai_client(cog.bot, cog.config)
+        if not cog.openai_client:
+            return False, "Failed to setup OpenAI client"
+    return True, ""
 
-    # Thread validation
-    if not ctx.interaction:
-        if (isinstance(ctx.channel, discord.Thread) and
-                ctx.channel.parent.id not in cog.channels_whitelist[ctx.guild.id]):
-            return False
-        if (not isinstance(ctx.channel, discord.Thread) and
-                ctx.channel.id not in cog.channels_whitelist[ctx.guild.id]):
-            return False
+
+async def check_guild_permissions(cog: MixinMeta, ctx: commands.Context) -> Tuple[bool, str]:
+    """Validate guild-level permissions and settings"""
+    if not ctx.guild:
+        return False, "Not in a guild"
+
+    if await cog.bot.cog_disabled_in_guild(cog, ctx.guild):
+        return False, "Cog disabled in guild"
 
     try:
         if not await cog.bot.ignored_channel_or_guild(ctx):
-            return False
+            return False, "Channel or guild ignored"
     except Exception:
         logger.debug("Exception in checking if ignored channel or guild", exc_info=True)
-        return False
+        return False, "Error checking channel/guild ignore status"
 
-    # User permission checks
+    return True, ""
+
+
+async def check_channel_settings(cog: MixinMeta, ctx: commands.Context) -> Tuple[bool, str]:
+    """Validate channel whitelist and thread settings"""
+    whitelist = cog.channels_whitelist.get(ctx.guild.id, [])
+    if not whitelist:
+        return False, "No whitelisted channels"
+
+    if not ctx.interaction:
+        if (isinstance(ctx.channel, discord.Thread) and
+                ctx.channel.parent.id not in whitelist):
+            return False, "Parent channel not whitelisted"
+
+        if (not isinstance(ctx.channel, discord.Thread) and
+                ctx.channel.id not in whitelist):
+            return False, "Channel not whitelisted"
+
+    return True, ""
+
+
+async def check_user_status(cog: MixinMeta, ctx: commands.Context) -> Tuple[bool, str]:
+    """Validate user permissions and opt-in status"""
+    if ctx.author.bot:
+        return False, "Author is bot"
+
     if not await cog.bot.allowed_by_whitelist_blacklist(ctx.author):
-        return False
-    if ctx.author.id in await cog.config.optout():
-        return False
-    if (not cog.optindefault.get(ctx.guild.id) and
-            (ctx.author.id not in await cog.config.optin())):
-        return False
+        return False, "User not allowed by whitelist/blacklist"
 
-    # Content checks
-    if (cog.ignore_regex.get(ctx.guild.id) and
-            cog.ignore_regex[ctx.guild.id].search(ctx.message.content)):
-        return False
+    if ctx.author.id in await cog.config.optout():
+        return False, "User opted out"
+
+    if not cog.optindefault.get(ctx.guild.id) and ctx.author.id not in await cog.config.optin():
+        return False, "User not opted in"
 
     # Role/member whitelist checks
     whitelisted_roles = await cog.config.guild(ctx.guild).roles_whitelist()
     whitelisted_members = await cog.config.guild(ctx.guild).members_whitelist()
     if whitelisted_members or whitelisted_roles:
-        if not ((ctx.author.id in whitelisted_members) or
-                (ctx.author.roles and (set([role.id for role in ctx.author.roles]) &
-                 set(whitelisted_roles)))):
+        user_roles = set(role.id for role in ctx.author.roles) if ctx.author.roles else set()
+        if not (
+            (ctx.author.id in whitelisted_members) or
+            (user_roles & set(whitelisted_roles))
+        ):
+            return False, "User not in role/member whitelist"
+
+    return True, ""
+
+
+async def check_message_content(cog: MixinMeta, ctx: commands.Context) -> Tuple[bool, str]:
+    """Validate message content and format"""
+    if not ctx.interaction:
+        if SINGULAR_MENTION_PATTERN.match(ctx.message.content):
+            if not await is_bot_mentioned_or_replied(cog, ctx.message):
+                return False, "Single mention without bot reference"
+
+        min_length = await cog.config.guild(ctx.guild).messages_min_length()
+        if 1 <= len(ctx.message.content) < min_length:
+            return False, f"Message too short (min: {min_length})"
+
+    if (cog.ignore_regex.get(ctx.guild.id) and
+            cog.ignore_regex[ctx.guild.id].search(ctx.message.content)):
+        return False, "Message matches ignore regex"
+
+    return True, ""
+
+
+async def is_valid_message(cog: MixinMeta, ctx: commands.Context) -> bool:
+    """
+    Main validation chain that runs all checks in sequence.
+    Returns (is_valid, reason) tuple.
+    """
+    validation_chain = [
+        (check_openai_client, "OpenAI Client"),
+        (check_guild_permissions, "Guild Permissions"),
+        (check_channel_settings, "Channel Settings"),
+        (check_user_status, "User Status"),
+        (check_message_content, "Message Content"),
+    ]
+
+    for validator, validation_type in validation_chain:
+        try:
+            is_valid, reason = await validator(cog, ctx) if validator != check_openai_client else await validator(cog)
+            if not is_valid:
+                logger.debug(f"Validation failed at {validation_type}: {reason}")
+                return False
+        except Exception as e:
+            logger.error(f"Error in {validation_type} validation", exc_info=True)
             return False
-
-    if not ctx.interaction and not await is_good_text_message(cog, ctx.message):
-        return False
-
-    if not cog.openai_client:
-        cog.openai_client = await setup_openai_client(cog.bot, cog.config)
-    if not cog.openai_client:
-        return False
-
-    return True
-
-
-async def is_good_text_message(cog: MixinMeta, message: discord.Message) -> bool:
-    """Validate message content"""
-    if (SINGULAR_MENTION_PATTERN.match(message.content) and
-            not (await is_bot_mentioned_or_replied(cog, message))):
-        logger.debug(f"Skipping singular mention message {message.id} in {message.guild.name}")
-        return False
-
-    min_length = await cog.config.guild(message.guild).messages_min_length()
-    if 1 <= len(message.content) < min_length:
-        logger.debug(f"Skipping too short message {message.id} in {message.guild.name}")
-        return False
 
     return True
 
