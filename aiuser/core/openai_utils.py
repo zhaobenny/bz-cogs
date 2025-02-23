@@ -118,8 +118,6 @@ def create_ratelimit_hook(config: Config) -> Callable[[httpx.Response], None]:
         A hook function that updates rate limit information
     """
     async def update_ratelimit_hook(response: httpx.Response) -> None:
-        from ..utils.utilities import is_using_openai_endpoint
-
         if not str(response.url).startswith("https://api.openai.com/"):
             return
 
