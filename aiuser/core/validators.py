@@ -119,7 +119,7 @@ async def is_valid_message(cog: MixinMeta, ctx: commands.Context) -> bool:
         try:
             is_valid, reason = await validator(cog, ctx) if validator != check_openai_client else await validator(cog)
             if not is_valid:
-                logger.debug(f"Message \'{ctx.message.id}\' validation failed at {validation_type}: {reason}")
+                logger.debug(f"Message \'{ctx.message.id}\' validation failed at \'{validation_type}\': \"{reason}\"")
                 return False
         except Exception as e:
             logger.error(f"Error in {validation_type} validation", exc_info=True)
