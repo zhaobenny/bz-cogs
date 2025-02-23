@@ -15,7 +15,6 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 async def create_response(cog: MixinMeta, ctx: commands.Context, messages_list=None):
     """Create and send either an image or chat response based on the context"""
-    # Check if this is an image request
     if (not messages_list and not ctx.interaction) and await is_image_request(cog, ctx.message):
         if await process_image_response(cog, ctx):
             return
@@ -23,7 +22,6 @@ async def create_response(cog: MixinMeta, ctx: commands.Context, messages_list=N
     return await process_chat_response(cog, ctx, messages_list)
 
 async def process_chat_response(cog, ctx, messages_list):
-    # Otherwise generate a chat response
     messages_list = messages_list or await create_messages_list(cog, ctx)
     
     async with ctx.message.channel.typing():
