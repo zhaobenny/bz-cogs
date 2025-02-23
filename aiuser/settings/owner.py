@@ -11,7 +11,7 @@ from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.types.abc import MixinMeta
-from aiuser.common.utilities import is_using_openrouter_endpoint
+from aiuser.utils.utilities import is_using_openrouter_endpoint
 from aiuser.settings.utilities import get_tokens, truncate_prompt
 
 logger = logging.getLogger("red.bz_cogs.aiuser")

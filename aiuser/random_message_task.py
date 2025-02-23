@@ -6,8 +6,8 @@ import discord
 from discord.ext import tasks
 
 from aiuser.types.abc import MixinMeta
-from aiuser.common.constants import DEFAULT_PROMPT
-from aiuser.common.utilities import format_variables
+from aiuser.utils.constants import DEFAULT_PROMPT
+from aiuser.utils.utilities import format_variables
 from aiuser.messages_list.messages import create_messages_list
 
 logger = logging.getLogger("red.bz_cogs.aiuser")

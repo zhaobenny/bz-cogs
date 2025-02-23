@@ -5,7 +5,7 @@ import discord
 from redbot.core import checks, commands
 
 from aiuser.types.abc import MixinMeta, aiuser
-from aiuser.common.constants import (
+from aiuser.utils.constants import (
     DEFAULT_IMAGE_REQUEST_SD_GEN_PROMPT,
     DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
     DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS)

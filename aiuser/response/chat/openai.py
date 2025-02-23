@@ -8,10 +8,10 @@ import openai
 from redbot.core import commands
 
 from aiuser.types.abc import MixinMeta
-from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
+from aiuser.utils.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
                                      UNSUPPORTED_LOGIT_BIAS_MODELS,
                                      VISION_SUPPORTED_MODELS)
-from aiuser.common.utilities import get_enabled_tools
+from aiuser.utils.utilities import get_enabled_tools
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import ToolCallSchema
 from aiuser.messages_list.messages import MessagesList
