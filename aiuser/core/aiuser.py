@@ -1,9 +1,7 @@
-import asyncio
 import json
 import logging
-import random
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 import discord
 from openai import AsyncOpenAI
@@ -25,7 +23,6 @@ from aiuser.utils.constants import (
     DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_IMAGE_UPLOAD_LIMIT,
     DEFAULT_MIN_MESSAGE_LENGTH, DEFAULT_PRESETS, DEFAULT_RANDOM_PROMPTS,
     DEFAULT_REMOVE_PATTERNS, DEFAULT_REPLY_PERCENT)
-from aiuser.utils.utilities import is_embed_valid
 
 from .openai_utils import setup_openai_client
 
