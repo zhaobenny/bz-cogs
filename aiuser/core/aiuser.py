@@ -13,7 +13,7 @@ from redbot.core.bot import Red
 from aiuser.core.handlers import handle_message, handle_slash_command
 from aiuser.dashboard_integration import DashboardIntegration
 from aiuser.messages_list.entry import MessageEntry
-from aiuser.random_message_task import RandomMessageTask
+from aiuser.core.random_message_task import RandomMessageTask
 from aiuser.response.response_handler import ResponseHandler
 from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
