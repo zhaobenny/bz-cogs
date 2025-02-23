@@ -11,7 +11,7 @@ from aiuser.utils.constants import SINGULAR_MENTION_PATTERN
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-async def check_openai_client(cog: MixinMeta) -> Tuple[bool, str]:
+async def check_openai_client(cog: MixinMeta, _ : commands.Context) -> Tuple[bool, str]:
     """Validate and setup OpenAI client"""
     if not cog.openai_client:
         cog.openai_client = await setup_openai_client(cog.bot, cog.config)
@@ -117,12 +117,12 @@ async def is_valid_message(cog: MixinMeta, ctx: commands.Context) -> bool:
 
     for validator, validation_type in validation_chain:
         try:
-            is_valid, reason = await validator(cog, ctx) if validator != check_openai_client else await validator(cog)
+            is_valid, reason = await validator(cog, ctx) 
             if not is_valid:
                 if validation_type in ["OpenAI Client", "Guild Permissions"]:
                     logger.warning(f"Critical validation failed in '{ctx.guild.id}': {validation_type} - {reason}")
                 return False
-        except Exception as e:
+        except Exception:
             logger.error(f"Error in {validation_type} validation", exc_info=True)
             return False
 
