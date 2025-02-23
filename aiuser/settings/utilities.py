@@ -2,8 +2,8 @@ import discord
 import tiktoken
 from redbot.core import Config, commands
 
-from aiuser.common.enums import MentionType
-from aiuser.common.utilities import format_variables
+from aiuser.types.enums import MentionType
+from aiuser.utils.utilities import format_variables
 
 
 def get_mention_type(mention) -> MentionType:

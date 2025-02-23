@@ -5,7 +5,7 @@ import aiohttp
 from discord import Message
 from tenacity import retry, stop_after_attempt, wait_random
 
-from aiuser.common.constants import YOUTUBE_VIDEO_ID_PATTERN
+from aiuser.utils.constants import YOUTUBE_VIDEO_ID_PATTERN
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

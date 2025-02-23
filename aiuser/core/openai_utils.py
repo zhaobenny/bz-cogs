@@ -1,8 +1,8 @@
 import json
 import logging
-from datetime import datetime, timedelta
 import random
-from typing import Optional, Callable
+from datetime import datetime, timedelta
+from typing import Callable, Optional
 
 import httpx
 from discord.ext import commands
@@ -10,9 +10,10 @@ from openai import AsyncOpenAI
 from redbot.core import Config
 from redbot.core.bot import Red
 
-from .constants import OPENROUTER_URL
+from ..utils.constants import OPENROUTER_URL
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
+
 
 async def setup_openai_client(
     bot: Red,
@@ -20,12 +21,12 @@ async def setup_openai_client(
     ctx: Optional[commands.Context] = None
 ) -> Optional[AsyncOpenAI]:
     """Initialize the OpenAI client with appropriate configuration.
-    
+
     Args:
         bot: The Red bot instance
         config: The cog's Config instance
         ctx: Optional context for error messaging
-    
+
     Returns:
         AsyncOpenAI client if successful, None otherwise
     """
@@ -75,6 +76,7 @@ async def setup_openai_client(
         http_client=client
     )
 
+
 async def log_request_prompt(request: httpx.Request) -> None:
     """Log the request prompt for debugging purposes."""
     if not logger.isEnabledFor(logging.DEBUG):
@@ -105,19 +107,20 @@ async def log_request_prompt(request: httpx.Request) -> None:
     except Exception as e:
         logger.debug(f"Error logging request prompt: {e}")
 
+
 def create_ratelimit_hook(config: Config) -> Callable[[httpx.Response], None]:
     """Create a hook function for handling rate limit responses.
-    
+
     Args:
         config: The cog's Config instance
-    
+
     Returns:
         A hook function that updates rate limit information
     """
     async def update_ratelimit_hook(response: httpx.Response) -> None:
-        from .utilities import is_using_openai_endpoint
-        
-        if not is_using_openai_endpoint(response.url):
+        from ..utils.utilities import is_using_openai_endpoint
+
+        if not str(response.url).startswith("https://api.openai.com/"):
             return
 
         headers = response.headers
@@ -148,12 +151,13 @@ def create_ratelimit_hook(config: Config) -> Callable[[httpx.Response], None]:
 
     return update_ratelimit_hook
 
+
 def extract_time_delta(time_str: Optional[str]) -> timedelta:
     """Extract timedelta from OpenAI's ratelimit time format.
-    
+
     Args:
         time_str: Time string in OpenAI format (e.g., "1d", "2h", "30m", "45s")
-    
+
     Returns:
         timedelta object representing the time
     """

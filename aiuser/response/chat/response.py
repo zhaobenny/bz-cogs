@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 from discord import AllowedMentions
 from redbot.core import Config, commands
 
-from aiuser.common.constants import REGEX_RUN_TIMEOUT
-from aiuser.common.utilities import to_thread
+from aiuser.utils.constants import REGEX_RUN_TIMEOUT
+from aiuser.utils.utilities import to_thread
 from aiuser.response.chat.generator import ChatGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")

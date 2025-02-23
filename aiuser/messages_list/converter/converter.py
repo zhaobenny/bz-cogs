@@ -4,7 +4,7 @@ from discord import Message
 from redbot.core import commands
 
 from aiuser.types.abc import MixinMeta
-from aiuser.common.utilities import contains_youtube_link, is_embed_valid
+from aiuser.utils.utilities import contains_youtube_link, is_embed_valid
 from aiuser.messages_list.converter.embed.formatter import format_embed_content
 from aiuser.messages_list.converter.helpers import (format_embed_text_content,
                                                     format_generic_image,

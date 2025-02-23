@@ -7,7 +7,7 @@ from discord import Message
 from PIL import Image
 
 from aiuser.types.abc import MixinMeta
-from aiuser.common.enums import ScanImageMode
+from aiuser.types.enums import ScanImageMode
 from aiuser.messages_list.converter.helpers import format_text_content
 from aiuser.messages_list.converter.image.AI_horde import \
     process_image_ai_horde
