@@ -16,7 +16,7 @@ from aiuser.response.image.generator import ImageGenerator
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-async def send_image_response(cog: MixinMeta, ctx: commands.Context, image_generator: ImageGenerator) -> bool:
+async def create_image_response(cog: MixinMeta, ctx: commands.Context, image_generator: ImageGenerator) -> bool:
     """Main function to handle image generation and response"""
     image, caption = None, None
     
