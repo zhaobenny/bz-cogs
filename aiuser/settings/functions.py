@@ -2,8 +2,8 @@
 import discord
 from redbot.core import checks, commands
 
-from aiuser.abc import MixinMeta, aiuser
-from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
+from aiuser.types.abc import MixinMeta, aiuser
+from aiuser.config.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
                                      OPENROUTER_URL)
 
 

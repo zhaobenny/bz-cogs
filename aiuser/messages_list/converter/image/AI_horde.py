@@ -11,7 +11,7 @@ from discord import Message
 from PIL.Image import Image
 from tenacity import retry, stop_after_attempt, stop_after_delay, wait_random
 
-from aiuser.abc import MixinMeta
+from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

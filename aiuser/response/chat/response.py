@@ -7,127 +7,124 @@ from datetime import datetime, timezone
 from discord import AllowedMentions
 from redbot.core import Config, commands
 
-from aiuser.common.constants import REGEX_RUN_TIMEOUT
-from aiuser.common.utilities import to_thread
-from aiuser.response.chat.generator import ChatGenerator
+from aiuser.messages_list.messages import MessagesList
+from aiuser.response.chat.llm_pipeline import LLMPipeline
+from aiuser.types.abc import MixinMeta
+from aiuser.config.constants import REGEX_RUN_TIMEOUT
+from aiuser.utils.utilities import to_thread
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
+async def create_chat_response(cog: MixinMeta, ctx: commands.Context, messsages_list: MessagesList):
 
+    pipeline = LLMPipeline(cog, ctx, messages=messsages_list)
+    response = await pipeline.run()
+    
+    if not response:
+        return False
+        
+    response = await remove_patterns_from_response(ctx, cog.config, response)
+    
+    if not response:
+        return False
 
-class ChatResponse():
-    def __init__(self, ctx: commands.Context, config: Config, chat: ChatGenerator):
-        self.ctx = ctx
-        self.config = config
-        self.response = None
-        self.chat = chat
-        self.can_reply = chat.can_reply
+    return await send_response(ctx, response, messsages_list.can_reply)
 
-    async def send(self):
-        message = self.ctx.message
+async def remove_patterns_from_response(ctx: commands.Context, config: Config, response: str) -> str:
+    """Remove specified patterns from the response text"""
+    
+    @to_thread(timeout=REGEX_RUN_TIMEOUT)
+    def substitute(pattern: re.Pattern, text: str) -> str:
+        return pattern.sub('', text).strip(' \n')
 
-        self.response = await self.chat.generate_message()
+    @to_thread(timeout=REGEX_RUN_TIMEOUT)
+    def compile_pattern(pattern: str) -> re.Pattern:
+        return re.compile(pattern)
 
-        if not self.response:
-            return False
+    # Get and process patterns
+    patterns = await config.guild(ctx.guild).removelist_regexes()
+    botname = ctx.message.guild.me.nick or ctx.bot.user.display_name
+    patterns = [pattern.replace(r'{botname}', botname) for pattern in patterns]
 
-        await self.remove_patterns_from_response()
+    # Process author patterns
+    authors = {m.author.display_name async for m in ctx.channel.history(limit=10) 
+              if m.author != ctx.guild.me}
 
-        if not self.response:
-            return False
+    authorname_patterns = [p for p in patterns if r'{authorname}' in p]
+    regular_patterns = [p for p in patterns if r'{authorname}' not in p]
+    
+    # Expand author patterns
+    for pattern in authorname_patterns:
+        for author in authors:
+            regular_patterns.append(pattern.replace(r'{authorname}', author))
 
-        allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[message.author])
+    # Compile patterns
+    compiled_patterns : list[re.Pattern] = []
+    for pattern in regular_patterns:
+        try:
+            compiled = await compile_pattern(pattern)
+            compiled_patterns.append(compiled)
+        except asyncio.TimeoutError:
+            logger.warning(
+                f"Timed out after {REGEX_RUN_TIMEOUT} seconds while compiling regex pattern \"{pattern}\", continuing...")
+        except Exception:
+            logger.warning(
+                f"Failed to compile regex pattern \"{pattern}\" for response \"{response}\"", 
+                exc_info=True)
 
-        if len(self.response) >= 2000:
-            chunks = [self.response[i:i + 2000]
-                      for i in range(0, len(self.response), 2000)]
-            for chunk in chunks:
-                await self.ctx.send(chunk, allowed_mentions=allowed_mentions)
-        elif self.can_reply and await self.is_reply():
-            await message.reply(self.response, mention_author=False, allowed_mentions=allowed_mentions)
-        elif self.ctx.interaction:
-            await self.ctx.interaction.followup.send(self.response, allowed_mentions=allowed_mentions)
-        else:
-            await self.ctx.send(self.response, allowed_mentions=allowed_mentions)
+    # Apply patterns
+    processed_response = response.strip(' \n')
+    for pattern in compiled_patterns:
+        try:
+            processed_response = await substitute(pattern, processed_response)
+        except asyncio.TimeoutError:
+            logger.warning(
+                f"Timed out after {REGEX_RUN_TIMEOUT} seconds while applying regex pattern "
+                f"\"{pattern.pattern}\" in response \"{response}\". Check pattern for catastrophic backtracking.")
+
+    return processed_response
+
+async def should_reply(ctx: commands.Context) -> bool:
+    """Determine if the bot should reply to a message"""
+    if ctx.interaction:
+        return False
+
+    try:
+        await ctx.fetch_message(ctx.message.id)
+    except Exception:
+        return False
+
+    time_diff = datetime.now(timezone.utc) - ctx.message.created_at
+
+    if time_diff.total_seconds() > 8 or random.random() < 0.25:
         return True
 
-    async def remove_patterns_from_response(self) -> str:
+    try:
+        async for last_message in ctx.message.channel.history(limit=1):
+            if last_message.author == ctx.message.guild.me:
+                return True
+    except Exception:
+        pass
 
-        @to_thread(timeout=REGEX_RUN_TIMEOUT)
-        def substitute(pattern: re.Pattern, response):
-            response = (pattern.sub('', response))
-            return response
+    return False
 
-        @to_thread(timeout=REGEX_RUN_TIMEOUT)
-        def compile(pattern: re.Pattern):
-            return re.compile(pattern)
+async def send_response(ctx: commands.Context, response: str, can_reply: bool) -> bool:
+    """Send the response in appropriate chunks"""
+    allowed_mentions = AllowedMentions(
+        everyone=False, 
+        roles=False, 
+        users=[ctx.message.author]
+    )
 
-        patterns = await self.config.guild(self.ctx.guild).removelist_regexes()
-
-        botname = self.ctx.message.guild.me.nick or self.ctx.bot.user.display_name
-        patterns = [pattern.replace(r'{botname}', botname)
-                    for pattern in patterns]
-
-        # get last 10 authors and applies regex patterns with display name
-        authors = set()
-        async for m in self.ctx.channel.history(limit=10):
-            if m.author != self.ctx.guild.me:
-                authors.add(m.author.display_name)
-
-        authorname_patterns = list(
-            filter(lambda pattern: r'{authorname}' in pattern, patterns))
-        patterns = [
-            pattern for pattern in patterns if r'{authorname}' not in pattern]
-
-        for pattern in authorname_patterns:
-            for author in authors:
-                patterns.append(pattern.replace(r'{authorname}', author))
-
-        complied_patterns = []
-        for pattern in patterns:
-            try:
-                complied_patterns.append(await compile(pattern))
-            except asyncio.TimeoutError:
-                logger.warning(
-                    f"Timed out after {REGEX_RUN_TIMEOUT} seconds while compiling regex pattern \"{pattern}\", continuing...")
-            except Exception:
-                logger.warning(
-                    f"Failed to compile regex pattern \"{pattern}\" for response \"{self.response}\", continuing...", exc_info=True)
-
-        response = self.response
-        response = response.strip(' \n')
-
-        for pattern in complied_patterns:
-            try:
-                response = await substitute(pattern, response)
-                response = response.strip(' \n')
-            except asyncio.TimeoutError:
-                logger.warning(
-                    f"Timed out after {REGEX_RUN_TIMEOUT} seconds while applying regex pattern \"{pattern.pattern}\" in response \"{self.response}\" \
-                        Please check the regex pattern for catastrophic backtracking. Continuing...")
-
-        self.response = response
-
-    async def is_reply(self):
-        if self.ctx.interaction:
-            return False
-
-        message = self.ctx.message
-        try:
-            await self.ctx.fetch_message(message.id)
-        except Exception:
-            return False
-
-        time_diff = datetime.now(timezone.utc) - message.created_at
-
-        if time_diff.total_seconds() > 8 or random.random() < 0.25:
-            return True
-
-        try:
-            async for last_message in message.channel.history(limit=1):
-                if last_message.author == message.guild.me:
-                    return True
-        except Exception:
-            pass
-
-        return False
+    if len(response) >= 2000:
+        chunks = [response[i:i + 2000] for i in range(0, len(response), 2000)]
+        for chunk in chunks:
+            await ctx.send(chunk, allowed_mentions=allowed_mentions)
+    elif can_reply and await should_reply(ctx):
+        await ctx.message.reply(response, mention_author=False, allowed_mentions=allowed_mentions)
+    elif ctx.interaction:
+        await ctx.interaction.followup.send(response, allowed_mentions=allowed_mentions)
+    else:
+        await ctx.send(response, allowed_mentions=allowed_mentions)
+    
+    return True

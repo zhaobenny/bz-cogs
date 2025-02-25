@@ -6,11 +6,11 @@ import discord
 from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
-from aiuser.abc import MixinMeta
-from aiuser.common.constants import FUNCTION_CALLING_SUPPORTED_MODELS
-from aiuser.common.enums import MentionType
-from aiuser.common.types import COMPATIBLE_CHANNELS, COMPATIBLE_MENTIONS
-from aiuser.common.utilities import (get_enabled_tools,
+from aiuser.types.abc import MixinMeta
+from aiuser.config.constants import FUNCTION_CALLING_SUPPORTED_MODELS
+from aiuser.types.enums import MentionType
+from aiuser.types.types import COMPATIBLE_CHANNELS, COMPATIBLE_MENTIONS
+from aiuser.utils.utilities import (get_enabled_tools,
                                      is_using_openai_endpoint,
                                      is_using_openrouter_endpoint)
 from aiuser.settings.functions import FunctionCallingSettings

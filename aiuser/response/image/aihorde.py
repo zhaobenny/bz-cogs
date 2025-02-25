@@ -7,7 +7,7 @@ import aiohttp
 from redbot.core import Config, commands
 from tenacity import retry, stop_after_delay, wait_random
 
-from aiuser.common.constants import IMAGE_REQUEST_AIHORDE_URL
+from aiuser.config.constants import IMAGE_REQUEST_AIHORDE_URL
 from aiuser.response.image.generator import ImageGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")

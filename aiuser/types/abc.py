@@ -6,7 +6,7 @@ from openai import AsyncOpenAI
 from redbot.core import Config, commands
 from redbot.core.bot import Red
 
-from aiuser.common.cache import Cache
+from aiuser.utils.cache import Cache
 from aiuser.messages_list.entry import MessageEntry
 
 
@@ -32,9 +32,7 @@ class MixinMeta(ABC):
         self.ignore_regex: dict[int, re.Pattern]
         self.channels_whitelist: dict[int, list[int]]
         self.openai_client: AsyncOpenAI
-
-    def initialize_openai_client(self):
-        pass
+        self.optindefault: dict[int, bool] 
 
     async def create_response(self, ctx: commands.Context, messages_list=None):
         pass

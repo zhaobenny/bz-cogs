@@ -10,8 +10,8 @@ from redbot.core.utils.chat_formatting import box, pagify
 from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
-from aiuser.abc import MixinMeta, aiuser
-from aiuser.common.constants import DEFAULT_REMOVE_PATTERNS
+from aiuser.types.abc import MixinMeta, aiuser
+from aiuser.config.constants import DEFAULT_REMOVE_PATTERNS
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

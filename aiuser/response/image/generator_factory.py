@@ -2,7 +2,7 @@ import logging
 
 from redbot.core import commands, config
 
-from aiuser.common.constants import IMAGE_REQUEST_AIHORDE_URL
+from aiuser.config.constants import IMAGE_REQUEST_AIHORDE_URL
 from aiuser.response.image.aihorde import AIHordeGenerator
 from aiuser.response.image.dalle import DalleImageGenerator
 from aiuser.response.image.generic import GenericImageGenerator
