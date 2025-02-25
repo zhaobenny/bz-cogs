@@ -18,7 +18,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 async def create_chat_response(cog: MixinMeta, ctx: commands.Context, messsages_list: MessagesList):
 
     pipeline = LLMPipeline(cog, ctx, messages=messsages_list)
-    response = await pipeline.create_completion()
+    response = await pipeline.run()
     
     if not response:
         return False

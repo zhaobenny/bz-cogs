@@ -106,9 +106,9 @@ class LLMPipeline:
         logger.warning(f'Could not find tool "{tool_name}" in {self.ctx.guild.name}')
         return None
 
-    async def generate_message(self) -> Optional[str]:
+    async def run(self) -> Optional[str]:
         try:
-            return await self.request_openai()
+            return await self.create_completion()
         except httpx.ReadTimeout:
             logger.error("Failed request to LLM endpoint. Timed out.")
             await self.ctx.react_quietly("💤", message="`aiuser` request timed out")
