@@ -7,7 +7,7 @@ from redbot.core import commands
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.constants import IMAGE_REQUEST_REPLY_PROMPT
 from aiuser.messages_list.messages import create_messages_list
-from aiuser.response.chat.openai import OpenAIAPIGenerator
+from aiuser.response.chat.chat import ChatGenerator
 from aiuser.response.chat.response import ChatResponse
 from aiuser.response.image.generator import ImageGenerator
 
@@ -43,7 +43,7 @@ class ImageResponse():
         message_list = await create_messages_list(self.cog, self.ctx)
         await message_list.add_system(saved_caption, index=len(message_list) + 1)
         await message_list.add_system(IMAGE_REQUEST_REPLY_PROMPT, index=len(message_list) + 1)
-        chat = OpenAIAPIGenerator(self.cog, self.ctx, message_list)
+        chat = ChatGenerator(self.cog, self.ctx, message_list)
         response = ChatResponse(self.ctx, self.config, chat)
 
         if not (await response.send()):

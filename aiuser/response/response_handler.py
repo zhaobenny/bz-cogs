@@ -4,7 +4,7 @@ import logging
 from redbot.core import commands
 
 from aiuser.messages_list.messages import create_messages_list
-from aiuser.response.chat.openai import OpenAIAPIGenerator
+from aiuser.response.chat.chat import ChatGenerator
 from aiuser.response.chat.response import ChatResponse
 from aiuser.response.image.generator_factory import get_image_generator
 from aiuser.response.image.response import ImageResponse
@@ -28,7 +28,7 @@ async def process_chat_response(cog: MixinMeta, ctx: commands.Context, messages_
     messages_list = messages_list or await create_messages_list(cog, ctx)
 
     async with ctx.message.channel.typing():
-        chat_generator = OpenAIAPIGenerator(cog, ctx, messages_list)
+        chat_generator = ChatGenerator(cog, ctx, messages_list)
         response = ChatResponse(ctx, cog.config, chat_generator)
         return await response.send()
 

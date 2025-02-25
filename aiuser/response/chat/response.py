@@ -9,7 +9,7 @@ from redbot.core import Config, commands
 
 from aiuser.utils.constants import REGEX_RUN_TIMEOUT
 from aiuser.utils.utilities import to_thread
-from aiuser.response.chat.generator import ChatGenerator
+from aiuser.response.chat.chat import ChatGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

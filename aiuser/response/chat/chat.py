@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 import openai
-from redbot.core import commands
+from redbot.core import Config, commands
 
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
@@ -15,14 +15,19 @@ from aiuser.utils.utilities import get_enabled_tools
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import ToolCallSchema
 from aiuser.messages_list.messages import MessagesList
-from aiuser.response.chat.generator import ChatGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class OpenAIAPIGenerator(ChatGenerator):
+class ChatGenerator:
     def __init__(self, cog: MixinMeta, ctx: commands.Context, messages: MessagesList):
-        super().__init__(cog, ctx, messages)
+        self.ctx: commands.Context = ctx
+        self.config: Config = cog.config
+        self.bot = cog.bot
+        self.msg_list = messages
+        self.model = messages.model
+        self.can_reply = messages.can_reply
+        self.messages = messages.get_json()
         self.openai_client = cog.openai_client
         self.enabled_tools: List[ToolCall] = []
         self.available_tools_schemas: List[ToolCallSchema] = []
