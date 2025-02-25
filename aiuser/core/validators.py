@@ -10,6 +10,32 @@ from aiuser.config.constants import SINGULAR_MENTION_PATTERN
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
+async def is_valid_message(cog: MixinMeta, ctx: commands.Context) -> bool:
+    """
+    Main validation chain that runs all checks in sequence.
+    Returns (is_valid, reason) tuple.
+    """
+    validation_chain = [
+        (check_openai_client, "OpenAI Client"),
+        (check_guild_permissions, "Guild Permissions"),
+        (check_channel_settings, "Channel Settings"),
+        (check_user_status, "User Status"),
+        (check_message_content, "Message Content"),
+    ]
+
+    for validator, validation_type in validation_chain:
+        try:
+            is_valid, reason = await validator(cog, ctx) 
+            if not is_valid:
+                if validation_type in ["OpenAI Client"]:
+                    logger.warning(f"Critical validation failed in '{ctx.guild.id}': {validation_type} - {reason}")
+                return False
+        except Exception:
+            logger.error(f"Error in {validation_type} validation", exc_info=True)
+            return False
+
+    return True
+
 
 async def check_openai_client(cog: MixinMeta, _ : commands.Context) -> Tuple[bool, str]:
     """Validate and setup OpenAI client"""
@@ -100,34 +126,6 @@ async def check_message_content(cog: MixinMeta, ctx: commands.Context) -> Tuple[
         return False, "Message matches ignore regex"
 
     return True, ""
-
-
-async def is_valid_message(cog: MixinMeta, ctx: commands.Context) -> bool:
-    """
-    Main validation chain that runs all checks in sequence.
-    Returns (is_valid, reason) tuple.
-    """
-    validation_chain = [
-        (check_openai_client, "OpenAI Client"),
-        (check_guild_permissions, "Guild Permissions"),
-        (check_channel_settings, "Channel Settings"),
-        (check_user_status, "User Status"),
-        (check_message_content, "Message Content"),
-    ]
-
-    for validator, validation_type in validation_chain:
-        try:
-            is_valid, reason = await validator(cog, ctx) 
-            if not is_valid:
-                if validation_type in ["OpenAI Client", "Guild Permissions"]:
-                    logger.warning(f"Critical validation failed in '{ctx.guild.id}': {validation_type} - {reason}")
-                return False
-        except Exception:
-            logger.error(f"Error in {validation_type} validation", exc_info=True)
-            return False
-
-    return True
-
 
 async def is_bot_mentioned_or_replied(cog: MixinMeta, message: discord.Message) -> bool:
     """Check if message mentions or replies to bot"""
