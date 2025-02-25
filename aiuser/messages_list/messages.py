@@ -1,8 +1,8 @@
 import json
 import logging
 import random
-from dataclasses import asdict
 from datetime import datetime, timedelta
+from typing import List
 
 import discord
 import tiktoken
@@ -48,7 +48,7 @@ class MessagesList:
         self.ignore_regex = cog.ignore_regex.get(self.guild.id, None)
         self.start_time = cog.override_prompt_start_time.get(
             self.guild.id)
-        self.messages = []
+        self.messages: List[MessageEntry] = []
         self.messages_ids = set()
         self.tokens = 0
         self.model = None
@@ -173,6 +173,20 @@ class MessagesList:
         self.messages.insert(index or 0, entry)
         await self._add_tokens(content)
 
+    async def add_assistant(self, content: str = "", index: int = None, tool_calls: list = []):
+        if self.tokens > self.token_limit:
+            return
+        entry = MessageEntry("assistant", content, tool_calls=tool_calls)
+        self.messages.insert(index or 0, entry)
+        await self._add_tokens(content)
+
+    async def add_tool_result(self, content: str,  tool_call_id: int, index: int = None):
+        if self.tokens > self.token_limit:
+            return
+        entry = MessageEntry("tool", content, tool_call_id=tool_call_id)
+        self.messages.insert(index or 0, entry)
+        await self._add_tokens(content)
+
     async def add_history(self):
         limit = await self.config.guild(self.guild).messages_backread()
         max_seconds_gap = await self.config.guild(self.guild).messages_backread_seconds()
@@ -245,7 +259,15 @@ class MessagesList:
         await self.init_message.channel.send(embed=embed, view=view)
 
     def get_json(self):
-        return [asdict(message) for message in self.messages]
+        return [
+            {
+                "role": message.role,
+                "content": message.content,
+                **({"tool_calls": message.tool_calls} if message.tool_calls else {}),
+                **({"tool_call_id": message.tool_call_id} if hasattr(message, 'tool_call_id') and message.tool_call_id else {})
+            }
+            for message in self.messages
+        ]
 
     async def _add_tokens(self, content):
         if not self._encoding:

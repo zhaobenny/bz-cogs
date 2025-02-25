@@ -1,7 +1,7 @@
 import json
 import logging
 from dataclasses import asdict
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import httpx
 import openai
@@ -15,6 +15,9 @@ from aiuser.utils.utilities import get_enabled_tools
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import ToolCallSchema
 from aiuser.messages_list.messages import MessagesList
+from typing import Dict, Any, Tuple, List
+from openai.types.chat import ChatCompletion, ChatCompletionMessageToolCall
+from openai.types.completion import Completion
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -53,19 +56,19 @@ class LLMPipeline:
         self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
         self.available_tools_schemas = [tool.schema for tool in self.enabled_tools]
 
-    async def call_client(self, kwargs: Dict[str, Any]):
+    async def call_client(self, kwargs: Dict[str, Any]) -> Union[str, Tuple[str, List[ChatCompletionMessageToolCall]]]:
         if "gpt-3.5-turbo-instruct" in self.model:
             prompt = "\n".join(message["content"] for message in self.messages)
-            response = await self.openai_client.completions.create(
+            response: Completion = await self.openai_client.completions.create(
                 model=self.model, prompt=prompt, **kwargs
             )
             return response.choices[0].message.content
         else:
-            response = await self.openai_client.chat.completions.create(
+            response: ChatCompletion = await self.openai_client.chat.completions.create(
                 model=self.model, messages=self.msg_list.get_json(), **kwargs
             )
 
-            tools_calls = response.choices[0].message.tool_calls or []
+            tools_calls: List[ChatCompletionMessageToolCall] = response.choices[0].message.tool_calls or []
 
             return response.choices[0].message.content, tools_calls
 
@@ -87,13 +90,14 @@ class LLMPipeline:
         logger.debug(f'Generated response in {self.ctx.guild.name}: "{self.completion}"')
         return self.completion
 
-    async def handle_tool_calls(self, tool_calls: List[Any]):
+    async def handle_tool_calls(self, tool_calls: List[ChatCompletionMessageToolCall]):
+        await self.msg_list.add_assistant(index=len(self.msg_list) + 1, tool_calls=tool_calls)
         for tool_call in tool_calls:
             function = tool_call.function
             arguments = json.loads(function.arguments)
             result = await self.run_tool(function.name, arguments)
             if result:
-                await self.msg_list.add_system(result, index=len(self.msg_list) + 1)
+                await self.msg_list.add_tool_result(result, tool_call.id, index=len(self.msg_list) + 1)
 
     async def run_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Optional[str]:
         for tool in self.enabled_tools:
