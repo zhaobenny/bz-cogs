@@ -1,8 +1,10 @@
 import logging
 import re
+from typing import Optional
 
 import discord
-from redbot.core import commands
+from openai import AsyncOpenAI
+from redbot.core import commands, Config
 
 from aiuser.response.chat.response import create_chat_response
 from aiuser.types.abc import MixinMeta
@@ -14,85 +16,86 @@ from aiuser.response.image.generator import ImageGenerator
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class ImageResponse():
-    def __init__(self, cog: MixinMeta, ctx: commands.Context, image_generator: ImageGenerator):
-        self.ctx = ctx
-        self.config = cog.config
-        self.cog = cog
-        self.message = ctx.message
-        self.image_generator = image_generator
-
-    async def send(self):
-        image, caption = None, None
-        try:
-            caption = await self._create_image_caption()
-            if caption is None:
-                return False
-
-            image = await self.image_generator.generate_image(caption)
-            if image is None:
-                return False
-
-        except Exception:
-            logger.exception(f"Error while attempting to generate image")
+async def send_image_response(cog: MixinMeta, ctx: commands.Context, image_generator: ImageGenerator) -> bool:
+    """Main function to handle image generation and response"""
+    image, caption = None, None
+    
+    try:
+        caption = await create_image_caption(cog.config, ctx.message, cog.openai_client)
+        if caption is None:
             return False
 
-        response = None
-        saved_caption = await self._format_saved_caption(caption)
+        image = await image_generator.generate_image(caption)
+        if image is None:
+            return False
 
-        message_list = await create_messages_list(self.cog, self.ctx)
-        await message_list.add_system(saved_caption, index=len(message_list) + 1)
-        await message_list.add_system(IMAGE_REQUEST_REPLY_PROMPT, index=len(message_list) + 1)
+    except Exception:
+        logger.exception("Error while attempting to generate image")
+        return False
 
-        if not (await create_chat_response(self.cog, self.ctx, message_list)):
-            await self._clean_error_emojis()
-            await self.message.add_reaction("👍")
+    saved_caption = await format_saved_caption(cog.config, ctx.message.guild, caption)
 
-        image_msg = await self.message.channel.send(file=discord.File(image, filename=f"{self.message.id}.png"))
+    message_list = await create_messages_list(cog, ctx)
+    await message_list.add_system(saved_caption, index=len(message_list) + 1)
+    await message_list.add_system(IMAGE_REQUEST_REPLY_PROMPT, index=len(message_list) + 1)
 
-        self.cog.cached_messages[image_msg.id] = saved_caption
-        return True
+    if not (await create_chat_response(cog, ctx, message_list)):
+        await clean_error_emojis(ctx.message, ctx)
+        await ctx.message.add_reaction("👍")
 
-    async def _create_image_caption(self):
-        subject = await self.config.guild(self.message.guild).image_requests_subject()
+    image_msg = await ctx.message.channel.send(
+        file=discord.File(image, filename=f"{ctx.message.id}.png")
+    )
 
-        botname = self.message.guild.me.nick or self.message.guild.me.display_name
-        request = self.message.content
+    cog.cached_messages[image_msg.id] = saved_caption
+    return True
 
-        for m in self.message.mentions:
-            request = request.replace(m.mention, m.display_name)
 
-        for w in (await self.config.guild(self.ctx.guild).image_requests_second_person_trigger_words()):
-            pattern = r'\b{}\b'.format(re.escape(w))
-            request = re.sub(pattern, subject, request, flags=re.IGNORECASE)
+async def create_image_caption(config: Config, message: discord.Message, openai_client: AsyncOpenAI) -> Optional[str]:
+    """Create a caption for the image based on the message content"""
+    subject = await config.guild(message.guild).image_requests_subject()
+    botname = message.guild.me.nick or message.guild.me.display_name
+    request = message.content
 
-        pattern = r'\b{}\b'.format(re.escape(botname))
+    # Replace mentions with display names
+    for m in message.mentions:
+        request = request.replace(m.mention, m.display_name)
+
+    # Replace trigger words with subject
+    trigger_words = await config.guild(message.guild).image_requests_second_person_trigger_words()
+    for w in trigger_words:
+        pattern = r'\b{}\b'.format(re.escape(w))
         request = re.sub(pattern, subject, request, flags=re.IGNORECASE)
 
-        response = await self.cog.openai_client.chat.completions.create(
-            model=await self.config.guild(self.message.guild).model(),
-            messages=[
-                {"role": "system", "content": await self.config.guild(self.message.guild).image_requests_sd_gen_prompt()},
-                {"role": "user", "content": request}
-            ],
-        )
-        prompt = response.choices[0].message.content.lower()
-        if "sorry" in prompt:
-            return None
-        return prompt
+    # Replace bot name with subject
+    pattern = r'\b{}\b'.format(re.escape(botname))
+    request = re.sub(pattern, subject, request, flags=re.IGNORECASE)
 
-    async def _format_saved_caption(self, caption):
-        subject = await self.config.guild(self.message.guild).image_requests_subject()
+    # Generate caption using OpenAI
+    response = await openai_client.chat.completions.create(
+        model=await config.guild(message.guild).model(),
+        messages=[
+            {"role": "system", "content": await config.guild(message.guild).image_requests_sd_gen_prompt()},
+            {"role": "user", "content": request}
+        ],
+    )
+    prompt = response.choices[0].message.content.lower()
+    
+    return None if "sorry" in prompt else prompt
 
-        pattern = r'\b{}\b'.format(re.escape(subject))
-        caption = re.sub(pattern, "", caption, flags=re.IGNORECASE)
-        caption = re.sub(r'^[\s,]+', '', caption)
-        return f"You sent: [Image: A picture of yourself. Keywords describing this picture would be: {caption}]"
+async def format_saved_caption(config: Config, guild: discord.Guild, caption: str) -> str:
+    """Format the caption for saving"""
+    subject = await config.guild(guild).image_requests_subject()
+    pattern = r'\b{}\b'.format(re.escape(subject))
+    caption = re.sub(pattern, "", caption, flags=re.IGNORECASE)
+    caption = re.sub(r'^[\s,]+', '', caption)
+    return f"You sent: [Image: A picture of yourself. Keywords describing this picture would be: {caption}]"
 
-    async def _clean_error_emojis(self):
-        emojis = ["💤", "⚠️"]
-        for emoji in emojis:
-            try:
-                await self.message.remove_reaction(emoji, self.ctx.me)
-            except Exception:
-                pass
+async def clean_error_emojis(message: discord.Message, ctx: commands.Context) -> None:
+    """Clean up error reaction emojis"""
+    emojis = ["💤", "⚠️"]
+    for emoji in emojis:
+        try:
+            await message.remove_reaction(emoji, ctx.me)
+        except Exception:
+            pass

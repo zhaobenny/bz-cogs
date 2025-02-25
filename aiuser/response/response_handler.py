@@ -6,7 +6,7 @@ from redbot.core import commands
 from aiuser.messages_list.messages import create_messages_list
 from aiuser.response.chat.response import create_chat_response
 from aiuser.response.image.generator_factory import get_image_generator
-from aiuser.response.image.response import ImageResponse
+from aiuser.response.image.response import send_image_response
 from aiuser.response.wants_image import wants_image
 from aiuser.types.abc import MixinMeta
 
@@ -37,8 +37,7 @@ async def process_image_response(cog: MixinMeta, ctx: commands.Context) -> bool:
     async with ctx.message.channel.typing():
         try:
             generator = await get_image_generator(ctx, cog.config)
-            response = ImageResponse(cog, ctx, generator)
-            success = await response.send()
+            success = await send_image_response(cog, ctx, generator)
 
             if success:
                 await ctx.message.remove_reaction("🧐", ctx.me)
