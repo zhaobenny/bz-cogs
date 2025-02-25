@@ -59,7 +59,7 @@ async def remove_patterns_from_response(ctx: commands.Context, config: Config, r
             regular_patterns.append(pattern.replace(r'{authorname}', author))
 
     # Compile patterns
-    compiled_patterns = []
+    compiled_patterns : list[re.Pattern] = []
     for pattern in regular_patterns:
         try:
             compiled = await compile_pattern(pattern)
