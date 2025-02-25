@@ -19,7 +19,7 @@ from aiuser.messages_list.messages import MessagesList
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class ChatGenerator:
+class LLMPipeline:
     def __init__(self, cog: MixinMeta, ctx: commands.Context, messages: MessagesList):
         self.ctx: commands.Context = ctx
         self.config: Config = cog.config
@@ -53,7 +53,7 @@ class ChatGenerator:
         self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
         self.available_tools_schemas = [tool.schema for tool in self.enabled_tools]
 
-    async def create_completion(self, kwargs: Dict[str, Any]):
+    async def call_client(self, kwargs: Dict[str, Any]):
         if "gpt-3.5-turbo-instruct" in self.model:
             prompt = "\n".join(message["content"] for message in self.messages)
             response = await self.openai_client.completions.create(
@@ -69,7 +69,7 @@ class ChatGenerator:
 
             return response.choices[0].message.content, tools_calls
 
-    async def request_openai(self) -> Optional[str]:
+    async def create_completion(self) -> Optional[str]:
         kwargs = await self.get_custom_parameters()
         await self.setup_tools()
 
@@ -77,7 +77,7 @@ class ChatGenerator:
             if self.available_tools_schemas:
                 kwargs["tools"] = [asdict(schema) for schema in self.available_tools_schemas]
 
-            self.completion, tool_calls = await self.create_completion(kwargs)
+            self.completion, tool_calls = await self.call_client(kwargs)
 
             if tool_calls and not self.completion:
                 await self.handle_tool_calls(tool_calls)

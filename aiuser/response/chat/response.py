@@ -7,25 +7,28 @@ from datetime import datetime, timezone
 from discord import AllowedMentions
 from redbot.core import Config, commands
 
+from aiuser.messages_list.messages import MessagesList
+from aiuser.response.chat.llm_pipeline import LLMPipeline
+from aiuser.types.abc import MixinMeta
 from aiuser.utils.constants import REGEX_RUN_TIMEOUT
 from aiuser.utils.utilities import to_thread
-from aiuser.response.chat.chat import ChatGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
-async def send_chat_response(ctx: commands.Context, config: Config, chat: ChatGenerator):
-    """Main function to generate and send chat responses"""
-    response = await chat.generate_message()
+async def create_chat_response(cog: MixinMeta, ctx: commands.Context, messsages_list: MessagesList):
+
+    pipeline = LLMPipeline(cog, ctx, messages=messsages_list)
+    response = await pipeline.create_completion()
     
     if not response:
         return False
         
-    response = await remove_patterns_from_response(ctx, config, response)
+    response = await remove_patterns_from_response(ctx, cog.config, response)
     
     if not response:
         return False
 
-    return await send_response(ctx, response, chat.can_reply)
+    return await send_response(ctx, response, messsages_list.can_reply)
 
 async def remove_patterns_from_response(ctx: commands.Context, config: Config, response: str) -> str:
     """Remove specified patterns from the response text"""
