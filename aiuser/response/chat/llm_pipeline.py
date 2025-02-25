@@ -8,7 +8,7 @@ import openai
 from redbot.core import Config, commands
 
 from aiuser.types.abc import MixinMeta
-from aiuser.utils.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
+from aiuser.config.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
                                      UNSUPPORTED_LOGIT_BIAS_MODELS,
                                      VISION_SUPPORTED_MODELS)
 from aiuser.utils.utilities import get_enabled_tools

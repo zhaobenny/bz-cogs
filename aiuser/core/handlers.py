@@ -12,7 +12,7 @@ from aiuser.core.validators import (is_bot_mentioned_or_replied,
                                     is_valid_message)
 from aiuser.response.response_handler import create_response
 from aiuser.types.abc import MixinMeta
-from aiuser.utils.constants import DEFAULT_REPLY_PERCENT, URL_PATTERN
+from aiuser.config.constants import DEFAULT_REPLY_PERCENT, URL_PATTERN
 from aiuser.utils.utilities import is_embed_valid
 
 logger = logging.getLogger("red.bz_cogs.aiuser")

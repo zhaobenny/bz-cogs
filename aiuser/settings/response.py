@@ -11,7 +11,7 @@ from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.types.abc import MixinMeta, aiuser
-from aiuser.utils.constants import DEFAULT_REMOVE_PATTERNS
+from aiuser.config.constants import DEFAULT_REMOVE_PATTERNS
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

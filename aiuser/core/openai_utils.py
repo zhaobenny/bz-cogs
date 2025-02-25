@@ -10,7 +10,7 @@ from openai import AsyncOpenAI
 from redbot.core import Config
 from redbot.core.bot import Red
 
-from ..utils.constants import OPENROUTER_URL
+from ..config.constants import OPENROUTER_URL
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

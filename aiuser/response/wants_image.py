@@ -6,7 +6,7 @@ import discord
 from redbot.core import Config
 
 from aiuser.types.abc import MixinMeta
-from aiuser.utils.constants import IMAGE_REQUEST_CHECK_PROMPT
+from aiuser.config.constants import IMAGE_REQUEST_CHECK_PROMPT
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

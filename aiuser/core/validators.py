@@ -6,7 +6,7 @@ from redbot.core import commands
 
 from aiuser.core.openai_utils import setup_openai_client
 from aiuser.types.abc import MixinMeta
-from aiuser.utils.constants import SINGULAR_MENTION_PATTERN
+from aiuser.config.constants import SINGULAR_MENTION_PATTERN
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

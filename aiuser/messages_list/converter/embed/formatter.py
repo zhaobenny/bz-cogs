@@ -2,7 +2,7 @@
 from discord import Message
 
 from aiuser.types.abc import MixinMeta
-from aiuser.utils.constants import URL_PATTERN
+from aiuser.config.constants import URL_PATTERN
 from aiuser.utils.utilities import contains_youtube_link
 from aiuser.functions.scrape.tool_call import ScrapeToolCall
 from aiuser.messages_list.converter.embed.youtube import format_youtube_embed

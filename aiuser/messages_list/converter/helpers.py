@@ -2,7 +2,7 @@ import logging
 
 from discord import Message, MessageType
 
-from aiuser.utils.constants import URL_PATTERN
+from aiuser.config.constants import URL_PATTERN
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

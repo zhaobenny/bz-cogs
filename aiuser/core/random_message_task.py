@@ -6,7 +6,7 @@ import discord
 from discord.ext import tasks
 
 from aiuser.types.abc import MixinMeta
-from aiuser.utils.constants import DEFAULT_PROMPT
+from aiuser.config.constants import DEFAULT_PROMPT
 from aiuser.utils.utilities import format_variables
 from aiuser.messages_list.messages import create_messages_list
 

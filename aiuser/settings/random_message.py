@@ -6,7 +6,7 @@ from redbot.core.utils.chat_formatting import box, pagify
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.types.abc import MixinMeta, aiuser
-from aiuser.utils.constants import DEFAULT_RANDOM_PROMPTS
+from aiuser.config.constants import DEFAULT_RANDOM_PROMPTS
 from aiuser.settings.utilities import get_tokens
 
 logger = logging.getLogger("red.bz_cogs.aiuser")

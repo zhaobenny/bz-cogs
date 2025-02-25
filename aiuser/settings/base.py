@@ -7,7 +7,7 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.types.abc import MixinMeta
-from aiuser.utils.constants import FUNCTION_CALLING_SUPPORTED_MODELS
+from aiuser.config.constants import FUNCTION_CALLING_SUPPORTED_MODELS
 from aiuser.types.enums import MentionType
 from aiuser.types.types import COMPATIBLE_CHANNELS, COMPATIBLE_MENTIONS
 from aiuser.utils.utilities import (get_enabled_tools,

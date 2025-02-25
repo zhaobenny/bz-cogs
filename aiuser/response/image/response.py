@@ -8,7 +8,7 @@ from redbot.core import commands, Config
 
 from aiuser.response.chat.response import create_chat_response
 from aiuser.types.abc import MixinMeta
-from aiuser.utils.constants import IMAGE_REQUEST_REPLY_PROMPT
+from aiuser.config.constants import IMAGE_REQUEST_REPLY_PROMPT
 from aiuser.messages_list.messages import create_messages_list
 
 from aiuser.response.image.generator import ImageGenerator

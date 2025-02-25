@@ -16,7 +16,7 @@ from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
 from aiuser.types.enums import ScanImageMode
 from aiuser.utils.cache import Cache
-from aiuser.utils.constants import (
+from aiuser.config.constants import (
     DEFAULT_IMAGE_REQUEST_SD_GEN_PROMPT,
     DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
     DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS, DEFAULT_IMAGE_UPLOAD_LIMIT,

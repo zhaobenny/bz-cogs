@@ -10,7 +10,7 @@ from redbot.core import Config, commands
 from aiuser.messages_list.messages import MessagesList
 from aiuser.response.chat.llm_pipeline import LLMPipeline
 from aiuser.types.abc import MixinMeta
-from aiuser.utils.constants import REGEX_RUN_TIMEOUT
+from aiuser.config.constants import REGEX_RUN_TIMEOUT
 from aiuser.utils.utilities import to_thread
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
