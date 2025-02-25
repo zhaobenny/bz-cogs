@@ -10,6 +10,7 @@ from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
+from aiuser.core.openai_utils import setup_openai_client
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import is_using_openrouter_endpoint
 from aiuser.settings.utilities import get_tokens, truncate_prompt
@@ -72,7 +73,7 @@ class OwnerSettings(MixinMeta):
         else:
             await self.config.custom_openai_endpoint.set(url)
 
-        await self.initialize_openai_client()
+        self.openai_client = await setup_openai_client(self.bot, self.config)
 
         chat_model = "gpt-3.5-turbo"
         image_model = "gpt-4o"
