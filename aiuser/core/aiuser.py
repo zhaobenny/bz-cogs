@@ -165,10 +165,6 @@ class AIUser(
     @app_commands.describe(text="The prompt you want to send to the AI.")
     @app_commands.checks.cooldown(1, 30)
     @app_commands.checks.cooldown(1, 5, key=None)
-    @app_commands.command(name="chat")
-    @app_commands.describe(text="The prompt you want to send to the AI.")
-    @app_commands.checks.cooldown(1, 30)
-    @app_commands.checks.cooldown(1, 5, key=None)
     async def slash_command(
         self,
         inter: discord.Interaction,
