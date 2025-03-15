@@ -9,13 +9,14 @@ import tiktoken
 from discord import Message
 from redbot.core import commands
 
-from aiuser.types.abc import MixinMeta
-from aiuser.config.constants import DEFAULT_PROMPT, OTHER_MODELS_LIMITS
-from aiuser.types.enums import ScanImageMode
-from aiuser.utils.utilities import format_variables
+from aiuser.config.defaults import DEFAULT_PROMPT
+from aiuser.config.models import OTHER_MODELS_LIMITS
 from aiuser.messages_list.converter.converter import MessageConverter
 from aiuser.messages_list.entry import MessageEntry
 from aiuser.messages_list.opt_view import OptView
+from aiuser.types.abc import MixinMeta
+from aiuser.types.enums import ScanImageMode
+from aiuser.utils.utilities import format_variables
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

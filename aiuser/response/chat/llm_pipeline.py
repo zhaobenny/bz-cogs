@@ -1,23 +1,24 @@
 import json
 import logging
 from dataclasses import asdict
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import httpx
 import openai
+from openai.types.chat import ChatCompletion, ChatCompletionMessageToolCall
+from openai.types.completion import Completion
 from redbot.core import Config, commands
 
-from aiuser.types.abc import MixinMeta
-from aiuser.config.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
-                                     UNSUPPORTED_LOGIT_BIAS_MODELS,
-                                     VISION_SUPPORTED_MODELS)
-from aiuser.utils.utilities import get_enabled_tools
+from aiuser.config.models import (
+    FUNCTION_CALLING_SUPPORTED_MODELS,
+    UNSUPPORTED_LOGIT_BIAS_MODELS,
+    VISION_SUPPORTED_MODELS,
+)
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import ToolCallSchema
 from aiuser.messages_list.messages import MessagesList
-from typing import Dict, Any, Tuple, List
-from openai.types.chat import ChatCompletion, ChatCompletionMessageToolCall
-from openai.types.completion import Completion
+from aiuser.types.abc import MixinMeta
+from aiuser.utils.utilities import get_enabled_tools
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

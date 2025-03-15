@@ -5,10 +5,10 @@ import random
 import discord
 from discord.ext import tasks
 
-from aiuser.types.abc import MixinMeta
-from aiuser.config.constants import DEFAULT_PROMPT
-from aiuser.utils.utilities import format_variables
+from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.messages_list.messages import create_messages_list
+from aiuser.types.abc import MixinMeta
+from aiuser.utils.utilities import format_variables
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

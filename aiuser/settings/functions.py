@@ -2,9 +2,9 @@
 import discord
 from redbot.core import checks, commands
 
+from aiuser.config.constants import OPENROUTER_URL
+from aiuser.config.models import FUNCTION_CALLING_SUPPORTED_MODELS
 from aiuser.types.abc import MixinMeta, aiuser
-from aiuser.config.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
-                                     OPENROUTER_URL)
 
 
 class FunctionCallingSettings(MixinMeta):
@@ -112,7 +112,10 @@ class FunctionCallingSettings(MixinMeta):
             See [Open-Meteo terms](https://open-meteo.com/en/terms) for their free API
         """
         from aiuser.functions.weather.tool_call import (
-            IsDaytimeToolCall, LocalWeatherToolCall, LocationWeatherToolCall)
+            IsDaytimeToolCall,
+            LocalWeatherToolCall,
+            LocationWeatherToolCall,
+        )
 
         tool_names = [IsDaytimeToolCall.function_name,
                       LocalWeatherToolCall.function_name, LocationWeatherToolCall.function_name]

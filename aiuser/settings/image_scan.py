@@ -4,8 +4,9 @@ import logging
 import discord
 from redbot.core import checks, commands
 
+from aiuser.config.constants import OPENROUTER_URL
+from aiuser.config.models import VISION_SUPPORTED_MODELS
 from aiuser.types.abc import MixinMeta, aiuser
-from aiuser.config.constants import OPENROUTER_URL, VISION_SUPPORTED_MODELS
 from aiuser.types.enums import ScanImageMode
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
