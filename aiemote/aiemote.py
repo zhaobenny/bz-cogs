@@ -16,6 +16,7 @@ from redbot.core.utils.views import SimpleMenu
 
 logger = logging.getLogger("red.bz_cogs.aiemote")
 
+LLM_MODEL = "gpt-4o-mini"
 
 class AIEmote(commands.Cog):
     """ Human-like Discord reacts to messages powered by OpenAI. """
@@ -26,7 +27,7 @@ class AIEmote(commands.Cog):
         super().__init__()
         self.bot: Red = bot
         self.config = Config.get_conf(self, identifier=754069)
-        self.encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        self.encoding = tiktoken.encoding_for_model(LLM_MODEL)
         self.aclient = None
 
         default_global = {
@@ -118,7 +119,7 @@ class AIEmote(commands.Cog):
         content = f"{message.author.display_name} : {self.stringify_any_mentions(message)}"
         try:
             response = await self.aclient.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model=LLM_MODEL,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": content}
@@ -126,8 +127,8 @@ class AIEmote(commands.Cog):
                 max_tokens=1,
                 logit_bias=logit_bias,
             )
-        except:
-            logger.warning(f"Skipping react in {message.guild.name}! Failed to get response from OpenAI")
+        except Exception:
+            logger.exception(f"Skipping react in {message.guild.name}! Failed to get response from OpenAI")
             return None
 
         response = response.choices[0].message.content
@@ -161,7 +162,7 @@ class AIEmote(commands.Cog):
             return False
         if ctx.author.id in self.optout_users:
             return False
-        if (not ctx.author.id in self.optin_users) and (not (await self.config.guild(ctx.guild).optin_by_default())):
+        if (ctx.author.id not in self.optin_users) and (not (await self.config.guild(ctx.guild).optin_by_default())):
             return False
 
         if not self.aclient:
@@ -309,7 +310,7 @@ class AIEmote(commands.Cog):
         optin = await self.config.optin()
         optout = await self.config.optout()
 
-        if not ctx.author.id in await self.config.optin() and ctx.author.id in self.optout_users:
+        if  ctx.author.id not in await self.config.optin() and ctx.author.id in self.optout_users:
             return await ctx.send("You are already opted out")
 
         if ctx.author.id in optin:
