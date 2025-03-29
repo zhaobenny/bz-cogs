@@ -206,7 +206,7 @@ class AIEmote(commands.Cog):
     async def aiemote(self, _):
         """ Totally not glorified sentiment analysis™
 
-            Picks a reaction for a message using gpt-3.5-turbo
+            Picks a reaction for a message using gpt-4o-mini
 
             To get started, please add a channel to the whitelist with:
             `[p]aiemote allow <#channel>`
