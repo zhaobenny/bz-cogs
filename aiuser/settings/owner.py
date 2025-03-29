@@ -10,10 +10,11 @@ from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
+from aiuser.config.defaults import DEFAULT_LLM_MODEL
 from aiuser.core.openai_utils import setup_openai_client
+from aiuser.settings.utilities import get_tokens, truncate_prompt
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import is_using_openrouter_endpoint
-from aiuser.settings.utilities import get_tokens, truncate_prompt
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -75,19 +76,19 @@ class OwnerSettings(MixinMeta):
 
         self.openai_client = await setup_openai_client(self.bot, self.config)
 
-        chat_model = "gpt-3.5-turbo"
-        image_model = "gpt-4o"
+        chat_model = DEFAULT_LLM_MODEL
+        image_model = DEFAULT_LLM_MODEL
 
         if (is_using_openrouter_endpoint(self.openai_client)):
-            chat_model = "openai/gpt-3.5-turbo"
-            image_model = "openai/gpt-4o"
+            chat_model = "openai/gpt-4o-mini"
+            image_model = "openai/gpt-4o-mini"
 
         embed = discord.Embed(
             title="Bot Custom OpenAI endpoint", color=await ctx.embed_color()
         )
         embed.add_field(
             name="🔄 Reset",
-            value="Per-server models have been set to use `gpt-3.5-turbo` for chat \n and `gpt-4o` for LLM image scan mode.",
+            value=f"Per-server models have been set to use `{chat_model}` for chat \n and `{image_model}` for LLM image scan mode.",
             inline=False,
         )
 
@@ -212,12 +213,12 @@ class OwnerSettings(MixinMeta):
 
         if not prompt:
             await self.config.custom_text_prompt.set(None)
-            return await ctx.send(f"The global prompt is now reset to the default prompt")
+            return await ctx.send("The global prompt is now reset to the default prompt")
 
         await self.config.custom_text_prompt.set(prompt)
 
         embed = discord.Embed(
-            title=f"The global prompt is now changed to:",
+            title="The global prompt is now changed to:",
             description=f"{truncate_prompt(prompt)}",
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))

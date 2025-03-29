@@ -1,12 +1,11 @@
 import json
 import logging
-from typing import Optional, Union
+from typing import Optional
 
 import discord
 from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
-from aiuser.config.models import FUNCTION_CALLING_SUPPORTED_MODELS
 from aiuser.settings.functions import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
 from aiuser.settings.image_request import ImageRequestSettings
@@ -342,15 +341,16 @@ class Settings(
             await ctx.send(":warning: Not a valid model!")
             return await self._paginate_models(ctx, models)
 
-        if await self.config.guild(ctx.guild).function_calling() and model not in FUNCTION_CALLING_SUPPORTED_MODELS:
-            return await ctx.send(":warning: Can not select model not whitelisted for function calling!\nSwitch function calling off using `[p]aiuser functions toggle` or select a model that supports function calling.")
-
         await self.config.guild(ctx.guild).model.set(model)
         embed = discord.Embed(
             title="This server's chat model is now set to:",
             description=model,
             color=await ctx.embed_color(),
         )
+
+        if await self.config.guild(ctx.guild).function_calling():
+            embed.set_footer(text="⚠️ Function calling is enabled - ensure selected model supports it")
+
         return await ctx.send(embed=embed)
 
     async def _paginate_models(self, ctx, models):

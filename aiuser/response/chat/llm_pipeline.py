@@ -10,7 +10,6 @@ from openai.types.completion import Completion
 from redbot.core import Config, commands
 
 from aiuser.config.models import (
-    FUNCTION_CALLING_SUPPORTED_MODELS,
     UNSUPPORTED_LOGIT_BIAS_MODELS,
     VISION_SUPPORTED_MODELS,
 )
@@ -52,7 +51,7 @@ class LLMPipeline:
         return kwargs
 
     async def setup_tools(self):
-        if not (self.model in FUNCTION_CALLING_SUPPORTED_MODELS and await self.config.guild(self.ctx.guild).function_calling()):
+        if not (await self.config.guild(self.ctx.guild).function_calling()):
             return
         self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
         self.available_tools_schemas = [tool.schema for tool in self.enabled_tools]

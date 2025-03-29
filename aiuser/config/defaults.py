@@ -47,6 +47,7 @@ DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS = ["yourself", "you"]
 DEFAULT_REPLY_PERCENT = 0.5
 DEFAULT_MIN_MESSAGE_LENGTH = 2
 DEFAULT_IMAGE_UPLOAD_LIMIT = 10 * (1024 * 1024)  # 10 MB
+DEFAULT_LLM_MODEL = "gpt-4o-mini"
 
 DEFAULT_GLOBAL = {
             "custom_openai_endpoint": None,
@@ -69,9 +70,9 @@ DEFAULT_GUILD = {
     "reply_to_mentions_replies": True,
     "scan_images": False,
     "scan_images_mode": ScanImageMode.AI_HORDE.value,
-    "scan_images_model": "gpt-4o",
+    "scan_images_model": DEFAULT_LLM_MODEL,
     "max_image_size": DEFAULT_IMAGE_UPLOAD_LIMIT,
-    "model": "gpt-3.5-turbo",
+    "model": DEFAULT_LLM_MODEL,
     "custom_text_prompt": None,
     "channels_whitelist": [],
     "roles_whitelist": [],

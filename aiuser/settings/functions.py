@@ -2,8 +2,6 @@
 import discord
 from redbot.core import checks, commands
 
-from aiuser.config.constants import OPENROUTER_URL
-from aiuser.config.models import FUNCTION_CALLING_SUPPORTED_MODELS
 from aiuser.types.abc import MixinMeta, aiuser
 
 
@@ -28,13 +26,6 @@ class FunctionCallingSettings(MixinMeta):
         """
 
         current_value = not await self.config.guild(ctx.guild).function_calling()
-        custom_endpoint = await self.config.custom_openai_endpoint()
-
-        if current_value and (not custom_endpoint or custom_endpoint.startswith(OPENROUTER_URL)):
-            model = await self.config.guild(ctx.guild).model()
-            if model not in FUNCTION_CALLING_SUPPORTED_MODELS:
-                return await ctx.send(f":warning: Currently selected model, `{model}` is not whitelisted for function calling. Set a compatible model first!")
-
         await self.config.guild(ctx.guild).function_calling.set(current_value)
 
         embed = discord.Embed(
@@ -42,6 +33,8 @@ class FunctionCallingSettings(MixinMeta):
             description=f"{current_value}",
             color=await ctx.embed_color(),
         )
+        if current_value:
+            embed.set_footer(text="⚠️ Ensure selected model supports function calling!")
         await ctx.send(embed=embed)
 
     @functions.command(name="location")
