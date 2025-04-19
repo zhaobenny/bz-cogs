@@ -129,7 +129,7 @@ class MessagesList:
             return False
         if (
             (not message.author.id == self.bot.user.id)
-            and not message.author.id in await self.config.optin()
+            and message.author.id not in await self.config.optin()
             and not await self.config.guild(self.guild).optin_by_default()
         ):
             return False
@@ -279,24 +279,23 @@ class MessagesList:
 
     @staticmethod
     def _get_token_limit(model) -> int:
-        limit = 3000
-        if "gpt-3.5" in model:
-            limit = 3000
-        if "gpt-4" in model:
-            limit = 7000
-        if "8k" in model:
-            limit = 7000
+        limit = 7000
+        
+        if 'gemini-2' in model or 'gpt-4.1' in model or 'llama-4.1' in model:
+            limit = 1000000
+        if "gpt-4o" in model or "llama-3.1" in model or "llama-3.2" in model or 'grok-3' in model:
+            limit = 123000
+        if "100k" in model or "claude" in model:
+            limit = 98000
         if "16k" in model:
             limit = 15000
         if "32k" in model:
             limit = 31000
-        if "100k" in model or "claude" in model:
-            limit = 99000
-        if "llama-3.1" in model:
-            limit = 123000
+
         model = model.split("/")[-1].split(":")[0]
         if model in OTHER_MODELS_LIMITS:
             limit = OTHER_MODELS_LIMITS.get(model, limit)
+
         return limit
 
     @staticmethod
