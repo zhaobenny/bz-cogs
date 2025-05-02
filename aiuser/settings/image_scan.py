@@ -123,6 +123,7 @@ class ImageScanSettings(MixinMeta):
         """
 
         custom_endpoint = await self.config.custom_openai_endpoint()
+        warning_message = None
 
         if (not custom_endpoint or custom_endpoint.startswith(OPENROUTER_URL)):
             await ctx.message.add_reaction("🔄")
@@ -131,12 +132,14 @@ class ImageScanSettings(MixinMeta):
             await ctx.message.remove_reaction("🔄", ctx.me)
 
             if model_name not in models:
-                await ctx.send(":warning: Not a valid model!")
-                return await self._paginate_models(ctx, models)
+                warning_message = "⚠️ Model has not been validated for image scanning."
+
 
         await self.config.guild(ctx.guild).scan_images_model.set(model_name)
         embed = discord.Embed(
             title="LLM for scanning images now set to:",
             description=f"{model_name}",
             color=await ctx.embed_color())
+        if warning_message:
+            embed.set_footer(text=warning_message)
         return await ctx.send(embed=embed)
