@@ -7,15 +7,20 @@ from openai import AsyncOpenAI
 from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
-from aiuser.config.defaults import DEFAULT_CHANNEL, DEFAULT_GLOBAL, DEFAULT_GUILD, DEFAULT_MEMBER, DEFAULT_ROLE
+from aiuser.config.defaults import (
+    DEFAULT_CHANNEL,
+    DEFAULT_GLOBAL,
+    DEFAULT_GUILD,
+    DEFAULT_MEMBER,
+    DEFAULT_ROLE,
+)
 from aiuser.core.handlers import handle_message, handle_slash_command
-from aiuser.dashboard_integration import DashboardIntegration
-from aiuser.messages_list.entry import MessageEntry
 from aiuser.core.random_message_task import RandomMessageTask
+from aiuser.dashboard.base import DashboardIntegration
+from aiuser.messages_list.entry import MessageEntry
 from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
 from aiuser.utils.cache import Cache
-
 
 from .openai_utils import setup_openai_client
 
