@@ -1,7 +1,6 @@
 import pathlib
 
 import discord
-import wtforms
 
 from aiuser.dashboard.decorator import dashboard_page
 
@@ -11,7 +10,8 @@ TEMPLATES_PATH = pathlib.Path(__file__).parent / "templates"
 
 @dashboard_page(name="data_usage_consent", description="Opt in/out of providing your messages to OpenAI or a third-party provider", methods=("GET", "POST"))
 async def opt_consent(self, user: discord.User, **kwargs):
-
+    import wtforms
+    
     class Form(kwargs["Form"]):
         def __init__(self):
             super().__init__(prefix="consent_")

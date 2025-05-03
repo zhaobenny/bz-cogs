@@ -1,5 +1,4 @@
 import discord
-import wtforms
 
 from aiuser.dashboard.decorator import dashboard_page
 from aiuser.settings.utilities import get_available_models
@@ -7,6 +6,7 @@ from aiuser.types.abc import MixinMeta
 
 @dashboard_page(name="bot_owner_per_server_settings", description="Some bot owner-only settings per server", methods=("GET", "POST"), is_owner=True)
 async def bot_owner_server_config(self: MixinMeta, guild: discord.Guild, **kwargs):
+    import wtforms
 
     class Form(kwargs["Form"]):
         def __init__(self):
