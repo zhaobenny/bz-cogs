@@ -14,7 +14,11 @@ from aiuser.config.defaults import DEFAULT_LLM_MODEL
 from aiuser.core.openai_utils import setup_openai_client
 from aiuser.settings.utilities import get_tokens, truncate_prompt
 from aiuser.types.abc import MixinMeta
-from aiuser.utils.utilities import is_using_openrouter_endpoint
+from aiuser.types.enums import ScanImageMode
+from aiuser.utils.utilities import (
+    is_using_openai_endpoint,
+    is_using_openrouter_endpoint,
+)
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -60,21 +64,36 @@ class OwnerSettings(MixinMeta):
 
     @aiuserowner.command()
     async def endpoint(self, ctx: commands.Context, url: Optional[str]):
-        """Sets the OpenAI endpoint to a custom one (must be OpenAI API compatible)
+        """Sets the OpenAI endpoint to a custom url (must be OpenAI API compatible)
 
-        Reset to official OpenAI endpoint with `[p]aiuseradmin endpoint clear`
+        **Arguments:**
+        - `url`: The url to set the endpoint to.
+        OR
+        - `openai`, `openrouter`, `ollama`: Shortcuts for the default endpoints. (localhost for ollama)
         """
 
         if url == "openrouter":
             url = "https://openrouter.ai/api/v1/"
-
-        if not url or url in ["clear", "reset", "openai"]:
-            await self.config.custom_openai_endpoint.set(None)
+        elif url == "ollama":
+            url = "http://localhost:11434/v1/"
+        elif url in ["clear", "reset", "openai"]:
             url = None
-        else:
-            await self.config.custom_openai_endpoint.set(url)
+
+        previous_url = await self.config.custom_openai_endpoint()
+        await self.config.custom_openai_endpoint.set(url)
+
+        await ctx.message.add_reaction("🔄")
 
         self.openai_client = await setup_openai_client(self.bot, self.config)
+
+        # test the endpoint works if not rollback
+        try:
+            models =await self.openai_client.models.list()
+        except Exception:
+            await self.config.custom_openai_endpoint.set(previous_url)
+            return await ctx.send(":warning: Invalid endpoint. Please check logs for more information.")
+        finally:
+            await ctx.message.remove_reaction("🔄", ctx.me)
 
         chat_model = DEFAULT_LLM_MODEL
         image_model = DEFAULT_LLM_MODEL
@@ -82,13 +101,16 @@ class OwnerSettings(MixinMeta):
         if (is_using_openrouter_endpoint(self.openai_client)):
             chat_model = "openai/gpt-4o-mini"
             image_model = "openai/gpt-4o-mini"
+        elif (not is_using_openai_endpoint(self.openai_client)):
+            chat_model = models.data[0].id
+            image_model = models.data[0].id
 
         embed = discord.Embed(
             title="Bot Custom OpenAI endpoint", color=await ctx.embed_color()
         )
         embed.add_field(
             name="🔄 Reset",
-            value=f"Per-server models have been set to use `{chat_model}` for chat \n and `{image_model}` for LLM image scan mode.",
+            value=f"All per-server models have been set to use `{chat_model}` for chat \n and `{image_model}` for scanning images if set to `{ScanImageMode.LLM.value}` mode.",
             inline=False,
         )
 
@@ -110,7 +132,7 @@ class OwnerSettings(MixinMeta):
             embed.description = f"Endpoint set to {url}."
             embed.add_field(
                 name="❗ Third Party Models",
-                value="Third party models may have undesirable results with this cog, compared to OpenAI's LLMs.",
+                value="Third party models may have undesirable results with this cog.",
                 inline=False,
             )
         else:
@@ -130,7 +152,7 @@ class OwnerSettings(MixinMeta):
 
         embed = discord.Embed(
             title="The request timeout is now:",
-            description=f"{seconds} seconds",
+            description=f"`{seconds}` seconds",
             color=await ctx.embed_color(),
         )
         return await ctx.send(embed=embed)
