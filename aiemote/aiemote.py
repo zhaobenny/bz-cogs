@@ -7,11 +7,10 @@ from openai import AsyncOpenAI
 from redbot.core import Config, commands
 from redbot.core.bot import Red
 
-from .settings import Settings
+from .settings import DEFAULT_LLM_MODEL, Settings
 
 logger = logging.getLogger("red.bz_cogs.aiemote")
 
-LLM_MODEL = "gpt-4o-mini"
 
 class AIEmote(commands.Cog, Settings):
     """ Human-like Discord reacts to messages powered by OpenAI. """
@@ -20,8 +19,9 @@ class AIEmote(commands.Cog, Settings):
         super().__init__()
         self.bot: Red = bot
         self.config = Config.get_conf(self, identifier=754069)
-        self.encoding = tiktoken.encoding_for_model(LLM_MODEL)
         self.aclient = None
+        self.llm_model = DEFAULT_LLM_MODEL
+        self.encoding = None
 
         default_global = {
             "percent": 50,
@@ -37,7 +37,8 @@ class AIEmote(commands.Cog, Settings):
             ],
             "extra_instruction": "",
             "optin": [],
-            "optout": []
+            "optout": [],
+            "llm_model": DEFAULT_LLM_MODEL
         }
 
         default_guild = {
@@ -55,8 +56,13 @@ class AIEmote(commands.Cog, Settings):
         self.percent = await self.config.percent()
         self.optin_users = await self.config.optin()
         self.optout_users = await self.config.optout()
+        self.llm_model = await self.config.llm_model() 
+        self.encoding = tiktoken.encoding_for_model(self.llm_model)
+
         for guild_id, config in all_config.items():
             self.whitelist[guild_id] = config["whitelist"]
+
+        await self.initalize_openai()
 
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, api_tokens):
@@ -112,7 +118,7 @@ class AIEmote(commands.Cog, Settings):
         content = f"{message.author.display_name} : {self.stringify_any_mentions(message)}"
         try:
             response = await self.aclient.chat.completions.create(
-                model=LLM_MODEL,
+                model=self.llm_model,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": content}

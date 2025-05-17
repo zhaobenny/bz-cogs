@@ -3,11 +3,13 @@ import re
 from typing import Optional
 
 import discord
+import tiktoken
 from emoji import EMOJI_DATA
 from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
+DEFAULT_LLM_MODEL = "gpt-4o-mini"
 
 class Settings:
     MATCH_DISCORD_EMOJI_REGEX = r"<a?:[A-Za-z0-9]+:[0-9]+>"
@@ -138,6 +140,76 @@ class Settings:
         """
         pass
 
+    async def _get_available_models(self, ctx: commands.Context):
+        res = await self.aclient.models.list()
+        models = [
+            model.id for model in res.data
+            if ("gpt" in model.id or "o3" in model.id.lower())
+            and "audio" not in model.id.lower()
+            and "realtime" not in model.id.lower()
+        ]
+        return models
+
+    async def _paginate_models(self, ctx: commands.Context, models: list):
+        if not models:
+            return await ctx.send("No models available or an error occurred.")
+
+        pagified_models = [models[i: i + 10] for i in range(0, len(models), 10)]
+        menu_pages = []
+
+        for models_page in pagified_models:
+            embed = discord.Embed(
+                title="Available Models",
+                color=await ctx.embed_color(),
+            )
+            embed.description = "\n".join([f"`{model}`" for model in models_page])
+            menu_pages.append(embed)
+
+        if not menu_pages:
+            return await ctx.send("No models found.")
+
+        if len(menu_pages) == 1:
+            return await ctx.send(embed=menu_pages[0])
+        else:
+            for i, page in enumerate(menu_pages):
+                page.set_footer(text=f"Page {i+1} of {len(menu_pages)}")
+            return await SimpleMenu(menu_pages).start(ctx)
+
+    @aiemote_owner.command(name="model")
+    @checks.is_owner()
+    async def set_llm_model(self, ctx: commands.Context, *, model_name: Optional[str] = None):
+        """Sets the global LLM model for AIEmote reactions.
+
+        Provide a model name or use `list` to see available models.
+        If no model name is given, lists available models.
+        """
+        await ctx.message.add_reaction("🔄")
+        available_models = await self._get_available_models(ctx)
+        await ctx.message.remove_reaction("🔄", ctx.me)
+
+        if model_name.lower() == "list":
+            return await self._paginate_models(ctx, available_models)
+
+        if model_name not in available_models:
+            await ctx.send(f":warning: `{model_name}` is not in the list of available models. Please choose a valid model.")
+            return await self._paginate_models(ctx, available_models)
+
+        try:
+            self.encoding = tiktoken.encoding_for_model(model_name)
+        except KeyError:
+            await ctx.send(f":warning: `{model_name}` does not be supported by tiktoken. Please choose a valid model.")
+            return await self._paginate_models(ctx, available_models)
+
+        await self.config.llm_model.set(model_name)
+        self.llm_model = model_name
+
+        embed = discord.Embed(
+            title="The LLM is now set to:",
+            description=f"`{self.llm_model}`",
+            color=await ctx.embed_color(),
+        )
+        await ctx.send(embed=embed)
+
     @aiemote_owner.command(name="instruction", aliases=["extra_instruction", "extra"])
     @checks.is_owner()
     async def set_extra_instruction(self, ctx: commands.Context, *, instruction: Optional[str]):
@@ -257,6 +329,7 @@ class Settings:
         settingsembed = discord.Embed(title="Main Settings", color=await ctx.embed_color())
         settingsembed.add_field(name="Percent Chance", value=f"{self.percent}%", inline=False)
         settingsembed.add_field(name="Additonal Instruction", value=await self.config.extra_instruction() or "None", inline=False)
+        settingsembed.add_field(name="LLM Model", value=await self.config.llm_model(), inline=False)
         await ctx.send(embed=settingsembed)
         if len(globalembeds) > 1:
             await (SimpleMenu(globalembeds)).start(ctx)
@@ -291,6 +364,7 @@ class Settings:
             await self.config.clear_all_globals()
             self.whitelist = {}
             self.percent = 50
+            self.llm_model = DEFAULT_LLM_MODEL
             return await confirm.edit(embed=discord.Embed(title="Cleared.", color=await ctx.embed_color()))
 
     @aiemote_owner.command(name="sadd")
@@ -339,4 +413,4 @@ class Settings:
             return await ctx.send("Invalid percent")
         self.percent = percent
         await self.config.percent.set(percent)
-        return await ctx.tick() 
+        return await ctx.tick()
