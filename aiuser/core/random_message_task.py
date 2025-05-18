@@ -5,8 +5,10 @@ import random
 import discord
 from discord.ext import tasks
 
+from aiuser.config.constants import RANDOM_MESSAGE_TASK_RETRY_SECONDS
 from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.messages_list.messages import create_messages_list
+from aiuser.response.dispatcher import dispatch_response
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import format_variables
 
@@ -14,7 +16,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class RandomMessageTask(MixinMeta):
-    @tasks.loop(minutes=33)
+    @tasks.loop(seconds=RANDOM_MESSAGE_TASK_RETRY_SECONDS)
     async def random_message_trigger(self):
 
         if not self.openai_client:
@@ -48,7 +50,7 @@ class RandomMessageTask(MixinMeta):
             await messages_list.add_system(f"Using the persona above, follow these instructions: {topic}", index=len(messages_list) + 1)
             messages_list.can_reply = False
 
-            return await self.dispatch_response(ctx, messages_list)
+            return await dispatch_response(self, ctx, messages_list)
 
     async def get_discord_context(self, guild_id: int, channels: list):
         guild = self.bot.get_guild(guild_id)

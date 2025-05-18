@@ -33,6 +33,3 @@ class MixinMeta(ABC):
         self.channels_whitelist: dict[int, list[int]]
         self.openai_client: AsyncOpenAI
         self.optindefault: dict[int, bool] 
-
-    async def dispatch_response(self, ctx: commands.Context, messages_list=None):
-        pass
