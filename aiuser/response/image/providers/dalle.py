@@ -6,7 +6,7 @@ import logging
 from openai import AsyncOpenAI
 from redbot.core import Config, commands
 
-from aiuser.response.image.generator import ImageGenerator
+from aiuser.response.image.providers.generator import ImageGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

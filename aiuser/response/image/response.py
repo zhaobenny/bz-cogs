@@ -11,7 +11,7 @@ from aiuser.types.abc import MixinMeta
 from aiuser.config.constants import IMAGE_REQUEST_REPLY_PROMPT
 from aiuser.messages_list.messages import create_messages_list
 
-from aiuser.response.image.generator import ImageGenerator
+from aiuser.response.image.providers.generator import ImageGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

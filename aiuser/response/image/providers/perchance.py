@@ -1,16 +1,15 @@
 import asyncio
-import base64
 import io
 import json
 import logging
 import random
 
 import aiohttp
-import perchance as pc
+import aiuser.response.image.providers.perchance as pc
 from PIL import Image
 from tenacity import retry, stop_after_attempt, stop_after_delay, wait_random
 
-from aiuser.response.image.generator import ImageGenerator
+from aiuser.response.image.providers.generator import ImageGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -103,7 +102,7 @@ async def visit_and_close_url(url: str):
 
         while True:
             async with session.get(
-                f"https://perchance.org/ai-text-to-image-generator"
+                "https://perchance.org/ai-text-to-image-generator"
             ) as response:
                 response.raise_for_status()
 

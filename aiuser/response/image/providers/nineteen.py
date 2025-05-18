@@ -4,7 +4,7 @@ import logging
 
 import aiohttp
 
-from aiuser.response.image.generator import ImageGenerator
+from aiuser.response.image.providers.generator import ImageGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 NINETEEN_API_URL = "https://api.nineteen.ai/v1/text-to-image"

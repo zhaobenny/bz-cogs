@@ -11,7 +11,7 @@ from redbot.core import commands
 from aiuser.config.constants import URL_PATTERN
 from aiuser.config.defaults import DEFAULT_REPLY_PERCENT
 from aiuser.core.validators import is_bot_mentioned_or_replied, is_valid_message
-from aiuser.response.response_handler import create_response
+from aiuser.response.dispatcher import dispatch_response
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import is_embed_valid
 
@@ -43,7 +43,7 @@ async def handle_slash_command(cog: MixinMeta, inter: discord.Interaction, text:
         )
 
     try:
-        await create_response(cog, ctx)
+        await dispatch_response(cog, ctx)
     except Exception:
         await ctx.send(":warning: Error in generating response!", ephemeral=True)
 
@@ -77,7 +77,7 @@ async def handle_message(cog: MixinMeta, message: discord.Message):
     if URL_PATTERN.search(ctx.message.content):
         ctx = await wait_for_embed(ctx)
 
-    await create_response(cog, ctx)
+    await dispatch_response(cog, ctx)
 
 
 async def get_percentage(cog: MixinMeta, ctx: commands.Context) -> float:
@@ -91,13 +91,13 @@ async def get_percentage(cog: MixinMeta, ctx: commands.Context) -> float:
             break
 
     percentage = await cog.config.member(author).reply_percent()
-    if percentage == None:
+    if percentage is None:
         percentage = role_percent
-    if percentage == None:
+    if percentage is None:
         percentage = await cog.config.channel(ctx.channel).reply_percent()
-    if percentage == None:
+    if percentage is None:
         percentage = await cog.config.guild(ctx.guild).reply_percent()
-    if percentage == None:
+    if percentage is None:
         percentage = DEFAULT_REPLY_PERCENT
     return percentage
 

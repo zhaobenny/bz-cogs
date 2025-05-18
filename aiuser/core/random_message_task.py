@@ -48,7 +48,7 @@ class RandomMessageTask(MixinMeta):
             await messages_list.add_system(f"Using the persona above, follow these instructions: {topic}", index=len(messages_list) + 1)
             messages_list.can_reply = False
 
-            return await self.create_response(ctx, messages_list)
+            return await self.dispatch_response(ctx, messages_list)
 
     async def get_discord_context(self, guild_id: int, channels: list):
         guild = self.bot.get_guild(guild_id)

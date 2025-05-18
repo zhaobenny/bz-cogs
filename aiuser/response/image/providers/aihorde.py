@@ -8,7 +8,7 @@ from redbot.core import Config, commands
 from tenacity import retry, stop_after_delay, wait_random
 
 from aiuser.config.constants import IMAGE_REQUEST_AIHORDE_URL
-from aiuser.response.image.generator import ImageGenerator
+from aiuser.response.image.providers.generator import ImageGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -49,7 +49,7 @@ class AIHordeGenerator(ImageGenerator):
         res = await session.get(f"{IMAGE_REQUEST_AIHORDE_URL}/v2/generate/check/{uuid}", headers=self.headers)
         res.raise_for_status()
         res = await res.json()
-        return res["done"] == True
+        return res["done"] is True
 
     async def _get_image(self, session: aiohttp.ClientSession, uuid: str):
         res = await session.get(f"{IMAGE_REQUEST_AIHORDE_URL}/v2/generate/status/{uuid}", headers=self.headers)

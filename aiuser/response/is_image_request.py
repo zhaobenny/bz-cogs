@@ -1,17 +1,17 @@
-# response/wants_image.py
+# response/is_image_request.py
 
 import logging
 
 import discord
 from redbot.core import Config
 
-from aiuser.types.abc import MixinMeta
 from aiuser.config.constants import IMAGE_REQUEST_CHECK_PROMPT
+from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-async def wants_image(cog: MixinMeta, message: discord.Message) -> bool:
+async def is_image_request(cog: MixinMeta, message: discord.Message) -> bool:
     """Determine if a message is requesting an image"""
     if not await cog.config.guild(message.guild).image_requests():
         return False
@@ -75,4 +75,4 @@ def _prepare_message_text(message: discord.Message) -> str:
 
     if message.reference and message.reference.resolved:
         text = f"{message.reference.resolved.content}\n {text}"
-    return text
+    return text 
