@@ -321,7 +321,7 @@ class Settings(
          (Setting is per server)
 
         **Arguments**
-            - `model` The model to use eg. `gpt-4`
+            - `model` The model to use eg. `gpt-4o`
         """
         await ctx.message.add_reaction("🔄")
         models = await get_available_models(self.openai_client)

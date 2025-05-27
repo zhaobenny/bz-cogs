@@ -1,8 +1,6 @@
 # response/response_handler.py
 import logging
-
 from redbot.core import commands
-
 from aiuser.messages_list.messages import create_messages_list
 from aiuser.response.chat.response import create_chat_response
 from aiuser.response.image.generator_factory import get_image_generator
@@ -14,20 +12,25 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 async def dispatch_response(cog: MixinMeta, ctx: commands.Context, messages_list=None):
-    """ Decide which response to send based on the context """
+    """Decide which response to send based on the context"""
     async with ctx.message.channel.typing():
         if (not messages_list and not ctx.interaction) and await is_image_request(cog, ctx.message):
             if await process_image_response(cog, ctx):
                 return
 
-        messages_list = messages_list or await create_messages_list(cog, ctx)
+        # user app check
+        if messages_list is None:
+            if ctx.guild is None:
+                messages_list = []
+            else:
+                messages_list = await create_messages_list(cog, ctx)
+
         return await create_chat_response(cog, ctx, messages_list)
 
 
 async def process_image_response(cog: MixinMeta, ctx: commands.Context) -> bool:
     """Process and send an image response"""
     await ctx.react_quietly("🧐")
-
     try:
         generator = await get_image_generator(ctx, cog.config)
         success = await create_image_response(cog, ctx, generator)

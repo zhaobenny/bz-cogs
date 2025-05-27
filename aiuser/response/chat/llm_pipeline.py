@@ -37,24 +37,35 @@ class LLMPipeline:
         self.completion: Optional[str] = None
 
     async def get_custom_parameters(self) -> Dict[str, Any]:
-        custom_parameters = await self.config.guild(self.ctx.guild).parameters()
-        kwargs = json.loads(custom_parameters) if custom_parameters else {}
-
-        if "logit_bias" not in kwargs:
-            weights = await self.config.guild(self.ctx.guild).weights()
-            kwargs["logit_bias"] = json.loads(weights or "{}")
-
-        if kwargs.get("logit_bias") and self.model in VISION_SUPPORTED_MODELS or self.model in UNSUPPORTED_LOGIT_BIAS_MODELS:
-            logger.warning(f"logit_bias is not supported for model {self.model}, removing...")
-            del kwargs["logit_bias"]
-
-        return kwargs
+        try:
+            if self.ctx.guild is not None:
+                custom_parameters = await self.config.guild(self.ctx.guild).parameters()
+                kwargs = json.loads(custom_parameters) if custom_parameters else {}
+                if "logit_bias" not in kwargs:
+                    weights = await self.config.guild(self.ctx.guild).weights()
+                    kwargs["logit_bias"] = json.loads(weights or "{}")
+                if (
+                    kwargs.get("logit_bias")
+                    and self.model in VISION_SUPPORTED_MODELS
+                    or self.model in UNSUPPORTED_LOGIT_BIAS_MODELS
+                ):
+                    logger.warning(f"logit_bias is not supported for model {self.model}, removing...")
+                    del kwargs["logit_bias"]
+                return kwargs
+            else:
+                return {}
+        except Exception:
+            return {}
 
     async def setup_tools(self):
-        if not (await self.config.guild(self.ctx.guild).function_calling()):
-            return
-        self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
-        self.available_tools_schemas = [tool.schema for tool in self.enabled_tools]
+        if self.ctx.guild is not None:
+            if not (await self.config.guild(self.ctx.guild).function_calling()):
+                return
+            self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
+            self.available_tools_schemas = [tool.schema for tool in self.enabled_tools]
+        else:
+            self.enabled_tools = []
+            self.available_tools_schemas = []
 
     async def call_client(self, kwargs: Dict[str, Any]) -> Union[str, Tuple[str, List[ChatCompletionMessageToolCall]]]:
         if "gpt-3.5-turbo-instruct" in self.model:
@@ -87,7 +98,7 @@ class LLMPipeline:
             else:
                 break
 
-        logger.debug(f'Generated response in {self.ctx.guild.name}: "{self.completion}"')
+        logger.debug(f'Generated response in {self.ctx.guild.name if self.ctx.guild else "DM"}: "{self.completion}"')
         return self.completion
 
     async def handle_tool_calls(self, tool_calls: List[ChatCompletionMessageToolCall]):
@@ -102,12 +113,14 @@ class LLMPipeline:
     async def run_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Optional[str]:
         for tool in self.enabled_tools:
             if tool.function_name == tool_name:
-                logger.info(f'Handling tool call in {self.ctx.guild.name}: "{tool_name}" with arguments: "{arguments}"')
+                logger.info(
+                    f'Handling tool call in {self.ctx.guild.name if self.ctx.guild else "DM"}: "{tool_name}" with arguments: "{arguments}"'
+                )
                 arguments["request"] = self
                 return await tool.run(arguments, self.available_tools_schemas)
 
         self.available_tools_schemas = []
-        logger.warning(f'Could not find tool "{tool_name}" in {self.ctx.guild.name}')
+        logger.warning(f'Could not find tool "{tool_name}" in {self.ctx.guild.name if self.ctx.guild else "DM"}')
         return None
 
     async def run(self) -> Optional[str]:
