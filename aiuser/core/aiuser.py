@@ -94,18 +94,6 @@ class AIUser(
         if service_name in ["openai", "openrouter"]:
             self.openai_client = await setup_openai_client(self.bot, self.config)
 
-    @app_commands.command(name="chat")
-    @app_commands.describe(text="The prompt you want to send to the AI.")
-    @app_commands.checks.cooldown(1, 30)
-    @app_commands.checks.cooldown(1, 5, key=None)
-    async def slash_command(
-        self,
-        inter: discord.Interaction,
-        *,
-        text: app_commands.Range[str, 1, 2000],
-    ):
-        """Talk directly to this bot's AI. Ask it anything you want!"""
-        await handle_slash_command(self, inter, text)
 
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):

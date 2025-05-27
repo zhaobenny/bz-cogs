@@ -23,9 +23,7 @@ def to_thread(timeout=300):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             loop = asyncio.get_event_loop()
-            result = await asyncio.wait_for(
-                loop.run_in_executor(None, func, *args, **kwargs), timeout
-            )
+            result = await asyncio.wait_for(loop.run_in_executor(None, func, *args, **kwargs), timeout)
             return result
 
         return wrapper
@@ -37,15 +35,22 @@ async def format_variables(ctx: commands.Context, text: str):
     """
     Insert supported variables into string if they are present
     """
-    botname = ctx.message.guild.me.nick or ctx.bot.user.display_name
+    if ctx.message.guild is not None:
+        botname = ctx.message.guild.me.nick or ctx.bot.user.display_name
+    else:
+        botname = ctx.bot.user.display_name if hasattr(ctx.bot.user, "display_name") else ctx.bot.user.name
+
     app_info = await ctx.bot.application_info()
     botowner = app_info.owner.name
-    authorname = ctx.message.author.display_name
-    authortoprole = ctx.message.author.top_role.name
+    authorname = (
+        ctx.message.author.display_name if hasattr(ctx.message.author, "display_name") else ctx.message.author.name
+    )
+    authortoprole = getattr(ctx.message.author, "top_role", None)
+    authortoprole = authortoprole.name if authortoprole else ""
     authormention = ctx.message.author.mention
 
-    servername = ctx.guild.name
-    channelname = ctx.message.channel.name
+    servername = ctx.guild.name if ctx.guild else "DM"
+    channelname = ctx.message.channel.name if hasattr(ctx.message.channel, "name") else "DM"
     currentdate = datetime.today().strftime("%Y/%m/%d")
     currentweekday = datetime.today().strftime("%A")
     currenttime = datetime.today().strftime("%H:%M")
@@ -55,11 +60,11 @@ async def format_variables(ctx: commands.Context, text: str):
     if isinstance(ctx.message.channel, discord.Thread):
         channeltopic = ctx.message.channel.parent.topic
     else:
-        channeltopic = ctx.message.channel.topic
+        channeltopic = getattr(ctx.message.channel, "topic", None)
 
-    serveremojis = [str(e) for e in ctx.message.guild.emojis]
+    serveremojis = [str(e) for e in ctx.message.guild.emojis] if ctx.message.guild else []
     random.shuffle(serveremojis)
-    serveremojis = ' '.join(serveremojis)
+    serveremojis = " ".join(serveremojis)
 
     try:
         res = text.format(
@@ -84,11 +89,7 @@ async def format_variables(ctx: commands.Context, text: str):
 
 
 def is_embed_valid(message: Message):
-    if (
-        (len(message.embeds) == 0)
-        or (not message.embeds[0].title)
-        or (not message.embeds[0].description)
-    ):
+    if (len(message.embeds) == 0) or (not message.embeds[0].title) or (not message.embeds[0].description):
         return False
     return True
 
@@ -107,18 +108,16 @@ def is_using_openrouter_endpoint(client: AsyncOpenAI):
 
 
 async def get_enabled_tools(config: Config, ctx: commands.Context) -> list:
-    functions_dir = Path(__file__).parent.parent / 'functions'
+    functions_dir = Path(__file__).parent.parent / "functions"
 
     for item in functions_dir.iterdir():
-        if item.is_dir() and not item.name.startswith('__'):
+        if item.is_dir() and not item.name.startswith("__"):
             try:
-                importlib.import_module(f'aiuser.functions.{item.name}.tool_call')
+                importlib.import_module(f"aiuser.functions.{item.name}.tool_call")
             except ImportError:
                 continue
 
     enabled_tools = await config.guild(ctx.guild).function_calling_functions()
     tool_classes = {cls.function_name: cls for cls in ToolCall.__subclasses__()}
 
-    return [tool_classes[name](config=config, ctx=ctx)
-            for name in enabled_tools
-            if name in tool_classes]
+    return [tool_classes[name](config=config, ctx=ctx) for name in enabled_tools if name in tool_classes]

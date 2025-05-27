@@ -1,5 +1,3 @@
-# handlers.py
-
 import asyncio
 import logging
 import random
@@ -25,22 +23,18 @@ async def handle_slash_command(cog: MixinMeta, inter: discord.Interaction, text:
     ctx = await commands.Context.from_interaction(inter)
     ctx.message.content = text
 
-    if not (await is_valid_message(cog, ctx)):
-        return await ctx.send(
-            "You're not allowed to use this command here.", ephemeral=True
-        )
+    if isinstance(ctx.channel, discord.DMChannel):
+        pass  # allow in DMs
+    elif not (await is_valid_message(cog, ctx)):
+        return await ctx.send("You're not allowed to use this command here.", ephemeral=True)
     elif await get_percentage(cog, ctx) == 1.0:
         pass
     elif not (await cog.config.guild(ctx.guild).reply_to_mentions_replies()):
         return await ctx.send("This command is not enabled.", ephemeral=True)
 
-    rate_limit_reset = datetime.strptime(
-        await cog.config.ratelimit_reset(), "%Y-%m-%d %H:%M:%S"
-    )
+    rate_limit_reset = datetime.strptime(await cog.config.ratelimit_reset(), "%Y-%m-%d %H:%M:%S")
     if rate_limit_reset > datetime.now():
-        return await ctx.send(
-            "The command is currently being ratelimited!", ephemeral=True
-        )
+        return await ctx.send("The command is currently being ratelimited!", ephemeral=True)
 
     try:
         await dispatch_response(cog, ctx)
@@ -50,6 +44,13 @@ async def handle_slash_command(cog: MixinMeta, inter: discord.Interaction, text:
 
 async def handle_message(cog: MixinMeta, message: discord.Message):
     """Handle regular message events"""
+
+    # prevents a massive feedback loop as a user app
+    if message.author.id == cog.bot.user.id:
+        return
+    if message.guild is None:
+        return
+
     ctx: commands.Context = await cog.bot.get_context(message)
 
     if not (await is_valid_message(cog, ctx)):
@@ -60,17 +61,10 @@ async def handle_message(cog: MixinMeta, message: discord.Message):
     elif random.random() > await get_percentage(cog, ctx):
         return
 
-    rate_limit_reset = datetime.strptime(
-        await cog.config.ratelimit_reset(), "%Y-%m-%d %H:%M:%S"
-    )
+    rate_limit_reset = datetime.strptime(await cog.config.ratelimit_reset(), "%Y-%m-%d %H:%M:%S")
     if rate_limit_reset > datetime.now():
-        logger.debug(
-            f"Want to respond but ratelimited until {rate_limit_reset.strftime('%Y-%m-%d %H:%M:%S')}"
-        )
-        if (
-            await is_bot_mentioned_or_replied(cog, message)
-            or await get_percentage(cog, ctx) == 1.0
-        ):
+        logger.debug(f"Want to respond but ratelimited until {rate_limit_reset.strftime('%Y-%m-%d %H:%M:%S')}")
+        if await is_bot_mentioned_or_replied(cog, message) or await get_percentage(cog, ctx) == 1.0:
             await ctx.react_quietly("💤", message="`aiuser` is ratedlimited")
         return
 
@@ -82,13 +76,17 @@ async def handle_message(cog: MixinMeta, message: discord.Message):
 
 async def get_percentage(cog: MixinMeta, ctx: commands.Context) -> float:
     """Get reply percentage based on member/role/channel/guild settings"""
+
+    if ctx.guild is None:
+        pass
+
     role_percent = None
     author = ctx.author
-
-    for role in author.roles:
-        if role.id in (await cog.config.all_roles()):
-            role_percent = await cog.config.role(role).reply_percent()
-            break
+    if hasattr(author, "roles"):
+        for role in author.roles:
+            if role.id in (await cog.config.all_roles()):
+                role_percent = await cog.config.role(role).reply_percent()
+                break
 
     percentage = await cog.config.member(author).reply_percent()
     if percentage is None:
@@ -104,6 +102,10 @@ async def get_percentage(cog: MixinMeta, ctx: commands.Context) -> float:
 
 async def is_in_conversation(cog: MixinMeta, ctx: commands.Context) -> bool:
     """Check if bot should continue conversation based on recent messages"""
+    # user app
+    if ctx.guild is None:
+        return False
+
     reply_percent = await cog.config.guild(ctx.guild).conversation_reply_percent()
     reply_time_seconds = await cog.config.guild(ctx.guild).conversation_reply_time()
 
@@ -113,11 +115,7 @@ async def is_in_conversation(cog: MixinMeta, ctx: commands.Context) -> bool:
     cutoff_time = datetime.now(tz=timezone.utc) - timedelta(seconds=reply_time_seconds)
 
     async for message in ctx.channel.history(limit=10):
-        if (
-            message.author.id == cog.bot.user.id
-            and len(message.embeds) == 0
-            and message.created_at > cutoff_time
-        ):
+        if message.author.id == cog.bot.user.id and len(message.embeds) == 0 and message.created_at > cutoff_time:
             return random.random() < reply_percent
 
     return False

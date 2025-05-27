@@ -13,27 +13,34 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 async def is_valid_message(cog: MixinMeta, ctx: commands.Context) -> bool:
     """
     Main validation chain that runs all checks in sequence.
-    Returns (is_valid, reason) tuple.
+    In DMs, only runs openai client check; skips all guild/channel/user content checks.
     """
+
+    # OpenAI client is always required
+    is_valid, reason = await check_openai_client(cog, ctx)
+    if not is_valid:
+        logger.warning(f"Critical validation failed: OpenAI Client - {reason}")
+        return False
+
+    # If not a guild (DM), skip the other checks
+    if ctx.guild is None:
+        return True
+
+    # Guild checks
     validation_chain = [
-        (check_openai_client, "OpenAI Client"),
         (check_guild_permissions, "Guild Permissions"),
         (check_channel_settings, "Channel Settings"),
         (check_user_status, "User Status"),
         (check_message_content, "Message Content"),
     ]
-
     for validator, validation_type in validation_chain:
         try:
             is_valid, reason = await validator(cog, ctx) 
             if not is_valid:
-                if validation_type in ["OpenAI Client"]:
-                    logger.warning(f"Critical validation failed in '{ctx.guild.id}': {validation_type} - {reason}")
                 return False
         except Exception:
             logger.error(f"Error in {validation_type} validation", exc_info=True)
             return False
-
     return True
 
 
@@ -129,6 +136,9 @@ async def check_message_content(cog: MixinMeta, ctx: commands.Context) -> Tuple[
 
 async def is_bot_mentioned_or_replied(cog: MixinMeta, message: discord.Message) -> bool:
     """Check if message mentions or replies to bot"""
+    # In DMs, never treat as bot-mentioned/replied for server-specific logic
+    if message.guild is None:
+        return False
     if not await cog.config.guild(message.guild).reply_to_mentions_replies():
         return False
     return cog.bot.user in message.mentions
