@@ -51,7 +51,9 @@ class TriggerSettings(MixinMeta):
     @checks.is_owner()
     @trigger.command(name="conversation_reply_percent")
     async def conversation_reply_percent(self, ctx: commands.Context, percent: int):
-        """ Set a different percentage chance of the bot continuing to reply within `conversation_reply_time` time frame"""
+        """ Set a different percentage chance of the bot continuing to reply within `conversation_reply_time` time frame. 
+            This is a additional percentage that will be rolled if the bot has already send a message in the last `conversation_reply_time` time frame.
+        """
         if percent < 0 or percent > 100:
             return await ctx.send("Please enter a number between 0 and 100")
         await self.config.guild(ctx.guild).conversation_reply_percent.set(percent / 100)
@@ -64,7 +66,7 @@ class TriggerSettings(MixinMeta):
     @trigger.command(name="conversation_reply_time")
     async def conversation_reply_time(self, ctx: commands.Context, seconds: int):
         """ Set the max time frame in seconds for the bot to have a `conversation_reply_percent` chance of replying to a message 
-            When `conversation_reply_time` have lapsed for the last bot message, `conversation_reply_percent` will not be used.
+            When `conversation_reply_time` have lapsed for the last bot message, `conversation_reply_percent` will not be used and be skipped.
         """
         if seconds < 0:
             return await ctx.send("Please enter a positive number")
@@ -94,6 +96,18 @@ class TriggerSettings(MixinMeta):
         await self.config.guild(ctx.guild).public_forget.set(value)
         embed = discord.Embed(
             title="Anyone can use the forget command:",
+            description=f"{value}",
+            color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
+
+    @trigger.command(name="grok")
+    @checks.is_owner()
+    async def grok(self, ctx: commands.Context):
+        """ Toggles a trigger where it always respond on an short message (less than 25 words) contains the word 'grok' or 'gork' and 'true' or 'explain' or 'confirm' """
+        value = not await self.config.guild(ctx.guild).grok_trigger()
+        await self.config.guild(ctx.guild).grok_trigger.set(value)
+        embed = discord.Embed(
+            title="The grok trigger is now:",
             description=f"{value}",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)

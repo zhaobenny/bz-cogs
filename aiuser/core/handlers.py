@@ -3,13 +3,14 @@
 import asyncio
 import logging
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 import discord
 from redbot.core import commands
 
 from aiuser.config.constants import URL_PATTERN
 from aiuser.config.defaults import DEFAULT_REPLY_PERCENT
+from aiuser.core.triggers import is_grok_triggered, is_in_conversation
 from aiuser.core.validators import is_bot_mentioned_or_replied, is_valid_message
 from aiuser.response.dispatcher import dispatch_response
 from aiuser.types.abc import MixinMeta
@@ -55,7 +56,7 @@ async def handle_message(cog: MixinMeta, message: discord.Message):
     if not (await is_valid_message(cog, ctx)):
         return
 
-    if await is_bot_mentioned_or_replied(cog, message) or await is_in_conversation(cog, ctx):
+    if await is_bot_mentioned_or_replied(cog, message) or await is_in_conversation(cog, ctx) or await is_grok_triggered(cog, ctx):
         pass
     elif random.random() > await get_percentage(cog, ctx):
         return
@@ -100,27 +101,6 @@ async def get_percentage(cog: MixinMeta, ctx: commands.Context) -> float:
     if percentage is None:
         percentage = DEFAULT_REPLY_PERCENT
     return percentage
-
-
-async def is_in_conversation(cog: MixinMeta, ctx: commands.Context) -> bool:
-    """Check if bot should continue conversation based on recent messages"""
-    reply_percent = await cog.config.guild(ctx.guild).conversation_reply_percent()
-    reply_time_seconds = await cog.config.guild(ctx.guild).conversation_reply_time()
-
-    if reply_percent == 0 or reply_time_seconds == 0:
-        return False
-
-    cutoff_time = datetime.now(tz=timezone.utc) - timedelta(seconds=reply_time_seconds)
-
-    async for message in ctx.channel.history(limit=10):
-        if (
-            message.author.id == cog.bot.user.id
-            and len(message.embeds) == 0
-            and message.created_at > cutoff_time
-        ):
-            return random.random() < reply_percent
-
-    return False
 
 
 async def wait_for_embed(ctx: commands.Context) -> commands.Context:

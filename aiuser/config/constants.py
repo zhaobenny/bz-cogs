@@ -6,6 +6,10 @@ IMAGE_REQUEST_AIHORDE_URL = "https://aihorde.net/api"
 
 RANDOM_MESSAGE_TASK_RETRY_SECONDS = 33 * 60
 
+GROK_PRIMARY_TRIGGERS = ["grok", "gork"]
+GROK_SECONDARY_TRIGGERS = ["true", "explain", "confirm"]
+GROK_MAX_WORDS = 25
+
 # regex patterns
 URL_PATTERN = re.compile(r"(https?://\S+)")
 YOUTUBE_URL_PATTERN = re.compile(r"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?(.+)")
