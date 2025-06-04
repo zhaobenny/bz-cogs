@@ -85,6 +85,15 @@ class FunctionCallingSettings(MixinMeta):
 
         await self.toggle_function_helper(ctx, tool_names, "Search")
 
+    @functions.command(name="searxng")
+    async def toggle_searxg_function(self, ctx: commands.Context):
+        """ Enable/disable searching/scraping the Internet using SearXNG """
+        from aiuser.functions.searxng.tool_call import SearXNGToolCall
+
+        tool_names = [SearXNGToolCall.function_name]
+
+        await self.toggle_function_helper(ctx, tool_names, "SearXNG")        
+
     @functions.command(name="scrape")
     async def toggle_scrape_function(self, ctx: commands.Context):
         """
