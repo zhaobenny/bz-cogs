@@ -107,7 +107,7 @@ class Settings(MixinMeta):
         if not negative_prompt:
             negative_prompt = ""
         await self.config.guild(ctx.guild).negative_prompt.set(negative_prompt)
-        await ctx.tick()
+        await ctx.tick("✅ Default negative prompt updated.")
 
     @aimage.command(name="cfg")
     async def cfg(self, ctx: commands.Context, cfg: int):
@@ -115,7 +115,7 @@ class Settings(MixinMeta):
         Set the default cfg
         """
         await self.config.guild(ctx.guild).cfg.set(cfg)
-        await ctx.tick()
+        await ctx.tick("✅ Default CFG updated.")
 
     @aimage.command(name="sampling_steps")
     async def sampling_steps(self, ctx: commands.Context, sampling_steps: int):
@@ -123,7 +123,7 @@ class Settings(MixinMeta):
         Set the default sampling steps
         """
         await self.config.guild(ctx.guild).sampling_steps.set(sampling_steps)
-        await ctx.tick()
+        await ctx.tick("✅ Default sampling steps updated.")
 
     @aimage.command(name="sampler")
     async def sampler(self, ctx: commands.Context, *, sampler: str):
@@ -139,7 +139,7 @@ class Settings(MixinMeta):
             return await ctx.send(f":warning: Sampler must be one of: `{', '.join(samplers)}`")
 
         await self.config.guild(ctx.guild).sampler.set(sampler)
-        await ctx.tick()
+        await ctx.tick("✅ Default sampler updated.")
 
     @aimage.command(name="width")
     async def width(self, ctx: commands.Context, width: int):
@@ -149,7 +149,7 @@ class Settings(MixinMeta):
         if width < 256 or width > 1536:
             return await ctx.send("Value must range between 256 and 1536.")
         await self.config.guild(ctx.guild).width.set(width)
-        await ctx.tick()
+        await ctx.tick("✅ Default width updated.")
 
     @aimage.command(name="height")
     async def height(self, ctx: commands.Context, height: int):
@@ -159,7 +159,7 @@ class Settings(MixinMeta):
         if height < 256 or height > 1536:
             return await ctx.send("Value must range between 256 and 1536.")
         await self.config.guild(ctx.guild).height.set(height)
-        await ctx.tick()
+        await ctx.tick("✅ Default height updated.")
 
     @aimage.command(name="max_img2img")
     async def max_img2img(self, ctx: commands.Context, resolution: int):
@@ -170,7 +170,7 @@ class Settings(MixinMeta):
         if resolution < 512 or resolution > 4096:
             return await ctx.send("Value must range between 512 and 4096.")
         await self.config.guild(ctx.guild).max_img2img.set(resolution)
-        await ctx.tick()
+        await ctx.tick("✅ Maximum img2img size updated.")
 
     @aimage.command(name="checkpoint", aliases=["model"])
     async def checkpoint(self, ctx: commands.Context, *, checkpoint: str):
@@ -195,7 +195,7 @@ class Settings(MixinMeta):
             return await ctx.send(f":warning: Invalid checkpoint. Pick one of these:`\n{', '.join(checkpoints)}`")
 
         await self.config.guild(ctx.guild).checkpoint.set(checkpoint)
-        await ctx.tick()
+        await ctx.tick("✅ Default checkpoint updated.")
 
     @aimage.command(name="vae")
     async def vae(self, ctx: commands.Context, *, vae: str):
@@ -219,7 +219,7 @@ class Settings(MixinMeta):
             return await ctx.send(f":warning: Invalid vae. Pick one of these:\n`{', '.join(vaes)}`")
 
         await self.config.guild(ctx.guild).vae.set(vae)
-        await ctx.tick()
+        await ctx.tick("✅ Default VAE updated.")
 
     @aimage.command(name="auth")
     async def auth(self, ctx: commands.Context, *, auth: str):
@@ -343,7 +343,7 @@ class Settings(MixinMeta):
         Clear the blacklist to nothing!
         """
         await self.config.guild(ctx.guild).words_blacklist.set([])
-        await ctx.tick()
+        await ctx.tick("✅ Blacklist cleared.")
 
     @aimage.command()
     @checks.is_owner()
