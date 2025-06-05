@@ -47,7 +47,7 @@ DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS = ["yourself", "you"]
 DEFAULT_REPLY_PERCENT = 0.5
 DEFAULT_MIN_MESSAGE_LENGTH = 2
 DEFAULT_IMAGE_UPLOAD_LIMIT = 10 * (1024 * 1024)  # 10 MB
-DEFAULT_LLM_MODEL = "gpt-4o-mini"
+DEFAULT_LLM_MODEL = "gpt-4.1-nano"
 
 DEFAULT_GLOBAL = {
             "custom_openai_endpoint": None,
@@ -58,6 +58,7 @@ DEFAULT_GLOBAL = {
             "max_random_prompt_length": 200,
             "max_prompt_length": 200,
             "custom_text_prompt": None,
+            "endpoint_model_history": {},
 }
 
 DEFAULT_GUILD = {
@@ -69,7 +70,7 @@ DEFAULT_GUILD = {
     "messages_min_length": DEFAULT_MIN_MESSAGE_LENGTH,
     "reply_to_mentions_replies": True,
     "scan_images": False,
-    "scan_images_mode": ScanImageMode.AI_HORDE.value,
+    "scan_images_mode": ScanImageMode.LLM.value,
     "scan_images_model": DEFAULT_LLM_MODEL,
     "max_image_size": DEFAULT_IMAGE_UPLOAD_LIMIT,
     "model": DEFAULT_LLM_MODEL,
