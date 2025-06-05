@@ -89,7 +89,7 @@ class Settings:
 
     @aiemote.command(name="optin")
     async def optin_user(self, ctx: commands.Context):
-        """ Opt in of sending your message to OpenAI (bot-wide)
+        """ Opt in of sending your chat messages to an external LLM provider (bot-wide)
 
             This will allow the bot to react to your messages
         """
@@ -112,7 +112,7 @@ class Settings:
 
     @aiemote.command(name="optout")
     async def optout_user(self, ctx: commands.Context):
-        """ Opt out of sending your message to OpenAI (bot-wide)
+        """ Opt out of sending your chat messages to an external LLM provider (bot-wide)
 
             The bot will no longer react to your messages
         """
@@ -140,15 +140,6 @@ class Settings:
         """
         pass
 
-    async def _get_available_models(self, ctx: commands.Context):
-        res = await self.aclient.models.list()
-        models = [
-            model.id for model in res.data
-            if ("gpt" in model.id or "o3" in model.id.lower())
-            and "audio" not in model.id.lower()
-            and "realtime" not in model.id.lower()
-        ]
-        return models
 
     async def _paginate_models(self, ctx: commands.Context, models: list):
         if not models:
@@ -184,7 +175,8 @@ class Settings:
         If no model name is given, lists available models.
         """
         await ctx.message.add_reaction("🔄")
-        available_models = await self._get_available_models(ctx)
+        res = await self.aclient.models.list()
+        available_models = [model.id for model in res.data]
         await ctx.message.remove_reaction("🔄", ctx.me)
 
         if model_name.lower() == "list":
@@ -197,8 +189,7 @@ class Settings:
         try:
             self.encoding = tiktoken.encoding_for_model(model_name)
         except KeyError:
-            await ctx.send(f":warning: `{model_name}` does not be supported by tiktoken. Please choose a valid model.")
-            return await self._paginate_models(ctx, available_models)
+            self.encoding = None
 
         await self.config.llm_model.set(model_name)
         self.llm_model = model_name
@@ -208,6 +199,53 @@ class Settings:
             description=f"`{self.llm_model}`",
             color=await ctx.embed_color(),
         )
+        await ctx.send(embed=embed)
+
+    @aiemote_owner.command()
+    @checks.is_owner()
+    async def endpoint(self, ctx: commands.Context, url: Optional[str]):
+        """Sets the OpenAI endpoint to a custom url (must be OpenAI API compatible)
+
+        **Arguments:**
+        - `url`: The url to set the endpoint to.
+        OR
+        - `openai`, `openrouter`, `ollama`: Shortcuts for the default endpoints. (localhost for ollama)
+        """
+        from .openai_utils import setup_openai_client
+
+        if url == "openrouter":
+            url = "https://openrouter.ai/api/v1/"
+        elif url == "ollama":
+            url = "http://localhost:11434/v1/"
+        elif url in ["clear", "reset", "openai"]:
+            url = None
+
+        previous_url = await self.config.custom_openai_endpoint()
+        await self.config.custom_openai_endpoint.set(url)
+
+        await ctx.message.add_reaction("🔄")
+
+        self.aclient = await setup_openai_client(self.bot, self.config)
+
+        # test the endpoint works if not rollback
+        try:
+            _ = await self.aclient.models.list()
+        except Exception:
+            await self.config.custom_openai_endpoint.set(previous_url)
+            return await ctx.send(":warning: Invalid endpoint. Please check logs for more information.")
+        finally:
+            await ctx.message.remove_reaction("🔄", ctx.me)
+
+        embed = discord.Embed(
+            title="Bot Custom OpenAI endpoint", color=await ctx.embed_color()
+        )
+
+        if url:
+            embed.description = f"Endpoint set to {url}."
+            embed.set_footer(text="❗ Third party models may have undesirable results with this cog.")
+        else:
+            embed.description = "Endpoint reset back to official OpenAI endpoint."
+
         await ctx.send(embed=embed)
 
     @aiemote_owner.command(name="instruction", aliases=["extra_instruction", "extra"])
@@ -327,9 +365,9 @@ class Settings:
         emojis = await self.config.guild(ctx.guild).server_emojis()
         serverembeds = await self.create_emoji_embed(ctx, "Current Server-specific Emojis", emojis)
         settingsembed = discord.Embed(title="Main Settings", color=await ctx.embed_color())
-        settingsembed.add_field(name="Percent Chance", value=f"{self.percent}%", inline=False)
+        settingsembed.add_field(name="Percent Chance", value=f"`{self.percent}%`", inline=False)
         settingsembed.add_field(name="Additonal Instruction", value=await self.config.extra_instruction() or "None", inline=False)
-        settingsembed.add_field(name="LLM Model", value=await self.config.llm_model(), inline=False)
+        settingsembed.add_field(name="LLM Model", value=f"`{await self.config.llm_model()}`", inline=False)
         await ctx.send(embed=settingsembed)
         if len(globalembeds) > 1:
             await (SimpleMenu(globalembeds)).start(ctx)

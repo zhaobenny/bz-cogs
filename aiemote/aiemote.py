@@ -3,10 +3,10 @@ import random
 
 import discord
 import tiktoken
-from openai import AsyncOpenAI
 from redbot.core import Config, commands
 from redbot.core.bot import Red
 
+from .openai_utils import setup_openai_client
 from .settings import DEFAULT_LLM_MODEL, Settings
 
 logger = logging.getLogger("red.bz_cogs.aiemote")
@@ -38,7 +38,8 @@ class AIEmote(commands.Cog, Settings):
             "extra_instruction": "",
             "optin": [],
             "optout": [],
-            "llm_model": DEFAULT_LLM_MODEL
+            "llm_model": DEFAULT_LLM_MODEL,
+            "custom_openai_endpoint": None
         }
 
         default_guild = {
@@ -57,33 +58,21 @@ class AIEmote(commands.Cog, Settings):
         self.optin_users = await self.config.optin()
         self.optout_users = await self.config.optout()
         self.llm_model = await self.config.llm_model() 
-        self.encoding = tiktoken.encoding_for_model(self.llm_model)
+        try:
+            self.encoding = tiktoken.encoding_for_model(self.llm_model)
+        except KeyError:
+            self.encoding = None
 
         for guild_id, config in all_config.items():
             self.whitelist[guild_id] = config["whitelist"]
 
-        await self.initalize_openai()
+        self.aclient = await setup_openai_client(self.bot, self.config)
 
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, api_tokens):
-        if service_name == "openai":
-            self.initalize_openai()
+        if service_name in ["openai", "openrouter"]:
+            self.aclient = await setup_openai_client(self.bot, self.config)
 
-    async def initalize_openai(self, ctx: commands.Context = None):
-        key = (await self.bot.get_shared_api_tokens("openai")).get("api_key")
-        if not key and ctx:
-            return await ctx.send(
-                f"OpenAI API key not set for `aiemote`. "
-                f"Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
-        if not key:
-            logger.error(
-                F"OpenAI API key not set for `aiemote` yet! Please set it with `{ctx.clean_prefix}set api openai api_key,API_KEY`")
-            return
-
-        self.aclient = AsyncOpenAI(
-            api_key=key,
-            timeout=50.0
-        )
 
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
@@ -109,10 +98,15 @@ class AIEmote(commands.Cog, Settings):
             options += f"{index}. {value['description']}\n"
 
         logit_bias = {}
-        for i in range(len(emojis)):
-            encoded_value = self.encoding.encode(str(i))
-            if len(encoded_value) == 1:
-                logit_bias[encoded_value[0]] = 100
+        try:
+            if not self.encoding:
+                raise KeyError
+            for i in range(len(emojis)):
+                    encoded_value = self.encoding.encode(str(i))
+                    if len(encoded_value) == 1:
+                        logit_bias[encoded_value[0]] = 100
+        except (KeyError, AttributeError):
+                logit_bias = {}
 
         system_prompt = f"You are in a chat room. You will pick an emoji for the following message. {await self.config.extra_instruction()} Here are your options: {options} Your answer will be a int between 0 and {len(emojis)-1}."
         content = f"{message.author.display_name} : {self.stringify_any_mentions(message)}"
@@ -165,7 +159,7 @@ class AIEmote(commands.Cog, Settings):
             return False
 
         if not self.aclient:
-            await self.initalize_openai(ctx)
+            self.aclient = await setup_openai_client(self.bot, self.config, ctx)
             if not self.aclient:
                 return False
 
