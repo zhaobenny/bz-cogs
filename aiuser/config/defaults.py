@@ -102,6 +102,7 @@ DEFAULT_GUILD = {
     "conversation_reply_time": 20,
     "grok_trigger": False,
     "custom_model_tokens_limit": None,
+    "always_reply_on_words": [],
 }
 
 DEFAULT_CHANNEL = {

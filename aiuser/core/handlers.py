@@ -10,8 +10,8 @@ from redbot.core import commands
 
 from aiuser.config.constants import URL_PATTERN
 from aiuser.config.defaults import DEFAULT_REPLY_PERCENT
-from aiuser.core.triggers import is_grok_triggered, is_in_conversation
-from aiuser.core.validators import is_bot_mentioned_or_replied, is_valid_message
+from aiuser.core.triggers import check_triggers
+from aiuser.core.validators import is_valid_message
 from aiuser.response.dispatcher import dispatch_response
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import is_embed_valid
@@ -56,7 +56,7 @@ async def handle_message(cog: MixinMeta, message: discord.Message):
     if not (await is_valid_message(cog, ctx)):
         return
 
-    if await is_bot_mentioned_or_replied(cog, message) or await is_in_conversation(cog, ctx) or await is_grok_triggered(cog, ctx):
+    if await check_triggers(cog, ctx, message):
         pass
     elif random.random() > await get_percentage(cog, ctx):
         return
@@ -69,7 +69,7 @@ async def handle_message(cog: MixinMeta, message: discord.Message):
             f"Want to respond but ratelimited until {rate_limit_reset.strftime('%Y-%m-%d %H:%M:%S')}"
         )
         if (
-            await is_bot_mentioned_or_replied(cog, message)
+            await check_triggers(cog, ctx, message)
             or await get_percentage(cog, ctx) == 1.0
         ):
             await ctx.react_quietly("💤", message="`aiuser` is ratedlimited")

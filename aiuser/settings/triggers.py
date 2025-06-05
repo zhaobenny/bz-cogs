@@ -112,6 +112,57 @@ class TriggerSettings(MixinMeta):
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
+    @trigger.group(name="words")
+    @commands.is_owner()
+    async def trigger_words(self, _):
+        """ Configure a list of words that will make the bot always be triggered to respond to a message """
+        pass
+
+    @trigger_words.command(name="add")
+    async def trigger_words_add(self, ctx: commands.Context, *, word: str):
+        """ Add a word to the trigger words list """
+        words = await self.config.guild(ctx.guild).always_reply_on_words()
+        if word in words:
+            return await ctx.send("That word is already in the list")
+        words.append(word)
+        await self.config.guild(ctx.guild).always_reply_on_words.set(words)
+        return await self.show_trigger_always_words(ctx, discord.Embed(
+            title="The trigger words are now:",
+            color=await ctx.embed_color()))
+
+    @trigger_words.command(name="remove")
+    async def trigger_words_remove(self, ctx: commands.Context, *, word: str):
+        """ Remove a word from the trigger words list """
+        words = await self.config.guild(ctx.guild).always_reply_on_words()
+        if word not in words:
+            return await ctx.send("That word is not in the list")
+        words.remove(word)
+        await self.config.guild(ctx.guild).always_reply_on_words.set(words)
+        return await self.show_trigger_always_words(ctx, discord.Embed(
+            title="The trigger words are now:",
+            color=await ctx.embed_color()))
+
+    @trigger_words.command(name="list", aliases=["show"])
+    async def trigger_words_list(self, ctx: commands.Context):
+        """ Show the trigger words list """
+        return await self.show_trigger_always_words(ctx, discord.Embed(
+            title="Trigger words that activate the bot",
+            color=await ctx.embed_color()))
+
+    @trigger_words.command(name="clear")
+    async def trigger_words_clear(self, ctx: commands.Context):
+        """ Clear the trigger words list """
+        await self.config.guild(ctx.guild).always_reply_on_words.set([])
+        return await ctx.send("The trigger words list has been cleared.")
+
+    async def show_trigger_always_words(self, ctx: commands.Context, embed: discord.Embed):
+        words = await self.config.guild(ctx.guild).always_reply_on_words()
+        if words:
+            embed.description = ", ".join(f"`{word}`" for word in words)
+        else:
+            embed.description = "No trigger words set."
+        return await ctx.send(embed=embed)
+
     @trigger.group(name="whitelist", aliases=["whitelists"])
     async def trigger_whitelist(self, ctx: commands.Context):
         """ If configured, only whitelisted roles / users can trigger a response in whitelisted channels
