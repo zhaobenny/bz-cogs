@@ -5,15 +5,18 @@ import discord
 import tiktoken
 from redbot.core import Config, commands
 from redbot.core.bot import Red
+from redbot.core.i18n import Translator, cog_i18n
 
 from .openai_utils import setup_openai_client
 from .settings import DEFAULT_LLM_MODEL, Settings
 
 logger = logging.getLogger("red.bz_cogs.aiemote")
 
+_ = Translator("AIEmote", __file__)
 
+@cog_i18n(_)
 class AIEmote(commands.Cog, Settings):
-    """ Human-like Discord reacts to messages powered by OpenAI. """
+    """Human-like Discord reacts to messages powered by OpenAI."""
 
     def __init__(self, bot):
         super().__init__()
@@ -27,11 +30,11 @@ class AIEmote(commands.Cog, Settings):
             "percent": 50,
             "global_emojis": [
                 {
-                    "description": "A happy face",
+                    "description": _("A happy face"),
                     "emoji": "😀",
                 },
                 {
-                    "description": "A sad face",
+                    "description": _("A sad face"),
                     "emoji": "😢",
                 },
             ],
@@ -73,7 +76,6 @@ class AIEmote(commands.Cog, Settings):
         if service_name in ["openai", "openrouter"]:
             self.aclient = await setup_openai_client(self.bot, self.config)
 
-
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
         ctx: commands.Context = await self.bot.get_context(message)
@@ -91,7 +93,9 @@ class AIEmote(commands.Cog, Settings):
         emojis += await self.config.global_emojis() or []
 
         if not emojis:
-            logger.warning(f"Skipping react! No valid emojis to use in {message.guild.name}")
+            logger.warning(_("Skipping react! No valid emojis to use in {guild_name}").format(
+                guild_name=message.guild.name
+            ))
             return None
 
         for index, value in enumerate(emojis):
@@ -108,7 +112,15 @@ class AIEmote(commands.Cog, Settings):
         except (KeyError, AttributeError):
                 logit_bias = {}
 
-        system_prompt = f"You are in a chat room. You will pick an emoji for the following message. {await self.config.extra_instruction()} Here are your options: {options} Your answer will be a int between 0 and {len(emojis)-1}."
+        system_prompt = _(
+            "You are in a chat room. You will pick an emoji for the following message. {extra_instruction} "
+            "Here are your options: {options} Your answer will be a int between 0 and {max_index}."
+        ).format(
+            extra_instruction=await self.config.extra_instruction(),
+            options=options,
+            max_index=len(emojis)-1
+        )
+        
         content = f"{message.author.display_name} : {self.stringify_any_mentions(message)}"
         try:
             response = await self.aclient.chat.completions.create(
@@ -121,7 +133,9 @@ class AIEmote(commands.Cog, Settings):
                 logit_bias=logit_bias,
             )
         except Exception:
-            logger.exception(f"Skipping react in {message.guild.name}! Failed to get response from OpenAI")
+            logger.exception(_("Skipping react in {guild_name}! Failed to get response from OpenAI").format(
+                guild_name=message.guild.name
+            ))
             return None
 
         response = response.choices[0].message.content
@@ -133,7 +147,11 @@ class AIEmote(commands.Cog, Settings):
             return partial_emoji
         else:
             logger.warning(
-                f"Skipping react in {message.guild.name}! Non-numeric response from OpenAI: {response}. (Please report to dev if this occurs often)")
+                _("Skipping react in {guild_name}! Non-numeric response from OpenAI: {response}. "
+                  "(Please report to dev if this occurs often)").format(
+                    guild_name=message.guild.name,
+                    response=response
+                ))
             return None
 
     async def is_valid_to_react(self, ctx: commands.Context):
@@ -169,7 +187,10 @@ class AIEmote(commands.Cog, Settings):
 
         # skipping long / short messages
         if len(ctx.message.content) > 1500 or len(ctx.message.content) < 10:
-            logger.debug(f"Skipping message in {ctx.guild.name} with length {len(ctx.message.content)}")
+            logger.debug(_("Skipping message in {guild_name} with length {length}").format(
+                guild_name=ctx.guild.name,
+                length=len(ctx.message.content)
+            ))
             return False
 
         return True

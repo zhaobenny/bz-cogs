@@ -1,0 +1,261 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: axion\n"
+"POT-Creation-Date: 2025-06-09 20:41+0200\n"
+"PO-Revision-Date: 2025-06-10 14:59\n"
+"Last-Translator: \n"
+"Language-Team: French\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: redgettext 3.4.2\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Crowdin-Project: axion\n"
+"X-Crowdin-Project-ID: 798154\n"
+"X-Crowdin-Language: fr\n"
+"X-Crowdin-File: t.pot\n"
+"X-Crowdin-File-ID: 8\n"
+"Language: fr_FR\n"
+
+#: aiemote\aiemote.py:33
+msgid "A happy face"
+msgstr "Un visage heureux"
+
+#: aiemote\aiemote.py:37
+msgid "A sad face"
+msgstr "Un visage triste"
+
+#: aiemote\aiemote.py:96
+msgid "Skipping react! No valid emojis to use in {guild_name}"
+msgstr "Ignorer la réaction! Aucun émojis valide à utiliser dans {guild_name}"
+
+#: aiemote\aiemote.py:115
+msgid ""
+"You are in a chat room. You will pick an emoji for the following message. "
+"{extra_instruction} Here are your options: {options} Your answer will be a "
+"int between 0 and {max_index}."
+msgstr ""
+"Tu est dans un salon textuel. Tu devra choisir un émoji dans le message suivant."
+"{extra_instruction} Voici tes options: {options} Ta réponse sera un "
+"nombre entre 0 et {max_index}."
+
+#: aiemote\aiemote.py:136
+msgid "Skipping react in {guild_name}! Failed to get response from OpenAI"
+msgstr "Ignorer la réaction dans {guild_name}! Impossible d'obtenir la réponse de OpenAI"
+
+#: aiemote\aiemote.py:150
+msgid ""
+"Skipping react in {guild_name}! Non-numeric response from OpenAI: "
+"{response}. (Please report to dev if this occurs often)"
+msgstr ""
+"Ignorer la réaction en {guild_name}! Réponse non-numérique de OpenAI : "
+"{response}. (Veuillez signaler au développeur si cela se produit souvent)"
+
+#: aiemote\aiemote.py:190
+msgid "Skipping message in {guild_name} with length {length}"
+msgstr "Sauter le message dans {guild_name} avec la longueur {length}"
+
+#: aiemote\openai_utils.py:39
+msgid ""
+"{api_type} API key not set for `aiemote`. Please set it with `{prefix}set "
+"api {api_type} api_key,[API_KEY_HERE]`"
+msgstr ""
+"La clé API {api_type} n'est pas définie pour `aiemote`. Veuillez la définir avec `{prefix}set "
+"api {api_type} api_key,[API_KEY_HERE]`"
+
+#: aiemote\openai_utils.py:50
+msgid ""
+"{api_type} API key not set for \"aiemote\" yet! Please set it with: [p]set "
+"api {api_type} api_key,[API_KEY_HERE]"
+msgstr "La clé API {api_type} n'est pas encore définie pour "aiemote" ! Veuillez la définir avec: `[p]set "
+"api {api_type} api_key,[CLÉ_API_ICI]`"
+
+#: aiemote\settings.py:39
+msgid "No channels in whitelist"
+msgstr "Aucun salon dans la liste blanche"
+
+#: aiemote\settings.py:41
+msgid "Whitelist"
+msgstr "Liste blanche"
+
+#: aiemote\settings.py:42
+msgid "Channels"
+msgstr "Salons"
+
+#: aiemote\settings.py:55
+msgid "Channel already in whitelist"
+msgstr "Salon déjà dans la liste blanche"
+
+#: aiemote\settings.py:59
+msgid "✅ Channel added to whitelist"
+msgstr "✅ Salon ajouté à la liste blanche"
+
+#: aiemote\settings.py:71
+msgid "Channel not in whitelist"
+msgstr "Le salon n'est pas dans la liste blanche"
+
+#: aiemote\settings.py:75
+msgid "✅ Channel removed from whitelist"
+msgstr "✅ Salon retirée de la liste blanche"
+
+#: aiemote\settings.py:85
+msgid "You cannot enable this setting for servers with more than 150 members."
+msgstr "Vous ne pouvez pas activer ce paramètre pour les serveurs de plus de 150 membres."
+
+#: aiemote\settings.py:89
+msgid "Users are now opted in by default in this server:"
+msgstr "Les utilisateurs sont maintenant choisis par défaut sur ce serveur:"
+
+#: aiemote\settings.py:104
+msgid "You are already opted in bot-wide"
+msgstr "Vous avez déjà été choisi dans l'ensemble du bot."
+
+#: aiemote\settings.py:115
+msgid "You are now opted in bot-wide"
+msgstr "Vous êtes maintenant choisi dans l'ensemble du bot-wide"
+
+#: aiemote\settings.py:127
+msgid "You are already opted out"
+msgstr "Vous êtes déjà exclu"
+
+#: aiemote\settings.py:138
+msgid "You are now opted out bot-wide"
+msgstr "Vous êtes maintenant exclu du bot-wide"
+
+#: aiemote\settings.py:148
+msgid "No models available or an error occurred."
+msgstr "Aucun modèle disponible ou une erreur est survenue."
+
+#: aiemote\settings.py:155
+msgid "Available Models"
+msgstr "Modèles disponibles"
+
+#: aiemote\settings.py:162
+msgid "No models found."
+msgstr "Aucun modèle trouvé."
+
+#: aiemote\settings.py:168 aiemote\settings.py:356
+msgid "Page {page_num} of {total_pages}"
+msgstr "Page {page_num} sur {total_pages}"
+
+#: aiemote\settings.py:188
+msgid ""
+":warning: `{model_name}` is not in the list of available models. Please "
+"choose a valid model."
+msgstr ""
+":warning: `{model_name}` n'est pas dans la liste des modèles disponibles. Veuillez "
+"choisir un modèle valide."
+
+#: aiemote\settings.py:200
+msgid "The LLM is now set to:"
+msgstr "Le LLM est maintenant réglé sur :"
+
+#: aiemote\settings.py:237
+msgid ":warning: Invalid endpoint. Please check logs for more information."
+msgstr ":warning: Point de terminaison invalide. Veuillez consulter les logs pour plus d'informations."
+
+#: aiemote\settings.py:242
+msgid "Bot Custom OpenAI endpoint"
+msgstr "Point de terminaison OpenAI personnalisé du bot"
+
+#: aiemote\settings.py:246
+msgid "Endpoint set to {url}."
+msgstr "Point de terminaison réglé sur {url}."
+
+#: aiemote\settings.py:247
+msgid "❗ Third party models may have undesirable results with this cog."
+msgstr "❗ Les modèles tiers peuvent avoir des résultats indésirables avec ce cog."
+
+#: aiemote\settings.py:249
+msgid "Endpoint reset back to official OpenAI endpoint."
+msgstr "Remise à zéro du point de terminaison officiel OpenAI."
+
+#: aiemote\settings.py:265
+msgid "✅ Extra instruction updated"
+msgstr "✅ Instruction supplémentaire mise à jour"
+
+#: aiemote\settings.py:271
+msgid "Invalid emoji!"
+msgstr "Émoji invalide!"
+
+#: aiemote\settings.py:276
+msgid "Invalid emoji! Custom emojis must be usable by the bot itself"
+msgstr "Émoji invalide! Les émojis personnalisés doivent être utilisables par le bot lui-même"
+
+#: aiemote\settings.py:282
+msgid "Emoji already in list"
+msgstr "Émoji déjà dans la liste"
+
+#: aiemote\settings.py:294
+msgid "Emoji not in list"
+msgstr "Émoji non dans la liste"
+
+#: aiemote\settings.py:316
+msgid "✅ Global emoji added"
+msgstr "✅ Émoji global ajouté"
+
+#: aiemote\settings.py:332
+msgid "✅ Global emoji removed"
+msgstr "✅ Émoji global supprimé"
+
+#: aiemote\settings.py:339 aiemote\settings.py:370
+msgid "None"
+msgstr "Aucun"
+
+#: aiemote\settings.py:365
+msgid "Global Emojis"
+msgstr "Émojis globaux"
+
+#: aiemote\settings.py:367
+msgid "Current Server-specific Emojis"
+msgstr "Émojis spécifiques au serveur actuel"
+
+#: aiemote\settings.py:368
+msgid "Main Settings"
+msgstr "Paramètres Principaux"
+
+#: aiemote\settings.py:369
+msgid "Percent Chance"
+msgstr "Pourcentage de Chances"
+
+#: aiemote\settings.py:370
+msgid "Additonal Instruction"
+msgstr "Instruction supplémentaire"
+
+#: aiemote\settings.py:371
+msgid "LLM Model"
+msgstr "Modèle LLM"
+
+#: aiemote\settings.py:387
+msgid "Are you sure?"
+msgstr "Êtes-vous sûr(e) ?"
+
+#: aiemote\settings.py:388
+msgid ""
+"This will reset all settings to default! (Including ALL per server lists)"
+msgstr ""
+"Cela réinitialisera tous les paramètres par défaut ! (Y compris TOUTES les listes de serveurs)"
+
+#: aiemote\settings.py:396 aiemote\settings.py:398
+msgid "Cancelled."
+msgstr "Annulé."
+
+#: aiemote\settings.py:405
+msgid "Cleared."
+msgstr "Effacé."
+
+#: aiemote\settings.py:423
+msgid "✅ Server emoji added"
+msgstr "✅ Émoji du serveur ajouté"
+
+#: aiemote\settings.py:439
+msgid "✅ Server emoji removed"
+msgstr "✅ Émoji du serveur supprimé"
+
+#: aiemote\settings.py:450
+msgid "Invalid percent"
+msgstr "Pourcentage invalide"
+
+#: aiemote\settings.py:453
+msgid "✅ Percent chance updated"
+msgstr "✅ Pourcentage de chance mise à jour"
