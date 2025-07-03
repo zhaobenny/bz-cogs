@@ -112,14 +112,14 @@ class ImageScanSettings(MixinMeta):
                 value="This will send image attachments to the specified endpoint for processing!",
                 inline=False)
             
-            model = await self.config.guild(ctx.guild).model()
+
+            model = await self.config.guild(ctx.guild).scan_images_model() 
             if model not in VISION_SUPPORTED_MODELS:
                 embed.add_field(
                     name=":warning: Unvalidated Model",
                     value=f"Set image scanning model to `{model}` but it has not been validated for image scanning.",
                     inline=False)
                             
-            await self.config.guild(ctx.guild).scan_images_model.set(model)
             return await ctx.send(embed=embed)
         
     @imagescan.command(name="model")
