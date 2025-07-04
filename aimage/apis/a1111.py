@@ -6,6 +6,7 @@ from typing import Union
 
 import discord
 from redbot.core import commands
+from redbot.core.i18n import Translator
 from tenacity import retry, stop_after_attempt, wait_random
 
 from aimage.abc import MixinMeta
@@ -16,6 +17,7 @@ from aimage.common.helpers import get_auth
 from aimage.common.params import ImageGenParams
 
 logger = logging.getLogger("red.bz_cogs.aimage")
+_ = Translator("AImage", __file__)
 
 
 class ImageGenerationType(Enum):
@@ -30,7 +32,7 @@ cache_mapping = {
     "sd-models": "checkpoints",
     "sd-vae": "vaes",
     "samplers": "samplers",
-    "prompt-styles": "styles"
+    "prompt-styles": "styles",
 }
 
 A1111_SAMPLERS = [
@@ -54,7 +56,7 @@ A1111_SAMPLERS = [
     "PLMS",
     "UniPC",
     "LCM",
-    "DDPM"
+    "DDPM",
 ]
 
 
@@ -72,7 +74,11 @@ class A1111(BaseAPI):
             try:
                 data = await self._get_terms(page)
             except Exception as e:
-                logger.warning(f"Failed to update autocomplete cache for {cache_key} in {self.guild.id}: \n {e}")
+                logger.warning(
+                    _(
+                        "Failed to update autocomplete cache for {cache_key} in {guild_id}: \n {error}"
+                    ).format(cache_key=cache_key, guild_id=self.guild.id, error=e)
+                )
                 continue
 
             if page == "scripts":
@@ -98,7 +104,8 @@ class A1111(BaseAPI):
     async def _generate_payload(self, params: ImageGenParams, init_image: bytes = None) -> dict:
         payload = {
             "prompt": f"{params.prompt} {params.lora}",
-            "negative_prompt": params.negative_prompt or await self.config.guild(self.guild).negative_prompt(),
+            "negative_prompt": params.negative_prompt
+            or await self.config.guild(self.guild).negative_prompt(),
             "styles": params.style.split(", ") if params.style else [],
             "cfg_scale": params.cfg or await self.config.guild(self.guild).cfg(),
             "steps": params.steps or await self.config.guild(self.guild).sampling_steps(),
@@ -106,27 +113,30 @@ class A1111(BaseAPI):
             "subseed": params.subseed,
             "subseed_strength": params.subseed_strength,
             "sampler_name": params.sampler or await self.config.guild(self.guild).sampler(),
-            "scheduler": params.scheduler or "Automatic",
+            "scheduler": params.scheduler or _("Automatic"),
             "override_settings": {
-                "sd_model_checkpoint": params.checkpoint or await self.config.guild(self.guild).checkpoint(),
-                "sd_vae": params.vae or await self.config.guild(self.guild).vae()
+                "sd_model_checkpoint": params.checkpoint
+                or await self.config.guild(self.guild).checkpoint(),
+                "sd_vae": params.vae or await self.config.guild(self.guild).vae(),
             },
             "width": params.width or await self.config.guild(self.guild).width(),
             "height": params.height or await self.config.guild(self.guild).height(),
-            "alwayson_scripts": {}
+            "alwayson_scripts": {},
         }
 
         # force flux support for now
         if "flux" in payload["override_settings"]["sd_model_checkpoint"]:
-            logger.debug("Flux model detected, setting scheduler to Simple and cfg_scale to 1")
-            payload["scheduler"] = "Simple"
+            logger.debug(_("Flux model detected, setting scheduler to Simple and cfg_scale to 1"))
+            payload["scheduler"] = _("Simple")
             payload["cfg_scale"] = 1
 
         if init_image:
-            payload.update({
-                "init_images": [base64.b64encode(init_image).decode("utf8")],
-                "denoising_strength": params.denoising
-            })
+            payload.update(
+                {
+                    "init_images": [base64.b64encode(init_image).decode("utf8")],
+                    "denoising_strength": params.denoising,
+                }
+            )
 
         if await self.config.guild(self.guild).adetailer():
             payload["alwayson_scripts"].update(ADETAILER_ARGS)
@@ -161,7 +171,9 @@ class A1111(BaseAPI):
 
             if logger.isEnabledFor(logging.DEBUG):
                 del r["images"]
-                logger.debug(f"Requested with parameters: {json.dumps(r, indent=4)}")
+                logger.debug(
+                    _("Requested with parameters: {params}").format(params=json.dumps(r, indent=4))
+                )
 
         return ImageResponse(data=data, info_string=info_string, is_nsfw=is_nsfw, payload=payload)
 

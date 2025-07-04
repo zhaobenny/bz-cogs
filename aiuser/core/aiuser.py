@@ -6,6 +6,7 @@ import discord
 from openai import AsyncOpenAI
 from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
+from redbot.core.i18n import Translator, cog_i18n
 
 from aiuser.config.defaults import (
     DEFAULT_CHANNEL,
@@ -27,7 +28,10 @@ from .openai_utils import setup_openai_client
 logger = logging.getLogger("red.bz_cogs.aiuser")
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
+_ = Translator("AIuser", __file__)
 
+
+@cog_i18n(_)
 class AIUser(
     DashboardIntegration,
     Settings,
@@ -36,8 +40,12 @@ class AIUser(
     metaclass=CompositeMetaClass,
 ):
     """
-        Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
+    Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
+
+    __version__ = "2.0"
+    __author__ = "zhaobenny"
+    __contributor__ = "evanroby"
 
     def __init__(self, bot):
         super().__init__()
@@ -75,6 +83,16 @@ class AIUser(
             self.override_prompt_start_time[test_guild] = datetime.now()
 
         self.random_message_trigger.start()
+
+    def format_help_for_context(self, ctx):
+        pre_processed = super().format_help_for_context(ctx)
+        n = "\n" if "\n\n" not in pre_processed else ""
+        return (
+            f"{pre_processed}{n}\n"
+            f"{_('Cog Version')}: {self.__version__}\n"
+            f"{_('Cog Author')}: {self.__author__}\n"
+            f"{_('Cog Contributor')}: {self.__contributor__}"
+        )
 
     async def cog_unload(self):
         if self.openai_client:

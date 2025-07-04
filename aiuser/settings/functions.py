@@ -1,4 +1,3 @@
-
 import discord
 from redbot.core import checks, commands
 
@@ -9,9 +8,9 @@ class FunctionCallingSettings(MixinMeta):
     @aiuser.group()
     @checks.is_owner()
     async def functions(self, _):
-        """ Settings to manage function calling
+        """Settings to manage function calling
 
-            (All subcommands are per server)
+        (All subcommands are per server)
         """
         pass
 
@@ -39,15 +38,17 @@ class FunctionCallingSettings(MixinMeta):
 
     @functions.command(name="location")
     async def set_location(self, ctx: commands.Context, latitude: float, longitude: float):
-        """ Set the location where the bot will canonically be in
+        """Set the location where the bot will canonically be in
 
-            Used for some functions.
+        Used for some functions.
 
-            **Arguments**
-            - `latitude` decimal latitude
-            - `longitude` decimal longitude
+        **Arguments**
+        - `latitude` decimal latitude
+        - `longitude` decimal longitude
         """
-        await self.config.guild(ctx.guild).function_calling_default_location.set([latitude, longitude])
+        await self.config.guild(ctx.guild).function_calling_default_location.set(
+            [latitude, longitude]
+        )
         embed = discord.Embed(
             title="Location now set to:",
             description=f"{latitude}, {longitude}",
@@ -55,7 +56,9 @@ class FunctionCallingSettings(MixinMeta):
         )
         await ctx.send(embed=embed)
 
-    async def toggle_function_helper(self, ctx: commands.Context, tool_names: list, embed_title: str):
+    async def toggle_function_helper(
+        self, ctx: commands.Context, tool_names: list, embed_title: str
+    ):
         enabled_tools: list = await self.config.guild(ctx.guild).function_calling_functions()
 
         if tool_names[0] not in enabled_tools:
@@ -75,9 +78,11 @@ class FunctionCallingSettings(MixinMeta):
 
     @functions.command(name="search")
     async def toggle_search_function(self, ctx: commands.Context):
-        """ Enable/disable searching/scraping the Internet using Serper.dev """
-        if (not (await self.bot.get_shared_api_tokens("serper")).get("api_key")):
-            return await ctx.send(f"Serper.dev key not set! Set it using `{ctx.clean_prefix}set api serper api_key,APIKEY`.")
+        """Enable/disable searching/scraping the Internet using Serper.dev"""
+        if not (await self.bot.get_shared_api_tokens("serper")).get("api_key"):
+            return await ctx.send(
+                f"Serper.dev key not set! Set it using `{ctx.clean_prefix}set api serper api_key,APIKEY`."
+            )
 
         from aiuser.functions.search.tool_call import SearchToolCall
 
@@ -100,9 +105,9 @@ class FunctionCallingSettings(MixinMeta):
 
     @functions.command(name="weather")
     async def toggle_weather_function(self, ctx: commands.Context):
-        """ Enable/disable a group of functions to getting weather using Open-Meteo
+        """Enable/disable a group of functions to getting weather using Open-Meteo
 
-            See [Open-Meteo terms](https://open-meteo.com/en/terms) for their free API
+        See [Open-Meteo terms](https://open-meteo.com/en/terms) for their free API
         """
         from aiuser.functions.weather.tool_call import (
             IsDaytimeToolCall,
@@ -110,8 +115,11 @@ class FunctionCallingSettings(MixinMeta):
             LocationWeatherToolCall,
         )
 
-        tool_names = [IsDaytimeToolCall.function_name,
-                      LocalWeatherToolCall.function_name, LocationWeatherToolCall.function_name]
+        tool_names = [
+            IsDaytimeToolCall.function_name,
+            LocalWeatherToolCall.function_name,
+            LocationWeatherToolCall.function_name,
+        ]
 
         await self.toggle_function_helper(ctx, tool_names, "Weather")
 
@@ -130,11 +138,13 @@ class FunctionCallingSettings(MixinMeta):
 
     @functions.command(name="wolframalpha")
     async def toggle_wolfram_alpha_function(self, ctx: commands.Context):
-        """ Enable/disable the functionality for the LLM to ask Wolfram Alpha about math, exchange rates, or the weather."""
+        """Enable/disable the functionality for the LLM to ask Wolfram Alpha about math, exchange rates, or the weather."""
         from aiuser.functions.wolframalpha.tool_call import WolframAlphaFunctionCall
 
-        if (not (await self.bot.get_shared_api_tokens("wolfram_alpha")).get("app_id")):
-            return await ctx.send(f"Wolfram Alpha app id not set! Set it using `{ctx.clean_prefix}set api wolfram_alpha app_id,APPID`.")
+        if not (await self.bot.get_shared_api_tokens("wolfram_alpha")).get("app_id"):
+            return await ctx.send(
+                f"Wolfram Alpha app id not set! Set it using `{ctx.clean_prefix}set api wolfram_alpha app_id,APPID`."
+            )
 
         tool_names = [WolframAlphaFunctionCall.function_name]
 

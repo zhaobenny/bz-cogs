@@ -59,7 +59,7 @@ async def format_variables(ctx: commands.Context, text: str):
 
     serveremojis = [str(e) for e in ctx.message.guild.emojis]
     random.shuffle(serveremojis)
-    serveremojis = ' '.join(serveremojis)
+    serveremojis = " ".join(serveremojis)
 
     try:
         res = text.format(
@@ -107,18 +107,18 @@ def is_using_openrouter_endpoint(client: AsyncOpenAI):
 
 
 async def get_enabled_tools(config: Config, ctx: commands.Context) -> list:
-    functions_dir = Path(__file__).parent.parent / 'functions'
+    functions_dir = Path(__file__).parent.parent / "functions"
 
     for item in functions_dir.iterdir():
-        if item.is_dir() and not item.name.startswith('__'):
+        if item.is_dir() and not item.name.startswith("__"):
             try:
-                importlib.import_module(f'aiuser.functions.{item.name}.tool_call')
+                importlib.import_module(f"aiuser.functions.{item.name}.tool_call")
             except ImportError:
                 continue
 
     enabled_tools = await config.guild(ctx.guild).function_calling_functions()
     tool_classes = {cls.function_name: cls for cls in ToolCall.__subclasses__()}
 
-    return [tool_classes[name](config=config, ctx=ctx)
-            for name in enabled_tools
-            if name in tool_classes]
+    return [
+        tool_classes[name](config=config, ctx=ctx) for name in enabled_tools if name in tool_classes
+    ]

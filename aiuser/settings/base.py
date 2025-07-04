@@ -30,6 +30,7 @@ from aiuser.utils.utilities import (
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
+
 class Settings(
     PromptSettings,
     ImageScanSettings,
@@ -77,9 +78,7 @@ class Settings(
         channels = [f"<#{channel_id}>" for channel_id in whitelist]
         embeds = []
 
-        main_embed = discord.Embed(
-            title="AI User Settings", color=await ctx.embed_color()
-        )
+        main_embed = discord.Embed(title="AI User Settings", color=await ctx.embed_color())
 
         main_embed.add_field(name="Model", inline=True, value=f"`{config['model']}`")
         main_embed.add_field(
@@ -120,8 +119,7 @@ class Settings(
             endpoint_text = "Using an custom endpoint"
         else:
             endpoint_text = "Using the official [OpenAI](https://openai.com/) endpoint"
-        main_embed.add_field(name="LLM Endpoint",
-                             inline=True, value=endpoint_text)
+        main_embed.add_field(name="LLM Endpoint", inline=True, value=endpoint_text)
 
         main_embed.add_field(
             name="",
@@ -147,9 +145,7 @@ class Settings(
             value="",
         )
 
-        main_embed.add_field(
-            name="Scan Images", inline=True, value=f"`{config['scan_images']}`"
-        )
+        main_embed.add_field(name="Scan Images", inline=True, value=f"`{config['scan_images']}`")
         main_embed.add_field(
             name="Scan Image Mode", inline=True, value=f"`{config['scan_images_mode']}`"
         )
@@ -160,7 +156,8 @@ class Settings(
         )
 
         main_embed.add_field(
-            name="Image Requests", value=f"`{config['image_requests']}`", inline=True)
+            name="Image Requests", value=f"`{config['image_requests']}`", inline=True
+        )
 
         main_embed.add_field(
             name="Image Req. Less Calls",
@@ -174,8 +171,7 @@ class Settings(
             inline=True,
         )
 
-        whitelisted_trigger = bool(
-            config["members_whitelist"] or config["roles_whitelist"])
+        whitelisted_trigger = bool(config["members_whitelist"] or config["roles_whitelist"])
 
         main_embed.add_field(
             name="Only Whitelist Trigger",
@@ -186,28 +182,22 @@ class Settings(
         main_embed.add_field(
             name="Whitelisted Members",
             inline=True,
-            value=" ".join(
-                [f"<@{member_id}>" for member_id in config["members_whitelist"]]
-            ) or "`None`",
+            value=" ".join([f"<@{member_id}>" for member_id in config["members_whitelist"]])
+            or "`None`",
         )
 
         main_embed.add_field(
             name="Whitelisted Roles",
             inline=True,
-            value=" ".join(
-                [f"<@&{role_id}>" for role_id in config["roles_whitelist"]]
-            ) or "`None`",
+            value=" ".join([f"<@&{role_id}>" for role_id in config["roles_whitelist"]]) or "`None`",
         )
 
         removelist_regexes = config["removelist_regexes"]
         regexes_num = 0
         if removelist_regexes is not None:
             regexes_num = len(removelist_regexes)
-        main_embed.add_field(
-            name="Remove list", value=f"`{regexes_num}` regexes set"
-        )
-        main_embed.add_field(name="Ignore Regex",
-                             value=f"`{config['ignore_regex']}`")
+        main_embed.add_field(name="Remove list", value=f"`{regexes_num}` regexes set")
+        main_embed.add_field(name="Ignore Regex", value=f"`{config['ignore_regex']}`")
         main_embed.add_field(
             name="Public Forget Command", inline=True, value=f"`{config['public_forget']}`"
         )
@@ -231,7 +221,12 @@ class Settings(
 
     @aiuser.command()
     @checks.is_owner()
-    async def percent(self, ctx: commands.Context, mention: Optional[COMPATIBLE_MENTIONS], percent: Optional[float]):
+    async def percent(
+        self,
+        ctx: commands.Context,
+        mention: Optional[COMPATIBLE_MENTIONS],
+        percent: Optional[float],
+    ):
         """Change the bot's response chance for a server (or a provided user, role, and channel)
 
         If multiple percentage can be used, the most specific percentage will be used, eg. it will go for: member > role > channel > server
@@ -278,9 +273,7 @@ class Settings(
         new_whitelist.append(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         self.channels_whitelist[ctx.guild.id] = new_whitelist
-        embed = discord.Embed(
-            title="The server whitelist is now:", color=await ctx.embed_color()
-        )
+        embed = discord.Embed(title="The server whitelist is now:", color=await ctx.embed_color())
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.description = "\n".join(channels) if channels else "None"
         return await ctx.send(embed=embed)
@@ -305,9 +298,7 @@ class Settings(
         new_whitelist.remove(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         self.channels_whitelist[ctx.guild.id] = new_whitelist
-        embed = discord.Embed(
-            title="The server whitelist is now:", color=await ctx.embed_color()
-        )
+        embed = discord.Embed(title="The server whitelist is now:", color=await ctx.embed_color())
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.description = "\n".join(channels) if channels else "None"
         return await ctx.send(embed=embed)
@@ -342,13 +333,14 @@ class Settings(
         )
 
         if await self.config.guild(ctx.guild).function_calling():
-            embed.set_footer(text="⚠️ Function calling is enabled - ensure selected model supports it")
+            embed.set_footer(
+                text="⚠️ Function calling is enabled - ensure selected model supports it"
+            )
 
         return await ctx.send(embed=embed)
 
     async def _paginate_models(self, ctx, models):
-        pagified_models = [models[i: i + 10]
-                           for i in range(0, len(models), 10)]
+        pagified_models = [models[i : i + 10] for i in range(0, len(models), 10)]
         menu_pages = []
 
         for models_page in pagified_models:
@@ -356,8 +348,7 @@ class Settings(
                 title="Available Models",
                 color=await ctx.embed_color(),
             )
-            embed.description = "\n".join(
-                [f"`{model}`" for model in models_page])
+            embed.description = "\n".join([f"`{model}`" for model in models_page])
             menu_pages.append(embed)
 
         if is_using_openrouter_endpoint(self.openai_client):
@@ -371,7 +362,7 @@ class Settings(
             return await ctx.send(embed=menu_pages[0])
         for i, page in enumerate(menu_pages):
             page.set_footer(text=f"Page {i+1} of {len(menu_pages)}")
-        return (await SimpleMenu(menu_pages).start(ctx))
+        return await SimpleMenu(menu_pages).start(ctx)
 
     @aiuser.command()
     async def optin(self, ctx: commands.Context):

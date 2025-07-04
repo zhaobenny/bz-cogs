@@ -21,16 +21,15 @@ class ResponseSettings(MixinMeta):
     @aiuser.group(name="response")
     @checks.admin_or_permissions(manage_guild=True)
     async def response(self, _):
-        """ Change settings used for generated responses
+        """Change settings used for generated responses
 
-            (All subcommands are per server)
+        (All subcommands are per server)
         """
         pass
 
     @response.group(name="removelist")
     async def removelist(self, _):
-        """ Manage the list of regex patterns to remove from responses
-        """
+        """Manage the list of regex patterns to remove from responses"""
 
     @removelist.command(name="add")
     async def removelist_add(self, ctx: commands.Context, *, regex_pattern: str):
@@ -47,7 +46,9 @@ class ResponseSettings(MixinMeta):
             await self.config.guild(ctx.guild).removelist_regexes.set(removelist_regexes)
             await ctx.send(f"The regex pattern `{regex_pattern}` has been added to the list.")
         else:
-            await ctx.send(f"The regex pattern `{regex_pattern}` is already in the list of regex patterns.")
+            await ctx.send(
+                f"The regex pattern `{regex_pattern}` is already in the list of regex patterns."
+            )
 
     @removelist.command(name="remove")
     async def removelist_remove(self, ctx: commands.Context, *, number: int):
@@ -61,7 +62,7 @@ class ResponseSettings(MixinMeta):
 
     @removelist.command(name="show")
     async def removelist_show(self, ctx: commands.Context):
-        """Show the current regex patterns of strings to removed from responses """
+        """Show the current regex patterns of strings to removed from responses"""
         removelist_regexes = await self.config.guild(ctx.guild).removelist_regexes()
         if not removelist_regexes:
             return await ctx.send("The list of regex patterns is empty.")
@@ -74,7 +75,8 @@ class ResponseSettings(MixinMeta):
             page = discord.Embed(
                 title=f"List of regexes patterns to remove in bot responses in {ctx.guild.name}",
                 description=box(text),
-                color=await ctx.embed_color())
+                color=await ctx.embed_color(),
+            )
             pages.append(page)
 
         if len(pages) == 1:
@@ -87,23 +89,30 @@ class ResponseSettings(MixinMeta):
 
     @removelist.command(name="reset")
     async def removelist_reset(self, ctx: commands.Context):
-        """Reset the list of regexes to default """
+        """Reset the list of regexes to default"""
         embed = discord.Embed(
             title="Are you sure?",
             description="This will reset this server's removelist to default.",
-            color=await ctx.embed_color())
+            color=await ctx.embed_color(),
+        )
         confirm = await ctx.send(embed=embed)
         start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
         pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
         try:
             await ctx.bot.wait_for("reaction_add", timeout=10.0, check=pred)
         except asyncio.TimeoutError:
-            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+            return await confirm.edit(
+                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
+            )
         if pred.result is False:
-            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+            return await confirm.edit(
+                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
+            )
         else:
             await self.config.guild(ctx.guild).removelist_regexes.set(DEFAULT_REMOVE_PATTERNS)
-            return await confirm.edit(embed=discord.Embed(title="Removelist reset.", color=await ctx.embed_color()))
+            return await confirm.edit(
+                embed=discord.Embed(title="Removelist reset.", color=await ctx.embed_color())
+            )
 
     @response.command(name="toggleoptinembed")
     async def toggle_optin_embed(self, ctx):
@@ -117,7 +126,7 @@ class ResponseSettings(MixinMeta):
             embed.add_field(
                 name=":warning: Warning :warning:",
                 value="Users not yet opt-in/out will be unaware their messages are not being processed",
-                inline=False
+                inline=False,
             )
 
         await ctx.send(embed=embed)
@@ -126,18 +135,18 @@ class ResponseSettings(MixinMeta):
     @checks.admin_or_permissions(manage_guild=True)
     async def weights(self, _):
         """
-            Bias the LLM for/against certain words (tokens)
+        Bias the LLM for/against certain words (tokens)
 
-            See [here](https://help.openai.com/en/articles/5247780-using-logit-bias-to-define-token-probability) for additional info.
+        See [here](https://help.openai.com/en/articles/5247780-using-logit-bias-to-define-token-probability) for additional info.
 
-            (All subcommands are per server)
+        (All subcommands are per server)
         """
         pass
 
     @weights.command(name="list", aliases=["show"])
     async def show_weight(self, ctx: commands.Context):
         """
-            Show weights
+        Show weights
         """
         weights = await self.config.guild(ctx.guild).weights()
         weights = {} if weights is None else json.loads(weights)
@@ -157,27 +166,31 @@ class ResponseSettings(MixinMeta):
     @weights.command(name="add")
     async def set_weight(self, ctx: commands.Context, word: str, weight: int):
         """
-            Sets weight for a specific word
+        Sets weight for a specific word
 
-            Will also use all possible tokens for a word when setting weight
-            See [https://platform.openai.com/tokenizer](https://platform.openai.com/tokenizer) for detailed text to token conversion.
+        Will also use all possible tokens for a word when setting weight
+        See [https://platform.openai.com/tokenizer](https://platform.openai.com/tokenizer) for detailed text to token conversion.
 
-            *Arguments*
-            - `word` The word to set weight for
-            - `weight` The weight to set (`-100` to `100`)
+        *Arguments*
+        - `word` The word to set weight for
+        - `weight` The weight to set (`-100` to `100`)
         """
 
         custom_parameters = await self.config.guild(ctx.guild).parameters()
         if custom_parameters:
             custom_parameters = json.loads(custom_parameters)
             if custom_parameters.get("logit_bias"):
-                return await ctx.send(":warning: Logit bias already set. Please remove logit bias from custom parameters first.")
+                return await ctx.send(
+                    ":warning: Logit bias already set. Please remove logit bias from custom parameters first."
+                )
 
         model = await self.config.guild(ctx.guild).model()
         try:
             encoding = tiktoken.encoding_for_model(model)
         except KeyError:
-            return await ctx.send(":warning: Unsupported model, please use custom parameters instead.")
+            return await ctx.send(
+                ":warning: Unsupported model, please use custom parameters instead."
+            )
 
         if weight < -100 or weight > 100:
             return await ctx.send(":warning: Weight must be between -100 and 100")
@@ -186,13 +199,12 @@ class ResponseSettings(MixinMeta):
         if len(tokens) > 1:
             token_str = [encoding.decode([token]) for token in tokens]
             embed = discord.Embed(
-                title=f":warning: Unable to set weight for `{word}`",
-                color=await ctx.embed_color()
+                title=f":warning: Unable to set weight for `{word}`", color=await ctx.embed_color()
             )
             embed.add_field(
                 name=f"`{word}` is multiple tokens.\nThis means in order to modify the weight for `{word}`, all the following strings will need separate weights:",
                 value=f"```{token_str}```",
-                inline=False
+                inline=False,
             )
             embed.add_field(
                 name="Helpful Resource",
@@ -207,8 +219,7 @@ class ResponseSettings(MixinMeta):
                 weights[token] = weight
             await self.config.guild(ctx.guild).weights.set(json.dumps(weights))
             embed = discord.Embed(
-                title=f"Weight for `{word}` set to `{weight}`",
-                color=await ctx.embed_color()
+                title=f"Weight for `{word}` set to `{weight}`", color=await ctx.embed_color()
             )
             return await ctx.send(embed=embed)
 
@@ -232,21 +243,20 @@ class ResponseSettings(MixinMeta):
             if str(token[0]) not in weights.keys():
                 return await ctx.send(":warning: Word not found in weights.")
         else:
-            return await ctx.send(":warning: Word is multiple tokens? Please check [p]aiuser response weights list")
+            return await ctx.send(
+                ":warning: Word is multiple tokens? Please check [p]aiuser response weights list"
+            )
 
         tokens = await self.get_all_tokens(word, encoding)
         for token in tokens:
             weights.pop(str(token))
         await self.config.guild(ctx.guild).weights.set(json.dumps(weights))
-        embed = discord.Embed(
-            title=f"Weight for `{word}` removed.",
-            color=await ctx.embed_color()
-        )
+        embed = discord.Embed(title=f"Weight for `{word}` removed.", color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
     async def get_all_tokens(self, word: str, encoding: tiktoken.Encoding):
         """
-            Returns all possible tokens for a word
+        Returns all possible tokens for a word
         """
         tokens = set()
 
@@ -268,18 +278,18 @@ class ResponseSettings(MixinMeta):
     @response.command(name="parameters")
     @checks.is_owner()
     async def set_custom_parameters(self, ctx: commands.Context, *, json_block: str):
-        """ Set custom parameters for an endpoint using a JSON code block
+        """Set custom parameters for an endpoint using a JSON code block
 
-            To reset parameters to default, use `[p]aiuser response parameters reset`
-            To show current parameters, use `[p]aiuser response parameters show`
+        To reset parameters to default, use `[p]aiuser response parameters reset`
+        To show current parameters, use `[p]aiuser response parameters show`
 
-            Example command:
-            `[p]aiuser response parameters ```{"frequency_penalty": 2.0, "max_tokens": 200}``` `
+        Example command:
+        `[p]aiuser response parameters ```{"frequency_penalty": 2.0, "max_tokens": 200}``` `
 
-            See [here](https://platform.openai.com/docs/api-reference/chat/create) for possible parameters
-            Some parameters are blocked.
+        See [here](https://platform.openai.com/docs/api-reference/chat/create) for possible parameters
+        Some parameters are blocked.
         """
-        if json_block in ['reset', 'clear']:
+        if json_block in ["reset", "clear"]:
             await self.config.guild(ctx.guild).parameters.set(None)
             return await ctx.send("Parameters reset to default")
 
@@ -287,7 +297,7 @@ class ResponseSettings(MixinMeta):
         parameters = await self.config.guild(ctx.guild).parameters()
         data = {} if parameters is None else json.loads(parameters)
 
-        if json_block not in ['show', 'list']:
+        if json_block not in ["show", "list"]:
             if not json_block.startswith("```"):
                 return await ctx.send(":warning: Please use a code block (`` eg. ```json ``)")
 
@@ -303,7 +313,9 @@ class ResponseSettings(MixinMeta):
             invalid_keys = [key for key in data.keys() if key in blacklist]
             if invalid_keys:
                 invalid_keys_str = ", ".join([f"`{key}`" for key in invalid_keys])
-                return await ctx.send(f":warning: Invalid JSON! Please remove \"{invalid_keys_str}\" key from your JSON.")
+                return await ctx.send(
+                    f':warning: Invalid JSON! Please remove "{invalid_keys_str}" key from your JSON.'
+                )
 
             if data.get("logit_bias") and await self.config(ctx.guild).weights():
                 embed = discord.Embed(
@@ -331,9 +343,11 @@ class ResponseSettings(MixinMeta):
             embed.add_field(
                 name=":warning: Warning :warning:",
                 value="No checks were done to see if parameters were compatible\n----------------------------------------",
-                inline=False
+                inline=False,
             )
             for key, value in data.items():
-                embed.add_field(name=key, value=f"```{json.dumps(value, indent=4)}```", inline=False)
+                embed.add_field(
+                    name=key, value=f"```{json.dumps(value, indent=4)}```", inline=False
+                )
 
         await ctx.send(embed=embed)

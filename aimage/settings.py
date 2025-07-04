@@ -18,7 +18,7 @@ class Settings(MixinMeta):
     @checks.bot_has_permissions(embed_links=True, add_reactions=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def aimage(self, _: commands.Context):
-        """ Manage AI Image cog settings for this server """
+        """Manage AI Image cog settings for this server"""
         pass
 
     @aimage.command(name="config")
@@ -54,8 +54,7 @@ class Settings(MixinMeta):
             blacklist = blacklist[:1000] + "..."
         elif not blacklist:
             blacklist = "None"
-        embed.add_field(name="Blacklisted words",
-                        value=f"`{blacklist}`", inline=False)
+        embed.add_field(name="Blacklisted words", value=f"`{blacklist}`", inline=False)
 
         return await ctx.send(embed=embed)
 
@@ -69,16 +68,20 @@ class Settings(MixinMeta):
         elif not endpoint.endswith("/"):
             endpoint += "/"
 
-        valid_endings = ['/sdapi/v1/', '/api/']
+        valid_endings = ["/sdapi/v1/", "/api/"]
 
         is_valid = endpoint and any(endpoint.endswith(ending) for ending in valid_endings)
         if endpoint and not is_valid:
-            await ctx.send(f"⚠️ Endpoint URL does not end with `/sdapi/v1/` or `/api/`. Continuing anyways...")
+            await ctx.send(
+                f"⚠️ Endpoint URL does not end with `/sdapi/v1/` or `/api/`. Continuing anyways..."
+            )
 
         await self.config.guild(ctx.guild).endpoint.set(endpoint)
         await self.config.guild(ctx.guild).api_type.set(API_Type.AUTOMATIC1111.value)
 
-        msg = await ctx.send("Endpoint set. Select what type of API this endpoint is ⤵️ ", view=APITypeView(self, ctx))
+        msg = await ctx.send(
+            "Endpoint set. Select what type of API this endpoint is ⤵️ ", view=APITypeView(self, ctx)
+        )
         asyncio.create_task(delete_button_after(msg))
 
     @aimage.command(name="nsfw")
@@ -94,7 +97,9 @@ class Settings(MixinMeta):
             data = self.autocomplete_cache[ctx.guild.id].get("scripts") or []
             await ctx.message.remove_reaction("🔄", ctx.me)
             if "censorscript" not in data:
-                return await ctx.send(":warning: Compatible censor script is not installed in A1111, install [CensorScript.py](<https://github.com/IOMisaka/sdapi-scripts>).")
+                return await ctx.send(
+                    ":warning: Compatible censor script is not installed in A1111, install [CensorScript.py](<https://github.com/IOMisaka/sdapi-scripts>)."
+                )
 
         await self.config.guild(ctx.guild).nsfw.set(not nsfw)
         await ctx.send(f"NSFW filtering is now {'`disabled`' if not nsfw else '`enabled`'}")
@@ -181,7 +186,7 @@ class Settings(MixinMeta):
         await self._update_autocomplete_cache(ctx)
         data = self.autocomplete_cache[ctx.guild.id].get("checkpoints") or []
         await ctx.message.remove_reaction("🔄", ctx.me)
-        
+
         if checkpoint not in data:
             checkpoints = []
 
@@ -189,10 +194,12 @@ class Settings(MixinMeta):
             for cp in data:
                 if len(cp) + 2 <= remaining_length:
                     checkpoints.append(cp)
-                    remaining_length -= (len(cp) + 2)
+                    remaining_length -= len(cp) + 2
                 else:
                     break
-            return await ctx.send(f":warning: Invalid checkpoint. Pick one of these:`\n{', '.join(checkpoints)}`")
+            return await ctx.send(
+                f":warning: Invalid checkpoint. Pick one of these:`\n{', '.join(checkpoints)}`"
+            )
 
         await self.config.guild(ctx.guild).checkpoint.set(checkpoint)
         await ctx.tick("✅ Default checkpoint updated.")
@@ -213,7 +220,7 @@ class Settings(MixinMeta):
             for vae in data:
                 if len(vae) + 2 <= remaining_length:
                     vaes.append(vae)
-                    remaining_length -= (len(vae) + 2)
+                    remaining_length -= len(vae) + 2
                 else:
                     break
             return await ctx.send(f":warning: Invalid vae. Pick one of these:\n`{', '.join(vaes)}`")
@@ -224,7 +231,7 @@ class Settings(MixinMeta):
     @aimage.command(name="auth")
     async def auth(self, ctx: commands.Context, *, auth: str):
         """
-        Sets the account from A1111 host flag `--api-auth` in this format `username:password` 
+        Sets the account from A1111 host flag `--api-auth` in this format `username:password`
         """
         try:
             await ctx.message.delete()
@@ -245,7 +252,9 @@ class Settings(MixinMeta):
             data = self.autocomplete_cache[ctx.guild.id].get("scripts") or []
             await ctx.message.remove_reaction("🔄", ctx.me)
             if "adetailer" not in data:
-                return await ctx.send(":warning: The ADetailer script is not installed in A1111, install [this.](<https://github.com/Bing-su/adetailer>)")
+                return await ctx.send(
+                    ":warning: The ADetailer script is not installed in A1111, install [this.](<https://github.com/Bing-su/adetailer>)"
+                )
 
         await self.config.guild(ctx.guild).adetailer.set(new)
         await ctx.send(f"ADetailer is now {'`disabled`' if not new else '`enabled`'}")
@@ -262,7 +271,9 @@ class Settings(MixinMeta):
             data = self.autocomplete_cache[ctx.guild.id].get("scripts") or []
             await ctx.message.remove_reaction("🔄", ctx.me)
             if "tiled vae" not in data:
-                return await ctx.send(":warning: The Tiled VAE script is not installed in A1111, install [this.](<https://github.com/pkuliyi2015/multidiffusion-upscaler-for-automatic1111>)")
+                return await ctx.send(
+                    ":warning: The Tiled VAE script is not installed in A1111, install [this.](<https://github.com/pkuliyi2015/multidiffusion-upscaler-for-automatic1111>)"
+                )
 
         await self.config.guild(ctx.guild).tiledvae.set(new)
         await ctx.send(f"Tiled VAE is now {'`disabled`' if not new else '`enabled`'}")
@@ -324,9 +335,8 @@ class Settings(MixinMeta):
         pages = []
 
         for i in range(0, len(current_words), 10):
-            embed = discord.Embed(title="Blacklisted words",
-                                  color=await ctx.embed_color())
-            embed.description = "\n".join(current_words[i:i+10])
+            embed = discord.Embed(title="Blacklisted words", color=await ctx.embed_color())
+            embed.description = "\n".join(current_words[i : i + 10])
             pages.append(embed)
 
         if len(pages) == 1:
@@ -350,14 +360,13 @@ class Settings(MixinMeta):
     @checks.bot_in_a_guild()
     async def forcesync(self, ctx: commands.Context):
         """
-        Resync slash commands / image generators 
+        Resync slash commands / image generators
 
         (Mainly a debug tool)
         """
         await ctx.message.add_reaction("🔄")
         await self._update_autocomplete_cache(ctx)
-        self.bot.tree.copy_global_to(
-            guild=discord.Object(id=ctx.guild.id))
+        self.bot.tree.copy_global_to(guild=discord.Object(id=ctx.guild.id))
         synced = await ctx.bot.tree.sync(guild=ctx.guild)
         await ctx.message.remove_reaction("🔄", ctx.me)
         await ctx.send(f"Force synced {len(synced)} commands")

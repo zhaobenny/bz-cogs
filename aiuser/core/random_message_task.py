@@ -39,15 +39,22 @@ class RandomMessageTask(MixinMeta):
             topics = await self.config.guild(guild).random_messages_prompts() or None
             if not topics:
                 return logger.warning(
-                    f"No random message topics were found in {guild.name}, skipping")
+                    f"No random message topics were found in {guild.name}, skipping"
+                )
 
-            prompt = await self.config.channel(channel).custom_text_prompt() or await self.config.guild(guild).custom_text_prompt() or await self.config.custom_text_prompt() or DEFAULT_PROMPT
+            prompt = (
+                await self.config.channel(channel).custom_text_prompt()
+                or await self.config.guild(guild).custom_text_prompt()
+                or await self.config.custom_text_prompt()
+                or DEFAULT_PROMPT
+            )
             messages_list = await create_messages_list(self, ctx, prompt=prompt, history=False)
-            topic = await format_variables(
-                ctx, topics[random.randint(0, len(topics) - 1)])
-            logger.debug(
-                f"Sending random message to #{channel.name} at {guild.name}")
-            await messages_list.add_system(f"Using the persona above, follow these instructions: {topic}", index=len(messages_list) + 1)
+            topic = await format_variables(ctx, topics[random.randint(0, len(topics) - 1)])
+            logger.debug(f"Sending random message to #{channel.name} at {guild.name}")
+            await messages_list.add_system(
+                f"Using the persona above, follow these instructions: {topic}",
+                index=len(messages_list) + 1,
+            )
             messages_list.can_reply = False
 
             return await dispatch_response(self, ctx, messages_list)
@@ -58,8 +65,7 @@ class RandomMessageTask(MixinMeta):
         if not channels:
             raise ValueError(f"Channels are empty in guild {guild.name}")
 
-        channel = guild.get_channel(
-            channels[random.randint(0, len(channels) - 1)])
+        channel = guild.get_channel(channels[random.randint(0, len(channels) - 1)])
 
         if not channel:
             raise ValueError(f"Channel not found in guild {guild.name}")
@@ -88,10 +94,11 @@ class RandomMessageTask(MixinMeta):
             # skip spamming channel with random event messages
             return False
 
-        last_created = last.created_at.replace(
-            tzinfo=datetime.timezone.utc)
+        last_created = last.created_at.replace(tzinfo=datetime.timezone.utc)
 
-        if (abs((datetime.datetime.now(datetime.timezone.utc) - last_created).total_seconds())) < 3600:
+        if (
+            abs((datetime.datetime.now(datetime.timezone.utc) - last_created).total_seconds())
+        ) < 3600:
             # only sent to channels with 1 hour since last message
             return False
 

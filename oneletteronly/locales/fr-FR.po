@@ -1,0 +1,48 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: axion\n"
+"POT-Creation-Date: 2025-06-09 20:41+0200\n"
+"PO-Revision-Date: 2025-06-10 14:59\n"
+"Last-Translator: \n"
+"Language-Team: French\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: redgettext 3.4.2\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Crowdin-Project: axion\n"
+"X-Crowdin-Project-ID: 798154\n"
+"X-Crowdin-Language: fr\n"
+"X-Crowdin-File: messages.pot\n"
+"X-Crowdin-File-ID: 8\n"
+"Language: fr_FR\n"
+
+#: oneletteronly\oneletteronly.py:10
+msgid "Changes new user's nickname to first letter of nickname"
+msgstr "Change le surnom des nouveaux utilisateurs en la première lettre du surnom"
+
+#: oneletteronly\oneletteronly.py:29
+msgid "Cog Version"
+msgstr "Version du Cog"
+
+#: oneletteronly\oneletteronly.py:30
+msgid "Cog Author"
+msgstr "Auteur du Cog"
+
+#: oneletteronly\oneletteronly.py:31
+msgid "Cog Contributor"
+msgstr "Contributeur du Cog"
+
+#: oneletteronly\oneletteronly.py:39
+msgid ""
+"Toggle if the bot should change new user's nickname to first letter of "
+"nickname"
+msgstr "Active/désactive si le bot doit changer le surnom des nouveaux utilisateurs en la première lettre du surnom"
+
+#: oneletteronly\oneletteronly.py:46
+msgid "Disabled"
+msgstr "Désactivé"
+
+#: oneletteronly\oneletteronly.py:48
+msgid "Enabled"
+msgstr "Activé"

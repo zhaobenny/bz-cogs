@@ -13,7 +13,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class RunPodGenerator(ImageGenerator):
-    STATUS_COMPLETED = 'COMPLETED'
+    STATUS_COMPLETED = "COMPLETED"
 
     def __init__(self, ctx: commands.Context, config: Config, apikey: str):
         self.apikey = apikey
@@ -22,23 +22,20 @@ class RunPodGenerator(ImageGenerator):
     async def _prepare_payload(self, caption):
         parameters = await self.config.guild(self.ctx.guild).image_requests_parameters()
         parameters = json.loads(parameters) if parameters else {}
-        prompt = (
-            await self.config.guild(self.ctx.guild).image_requests_preprompt()
-            + " "
-            + caption
-        )
+        prompt = await self.config.guild(self.ctx.guild).image_requests_preprompt() + " " + caption
         parameters["prompt"] = prompt
         return {
             "input": {
-                "api": {
-                    "method": "POST",
-                    "endpoint": "/sdapi/v1/txt2img"
-                },
-                "payload": parameters
+                "api": {"method": "POST", "endpoint": "/sdapi/v1/txt2img"},
+                "payload": parameters,
             }
         }
 
-    @retry(wait=wait_random(min=2, max=3), stop=stop_after_attempt(2) | stop_after_delay(190), reraise=True)
+    @retry(
+        wait=wait_random(min=2, max=3),
+        stop=stop_after_attempt(2) | stop_after_delay(190),
+        reraise=True,
+    )
     async def generate_image(self, caption):
         url = await self.config.guild(self.ctx.guild).image_requests_endpoint()
 
@@ -49,7 +46,8 @@ class RunPodGenerator(ImageGenerator):
         headers = {"Authorization": "Bearer " + self.apikey}
 
         logger.debug(
-            f"Sending SD request to runpod-worker-a1111 Runpod with payload: {json.dumps(payload, indent=4)}")
+            f"Sending SD request to runpod-worker-a1111 Runpod with payload: {json.dumps(payload, indent=4)}"
+        )
 
         image = await self._post_request(url, headers, payload)
 
@@ -62,7 +60,7 @@ class RunPodGenerator(ImageGenerator):
                 response.raise_for_status()
 
                 response = await response.json()
-                if response['status'] != self.STATUS_COMPLETED:
+                if response["status"] != self.STATUS_COMPLETED:
                     raise Exception(f"Invalid response from Runpod: {response['status']}")
 
                 image_data = base64.b64decode(response["output"]["images"][0])

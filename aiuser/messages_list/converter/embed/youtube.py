@@ -1,4 +1,3 @@
-
 import logging
 
 import aiohttp
@@ -25,7 +24,7 @@ async def format_youtube_embed(api_key: str, message: Message):
         logger.error(f"Failed request to Youtube API", exc_info=True)
         return None
 
-    return (f'User "{author}" sent: [Link to Youtube video with title "{video_title}" and description "{description}" from channel "{channel_title}"]')
+    return f'User "{author}" sent: [Link to Youtube video with title "{video_title}" and description "{description}" from channel "{channel_title}"]'
 
 
 async def get_video_id(url):
@@ -37,10 +36,7 @@ async def get_video_id(url):
         return None
 
 
-@retry(
-    wait=wait_random(min=1, max=2), stop=(stop_after_attempt(3)),
-    reraise=True
-)
+@retry(wait=wait_random(min=1, max=2), stop=(stop_after_attempt(3)), reraise=True)
 async def get_video_details(api_key, video_id):
     url = YOUTUBE_API_URL.format(video_id, api_key)
     async with aiohttp.ClientSession() as session:

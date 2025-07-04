@@ -32,6 +32,7 @@ async def get_image_generator(ctx: commands.Context, config: config):
         return NemusonaGenerator(ctx, config)
     elif sd_endpoint.startswith("https://perchance.org/ai-text-to-image-generator"):
         from aiuser.response.image.providers.perchance import PerchanceGenerator
+
         return PerchanceGenerator(ctx, config)
     elif sd_endpoint.endswith("imggen.modal.run/"):
         auth_token = (await ctx.bot.get_shared_api_tokens("modal-img-gen")).get("token")

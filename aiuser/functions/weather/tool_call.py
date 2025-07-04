@@ -1,45 +1,44 @@
-from dataclasses import asdict
-
 from aiuser.functions.tool_call import ToolCall
-from aiuser.functions.types import (Function, Parameters,
-                                                  ToolCallSchema)
-from aiuser.functions.weather.query import (get_local_weather,
-                                                          get_weather,
-                                                          is_daytime)
+from aiuser.functions.types import Function, Parameters, ToolCallSchema
+from aiuser.functions.weather.query import get_local_weather, get_weather, is_daytime
 
-location_weather_schema = ToolCallSchema(function=Function(
-    name="get_weather",
-    description="Get the requested weather forecast of a city, region, or country",
-    parameters=Parameters(
-        properties={
+location_weather_schema = ToolCallSchema(
+    function=Function(
+        name="get_weather",
+        description="Get the requested weather forecast of a city, region, or country",
+        parameters=Parameters(
+            properties={
                 "location": {
                     "type": "string",
                     "description": "The location to get the weather of",
                 },
-            "days": {
+                "days": {
                     "type": "integer",
                     "description": "The number of days to get the weather of",
                     "default": 1,
                 },
-        },
-        required=["location"]
+            },
+            required=["location"],
+        ),
     )
-))
+)
 
-local_weather_schema = ToolCallSchema(function=Function(
-    name="get_local_weather",
-    description="Get the requested weather forecast of the local location you are in",
-    parameters=Parameters(
-        properties={
-            "days": {
-                "type": "integer",
-                "description": "The number of days to get the weather of",
-                "default": 1,
-            }
-        },
-        required=[]
+local_weather_schema = ToolCallSchema(
+    function=Function(
+        name="get_local_weather",
+        description="Get the requested weather forecast of the local location you are in",
+        parameters=Parameters(
+            properties={
+                "days": {
+                    "type": "integer",
+                    "description": "The number of days to get the weather of",
+                    "default": 1,
+                }
+            },
+            required=[],
+        ),
     )
-))
+)
 
 
 class LocationWeatherToolCall(ToolCall):
@@ -73,13 +72,13 @@ class LocalWeatherToolCall(ToolCall):
 
 
 class IsDaytimeToolCall(ToolCall):
-    schema = ToolCallSchema(function=Function(
-        name="is_daytime_local",
-        description="Checks if it is daytime or nighttime in the local location you are in",
-        parameters=Parameters(
-            properties={}
+    schema = ToolCallSchema(
+        function=Function(
+            name="is_daytime_local",
+            description="Checks if it is daytime or nighttime in the local location you are in",
+            parameters=Parameters(properties={}),
         )
-    ))
+    )
     function_name = schema.function.name
 
     async def _handle(self, _):

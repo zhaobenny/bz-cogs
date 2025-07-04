@@ -14,6 +14,7 @@ _ = Translator("AIEmote", __file__)
 
 DEFAULT_LLM_MODEL = "gpt-4o-mini"
 
+
 @cog_i18n(_)
 class Settings:
     MATCH_DISCORD_EMOJI_REGEX = r"<a?:[A-Za-z0-9]+:[0-9]+>"
@@ -39,7 +40,9 @@ class Settings:
             return await ctx.send(_("No channels in whitelist"))
         channels = [ctx.guild.get_channel(channel_id) for channel_id in whitelist]
         embed = discord.Embed(title=_("Whitelist"), color=await ctx.embed_color())
-        embed.add_field(name=_("Channels"), value="\n".join([channel.mention for channel in channels]))
+        embed.add_field(
+            name=_("Channels"), value="\n".join([channel.mention for channel in channels])
+        )
         await ctx.send(embed=embed)
 
     @aiemote.command(name="allow", aliases=["add"])
@@ -82,13 +85,16 @@ class Settings:
         This command is disabled for servers with more than 150 members.
         """
         if len(ctx.guild.members) > 150:
-            return await ctx.send(_("You cannot enable this setting for servers with more than 150 members."))
+            return await ctx.send(
+                _("You cannot enable this setting for servers with more than 150 members.")
+            )
         value = not await self.config.guild(ctx.guild).optin_by_default()
         await self.config.guild(ctx.guild).optin_by_default.set(value)
         embed = discord.Embed(
             title=_("Users are now opted in by default in this server:"),
             description=f"{value}",
-            color=await ctx.embed_color())
+            color=await ctx.embed_color(),
+        )
         return await ctx.send(embed=embed)
 
     @aiemote.command(name="optin")
@@ -147,7 +153,7 @@ class Settings:
         if not models:
             return await ctx.send(_("No models available or an error occurred."))
 
-        pagified_models = [models[i: i + 10] for i in range(0, len(models), 10)]
+        pagified_models = [models[i : i + 10] for i in range(0, len(models), 10)]
         menu_pages = []
 
         for models_page in pagified_models:
@@ -165,7 +171,11 @@ class Settings:
             return await ctx.send(embed=menu_pages[0])
         else:
             for i, page in enumerate(menu_pages):
-                page.set_footer(text=_("Page {page_num} of {total_pages}").format(page_num=i+1, total_pages=len(menu_pages)))
+                page.set_footer(
+                    text=_("Page {page_num} of {total_pages}").format(
+                        page_num=i + 1, total_pages=len(menu_pages)
+                    )
+                )
             return await SimpleMenu(menu_pages).start(ctx)
 
     @aiemote_owner.command(name="model")
@@ -185,7 +195,11 @@ class Settings:
             return await self._paginate_models(ctx, available_models)
 
         if model_name and model_name not in available_models:
-            await ctx.send(_(":warning: `{model_name}` is not in the list of available models. Please choose a valid model.").format(model_name=model_name))
+            await ctx.send(
+                _(
+                    ":warning: `{model_name}` is not in the list of available models. Please choose a valid model."
+                ).format(model_name=model_name)
+            )
             return await self._paginate_models(ctx, available_models)
 
         try:
@@ -234,17 +248,19 @@ class Settings:
             _ = await self.aclient.models.list()
         except Exception:
             await self.config.custom_openai_endpoint.set(previous_url)
-            return await ctx.send(_(":warning: Invalid endpoint. Please check logs for more information."))
+            return await ctx.send(
+                _(":warning: Invalid endpoint. Please check logs for more information.")
+            )
         finally:
             await ctx.message.remove_reaction("🔄", ctx.me)
 
-        embed = discord.Embed(
-            title=_("Bot Custom OpenAI endpoint"), color=await ctx.embed_color()
-        )
+        embed = discord.Embed(title=_("Bot Custom OpenAI endpoint"), color=await ctx.embed_color())
 
         if url:
             embed.description = _("Endpoint set to {url}.").format(url=url)
-            embed.set_footer(text=_("❗ Third party models may have undesirable results with this cog."))
+            embed.set_footer(
+                text=_("❗ Third party models may have undesirable results with this cog.")
+            )
         else:
             embed.description = _("Endpoint reset back to official OpenAI endpoint.")
 
@@ -267,7 +283,7 @@ class Settings:
     async def check_valid_emoji(self, ctx: commands.Context, emoji):
         if emoji in EMOJI_DATA.keys():
             return True
-        if (not bool(re.fullmatch(self.MATCH_DISCORD_EMOJI_REGEX, emoji))):
+        if not bool(re.fullmatch(self.MATCH_DISCORD_EMOJI_REGEX, emoji)):
             await ctx.send(_("Invalid emoji!"))
             return False
         emoji = discord.PartialEmoji.from_str(emoji)
@@ -282,10 +298,7 @@ class Settings:
             await ctx.send(_("Emoji already in list"))
             return False
 
-        emoji_list.append({
-            "description": description,
-            "emoji": str(emoji)
-        })
+        emoji_list.append({"description": description, "emoji": str(emoji)})
         return True
 
     async def remove_emoji(self, ctx: commands.Context, emoji_list, emoji):
@@ -343,7 +356,7 @@ class Settings:
         for i in range(0, len(emojis), chunk_size):
             embed = discord.Embed(title=title, color=await ctx.embed_color())
 
-            chunk = emojis[i: i + chunk_size]
+            chunk = emojis[i : i + chunk_size]
             for item in chunk:
                 partial_emoji = discord.PartialEmoji.from_str(item["emoji"])
                 emoji = str(partial_emoji)
@@ -353,7 +366,11 @@ class Settings:
 
         if len(embeds) > 1:
             for i, page in enumerate(embeds):
-                page.set_footer(text=_("Page {page_num} of {total_pages}").format(page_num=i+1, total_pages=len(embeds)))
+                page.set_footer(
+                    text=_("Page {page_num} of {total_pages}").format(
+                        page_num=i + 1, total_pages=len(embeds)
+                    )
+                )
 
         return embeds
 
@@ -364,18 +381,26 @@ class Settings:
         emojis = await self.config.global_emojis()
         globalembeds = await self.create_emoji_embed(ctx, _("Global Emojis"), emojis)
         emojis = await self.config.guild(ctx.guild).server_emojis()
-        serverembeds = await self.create_emoji_embed(ctx, _("Current Server-specific Emojis"), emojis)
+        serverembeds = await self.create_emoji_embed(
+            ctx, _("Current Server-specific Emojis"), emojis
+        )
         settingsembed = discord.Embed(title=_("Main Settings"), color=await ctx.embed_color())
         settingsembed.add_field(name=_("Percent Chance"), value=f"`{self.percent}%`", inline=False)
-        settingsembed.add_field(name=_("Additonal Instruction"), value=await self.config.extra_instruction() or _("None"), inline=False)
-        settingsembed.add_field(name=_("LLM Model"), value=f"`{await self.config.llm_model()}`", inline=False)
+        settingsembed.add_field(
+            name=_("Additonal Instruction"),
+            value=await self.config.extra_instruction() or _("None"),
+            inline=False,
+        )
+        settingsembed.add_field(
+            name=_("LLM Model"), value=f"`{await self.config.llm_model()}`", inline=False
+        )
         await ctx.send(embed=settingsembed)
         if len(globalembeds) > 1:
-            await (SimpleMenu(globalembeds)).start(ctx)
+            await SimpleMenu(globalembeds).start(ctx)
         else:
             await ctx.send(embed=globalembeds[0])
         if len(serverembeds) > 1:
-            await (SimpleMenu(serverembeds)).start(ctx)
+            await SimpleMenu(serverembeds).start(ctx)
         else:
             await ctx.send(embed=serverembeds[0])
 
@@ -385,24 +410,33 @@ class Settings:
         """Reset *all* settings"""
         embed = discord.Embed(
             title=_("Are you sure?"),
-            description=_("This will reset all settings to default! (Including ALL per server lists)"),
-            color=await ctx.embed_color())
+            description=_(
+                "This will reset all settings to default! (Including ALL per server lists)"
+            ),
+            color=await ctx.embed_color(),
+        )
         confirm = await ctx.send(embed=embed)
         start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
         pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
         try:
             await ctx.bot.wait_for("reaction_add", timeout=10.0, check=pred)
         except asyncio.TimeoutError:
-            return await confirm.edit(embed=discord.Embed(title=_("Cancelled."), color=await ctx.embed_color()))
+            return await confirm.edit(
+                embed=discord.Embed(title=_("Cancelled."), color=await ctx.embed_color())
+            )
         if pred.result is False:
-            return await confirm.edit(embed=discord.Embed(title=_("Cancelled."), color=await ctx.embed_color()))
+            return await confirm.edit(
+                embed=discord.Embed(title=_("Cancelled."), color=await ctx.embed_color())
+            )
         else:
             await self.config.clear_all_guilds()
             await self.config.clear_all_globals()
             self.whitelist = {}
             self.percent = 50
             self.llm_model = DEFAULT_LLM_MODEL
-            return await confirm.edit(embed=discord.Embed(title=_("Cleared."), color=await ctx.embed_color()))
+            return await confirm.edit(
+                embed=discord.Embed(title=_("Cleared."), color=await ctx.embed_color())
+            )
 
     @aiemote_owner.command(name="sadd")
     @checks.is_owner()

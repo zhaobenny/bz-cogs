@@ -1,9 +1,12 @@
 from copy import copy
 
 import discord
+from redbot.core.i18n import Translator
 
 from aimage.common.constants import ADETAILER_ARGS, AUTO_COMPLETE_UPSCALERS
 from aimage.views.image_actions import ImageActions
+
+_ = Translator("AImage", __file__)
 
 
 class HiresView(discord.ui.View):
@@ -14,9 +17,11 @@ class HiresView(discord.ui.View):
         self.src_button = parent.button_upscale
         self.payload = copy(parent.payload)
         self.generate_image = parent.generate_image
-        upscalers = AUTO_COMPLETE_UPSCALERS + parent.cache[interaction.guild.id].get("upscalers", [])
-        maxscale = ((maxsize*maxsize) / (self.payload["width"]*self.payload["height"]))**0.5
-        scales = [num/100 for num in range(100, min(max(int(maxscale * 100) + 1, 101), 201), 25)]
+        upscalers = AUTO_COMPLETE_UPSCALERS + parent.cache[interaction.guild.id].get(
+            "upscalers", []
+        )
+        maxscale = ((maxsize * maxsize) / (self.payload["width"] * self.payload["height"])) ** 0.5
+        scales = [num / 100 for num in range(100, min(max(int(maxscale * 100) + 1, 101), 201), 25)]
         self.upscaler = upscalers[0]
         self.scale = scales[-1]
         self.denoising = 0.5
@@ -27,7 +32,7 @@ class HiresView(discord.ui.View):
         if self.adetailer:
             self.add_item(AdetailerSelect(self))
 
-    @discord.ui.button(emoji='⬆', label='Upscale', style=discord.ButtonStyle.blurple, row=4)
+    @discord.ui.button(emoji="⬆", label=_("Upscale"), style=discord.ButtonStyle.blurple, row=4)
     async def upscale(self, interaction: discord.Interaction, _: discord.Button):
         await interaction.response.defer(thinking=True)
         self.payload["enable_hr"] = True
@@ -63,7 +68,10 @@ class HiresView(discord.ui.View):
 class UpscalerSelect(discord.ui.Select):
     def __init__(self, parent: HiresView, upscalers: list):
         self.parent = parent
-        options = [discord.SelectOption(label=name, default=i == 1) for i, name in enumerate(upscalers[:25])]
+        options = [
+            discord.SelectOption(label=name, default=i == 1)
+            for i, name in enumerate(upscalers[:25])
+        ]
         super().__init__(options=options)
 
     async def callback(self, interaction: discord.Interaction):
@@ -76,7 +84,10 @@ class UpscalerSelect(discord.ui.Select):
 class ScaleSelect(discord.ui.Select):
     def __init__(self, parent: HiresView, scales: list):
         self.parent = parent
-        options = [discord.SelectOption(label=f"x{num:.2f}", value=str(num)) for num in scales]
+        options = [
+            discord.SelectOption(label=_("x{num:.2f}").format(num=num), value=str(num))
+            for num in scales
+        ]
         options[-1].default = True
         super().__init__(options=options)
 
@@ -90,8 +101,14 @@ class ScaleSelect(discord.ui.Select):
 class DenoisingSelect(discord.ui.Select):
     def __init__(self, parent: HiresView):
         self.parent = parent
-        options = [discord.SelectOption(label=f"Denoising: {num / 100:.2f}", value=str(num / 100), default=num == 55)
-                   for num in range(0, 100, 5)]
+        options = [
+            discord.SelectOption(
+                label=_("Denoising: {value:.2f}").format(value=num / 100),
+                value=str(num / 100),
+                default=num == 55,
+            )
+            for num in range(0, 100, 5)
+        ]
         super().__init__(options=options)
 
     async def callback(self, interaction: discord.Interaction):
@@ -104,10 +121,12 @@ class DenoisingSelect(discord.ui.Select):
 class AdetailerSelect(discord.ui.Select):
     def __init__(self, parent: HiresView):
         self.parent = parent
-        super().__init__(options=[
-            discord.SelectOption(label="ADetailer Enabled", value=str(1), default=True),
-            discord.SelectOption(label="ADetailer Disabled", value=str(0)),
-        ])
+        super().__init__(
+            options=[
+                discord.SelectOption(label=_("ADetailer Enabled"), value=str(1), default=True),
+                discord.SelectOption(label=_("ADetailer Disabled"), value=str(0)),
+            ]
+        )
 
     async def callback(self, interaction: discord.Interaction):
         self.parent.adetailer = bool(int(self.values[0]))

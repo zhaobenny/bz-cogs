@@ -34,6 +34,6 @@ async def ask_wolfram_alpha(query: str, app_id: str, ctx: commands.Context):
     content = "\n".join(plaintext[:3])
 
     if len(content) > 2000:
-        content = content[:2000-3] + "..."
+        content = content[: 2000 - 3] + "..."
 
     return f"[Wolfram Alpha] [Question: {query}] [Answer:] {content}"

@@ -44,7 +44,11 @@ class LLMPipeline:
             weights = await self.config.guild(self.ctx.guild).weights()
             kwargs["logit_bias"] = json.loads(weights or "{}")
 
-        if kwargs.get("logit_bias") and self.model in VISION_SUPPORTED_MODELS or self.model in UNSUPPORTED_LOGIT_BIAS_MODELS:
+        if (
+            kwargs.get("logit_bias")
+            and self.model in VISION_SUPPORTED_MODELS
+            or self.model in UNSUPPORTED_LOGIT_BIAS_MODELS
+        ):
             logger.warning(f"logit_bias is not supported for model {self.model}, removing...")
             del kwargs["logit_bias"]
 
@@ -56,7 +60,9 @@ class LLMPipeline:
         self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
         self.available_tools_schemas = [tool.schema for tool in self.enabled_tools]
 
-    async def call_client(self, kwargs: Dict[str, Any]) -> Union[str, Tuple[str, List[ChatCompletionMessageToolCall]]]:
+    async def call_client(
+        self, kwargs: Dict[str, Any]
+    ) -> Union[str, Tuple[str, List[ChatCompletionMessageToolCall]]]:
         if "gpt-3.5-turbo-instruct" in self.model:
             prompt = "\n".join(message["content"] for message in self.messages)
             response: Completion = await self.openai_client.completions.create(
@@ -68,7 +74,9 @@ class LLMPipeline:
                 model=self.model, messages=self.msg_list.get_json(), **kwargs
             )
 
-            tools_calls: List[ChatCompletionMessageToolCall] = response.choices[0].message.tool_calls or []
+            tools_calls: List[ChatCompletionMessageToolCall] = (
+                response.choices[0].message.tool_calls or []
+            )
 
             return response.choices[0].message.content, tools_calls
 
@@ -97,12 +105,16 @@ class LLMPipeline:
             arguments = json.loads(function.arguments)
             result = await self.run_tool(function.name, arguments)
             if result:
-                await self.msg_list.add_tool_result(result, tool_call.id, index=len(self.msg_list) + 1)
+                await self.msg_list.add_tool_result(
+                    result, tool_call.id, index=len(self.msg_list) + 1
+                )
 
     async def run_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Optional[str]:
         for tool in self.enabled_tools:
             if tool.function_name == tool_name:
-                logger.info(f'Handling tool call in {self.ctx.guild.name}: "{tool_name}" with arguments: "{arguments}"')
+                logger.info(
+                    f'Handling tool call in {self.ctx.guild.name}: "{tool_name}" with arguments: "{arguments}"'
+                )
                 arguments["request"] = self
                 return await tool.run(arguments, self.available_tools_schemas)
 

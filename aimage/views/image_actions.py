@@ -1,22 +1,33 @@
 import asyncio
-import io
 from collections import OrderedDict
-from copy import copy
 from typing import Optional
 
 import discord
 from redbot.core.bot import Red
+from redbot.core.i18n import Translator, _
 
 from aimage.abc import MixinMeta
-from aimage.common.constants import (ADETAILER_ARGS, AUTO_COMPLETE_UPSCALERS,
-                                     PARAM_GROUP_REGEX, PARAM_REGEX,
-                                     PARAMS_BLACKLIST, VIEW_TIMEOUT)
+from aimage.common.constants import (
+    PARAM_GROUP_REGEX,
+    PARAM_REGEX,
+    PARAMS_BLACKLIST,
+    VIEW_TIMEOUT,
+)
 from aimage.common.helpers import delete_button_after
 from aimage.views.params import ParamsView
 
+_ = Translator("AImage", __file__)
+
 
 class ImageActions(discord.ui.View):
-    def __init__(self, cog: MixinMeta, image_info: str, payload: dict, author: discord.Member, channel: discord.TextChannel):
+    def __init__(
+        self,
+        cog: MixinMeta,
+        image_info: str,
+        payload: dict,
+        author: discord.Member,
+        channel: discord.TextChannel,
+    ):
         super().__init__(timeout=VIEW_TIMEOUT)
         self.info_string = image_info
         self.payload = payload
@@ -28,13 +39,13 @@ class ImageActions(discord.ui.View):
         self.generate_image = cog.generate_image
         self.generate_img2img = cog.generate_img2img
 
-        self.button_caption = discord.ui.Button(emoji='🔎')
+        self.button_caption = discord.ui.Button(emoji="🔎")
         self.button_caption.callback = self.get_caption
-        self.button_regenerate = discord.ui.Button(emoji='🔄')
+        self.button_regenerate = discord.ui.Button(emoji="🔄")
         self.button_regenerate.callback = self.regenerate_image
-        self.button_upscale = discord.ui.Button(emoji='⬆')
+        self.button_upscale = discord.ui.Button(emoji="⬆")
         self.button_upscale.callback = self.upscale_image
-        self.button_delete = discord.ui.Button(emoji='🗑️')
+        self.button_delete = discord.ui.Button(emoji="🗑️")
         self.button_delete.callback = self.delete_image
 
         self.add_item(self.button_caption)
@@ -52,7 +63,12 @@ class ImageActions(discord.ui.View):
             msg = await interaction.original_response()
             asyncio.create_task(delete_button_after(msg))
         else:
-            await interaction.response.send_message(f'Parameters for this image:\n```yaml\n{self.info_string}```')
+            await interaction.response.send_message(
+                _("Parameters for this image:\n```yaml\n{info_string}```").format(
+                    info_string=self.info_string
+                ),
+                ephemeral=True,
+            )
 
     async def regenerate_image(self, interaction: discord.Interaction):
         await interaction.response.defer(thinking=True)
@@ -78,21 +94,39 @@ class ImageActions(discord.ui.View):
     async def upscale_image(self, interaction: discord.Interaction):
         maxsize = await self.config.guild(interaction.guild).max_img2img()
         from aimage.views.hi_res import HiresView
+
         view = HiresView(self, interaction, maxsize)
         await interaction.response.send_message(view=view, ephemeral=True)
 
     async def delete_image(self, interaction: discord.Interaction):
         if not (await self._check_if_can_delete(interaction)):
-            return await interaction.response.send_message(content=":warning: Only the requester and members with `Manage Messages` permission can delete this image!", ephemeral=True)
+            return await interaction.response.send_message(
+                content=_(
+                    ":warning: Only the requester and members with `Manage Messages` permission can delete this image!"
+                ),
+                ephemeral=True,
+            )
 
         self.button_delete.disabled = True
         await interaction.message.delete()
 
         prompt = self.payload["prompt"]
         if interaction.user.id == self.og_user.id:
-            await interaction.response.send_message(f'{self.og_user.mention} deleted their requested image with prompt: `{prompt}`', allowed_mentions=discord.AllowedMentions.none())
+            await interaction.response.send_message(
+                _("{user} deleted their requested image with prompt: `{prompt}`").format(
+                    user=self.og_user.mention, prompt=prompt
+                ),
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
         else:
-            await interaction.response.send_message(f'{interaction.user.mention} deleted a image requested by {self.og_user.mention} with prompt: `{prompt}`', allowed_mentions=discord.AllowedMentions.none())
+            await interaction.response.send_message(
+                _(
+                    "{user} deleted an image requested by {requester} with prompt: `{prompt}`"
+                ).format(
+                    user=interaction.user.mention, requester=self.og_user.mention, prompt=prompt
+                ),
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
 
         self.stop()
 
@@ -102,7 +136,9 @@ class ImageActions(discord.ui.View):
         output_dict = OrderedDict()
         prompts, params = self.info_string.rsplit("Steps: ", 1)
         try:
-            output_dict["Prompt"], output_dict["Negative Prompt"] = prompts.rsplit("Negative prompt: ", 1)
+            output_dict["Prompt"], output_dict["Negative Prompt"] = prompts.rsplit(
+                "Negative prompt: ", 1
+            )
         except:
             output_dict["Prompt"] = prompts
         params = f"Steps: {params},"
@@ -121,7 +157,10 @@ class ImageActions(discord.ui.View):
         params = self.get_params_dict()
         if not params:
             return None
-        embed = discord.Embed(title="Image Parameters", color=await self.bot.get_embed_color(self.channel))
+        embed = discord.Embed(
+            title=_("Image Parameters"),
+            color=await self.bot.get_embed_color(self.channel),
+        )
         for key, value in params.items():
             embed.add_field(name=key, value=value, inline="Prompt" not in key)
         return embed
@@ -131,6 +170,9 @@ class ImageActions(discord.ui.View):
 
         guild = interaction.guild
         member = guild.get_member(interaction.user.id)
-        can_delete = await self.bot.is_owner(member) or interaction.channel.permissions_for(member).manage_messages
+        can_delete = (
+            await self.bot.is_owner(member)
+            or interaction.channel.permissions_for(member).manage_messages
+        )
 
         return is_og_user or can_delete

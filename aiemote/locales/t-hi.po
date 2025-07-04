@@ -1,0 +1,257 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: bz-cogs\n"
+"POT-Creation-Date: 2025-06-09 18:41+0000\n"
+"Last-Translator: \n"
+"Language-Team: Hindi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: redgettext 3.4.2\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Crowdin-Project: bz-cogs\n"
+"X-Crowdin-Project-ID: 289505\n"
+"X-Crowdin-Language: hi\n"
+"X-Crowdin-File-ID: 8\n"
+"Language: hi_IN\n"
+
+#: aiemote\aiemote.py:33
+msgid "A happy face"
+msgstr "Ek khush chehra"
+
+#: aiemote\aiemote.py:37
+msgid "A sad face"
+msgstr "Ek udaas chehra"
+
+#: aiemote\aiemote.py:96
+msgid "Skipping react! No valid emojis to use in {guild_name}"
+msgstr "React skip kar rahe hain! {guild_name} mein use karne ke liye koi valid emoji nahi hai."
+
+#: aiemote\aiemote.py:115
+msgid ""
+"You are in a chat room. You will pick an emoji for the following message. "
+"{extra_instruction} Here are your options: {options} Your answer will be a "
+"int between 0 and {max_index}."
+msgstr ""
+"Aap ek chat room mein hain. Aapko neeche diye gaye message ke liye ek emoji chunna hai. "
+"{extra_instruction} Yeh aapke options hain: {options} Aapka jawab 0 aur {max_index} ke beech ek number hoga."
+
+#: aiemote\aiemote.py:136
+msgid "Skipping react in {guild_name}! Failed to get response from OpenAI"
+msgstr "{guild_name} mein react skip kar rahe hain! OpenAI se response nahi mila."
+
+#: aiemote\aiemote.py:150
+msgid ""
+"Skipping react in {guild_name}! Non-numeric response from OpenAI: "
+"{response}. (Please report to dev if this occurs often)"
+msgstr ""
+"{guild_name} mein react skip kar rahe hain! OpenAI se non-numeric response mila: "
+"{response}. (Agar yeh baar-baar hota hai, to please developer ko report karein)"
+
+#: aiemote\aiemote.py:190
+msgid "Skipping message in {guild_name} with length {length}"
+msgstr "{guild_name} mein {length} length wala message skip kiya ja raha hai."
+
+#: aiemote\openai_utils.py:39
+msgid ""
+"{api_type} API key not set for `aiemote`. Please set it with `{prefix}set "
+"api {api_type} api_key,[API_KEY_HERE]`"
+msgstr ""
+"`aiemote` ke liye {api_type} API key set nahi hai. Please ise `{prefix}set api {api_type} api_key,[API_KEY_HERE]` se set karein."
+
+#: aiemote\openai_utils.py:50
+msgid ""
+"{api_type} API key not set for \"aiemote\" yet! Please set it with: [p]set "
+"api {api_type} api_key,[API_KEY_HERE]"
+msgstr ""
+"`aiemote` ke liye {api_type} API key abhi tak set nahi hai! Please ise iske saath set karein: [p]set api {api_type} api_key,[API_KEY_HERE]"
+
+#: aiemote\settings.py:39
+msgid "No channels in whitelist"
+msgstr "Whitelist mein koi channel nahi hai."
+
+#: aiemote\settings.py:41
+msgid "Whitelist"
+msgstr "Whitelist"
+
+#: aiemote\settings.py:42
+msgid "Channels"
+msgstr "Channels"
+
+#: aiemote\settings.py:55
+msgid "Channel already in whitelist"
+msgstr "Channel pehle se hi whitelist mein hai."
+
+#: aiemote\settings.py:59
+msgid "✅ Channel added to whitelist"
+msgstr "✅ Channel whitelist mein jod diya gaya hai."
+
+#: aiemote\settings.py:71
+msgid "Channel not in whitelist"
+msgstr "Channel whitelist mein nahi hai."
+
+#: aiemote\settings.py:75
+msgid "✅ Channel removed from whitelist"
+msgstr "✅ Channel whitelist se hata diya gaya hai."
+
+#: aiemote\settings.py:85
+msgid "You cannot enable this setting for servers with more than 150 members."
+msgstr "Aap yeh setting 150 se zyada members wale servers ke liye enable nahi kar sakte."
+
+#: aiemote\settings.py:89
+msgid "Users are now opted in by default in this server:"
+msgstr "Is server mein users ab by default opted-in hain:"
+
+#: aiemote\settings.py:104
+msgid "You are already opted in bot-wide"
+msgstr "Aap pehle se hi bot-wide opted-in hain."
+
+#: aiemote\settings.py:115
+msgid "You are now opted in bot-wide"
+msgstr "Aap ab bot-wide opted-in hain."
+
+#: aiemote\settings.py:127
+msgid "You are already opted out"
+msgstr "Aap pehle se hi opted-out hain."
+
+#: aiemote\settings.py:138
+msgid "You are now opted out bot-wide"
+msgstr "Aap ab bot-wide opted-out hain."
+
+#: aiemote\settings.py:148
+msgid "No models available or an error occurred."
+msgstr "Koi model available nahi hai ya koi error aa gaya hai."
+
+#: aiemote\settings.py:155
+msgid "Available Models"
+msgstr "Available Models"
+
+#: aiemote\settings.py:162
+msgid "No models found."
+msgstr "Koi model nahi mila."
+
+#: aiemote\settings.py:168 aiemote\settings.py:356
+msgid "Page {page_num} of {total_pages}"
+msgstr "Page {page_num} / {total_pages}"
+
+#: aiemote\settings.py:188
+msgid ""
+":warning: `{model_name}` is not in the list of available models. Please "
+"choose a valid model."
+msgstr ""
+":warning: `{model_name}` available models ki list mein nahi hai. Please "
+"ek valid model chunein."
+
+#: aiemote\settings.py:200
+msgid "The LLM is now set to:"
+msgstr "LLM ab ispar set hai:"
+
+#: aiemote\settings.py:237
+msgid ":warning: Invalid endpoint. Please check logs for more information."
+msgstr ":warning: Invalid endpoint. Zyada jaankari ke liye logs check karein."
+
+#: aiemote\settings.py:242
+msgid "Bot Custom OpenAI endpoint"
+msgstr "Bot ka Custom OpenAI Endpoint"
+
+#: aiemote\settings.py:246
+msgid "Endpoint set to {url}."
+msgstr "Endpoint {url} par set ho gaya hai."
+
+#: aiemote\settings.py:247
+msgid "❗ Third party models may have undesirable results with this cog."
+msgstr "❗ Third-party models is cog ke saath galat results de sakte hain."
+
+#: aiemote\settings.py:249
+msgid "Endpoint reset back to official OpenAI endpoint."
+msgstr "Endpoint wapas official OpenAI endpoint par reset kar diya gaya hai."
+
+#: aiemote\settings.py:265
+msgid "✅ Extra instruction updated"
+msgstr "✅ Extra instruction update ho gaya hai."
+
+#: aiemote\settings.py:271
+msgid "Invalid emoji!"
+msgstr "Invalid emoji!"
+
+#: aiemote\settings.py:276
+msgid "Invalid emoji! Custom emojis must be usable by the bot itself"
+msgstr "Invalid emoji! Custom emojis aise hone chahiye jo bot khud use kar sake."
+
+#: aiemote\settings.py:282
+msgid "Emoji already in list"
+msgstr "Emoji pehle se list mein hai."
+
+#: aiemote\settings.py:294
+msgid "Emoji not in list"
+msgstr "Emoji list mein nahi hai."
+
+#: aiemote\settings.py:316
+msgid "✅ Global emoji added"
+msgstr "✅ Global emoji add kar diya gaya hai."
+
+#: aiemote\settings.py:332
+msgid "✅ Global emoji removed"
+msgstr "✅ Global emoji hata diya gaya hai."
+
+#: aiemote\settings.py:339 aiemote\settings.py:370
+msgid "None"
+msgstr "Koi nahi"
+
+#: aiemote\settings.py:365
+msgid "Global Emojis"
+msgstr "Global Emojis"
+
+#: aiemote\settings.py:367
+msgid "Current Server-specific Emojis"
+msgstr "Is Server ke Emojis"
+
+#: aiemote\settings.py:368
+msgid "Main Settings"
+msgstr "Main Settings"
+
+#: aiemote\settings.py:369
+msgid "Percent Chance"
+msgstr "Percent Chance"
+
+#: aiemote\settings.py:370
+msgid "Additonal Instruction"
+msgstr "Additional Instruction"
+
+#: aiemote\settings.py:371
+msgid "LLM Model"
+msgstr "LLM Model"
+
+#: aiemote\settings.py:387
+msgid "Are you sure?"
+msgstr "Kya aap sure hain?"
+
+#: aiemote\settings.py:388
+msgid ""
+"This will reset all settings to default! (Including ALL per server lists)"
+msgstr ""
+"Isse saari settings default par reset ho jaayengi! (Saari server-specific lists bhi)"
+
+#: aiemote\settings.py:396 aiemote\settings.py:398
+msgid "Cancelled."
+msgstr "Cancel kar diya gaya."
+
+#: aiemote\settings.py:405
+msgid "Cleared."
+msgstr "Clear kar diya gaya."
+
+#: aiemote\settings.py:423
+msgid "✅ Server emoji added"
+msgstr "✅ Server emoji add kar diya gaya hai."
+
+#: aiemote\settings.py:439
+msgid "✅ Server emoji removed"
+msgstr "✅ Server emoji hata diya gaya hai."
+
+#: aiemote\settings.py:450
+msgid "Invalid percent"
+msgstr "Galat percent."
+
+#: aiemote\settings.py:453
+msgid "✅ Percent chance updated"
+msgstr "✅ Percent chance update ho gaya hai."

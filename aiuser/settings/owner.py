@@ -34,7 +34,7 @@ class OwnerSettings(MixinMeta):
     async def max_prompt_length(self, ctx: commands.Context, length: int):
         """Sets the maximum character length of a prompt that can set by admins in any server.
 
-            (Does not apply to already set prompts, only new ones)
+        (Does not apply to already set prompts, only new ones)
         """
         if length < 1:
             return await ctx.send("Please enter a positive integer.")
@@ -50,7 +50,7 @@ class OwnerSettings(MixinMeta):
     async def max_random_prompt_length(self, ctx: commands.Context, length: int):
         """Sets the maximum character length of a random prompt that can set by any server.
 
-            (Does not apply to already set prompts, only new ones)
+        (Does not apply to already set prompts, only new ones)
         """
         if length < 1:
             return await ctx.send("Please enter a positive integer.")
@@ -80,7 +80,7 @@ class OwnerSettings(MixinMeta):
             url = None
 
         previous_url = await self.config.custom_openai_endpoint()
-        
+
         # Save current models before switching
         if previous_url:
             history = await self.config.endpoint_model_history()
@@ -89,10 +89,10 @@ class OwnerSettings(MixinMeta):
                 guild_config = self.config.guild_from_id(guild_id)
                 history[previous_url][str(guild_id)] = {
                     "chat_model": await guild_config.model(),
-                    "image_model": await guild_config.scan_images_model()
+                    "image_model": await guild_config.scan_images_model(),
                 }
             await self.config.endpoint_model_history.set(history)
-        
+
         await self.config.custom_openai_endpoint.set(url)
 
         await ctx.message.add_reaction("🔄")
@@ -101,36 +101,36 @@ class OwnerSettings(MixinMeta):
 
         # test the endpoint works if not rollback
         try:
-            models =await self.openai_client.models.list()
+            models = await self.openai_client.models.list()
         except Exception:
             await self.config.custom_openai_endpoint.set(previous_url)
-            return await ctx.send(":warning: Invalid endpoint. Please check logs for more information.")
+            return await ctx.send(
+                ":warning: Invalid endpoint. Please check logs for more information."
+            )
         finally:
             await ctx.message.remove_reaction("🔄", ctx.me)
 
         # Check if we have saved models for this endpoint
         history = await self.config.endpoint_model_history()
         saved_models = history.get(url or "default", {})
-        
+
         chat_model = DEFAULT_LLM_MODEL
         image_model = DEFAULT_LLM_MODEL
 
-        if (is_using_openrouter_endpoint(self.openai_client)):
+        if is_using_openrouter_endpoint(self.openai_client):
             chat_model = f"openai/{DEFAULT_LLM_MODEL}"
             image_model = f"openai/{DEFAULT_LLM_MODEL}"
-        elif (not is_using_openai_endpoint(self.openai_client)):
+        elif not is_using_openai_endpoint(self.openai_client):
             chat_model = models.data[0].id
             image_model = models.data[0].id
 
-        embed = discord.Embed(
-            title="Bot Custom OpenAI endpoint", color=await ctx.embed_color()
-        )
-        
+        embed = discord.Embed(title="Bot Custom OpenAI endpoint", color=await ctx.embed_color())
+
         restored_count = 0
         guilds_with_parameters = []
         for guild_id in await self.config.all_guilds():
             guild_config = self.config.guild_from_id(guild_id)
-            
+
             # Restore saved models if available, otherwise use defaults
             if str(guild_id) in saved_models:
                 await guild_config.model.set(saved_models[str(guild_id)]["chat_model"])
@@ -139,7 +139,7 @@ class OwnerSettings(MixinMeta):
             else:
                 await guild_config.model.set(chat_model)
                 await guild_config.scan_images_model.set(image_model)
-            
+
             if await guild_config.parameters():
                 guilds_with_parameters.append(str(self.bot.get_guild(guild_id).name))
 
@@ -169,7 +169,9 @@ class OwnerSettings(MixinMeta):
 
         if url:
             embed.description = f"Endpoint set to {url}."
-            embed.set_footer(text="❗ Third party models may have undesirable results with this cog.")
+            embed.set_footer(
+                text="❗ Third party models may have undesirable results with this cog."
+            )
         else:
             embed.description = "Endpoint reset back to offical OpenAI endpoint."
 
@@ -177,7 +179,7 @@ class OwnerSettings(MixinMeta):
 
     @aiuserowner.command()
     async def timeout(self, ctx: commands.Context, seconds: int):
-        """ Sets the request timeout to the OpenAI endpoint """
+        """Sets the request timeout to the OpenAI endpoint"""
 
         if seconds < 1:
             return await ctx.send(":warning: Please enter a positive integer.")
@@ -196,25 +198,23 @@ class OwnerSettings(MixinMeta):
     async def export_config(self, ctx: commands.Context):
         """Exports the current config to a json file
 
-           :warning: JSON backend only
+        :warning: JSON backend only
         """
         path = Path(cog_data_path(self) / "settings.json")
 
         if not path.exists():
             return await ctx.send(":warning: Export is only supported for json backends")
 
-        await ctx.send(
-            file=discord.File(path, filename="aiuser_config.json")
-        )
+        await ctx.send(file=discord.File(path, filename="aiuser_config.json"))
         await ctx.tick()
 
     @aiuserowner.command(name="importconfig")
     async def import_config(self, ctx: commands.Context):
-        """ Imports a config from json file (:warning: No checks are done)
+        """Imports a config from json file (:warning: No checks are done)
 
-            Make sure your new config is valid, and the old config is backed up.
+         Make sure your new config is valid, and the old config is backed up.
 
-           :warning: JSON backend only
+        :warning: JSON backend only
         """
         if not ctx.message.attachments:
             return await ctx.send(":warning: No file was attached.")
@@ -235,33 +235,41 @@ class OwnerSettings(MixinMeta):
             description=f":warning: This will overwrite the current config, and you will lose existing settings! \
                 \n :warning: You may also break the cog or bot, if the config is invalid. \
                 \n To fix, make sure you can access the config file: \n `{path}`",
-            color=await ctx.embed_color())
+            color=await ctx.embed_color(),
+        )
         confirm = await ctx.send(embed=embed)
         start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
         pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
         try:
             await ctx.bot.wait_for("reaction_add", timeout=30.0, check=pred)
         except asyncio.TimeoutError:
-            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+            return await confirm.edit(
+                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
+            )
         if pred.result is False:
-            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+            return await confirm.edit(
+                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
+            )
 
         with path.open("w") as f:
             json.dump(new_config, f, indent=4)
 
-        return await confirm.edit(embed=discord.Embed(
-            title="Overwritten!",
-            description="You will need to restart the bot for the changes to take effect.",
-            color=await ctx.embed_color()))
+        return await confirm.edit(
+            embed=discord.Embed(
+                title="Overwritten!",
+                description="You will need to restart the bot for the changes to take effect.",
+                color=await ctx.embed_color(),
+            )
+        )
 
     @aiuserowner.command(name="prompt")
     async def global_prompt(self, ctx: commands.Context, *, prompt: Optional[str]):
-        """ Set the global default prompt for aiuser.
+        """Set the global default prompt for aiuser.
 
-            Leave blank to delete the currently set global prompt, and use the build-in default prompt.
+        Leave blank to delete the currently set global prompt, and use the build-in default prompt.
 
-            **Arguments**
-                - `prompt` The prompt to set.
+        **Arguments**
+            - `prompt` The prompt to set.
         """
         if not prompt and ctx.message.attachments:
             if not ctx.message.attachments[0].filename.endswith(".txt"):
@@ -277,6 +285,7 @@ class OwnerSettings(MixinMeta):
         embed = discord.Embed(
             title="The global prompt is now changed to:",
             description=f"{truncate_prompt(prompt)}",
-            color=await ctx.embed_color())
+            color=await ctx.embed_color(),
+        )
         embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
         return await ctx.send(embed=embed)
