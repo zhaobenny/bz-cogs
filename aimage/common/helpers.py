@@ -7,6 +7,7 @@ from redbot.core import commands
 from redbot.core.i18n import Translator
 
 from aimage.common.constants import VIEW_TIMEOUT
+from discord.errors import NotFound, Forbidden, HTTPException
 
 _ = Translator("AImage", __file__)
 
@@ -19,7 +20,7 @@ async def send_response(
     else:
         try:
             await context.message.remove_reaction("⏳", context.bot.user)
-        except:
+        except (NotFound, Forbidden, HTTPException):
             pass
         return await context.send(**kwargs)
 

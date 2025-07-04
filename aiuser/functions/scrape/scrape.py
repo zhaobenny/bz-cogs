@@ -17,7 +17,7 @@ async def scrape_page(link: str):
         async with session.get(link) as response:
             response.raise_for_status()
             content_type = response.headers.get("Content-Type", "").lower()
-            if not "text/html" in content_type:
+            if "text/html" not in content_type:
                 raise ValueError("Content type is not text/html")
 
             html_content = await response.text()

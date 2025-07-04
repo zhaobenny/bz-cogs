@@ -37,34 +37,41 @@ AI_HORDE_SAMPLERS = [
 
 
 class AIHorde(BaseAPI):
-
-    def __init__(self, cog: MixinMeta, context: Union[commands.Context, discord.Interaction]):
+    def __init__(
+        self, cog: MixinMeta, context: Union[commands.Context, discord.Interaction]
+    ):
         super().__init__(cog, context)
         cog.autocomplete_cache[self.guild.id]["samplers"] = AI_HORDE_SAMPLERS
         self.bot: Red = cog.bot
 
     async def _init(self):
         self.endpoint = await self.config.guild(self.guild).endpoint()
-        api_key = (await self.bot.get_shared_api_tokens("aihorde")).get("apikey") or "0000000000"
+        api_key = (await self.bot.get_shared_api_tokens("aihorde")).get(
+            "apikey"
+        ) or "0000000000"
         self.headers = {"apikey": api_key}
 
     async def update_autocomplete_cache(self, cache):
         # models only supported
         res = await self.session.get(
-            f"{self.endpoint}/v2/status/models?type=image&model_state=known", headers=self.headers
+            f"{self.endpoint}/v2/status/models?type=image&model_state=known",
+            headers=self.headers,
         )
         try:
             res.raise_for_status()
             res = await res.json()
             cache[self.guild.id]["checkpoints"] = [
-                model["name"] for model in sorted(res, key=lambda x: x["count"], reverse=True)
+                model["name"]
+                for model in sorted(res, key=lambda x: x["count"], reverse=True)
             ]
         except Exception:
             pass
 
     async def generate_image(self, params: ImageGenParams, payload: dict = None):
         if payload:
-            payload["params"]["seed"] = str(random.randint(-sys.maxsize - 1, sys.maxsize))
+            payload["params"]["seed"] = str(
+                random.randint(-sys.maxsize - 1, sys.maxsize)
+            )
         elif params and params.seed == -1:
             params.seed = random.randint(-sys.maxsize - 1, sys.maxsize)
 
@@ -72,7 +79,8 @@ class AIHorde(BaseAPI):
         payload = payload or {
             "prompt": params.prompt,
             "params": {
-                "sampler_name": params.sampler or await self.config.guild(self.guild).sampler(),
+                "sampler_name": params.sampler
+                or await self.config.guild(self.guild).sampler(),
                 "cfg_scale": params.cfg or await self.config.guild(self.guild).cfg(),
                 "seed": str(params.seed),
                 "width": self._round_to_nearest(
@@ -82,10 +90,13 @@ class AIHorde(BaseAPI):
                     params.height or await self.config.guild(self.guild).height(), 16
                 ),
             },
-            "nsfw": ((await self.config.guild(self.guild).nsfw())),
+            "nsfw": (await self.config.guild(self.guild).nsfw()),
             "censor_nsfw": (not (await self.config.guild(self.guild).nsfw())),
-            "steps": params.steps or await self.config.guild(self.guild).sampling_steps(),
-            "models": [params.checkpoint or await self.config.guild(self.guild).checkpoint()],
+            "steps": params.steps
+            or await self.config.guild(self.guild).sampling_steps(),
+            "models": [
+                params.checkpoint or await self.config.guild(self.guild).checkpoint()
+            ],
         }
         res = await self.session.post(
             f"{self.endpoint}/v2/generate/async", headers=self.headers, json=payload
@@ -129,7 +140,7 @@ class AIHorde(BaseAPI):
         )
         res.raise_for_status()
         res = await res.json()
-        return res["done"] == True
+        return res["done"]
 
     async def _get_image(self, uuid: str):
         res = await self.session.get(

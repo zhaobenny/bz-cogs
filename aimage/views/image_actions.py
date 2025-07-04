@@ -5,6 +5,7 @@ from typing import Optional
 import discord
 from redbot.core.bot import Red
 from redbot.core.i18n import Translator, _
+from discord.errors import NotFound, Forbidden, HTTPException
 
 from aimage.abc import MixinMeta
 from aimage.common.constants import (
@@ -16,7 +17,7 @@ from aimage.common.constants import (
 from aimage.common.helpers import delete_button_after
 from aimage.views.params import ParamsView
 
-_ = Translator("AImage", __file__)
+translator = Translator("AImage", __file__)
 
 
 class ImageActions(discord.ui.View):
@@ -51,7 +52,10 @@ class ImageActions(discord.ui.View):
         self.add_item(self.button_caption)
         if not payload.get("enable_hr", False):
             self.add_item(self.button_regenerate)
-            if not payload.get("init_images", []) and "AI Horde" not in self.info_string:
+            if (
+                not payload.get("init_images", [])
+                and "AI Horde" not in self.info_string
+            ):
                 self.add_item(self.button_upscale)
         self.add_item(self.button_delete)
 
@@ -59,7 +63,9 @@ class ImageActions(discord.ui.View):
         embed = await self._get_params_embed()
         if embed:
             view = ParamsView(self.info_string, interaction)
-            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            await interaction.response.send_message(
+                embed=embed, view=view, ephemeral=True
+            )
             msg = await interaction.original_response()
             asyncio.create_task(delete_button_after(msg))
         else:
@@ -88,7 +94,7 @@ class ImageActions(discord.ui.View):
         if not self.is_finished():
             try:
                 await interaction.message.edit(view=self)
-            except:
+            except (NotFound, Forbidden, HTTPException):
                 pass
 
     async def upscale_image(self, interaction: discord.Interaction):
@@ -113,9 +119,9 @@ class ImageActions(discord.ui.View):
         prompt = self.payload["prompt"]
         if interaction.user.id == self.og_user.id:
             await interaction.response.send_message(
-                _("{user} deleted their requested image with prompt: `{prompt}`").format(
-                    user=self.og_user.mention, prompt=prompt
-                ),
+                _(
+                    "{user} deleted their requested image with prompt: `{prompt}`"
+                ).format(user=self.og_user.mention, prompt=prompt),
                 allowed_mentions=discord.AllowedMentions.none(),
             )
         else:
@@ -123,7 +129,9 @@ class ImageActions(discord.ui.View):
                 _(
                     "{user} deleted an image requested by {requester} with prompt: `{prompt}`"
                 ).format(
-                    user=interaction.user.mention, requester=self.og_user.mention, prompt=prompt
+                    user=interaction.user.mention,
+                    requester=self.og_user.mention,
+                    prompt=prompt,
                 ),
                 allowed_mentions=discord.AllowedMentions.none(),
             )
@@ -139,13 +147,15 @@ class ImageActions(discord.ui.View):
             output_dict["Prompt"], output_dict["Negative Prompt"] = prompts.rsplit(
                 "Negative prompt: ", 1
             )
-        except:
+        except ValueError:
             output_dict["Prompt"] = prompts
         params = f"Steps: {params},"
         params = PARAM_GROUP_REGEX.sub("", params)
         param_list = PARAM_REGEX.findall(params)
         for key, value in param_list:
-            if len(output_dict) > 24 or any(blacklisted in key for blacklisted in PARAMS_BLACKLIST):
+            if len(output_dict) > 24 or any(
+                blacklisted in key for blacklisted in PARAMS_BLACKLIST
+            ):
                 continue
             output_dict[key] = value
         for key in output_dict:

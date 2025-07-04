@@ -17,7 +17,6 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class ResponseSettings(MixinMeta):
-
     @aiuser.group(name="response")
     @checks.admin_or_permissions(manage_guild=True)
     async def response(self, _):
@@ -43,8 +42,12 @@ class ResponseSettings(MixinMeta):
 
         if regex_pattern not in removelist_regexes:
             removelist_regexes.append(regex_pattern)
-            await self.config.guild(ctx.guild).removelist_regexes.set(removelist_regexes)
-            await ctx.send(f"The regex pattern `{regex_pattern}` has been added to the list.")
+            await self.config.guild(ctx.guild).removelist_regexes.set(
+                removelist_regexes
+            )
+            await ctx.send(
+                f"The regex pattern `{regex_pattern}` has been added to the list."
+            )
         else:
             await ctx.send(
                 f"The regex pattern `{regex_pattern}` is already in the list of regex patterns."
@@ -58,7 +61,9 @@ class ResponseSettings(MixinMeta):
             return await ctx.send("Invalid number.")
         removed_regex = removelist_regexes.pop(number - 1)
         await self.config.guild(ctx.guild).removelist_regexes.set(removelist_regexes)
-        await ctx.send(f"The regex pattern `{removed_regex}` has been removed from the list.")
+        await ctx.send(
+            f"The regex pattern `{removed_regex}` has been removed from the list."
+        )
 
     @removelist.command(name="show")
     async def removelist_show(self, ctx: commands.Context):
@@ -69,7 +74,9 @@ class ResponseSettings(MixinMeta):
 
         pages = []
 
-        formatted_list = [f"{i+1}. {pattern}" for i, pattern in enumerate(removelist_regexes)]
+        formatted_list = [
+            f"{i + 1}. {pattern}" for i, pattern in enumerate(removelist_regexes)
+        ]
         formatted_list = "\n".join(formatted_list)
         for text in pagify(formatted_list, page_length=888):
             page = discord.Embed(
@@ -83,7 +90,7 @@ class ResponseSettings(MixinMeta):
             return await ctx.send(embed=pages[0])
 
         for i, page in enumerate(pages):
-            page.set_footer(text=f"Page {i+1} of {len(pages)}")
+            page.set_footer(text=f"Page {i + 1} of {len(pages)}")
 
         return await SimpleMenu(pages).start(ctx)
 
@@ -109,9 +116,13 @@ class ResponseSettings(MixinMeta):
                 embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
             )
         else:
-            await self.config.guild(ctx.guild).removelist_regexes.set(DEFAULT_REMOVE_PATTERNS)
+            await self.config.guild(ctx.guild).removelist_regexes.set(
+                DEFAULT_REMOVE_PATTERNS
+            )
             return await confirm.edit(
-                embed=discord.Embed(title="Removelist reset.", color=await ctx.embed_color())
+                embed=discord.Embed(
+                    title="Removelist reset.", color=await ctx.embed_color()
+                )
             )
 
     @response.command(name="toggleoptinembed")
@@ -120,7 +131,9 @@ class ResponseSettings(MixinMeta):
         current = await self.config.guild(ctx.guild).optin_disable_embed()
         await self.config.guild(ctx.guild).optin_disable_embed.set(not current)
 
-        embed = discord.Embed(title="Senting Opt-in Warning Embed", color=await ctx.embed_color())
+        embed = discord.Embed(
+            title="Senting Opt-in Warning Embed", color=await ctx.embed_color()
+        )
         embed.description = f"{current}"
         if not current:
             embed.add_field(
@@ -154,10 +167,14 @@ class ResponseSettings(MixinMeta):
             return await ctx.send(":warning: No weights set.")
         embed = discord.Embed(title="Weights Used", color=await ctx.embed_color())
         try:
-            encoding = tiktoken.encoding_for_model(await self.config.guild(ctx.guild).model())
+            encoding = tiktoken.encoding_for_model(
+                await self.config.guild(ctx.guild).model()
+            )
         except KeyError:
             return await ctx.send(":warning: Unsupported model for tokenization")
-        weights = {encoding.decode([int(token)]): weight for token, weight in weights.items()}
+        weights = {
+            encoding.decode([int(token)]): weight for token, weight in weights.items()
+        }
         weights = {key.strip().lower(): value for key, value in weights.items()}
         for word, weight in weights.items():
             embed.add_field(name=word, value=weight, inline=False)
@@ -199,7 +216,8 @@ class ResponseSettings(MixinMeta):
         if len(tokens) > 1:
             token_str = [encoding.decode([token]) for token in tokens]
             embed = discord.Embed(
-                title=f":warning: Unable to set weight for `{word}`", color=await ctx.embed_color()
+                title=f":warning: Unable to set weight for `{word}`",
+                color=await ctx.embed_color(),
             )
             embed.add_field(
                 name=f"`{word}` is multiple tokens.\nThis means in order to modify the weight for `{word}`, all the following strings will need separate weights:",
@@ -208,7 +226,7 @@ class ResponseSettings(MixinMeta):
             )
             embed.add_field(
                 name="Helpful Resource",
-                value=f"For better details on tokenization, go [here](https://platform.openai.com/tokenizer).",
+                value="For better details on tokenization, go [here](https://platform.openai.com/tokenizer).",
             )
             return await ctx.send(embed=embed)
         else:
@@ -219,7 +237,8 @@ class ResponseSettings(MixinMeta):
                 weights[token] = weight
             await self.config.guild(ctx.guild).weights.set(json.dumps(weights))
             embed = discord.Embed(
-                title=f"Weight for `{word}` set to `{weight}`", color=await ctx.embed_color()
+                title=f"Weight for `{word}` set to `{weight}`",
+                color=await ctx.embed_color(),
             )
             return await ctx.send(embed=embed)
 
@@ -232,7 +251,9 @@ class ResponseSettings(MixinMeta):
             - `word` The word to remove
         """
         try:
-            encoding = tiktoken.encoding_for_model(await self.config.guild(ctx.guild).model())
+            encoding = tiktoken.encoding_for_model(
+                await self.config.guild(ctx.guild).model()
+            )
         except KeyError:
             return await ctx.send(":warning: Unsupported model for tokenization")
         weights = await self.config.guild(ctx.guild).weights()
@@ -251,7 +272,9 @@ class ResponseSettings(MixinMeta):
         for token in tokens:
             weights.pop(str(token))
         await self.config.guild(ctx.guild).weights.set(json.dumps(weights))
-        embed = discord.Embed(title=f"Weight for `{word}` removed.", color=await ctx.embed_color())
+        embed = discord.Embed(
+            title=f"Weight for `{word}` removed.", color=await ctx.embed_color()
+        )
         return await ctx.send(embed=embed)
 
     async def get_all_tokens(self, word: str, encoding: tiktoken.Encoding):
@@ -299,7 +322,9 @@ class ResponseSettings(MixinMeta):
 
         if json_block not in ["show", "list"]:
             if not json_block.startswith("```"):
-                return await ctx.send(":warning: Please use a code block (`` eg. ```json ``)")
+                return await ctx.send(
+                    ":warning: Please use a code block (`` eg. ```json ``)"
+                )
 
             json_block = json_block.replace("```json", "").replace("```", "")
 

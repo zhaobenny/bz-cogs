@@ -1,6 +1,7 @@
 import io
 import discord
 from redbot.core.i18n import Translator
+from discord.errors import NotFound, Forbidden, HTTPException
 
 _ = Translator("AImage", __file__)
 
@@ -12,7 +13,9 @@ class ParamsView(discord.ui.View):
         self.src_interaction = interaction
 
     @discord.ui.button(emoji="🔧", label=_("View Full"))
-    async def view_full_parameters(self, interaction: discord.Interaction, _: discord.Button):
+    async def view_full_parameters(
+        self, interaction: discord.Interaction, _: discord.Button
+    ):
         if len(self.params) < 1980:
             await interaction.response.send_message(
                 _("```yaml\n{params}```").format(params=self.params), ephemeral=True
@@ -28,5 +31,5 @@ class ParamsView(discord.ui.View):
         self.stop()
         try:
             await self.src_interaction.edit_original_response(view=None)
-        except:
+        except (NotFound, Forbidden, HTTPException):
             pass

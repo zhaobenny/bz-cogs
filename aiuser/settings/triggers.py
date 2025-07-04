@@ -113,7 +113,9 @@ class TriggerSettings(MixinMeta):
         value = not await self.config.guild(ctx.guild).grok_trigger()
         await self.config.guild(ctx.guild).grok_trigger.set(value)
         embed = discord.Embed(
-            title="The grok trigger is now:", description=f"{value}", color=await ctx.embed_color()
+            title="The grok trigger is now:",
+            description=f"{value}",
+            color=await ctx.embed_color(),
         )
         return await ctx.send(embed=embed)
 
@@ -132,7 +134,10 @@ class TriggerSettings(MixinMeta):
         words.append(word)
         await self.config.guild(ctx.guild).always_reply_on_words.set(words)
         return await self.show_trigger_always_words(
-            ctx, discord.Embed(title="The trigger words are now:", color=await ctx.embed_color())
+            ctx,
+            discord.Embed(
+                title="The trigger words are now:", color=await ctx.embed_color()
+            ),
         )
 
     @trigger_words.command(name="remove")
@@ -144,7 +149,10 @@ class TriggerSettings(MixinMeta):
         words.remove(word)
         await self.config.guild(ctx.guild).always_reply_on_words.set(words)
         return await self.show_trigger_always_words(
-            ctx, discord.Embed(title="The trigger words are now:", color=await ctx.embed_color())
+            ctx,
+            discord.Embed(
+                title="The trigger words are now:", color=await ctx.embed_color()
+            ),
         )
 
     @trigger_words.command(name="list", aliases=["show"])
@@ -153,7 +161,8 @@ class TriggerSettings(MixinMeta):
         return await self.show_trigger_always_words(
             ctx,
             discord.Embed(
-                title="Trigger words that activate the bot", color=await ctx.embed_color()
+                title="Trigger words that activate the bot",
+                color=await ctx.embed_color(),
             ),
         )
 
@@ -163,7 +172,9 @@ class TriggerSettings(MixinMeta):
         await self.config.guild(ctx.guild).always_reply_on_words.set([])
         return await ctx.send("The trigger words list has been cleared.")
 
-    async def show_trigger_always_words(self, ctx: commands.Context, embed: discord.Embed):
+    async def show_trigger_always_words(
+        self, ctx: commands.Context, embed: discord.Embed
+    ):
         words = await self.config.guild(ctx.guild).always_reply_on_words()
         if words:
             embed.description = ", ".join(f"`{word}`" for word in words)
@@ -196,7 +207,8 @@ class TriggerSettings(MixinMeta):
             await self.config.guild(ctx.guild).members_whitelist.set(whitelist)
 
         return await self.show_trigger_whitelist(
-            ctx, discord.Embed(title="The whitelist is now:", color=await ctx.embed_color())
+            ctx,
+            discord.Embed(title="The whitelist is now:", color=await ctx.embed_color()),
         )
 
     @trigger_whitelist.command(name="remove")
@@ -218,7 +230,8 @@ class TriggerSettings(MixinMeta):
             whitelist.remove(rm.id)
             await self.config.guild(ctx.guild).members_whitelist.set(whitelist)
         return await self.show_trigger_whitelist(
-            ctx, discord.Embed(title="The whitelist is now:", color=await ctx.embed_color())
+            ctx,
+            discord.Embed(title="The whitelist is now:", color=await ctx.embed_color()),
         )
 
     @trigger_whitelist.command(name="list", aliases=["show"])
@@ -244,11 +257,15 @@ class TriggerSettings(MixinMeta):
         users_whitelist = await self.config.guild(ctx.guild).members_whitelist()
         if roles_whitelist:
             embed.add_field(
-                name="Roles", value="\n".join([f"<@&{r}>" for r in roles_whitelist]), inline=False
+                name="Roles",
+                value="\n".join([f"<@&{r}>" for r in roles_whitelist]),
+                inline=False,
             )
         if users_whitelist:
             embed.add_field(
-                name="Users", value="\n".join([f"<@{u}>" for u in users_whitelist]), inline=False
+                name="Users",
+                value="\n".join([f"<@{u}>" for u in users_whitelist]),
+                inline=False,
             )
         if not roles_whitelist and not users_whitelist:
             embed.description = (

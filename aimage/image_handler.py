@@ -10,7 +10,6 @@ from redbot.core import commands
 from redbot.core.i18n import Translator
 
 from aimage.abc import MixinMeta
-from aimage.apis.a1111 import A1111
 from aimage.apis.response import ImageResponse
 from aimage.common.helpers import delete_button_after, send_response
 from aimage.common.params import ImageGenParams
@@ -28,12 +27,13 @@ class ImageHandler(MixinMeta):
         params: ImageGenParams = None,
         generate_method: str = "generate_image",
     ):
-
         if not isinstance(context, discord.Interaction):
             await context.message.add_reaction("⏳")
 
         guild = context.guild
-        user = context.user if isinstance(context, discord.Interaction) else context.author
+        user = (
+            context.user if isinstance(context, discord.Interaction) else context.author
+        )
 
         if self.generating[user.id]:
             content = _(
@@ -59,15 +59,23 @@ class ImageHandler(MixinMeta):
                 content=_(":warning: Invalid parameter: {error}").format(error=error),
                 ephemeral=True,
             )
-        except aiohttp.ClientResponseError as error:
-            logger.exception(_("Failed request in host {guild_id}").format(guild_id=guild.id))
+        except aiohttp.ClientResponseError:
+            logger.exception(
+                _("Failed request in host {guild_id}").format(guild_id=guild.id)
+            )
             return await send_response(
-                context, content=_(":warning: Timed out! Bad response from host!"), ephemeral=True
+                context,
+                content=_(":warning: Timed out! Bad response from host!"),
+                ephemeral=True,
             )
         except aiohttp.ClientConnectorError:
-            logger.exception(_("Failed request in server {guild_id}").format(guild_id=guild.id))
+            logger.exception(
+                _("Failed request in server {guild_id}").format(guild_id=guild.id)
+            )
             return await send_response(
-                context, content=_(":warning: Timed out! Could not reach host!"), ephemeral=True
+                context,
+                content=_(":warning: Timed out! Could not reach host!"),
+                ephemeral=True,
             )
         except NotImplementedError:
             return await send_response(
@@ -76,7 +84,9 @@ class ImageHandler(MixinMeta):
                 ephemeral=True,
             )
         except Exception:
-            logger.exception(_("Failed request in server {guild_id}").format(guild_id=guild.id))
+            logger.exception(
+                _("Failed request in server {guild_id}").format(guild_id=guild.id)
+            )
             return await send_response(
                 context, content=_(":warning: Something went wrong!"), ephemeral=True
             )
@@ -92,8 +102,12 @@ class ImageHandler(MixinMeta):
                 allowed_mentions=discord.AllowedMentions.none(),
             )
 
-        file = discord.File(io.BytesIO(response.data), filename=f"image.{response.extension}")
-        view = ImageActions(self, response.info_string, response.payload, user, context.channel)
+        file = discord.File(
+            io.BytesIO(response.data), filename=f"image.{response.extension}"
+        )
+        view = ImageActions(
+            self, response.info_string, response.payload, user, context.channel
+        )
         msg = await send_response(context, file=file, view=view)
         asyncio.create_task(delete_button_after(msg))
 
@@ -103,7 +117,10 @@ class ImageHandler(MixinMeta):
         imagescanner = self.bot.get_cog("ImageScanner")
         if imagescanner and response.extension == "png":
             if context.channel.id in imagescanner.scan_channels:
-                imagescanner.image_cache[msg.id] = ({1: response.info_string}, {1: response.data})
+                imagescanner.image_cache[msg.id] = (
+                    {1: response.info_string},
+                    {1: response.data},
+                )
                 await msg.add_reaction("🔎")
 
     async def generate_image(
@@ -115,9 +132,14 @@ class ImageHandler(MixinMeta):
         await self._execute_image_generation(context, payload, params, "generate_image")
 
     async def generate_img2img(
-        self, context: discord.Interaction, payload: dict = None, params: ImageGenParams = None
+        self,
+        context: discord.Interaction,
+        payload: dict = None,
+        params: ImageGenParams = None,
     ):
-        await self._execute_image_generation(context, payload, params, "generate_img2img")
+        await self._execute_image_generation(
+            context, payload, params, "generate_img2img"
+        )
 
     async def _contains_blacklisted_word(self, guild: discord.Guild, prompt: str):
         blacklist = await self.config.guild(guild).words_blacklist()

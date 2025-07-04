@@ -36,7 +36,9 @@ class oneletteronly(commands.Cog):
     @commands.command(name="oneletteronly")
     async def oneletteronly_toggle(self, ctx: commands.Context):
         """{0}""".format(
-            _("Toggle if the bot should change new user's nickname to first letter of nickname")
+            _(
+                "Toggle if the bot should change new user's nickname to first letter of nickname"
+            )
         )
         guild = ctx.guild
         enabled = await self.config.guild(guild).enabled()

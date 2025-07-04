@@ -84,7 +84,9 @@ class BitTensorImg(commands.Cog):
             "negative_prompt": negative_prompt,
         }
 
-        async with self.session.post(NINETEEN_API_URL, headers=headers, json=data) as response:
+        async with self.session.post(
+            NINETEEN_API_URL, headers=headers, json=data
+        ) as response:
             if response.status == 200:
                 res = await response.json()
                 image_data = res["image_b64"]
@@ -127,7 +129,9 @@ class BitTensorImg(commands.Cog):
             "num_inference_steps": steps,
         }
 
-        async with self.session.post(CHUTES_API_URL, headers=headers, json=data) as response:
+        async with self.session.post(
+            CHUTES_API_URL, headers=headers, json=data
+        ) as response:
             if response.status == 200:
                 return await response.read()
             else:
@@ -181,16 +185,20 @@ class BitTensorImg(commands.Cog):
                 )
             else:
                 await interaction.followup.send(
-                    _("Invalid provider: {provider}").format(provider=provider), ephemeral=True
+                    _("Invalid provider: {provider}").format(provider=provider),
+                    ephemeral=True,
                 )
 
             file = discord.File(io.BytesIO(image_bytes), filename="image.png")
             await interaction.followup.send(file=file)
-        except ValueError as e:
+        except ValueError:
             await interaction.followup.send(
                 _(
                     "No API key set for {provider}! Use `[p]set api {api_name} api_key,[YOUR_API_KEY_HERE]`"
-                ).format(provider=provider, api_name=NINETEEN if provider == NINETEEN else CHUTES),
+                ).format(
+                    provider=provider,
+                    api_name=NINETEEN if provider == NINETEEN else CHUTES,
+                ),
                 ephemeral=True,
             )
         except Exception as e:
@@ -218,7 +226,9 @@ class BitTensorImg(commands.Cog):
                 api_key_name = CHUTES
                 image_bytes = await self._generate_image_chutes(prompt)
             else:
-                raise ValueError(_("Invalid provider: {provider}").format(provider=provider))
+                raise ValueError(
+                    _("Invalid provider: {provider}").format(provider=provider)
+                )
 
             file = discord.File(io.BytesIO(image_bytes), filename="image.png")
             await ctx.message.remove_reaction(thinking_emoji, ctx.bot.user)

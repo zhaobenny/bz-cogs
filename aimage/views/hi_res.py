@@ -5,12 +5,15 @@ from redbot.core.i18n import Translator
 
 from aimage.common.constants import ADETAILER_ARGS, AUTO_COMPLETE_UPSCALERS
 from aimage.views.image_actions import ImageActions
+from discord.errors import NotFound, Forbidden, HTTPException
 
 _ = Translator("AImage", __file__)
 
 
 class HiresView(discord.ui.View):
-    def __init__(self, parent: ImageActions, interaction: discord.Interaction, maxsize: int):
+    def __init__(
+        self, parent: ImageActions, interaction: discord.Interaction, maxsize: int
+    ):
         super().__init__()
         self.src_view = parent
         self.src_interaction = interaction
@@ -20,19 +23,28 @@ class HiresView(discord.ui.View):
         upscalers = AUTO_COMPLETE_UPSCALERS + parent.cache[interaction.guild.id].get(
             "upscalers", []
         )
-        maxscale = ((maxsize * maxsize) / (self.payload["width"] * self.payload["height"])) ** 0.5
-        scales = [num / 100 for num in range(100, min(max(int(maxscale * 100) + 1, 101), 201), 25)]
+        maxscale = (
+            (maxsize * maxsize) / (self.payload["width"] * self.payload["height"])
+        ) ** 0.5
+        scales = [
+            num / 100
+            for num in range(100, min(max(int(maxscale * 100) + 1, 101), 201), 25)
+        ]
         self.upscaler = upscalers[0]
         self.scale = scales[-1]
         self.denoising = 0.5
-        self.adetailer = "adetailer" in parent.cache[interaction.guild.id].get("scripts", [])
+        self.adetailer = "adetailer" in parent.cache[interaction.guild.id].get(
+            "scripts", []
+        )
         self.add_item(UpscalerSelect(self, upscalers))
         self.add_item(ScaleSelect(self, scales))
         self.add_item(DenoisingSelect(self))
         if self.adetailer:
             self.add_item(AdetailerSelect(self))
 
-    @discord.ui.button(emoji="⬆", label=_("Upscale"), style=discord.ButtonStyle.blurple, row=4)
+    @discord.ui.button(
+        emoji="⬆", label=_("Upscale"), style=discord.ButtonStyle.blurple, row=4
+    )
     async def upscale(self, interaction: discord.Interaction, _: discord.Button):
         await interaction.response.defer(thinking=True)
         self.payload["enable_hr"] = True
@@ -61,7 +73,7 @@ class HiresView(discord.ui.View):
         if not self.src_view.is_finished():
             try:
                 await self.src_interaction.message.edit(view=self.src_view)
-            except:
+            except (NotFound, Forbidden, HTTPException):
                 pass
 
 
@@ -123,7 +135,9 @@ class AdetailerSelect(discord.ui.Select):
         self.parent = parent
         super().__init__(
             options=[
-                discord.SelectOption(label=_("ADetailer Enabled"), value=str(1), default=True),
+                discord.SelectOption(
+                    label=_("ADetailer Enabled"), value=str(1), default=True
+                ),
                 discord.SelectOption(label=_("ADetailer Disabled"), value=str(0)),
             ]
         )

@@ -12,7 +12,6 @@ from aimage.views.api_type import APITypeView
 
 
 class Settings(MixinMeta):
-
     @commands.group(name="aimage")
     @commands.guild_only()
     @checks.bot_has_permissions(embed_links=True, add_reactions=True)
@@ -35,14 +34,20 @@ class Settings(MixinMeta):
         negative_prompt = config["negative_prompt"]
         if len(negative_prompt) > 1000:
             negative_prompt = negative_prompt[:1000] + "..."
-        embed.add_field(name="Default Negative Prompt", value=f"`{negative_prompt}`", inline=False)
+        embed.add_field(
+            name="Default Negative Prompt", value=f"`{negative_prompt}`", inline=False
+        )
 
         embed.add_field(name="Default Checkpoint", value=f"`{config['checkpoint']}`")
         embed.add_field(name="Default VAE", value=f"`{config['vae']}`")
         embed.add_field(name="Default Sampler", value=f"`{config['sampler']}`")
         embed.add_field(name="Default CFG", value=f"`{config['cfg']}`")
-        embed.add_field(name="Default Sampling Steps", value=f"`{config['sampling_steps']}`")
-        embed.add_field(name="Default Size", value=f"`{config['width']}x{config['height']}`")
+        embed.add_field(
+            name="Default Sampling Steps", value=f"`{config['sampling_steps']}`"
+        )
+        embed.add_field(
+            name="Default Size", value=f"`{config['width']}x{config['height']}`"
+        )
         embed.add_field(name="NSFW allowed", value=f"`{config['nsfw']}`")
         embed.add_field(name="Use ADetailer", value=f"`{config['adetailer']}`")
         embed.add_field(name="Use Tiled VAE", value=f"`{config['tiledvae']}`")
@@ -70,17 +75,20 @@ class Settings(MixinMeta):
 
         valid_endings = ["/sdapi/v1/", "/api/"]
 
-        is_valid = endpoint and any(endpoint.endswith(ending) for ending in valid_endings)
+        is_valid = endpoint and any(
+            endpoint.endswith(ending) for ending in valid_endings
+        )
         if endpoint and not is_valid:
             await ctx.send(
-                f"⚠️ Endpoint URL does not end with `/sdapi/v1/` or `/api/`. Continuing anyways..."
+                "⚠️ Endpoint URL does not end with `/sdapi/v1/` or `/api/`. Continuing anyways..."
             )
 
         await self.config.guild(ctx.guild).endpoint.set(endpoint)
         await self.config.guild(ctx.guild).api_type.set(API_Type.AUTOMATIC1111.value)
 
         msg = await ctx.send(
-            "Endpoint set. Select what type of API this endpoint is ⤵️ ", view=APITypeView(self, ctx)
+            "Endpoint set. Select what type of API this endpoint is ⤵️ ",
+            view=APITypeView(self, ctx),
         )
         asyncio.create_task(delete_button_after(msg))
 
@@ -102,10 +110,14 @@ class Settings(MixinMeta):
                 )
 
         await self.config.guild(ctx.guild).nsfw.set(not nsfw)
-        await ctx.send(f"NSFW filtering is now {'`disabled`' if not nsfw else '`enabled`'}")
+        await ctx.send(
+            f"NSFW filtering is now {'`disabled`' if not nsfw else '`enabled`'}"
+        )
 
     @aimage.command(name="negative_prompt")
-    async def negative_prompt(self, ctx: commands.Context, *, negative_prompt: Optional[str]):
+    async def negative_prompt(
+        self, ctx: commands.Context, *, negative_prompt: Optional[str]
+    ):
         """
         Set the default negative prompt
         """
@@ -141,7 +153,9 @@ class Settings(MixinMeta):
         await ctx.message.remove_reaction("🔄", ctx.me)
 
         if sampler not in samplers:
-            return await ctx.send(f":warning: Sampler must be one of: `{', '.join(samplers)}`")
+            return await ctx.send(
+                f":warning: Sampler must be one of: `{', '.join(samplers)}`"
+            )
 
         await self.config.guild(ctx.guild).sampler.set(sampler)
         await ctx.tick("✅ Default sampler updated.")
@@ -223,7 +237,9 @@ class Settings(MixinMeta):
                     remaining_length -= len(vae) + 2
                 else:
                     break
-            return await ctx.send(f":warning: Invalid vae. Pick one of these:\n`{', '.join(vaes)}`")
+            return await ctx.send(
+                f":warning: Invalid vae. Pick one of these:\n`{', '.join(vaes)}`"
+            )
 
         await self.config.guild(ctx.guild).vae.set(vae)
         await ctx.tick("✅ Default VAE updated.")
@@ -335,7 +351,9 @@ class Settings(MixinMeta):
         pages = []
 
         for i in range(0, len(current_words), 10):
-            embed = discord.Embed(title="Blacklisted words", color=await ctx.embed_color())
+            embed = discord.Embed(
+                title="Blacklisted words", color=await ctx.embed_color()
+            )
             embed.description = "\n".join(current_words[i : i + 10])
             pages.append(embed)
 
@@ -343,7 +361,7 @@ class Settings(MixinMeta):
             return await ctx.send(embed=pages[0])
 
         for i, page in enumerate(pages):
-            page.set_footer(text=f"Page {i+1} of {len(pages)}")
+            page.set_footer(text=f"Page {i + 1} of {len(pages)}")
 
         await SimpleMenu(pages).start(ctx)
 

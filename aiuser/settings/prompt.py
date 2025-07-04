@@ -23,7 +23,6 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class PromptSettings(MixinMeta):
-
     @aiuser.group()
     @checks.admin_or_permissions(manage_guild=True)
     async def prompt(self, _):
@@ -65,12 +64,15 @@ class PromptSettings(MixinMeta):
                 await self.config.role(role).custom_text_prompt.set(None)
             return await confirm.edit(
                 embed=discord.Embed(
-                    title="All prompts have been reset to default.", color=await ctx.embed_color()
+                    title="All prompts have been reset to default.",
+                    color=await ctx.embed_color(),
                 )
             )
 
     @prompt.group(name="show", invoke_without_command=True)
-    async def prompt_show(self, ctx: commands.Context, mention: Optional[COMPATIBLE_MENTIONS]):
+    async def prompt_show(
+        self, ctx: commands.Context, mention: Optional[COMPATIBLE_MENTIONS]
+    ):
         """Show the prompt for the server (or provided user/channel)
         **Arguments**
             - `mention` *(Optional)* User or channel
@@ -97,9 +99,13 @@ class PromptSettings(MixinMeta):
             )
         else:
             embed = discord.Embed(
-                title=title, description=truncate_prompt(prompt), color=await ctx.embed_color()
+                title=title,
+                description=truncate_prompt(prompt),
+                color=await ctx.embed_color(),
             )
-            embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
+            embed.add_field(
+                name="Tokens", value=await get_tokens(self.config, ctx, prompt)
+            )
         await ctx.send(embed=embed)
 
     @prompt_show.command(name="members", aliases=["users"])
@@ -125,7 +131,7 @@ class PromptSettings(MixinMeta):
         elif mention_type == MentionType.CHANNEL:
             return f"The prompt for {entity.mention} is:"
         else:
-            return f"The prompt for this server is:"
+            return "The prompt for this server is:"
 
     async def _get_custom_prompt(self, ctx, entity, mention_type: MentionType):
         custom_prompt = None
@@ -141,7 +147,9 @@ class PromptSettings(MixinMeta):
             description=truncate_prompt(custom_prompt),
             color=await ctx.embed_color(),
         )
-        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, custom_prompt))
+        embed.add_field(
+            name="Tokens", value=await get_tokens(self.config, ctx, custom_prompt)
+        )
         return embed
 
     async def _show_prompts(self, ctx, entities, mention_type: MentionType):
@@ -152,13 +160,15 @@ class PromptSettings(MixinMeta):
                 pages.append(embed)
 
         if not pages:
-            return await ctx.send(f"No {mention_type.name.lower()}s with custom prompts")
+            return await ctx.send(
+                f"No {mention_type.name.lower()}s with custom prompts"
+            )
 
         if len(pages) == 1:
             return await ctx.send(embed=pages[0])
 
         for i, page in enumerate(pages):
-            page.set_footer(text=f"Page {i+1} of {len(pages)}")
+            page.set_footer(text=f"Page {i + 1} of {len(pages)}")
 
         await SimpleMenu(pages).start(ctx)
 
@@ -171,7 +181,7 @@ class PromptSettings(MixinMeta):
             or DEFAULT_PROMPT
         )
         embed = discord.Embed(
-            title=f"The prompt for this server is:",
+            title="The prompt for this server is:",
             description=truncate_prompt(prompt),
             color=await ctx.embed_color(),
         )
@@ -196,12 +206,14 @@ class PromptSettings(MixinMeta):
                 description=truncate_prompt(prompt),
                 color=await ctx.embed_color(),
             )
-            page.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
+            page.add_field(
+                name="Tokens", value=await get_tokens(self.config, ctx, prompt)
+            )
             pages.append(page)
         if len(pages) == 1:
             return await ctx.send(embed=pages[0])
         for i, page in enumerate(pages):
-            page.set_footer(text=f"Page {i+1} of {len(pages)}")
+            page.set_footer(text=f"Page {i + 1} of {len(pages)}")
         await SimpleMenu(pages).start(ctx)
 
     @prompt_preset.command(name="add", aliases=["a"])
@@ -225,7 +237,9 @@ class PromptSettings(MixinMeta):
                 )
         if preset in presets:
             return await ctx.send("That preset name already exists.")
-        if len(prompt) > await self.config.max_prompt_length() and not await ctx.bot.is_owner(
+        if len(
+            prompt
+        ) > await self.config.max_prompt_length() and not await ctx.bot.is_owner(
             ctx.author
         ):
             return await ctx.send(
@@ -282,7 +296,9 @@ class PromptSettings(MixinMeta):
         """
         if not prompt and ctx.message.attachments:
             if not ctx.message.attachments[0].filename.endswith(".txt"):
-                return await ctx.send(":warning: Invalid attachment. Must be a `.txt` file.")
+                return await ctx.send(
+                    ":warning: Invalid attachment. Must be a `.txt` file."
+                )
             prompt = (await ctx.message.attachments[0].read()).decode("utf-8")
 
         if not prompt:

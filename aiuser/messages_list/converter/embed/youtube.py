@@ -8,7 +8,9 @@ from aiuser.config.constants import YOUTUBE_VIDEO_ID_PATTERN
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
-YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3/videos?part=snippet&id={}&key={}"
+YOUTUBE_API_URL = (
+    "https://www.googleapis.com/youtube/v3/videos?part=snippet&id={}&key={}"
+)
 
 
 async def format_youtube_embed(api_key: str, message: Message):
@@ -19,9 +21,11 @@ async def format_youtube_embed(api_key: str, message: Message):
         return None
 
     try:
-        video_title, channel_title, description = await get_video_details(api_key, video_id)
+        video_title, channel_title, description = await get_video_details(
+            api_key, video_id
+        )
     except Exception:
-        logger.error(f"Failed request to Youtube API", exc_info=True)
+        logger.error("Failed request to Youtube API", exc_info=True)
         return None
 
     return f'User "{author}" sent: [Link to Youtube video with title "{video_title}" and description "{description}" from channel "{channel_title}"]'

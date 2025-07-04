@@ -15,15 +15,21 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 async def process_image_ai_horde(cog: MixinMeta, message: Message, image: Image):
-    api_key = (await cog.bot.get_shared_api_tokens("ai-horde")).get("api_key") or "0000000000"
+    api_key = (await cog.bot.get_shared_api_tokens("ai-horde")).get(
+        "api_key"
+    ) or "0000000000"
     buffer = BytesIO()
     image.convert("RGB").save(buffer, format="webp", exact=True)
     encoded_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    payload = {"source_image": encoded_image, "slow_workers": True, "forms": [{"name": "caption"}]}
+    payload = {
+        "source_image": encoded_image,
+        "slow_workers": True,
+        "forms": [{"name": "caption"}],
+    }
     try:
         caption = await request_ai_horde(payload, api_key)
     except Exception:
-        logger.exception(f"Failed request to AI Horde")
+        logger.exception("Failed request to AI Horde")
 
     logger.info(
         f"AI Horde image caption result for message {message.id} in {message.guild.name}: {caption}"

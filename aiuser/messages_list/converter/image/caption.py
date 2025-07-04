@@ -32,7 +32,9 @@ async def transcribe_image(cog: MixinMeta, message: Message):
     return content
 
 
-async def process_image(cog: MixinMeta, message: Message, image: Image, mode: ScanImageMode):
+async def process_image(
+    cog: MixinMeta, message: Message, image: Image, mode: ScanImageMode
+):
     if mode == ScanImageMode.AI_HORDE:
         return await process_image_ai_horde(cog, message, image)
     elif mode == ScanImageMode.LOCAL:
@@ -71,6 +73,7 @@ def scale_image(image: Image.Image, target_resolution: int) -> Image:
     if image_resolution > target_resolution:
         scale_factor = (target_resolution / image_resolution) ** 0.5
         return image.resize(
-            (int(width * scale_factor), int(height * scale_factor)), Image.Resampling.LANCZOS
+            (int(width * scale_factor), int(height * scale_factor)),
+            Image.Resampling.LANCZOS,
         )
     return image
