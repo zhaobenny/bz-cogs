@@ -59,7 +59,7 @@ class Settings:
         whitelist.append(channel.id)
         self.whitelist[ctx.guild.id] = whitelist
         await self.config.guild(ctx.guild).whitelist.set(whitelist)
-        return await ctx.tick(_("✅ Channel added to whitelist"))
+        return await ctx.tick(message="✅ Channel added to whitelist")
 
     @aiemote.command(name="remove", aliases=["rm"])
     @checks.admin_or_permissions(manage_guild=True)
@@ -75,7 +75,7 @@ class Settings:
         whitelist.remove(channel.id)
         self.whitelist[ctx.guild.id] = whitelist
         await self.config.guild(ctx.guild).whitelist.set(whitelist)
-        return await ctx.tick(_("✅ Channel removed from whitelist"))
+        return await ctx.tick(message="✅ Channel removed from whitelist")
 
     @aiemote.command(name="optinbydefault", alias=["optindefault"])
     @checks.admin_or_permissions(manage_guild=True)
@@ -278,7 +278,7 @@ class Settings:
             await self.config.extra_instruction.set("")
         else:
             await self.config.extra_instruction.set(instruction)
-        return await ctx.tick(_("✅ Extra instruction updated"))
+        return await ctx.tick(message="✅ Extra instruction updated")
 
     async def check_valid_emoji(self, ctx: commands.Context, emoji):
         if emoji in EMOJI_DATA.keys():
@@ -326,7 +326,7 @@ class Settings:
             emojis = []
         if await self.add_emoji(ctx, emojis, emoji, description):
             await self.config.global_emojis.set(emojis)
-            await ctx.tick(_("✅ Global emoji added"))
+            await ctx.tick(message="✅ Global emoji added")
 
     @aiemote_owner.command(name="remove", aliases=["rm"])
     @checks.is_owner()
@@ -342,7 +342,7 @@ class Settings:
         emojis = await self.config.global_emojis()
         if await self.remove_emoji(ctx, emojis, emoji):
             await self.config.global_emojis.set(emojis)
-            await ctx.tick(_("✅ Global emoji removed"))
+            await ctx.tick(message="✅ Global emoji removed")
 
     async def create_emoji_embed(self, ctx, title: str, emojis: list):
         embeds = []
@@ -454,7 +454,7 @@ class Settings:
             emojis = []
         if await self.add_emoji(ctx, emojis, emoji, description):
             await self.config.guild(ctx.guild).server_emojis.set(emojis)
-            await ctx.tick(_("✅ Server emoji added"))
+            await ctx.tick(message="✅ Server emoji added")
 
     @aiemote_owner.command(name="sremove", aliases=["srm"])
     @checks.is_owner()
@@ -470,7 +470,7 @@ class Settings:
         emojis = await self.config.guild(ctx.guild).server_emojis()
         if await self.remove_emoji(ctx, emojis, emoji):
             await self.config.guild(ctx.guild).server_emojis.set(emojis)
-            await ctx.tick(_("✅ Server emoji removed"))
+            await ctx.tick(message="✅ Server emoji removed")
 
     @aiemote_owner.command(name="percent")
     @checks.is_owner()
@@ -484,4 +484,4 @@ class Settings:
             return await ctx.send(_("Invalid percent"))
         self.percent = percent
         await self.config.percent.set(percent)
-        return await ctx.tick(_("✅ Percent chance updated"))
+        return await ctx.tick(message="✅ Percent chance updated")

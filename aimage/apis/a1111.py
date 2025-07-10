@@ -30,7 +30,7 @@ cache_mapping = {
     "scripts": "scripts",
     "loras": "loras",
     "sd-models": "checkpoints",
-    "sd-vae": "vaes",
+    "sd-modules": "vaes",
     "samplers": "samplers",
     "prompt-styles": "styles",
 }
@@ -85,7 +85,7 @@ class A1111(BaseAPI):
                 choices = [choice for choice in data["txt2img"]] if data else []
             elif page == "loras":
                 choices = [f"<lora:{choice['name']}:1>" for choice in data] if data else []
-            elif page in ["sd-models", "sd-vae"]:
+            elif page in ["sd-models", "sd-modules"]:
                 choices = [choice["model_name"] for choice in data] if data else []
             else:
                 choices = [choice["name"] for choice in data] if data else []
