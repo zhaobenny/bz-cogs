@@ -17,8 +17,7 @@ class GenericImageGenerator(ImageGenerator):
         url = await self.config.guild(self.ctx.guild).image_requests_endpoint()
         payload = await self._prepare_payload(caption)
 
-        logger.debug(
-            f"Sending SD request with payload: {json.dumps(payload, indent=4)}")
+        logger.debug(f"Sending SD request with payload: {json.dumps(payload, indent=4)}")
         image = await self._post_request(url, payload)
         return image
 

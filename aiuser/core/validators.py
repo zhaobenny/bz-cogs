@@ -10,6 +10,7 @@ from aiuser.config.constants import SINGULAR_MENTION_PATTERN
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
+
 async def is_valid_message(cog: MixinMeta, ctx: commands.Context) -> bool:
     """
     Main validation chain that runs all checks in sequence.
@@ -25,10 +26,12 @@ async def is_valid_message(cog: MixinMeta, ctx: commands.Context) -> bool:
 
     for validator, validation_type in validation_chain:
         try:
-            is_valid, reason = await validator(cog, ctx) 
+            is_valid, reason = await validator(cog, ctx)
             if not is_valid:
                 if validation_type in ["OpenAI Client"]:
-                    logger.warning(f"Critical validation failed in '{ctx.guild.id}': {validation_type} - {reason}")
+                    logger.warning(
+                        f"Critical validation failed in '{ctx.guild.id}': {validation_type} - {reason}"
+                    )
                 return False
         except Exception:
             logger.error(f"Error in {validation_type} validation", exc_info=True)
@@ -37,7 +40,7 @@ async def is_valid_message(cog: MixinMeta, ctx: commands.Context) -> bool:
     return True
 
 
-async def check_openai_client(cog: MixinMeta, _ : commands.Context) -> Tuple[bool, str]:
+async def check_openai_client(cog: MixinMeta, _: commands.Context) -> Tuple[bool, str]:
     """Validate and setup OpenAI client"""
     if not cog.openai_client:
         cog.openai_client = await setup_openai_client(cog.bot, cog.config)
@@ -71,12 +74,10 @@ async def check_channel_settings(cog: MixinMeta, ctx: commands.Context) -> Tuple
         return False, "No whitelisted channels"
 
     if not ctx.interaction:
-        if (isinstance(ctx.channel, discord.Thread) and
-                ctx.channel.parent.id not in whitelist):
+        if isinstance(ctx.channel, discord.Thread) and ctx.channel.parent.id not in whitelist:
             return False, "Parent channel not whitelisted"
 
-        if (not isinstance(ctx.channel, discord.Thread) and
-                ctx.channel.id not in whitelist):
+        if not isinstance(ctx.channel, discord.Thread) and ctx.channel.id not in whitelist:
             return False, "Channel not whitelisted"
 
     return True, ""
@@ -101,10 +102,7 @@ async def check_user_status(cog: MixinMeta, ctx: commands.Context) -> Tuple[bool
     whitelisted_members = await cog.config.guild(ctx.guild).members_whitelist()
     if whitelisted_members or whitelisted_roles:
         user_roles = set(role.id for role in ctx.author.roles) if ctx.author.roles else set()
-        if not (
-            (ctx.author.id in whitelisted_members) or
-            (user_roles & set(whitelisted_roles))
-        ):
+        if not ((ctx.author.id in whitelisted_members) or (user_roles & set(whitelisted_roles))):
             return False, "User not in role/member whitelist"
 
     return True, ""
@@ -121,11 +119,13 @@ async def check_message_content(cog: MixinMeta, ctx: commands.Context) -> Tuple[
         if 1 <= len(ctx.message.content) < min_length:
             return False, f"Message too short (min: {min_length})"
 
-    if (cog.ignore_regex.get(ctx.guild.id) and
-            cog.ignore_regex[ctx.guild.id].search(ctx.message.content)):
+    if cog.ignore_regex.get(ctx.guild.id) and cog.ignore_regex[ctx.guild.id].search(
+        ctx.message.content
+    ):
         return False, "Message matches ignore regex"
 
     return True, ""
+
 
 async def is_bot_mentioned_or_replied(cog: MixinMeta, message: discord.Message) -> bool:
     """Check if message mentions or replies to bot"""

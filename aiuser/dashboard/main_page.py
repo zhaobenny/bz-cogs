@@ -8,4 +8,4 @@ async def main(self, **kwargs):
         "web_content": {
             "source": "Not implemented yet.",
         },
-    } 
+    }

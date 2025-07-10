@@ -14,7 +14,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 async def dispatch_response(cog: MixinMeta, ctx: commands.Context, messages_list=None):
-    """ Decide which response to send based on the context """
+    """Decide which response to send based on the context"""
     async with ctx.message.channel.typing():
         if (not messages_list and not ctx.interaction) and await is_image_request(cog, ctx.message):
             if await process_image_response(cog, ctx):

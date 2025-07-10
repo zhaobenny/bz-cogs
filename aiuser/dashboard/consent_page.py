@@ -8,19 +8,30 @@ from aiuser.dashboard.decorator import dashboard_page
 TEMPLATES_PATH = pathlib.Path(__file__).parent / "templates"
 
 
-@dashboard_page(name="data_usage_consent", description="Opt in/out of providing your messages to OpenAI or a third-party provider", methods=("GET", "POST"))
+@dashboard_page(
+    name="data_usage_consent",
+    description="Opt in/out of providing your messages to OpenAI or a third-party provider",
+    methods=("GET", "POST"),
+)
 async def opt_consent(self, user: discord.User, **kwargs):
     import wtforms
-    
+
     class Form(kwargs["Form"]):
         def __init__(self):
             super().__init__(prefix="consent_")
-        accept: wtforms.SubmitField = wtforms.SubmitField("Yes, I consent.", render_kw={
-            "class": "btn btn-success px-4 py-2",
-        })
-        reject: wtforms.SubmitField = wtforms.SubmitField("No, I do NOT consent.", render_kw={
-            "class": "btn btn-danger px-4 py-2",
-        })
+
+        accept: wtforms.SubmitField = wtforms.SubmitField(
+            "Yes, I consent.",
+            render_kw={
+                "class": "btn btn-success px-4 py-2",
+            },
+        )
+        reject: wtforms.SubmitField = wtforms.SubmitField(
+            "No, I do NOT consent.",
+            render_kw={
+                "class": "btn btn-danger px-4 py-2",
+            },
+        )
 
     form = Form()
     whitelist = await self.config.optin()
@@ -52,7 +63,9 @@ async def opt_consent(self, user: discord.User, **kwargs):
         except Exception:
             return {
                 "status": 1,
-                "notifications": [{"message": "Something went wrong while saving changes!", "category": "error"}],
+                "notifications": [
+                    {"message": "Something went wrong while saving changes!", "category": "error"}
+                ],
             }
         return {
             "status": 0,
@@ -62,13 +75,13 @@ async def opt_consent(self, user: discord.User, **kwargs):
 
     template_path = TEMPLATES_PATH / "consent_page.html"
     source = template_path.read_text()
-    
+
     return {
         "status": 0,
         "web_content": {
             "source": source,  # Template content
             "user_name": user.name,  # Context variable
             "whitelist_text": whitelist_text,  # Context variable
-            "form": form  # Context variable (WTForms object)
+            "form": form,  # Context variable (WTForms object)
         },
-    } 
+    }
