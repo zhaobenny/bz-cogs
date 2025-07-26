@@ -10,13 +10,13 @@ from aiuser.response.image.providers.modal import ModalImageGenerator
 from aiuser.response.image.providers.nemusona import NemusonaGenerator
 from aiuser.response.image.providers.runpod import RunPodGenerator
 from aiuser.response.image.providers.nineteen import NINETEEN_API_URL, NineteenGenerator
+from aiuser.response.image.providers.huggingface import HuggingFaceGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 async def get_image_generator(ctx: commands.Context, config: config):
     sd_endpoint: str = await config.guild(ctx.guild).image_requests_endpoint()
-
     if not sd_endpoint:
         logger.error(
             f"Stable Diffusion endpoint not set for {ctx.guild.name}, "
@@ -28,10 +28,14 @@ async def get_image_generator(ctx: commands.Context, config: config):
     if sd_endpoint.startswith("dall-e-"):
         api_key = (await ctx.bot.get_shared_api_tokens("openai")).get("api_key")
         return DalleImageGenerator(ctx, config, sd_endpoint, api_key)
-    elif sd_endpoint.startswith("https://waifus-api.nemusona.com/"):
-        return NemusonaGenerator(ctx, config)
+    elif (
+        sd_endpoint.startswith("https://huggingface.co/spaces/")
+        or ".hf.space" in sd_endpoint
+    ):
+        return HuggingFaceGenerator(ctx, config, sd_endpoint=sd_endpoint)
     elif sd_endpoint.startswith("https://perchance.org/ai-text-to-image-generator"):
         from aiuser.response.image.providers.perchance import PerchanceGenerator
+
         return PerchanceGenerator(ctx, config)
     elif sd_endpoint.endswith("imggen.modal.run/"):
         auth_token = (await ctx.bot.get_shared_api_tokens("modal-img-gen")).get("token")
