@@ -19,7 +19,7 @@
         "Pillow",
         "trafilatura",
         "aiohttp",
-		"gradio_client"
+        "gradio_client"
     ],
     "end_user_data_statement": "This cog does not autonomously store data or metadata concerning users. With user consent, chat messages/images may be forwarded to OpenAI or third parties to produce LLM responses. For further details, please consult: https://openai.com/policies/privacy-policy, https://openrouter.ai/privacy, https://stablehorde.net/privacy, and relevant third-party privacy policies.",
     "tags": [
