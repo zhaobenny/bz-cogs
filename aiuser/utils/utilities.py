@@ -12,7 +12,7 @@ from discord import Message
 from openai import AsyncOpenAI
 from redbot.core import Config, commands
 
-from aiuser.common.constants import OPENROUTER_URL, YOUTUBE_URL_PATTERN
+from aiuser.config.constants import OPENROUTER_URL, YOUTUBE_URL_PATTERN
 from aiuser.functions.tool_call import ToolCall
 
 logger = logging.getLogger("red.bz_cogs.aiuser")

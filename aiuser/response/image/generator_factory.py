@@ -2,14 +2,14 @@ import logging
 
 from redbot.core import commands, config
 
-from aiuser.common.constants import IMAGE_REQUEST_AIHORDE_URL
-from aiuser.response.image.aihorde import AIHordeGenerator
-from aiuser.response.image.dalle import DalleImageGenerator
-from aiuser.response.image.generic import GenericImageGenerator
-from aiuser.response.image.modal import ModalImageGenerator
-from aiuser.response.image.nemusona import NemusonaGenerator
-from aiuser.response.image.runpod import RunPodGenerator
-from aiuser.response.image.nineteen import NINETEEN_API_URL, NineteenGenerator
+from aiuser.config.constants import IMAGE_REQUEST_AIHORDE_URL
+from aiuser.response.image.providers.aihorde import AIHordeGenerator
+from aiuser.response.image.providers.dalle import DalleImageGenerator
+from aiuser.response.image.providers.generic import GenericImageGenerator
+from aiuser.response.image.providers.modal import ModalImageGenerator
+from aiuser.response.image.providers.nemusona import NemusonaGenerator
+from aiuser.response.image.providers.runpod import RunPodGenerator
+from aiuser.response.image.providers.nineteen import NINETEEN_API_URL, NineteenGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -31,7 +31,7 @@ async def get_image_generator(ctx: commands.Context, config: config):
     elif sd_endpoint.startswith("https://waifus-api.nemusona.com/"):
         return NemusonaGenerator(ctx, config)
     elif sd_endpoint.startswith("https://perchance.org/ai-text-to-image-generator"):
-        from aiuser.response.image.perchance import PerchanceGenerator
+        from aiuser.response.image.providers.perchance import PerchanceGenerator
         return PerchanceGenerator(ctx, config)
     elif sd_endpoint.endswith("imggen.modal.run/"):
         auth_token = (await ctx.bot.get_shared_api_tokens("modal-img-gen")).get("token")

@@ -4,9 +4,10 @@ import logging
 import discord
 from redbot.core import checks, commands
 
-from aiuser.abc import MixinMeta, aiuser
-from aiuser.common.constants import OPENROUTER_URL, VISION_SUPPORTED_MODELS
-from aiuser.common.enums import ScanImageMode
+from aiuser.config.constants import OPENROUTER_URL
+from aiuser.config.models import VISION_SUPPORTED_MODELS
+from aiuser.types.abc import MixinMeta, aiuser
+from aiuser.types.enums import ScanImageMode
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -30,7 +31,7 @@ class ImageScanSettings(MixinMeta):
         await self.config.guild(ctx.guild).scan_images.set(value)
         embed = discord.Embed(
             title="Scanning Images for this server now set to:",
-            description=f"{value}",
+            description=f"`{value}`",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
@@ -40,7 +41,7 @@ class ImageScanSettings(MixinMeta):
         await self.config.guild(ctx.guild).max_image_size.set(size * 1024 * 1024)
         embed = discord.Embed(
             title="Max download size to scan images now set to:",
-            description=f"{size:.2f} MB",
+            description=f"`{size:.2f}` MB",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
 
@@ -73,19 +74,19 @@ class ImageScanSettings(MixinMeta):
                 await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.LOCAL.value)
                 embed = discord.Embed(title="Scanning Images for this server now set to", color=await ctx.embed_color())
                 embed.add_field(
-                    name=":warning: __WILL CAUSE HEAVY CPU LOAD__ :warning:", value=mode.value, inline=False)
+                    name="❗ __WILL CAUSE HEAVY CPU LOAD__ ❗", value=f"`{mode.value}`", inline=False)
                 return await ctx.send(embed=embed)
-            except Exception as e:
+            except Exception:
                 logger.error(
                     "Image processing dependencies import failed. ", exc_info=True)
                 await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.AI_HORDE.value)
                 return await ctx.send(":warning: Local image processing dependencies not available. Please install them (see cog README.md) to use this feature locally.")
         elif mode == ScanImageMode.AI_HORDE:
             await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.AI_HORDE.value)
-            embed = discord.Embed(title="Scanning Images for this server now set to", description=mode.value, color=await ctx.embed_color())
+            embed = discord.Embed(title="Scanning Images for this server now set to", description=f"`{mode.value}`", color=await ctx.embed_color())
             embed.add_field(
-                name=":warning: __PRIVACY WARNING__ :warning:",
-                value="This will send images to a random volunteer machine for processing! \n Please inform users or use local mode for privacy.",
+                name="👁️ __PRIVACY WARNING__",
+                value="This will send image attachments to a random volunteer worker machine for processing!",
                 inline=False)
             if (await self.bot.get_shared_api_tokens('ai-horde')).get("api_key"):
                 key_description = "Key set."
@@ -104,14 +105,23 @@ class ImageScanSettings(MixinMeta):
             return await ctx.send(embed=embed)
         elif mode == ScanImageMode.LLM:
             await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.LLM.value)
-            embed = discord.Embed(title="Scanning Images for this server now set to", description=mode.value, color=await ctx.embed_color())
+            embed = discord.Embed(title="Scanning Images for this server now set to", description=f"`{mode.value}`", color=await ctx.embed_color())
 
             embed.add_field(
-                name=":warning: __PRIVACY WARNING__ :warning:",
-                value="This may send images to OpenAI / third party for processing! \n Please inform users or use local mode for privacy.",
+                name="👁️ __PRIVACY WARNING__",
+                value="This will send image attachments to the specified endpoint for processing!",
                 inline=False)
-            return await ctx.send(embed=embed)
+            
 
+            model = await self.config.guild(ctx.guild).scan_images_model() 
+            if model not in VISION_SUPPORTED_MODELS:
+                embed.add_field(
+                    name=":warning: Unvalidated Model",
+                    value=f"Set image scanning model to `{model}` but it has not been validated for image scanning.",
+                    inline=False)
+                            
+            return await ctx.send(embed=embed)
+        
     @imagescan.command(name="model")
     async def image_model(self, ctx: commands.Context, model_name: str):
         """ Set the specific LLM used in the `supported-llm` mode
@@ -120,8 +130,8 @@ class ImageScanSettings(MixinMeta):
         **Arguments**
             - `model_name` Name of a compatible model
         """
-
         custom_endpoint = await self.config.custom_openai_endpoint()
+        warning_message = None
 
         if (not custom_endpoint or custom_endpoint.startswith(OPENROUTER_URL)):
             await ctx.message.add_reaction("🔄")
@@ -130,12 +140,14 @@ class ImageScanSettings(MixinMeta):
             await ctx.message.remove_reaction("🔄", ctx.me)
 
             if model_name not in models:
-                await ctx.send(":warning: Not a valid model!")
-                return await self._paginate_models(ctx, models)
+                warning_message = "⚠️ Model has not been validated for image scanning."
+
 
         await self.config.guild(ctx.guild).scan_images_model.set(model_name)
         embed = discord.Embed(
             title="LLM for scanning images now set to:",
-            description=f"{model_name}",
+            description=f"`{model_name}`",
             color=await ctx.embed_color())
+        if warning_message:
+            embed.set_footer(text=warning_message)
         return await ctx.send(embed=embed)

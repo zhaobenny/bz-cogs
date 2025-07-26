@@ -1,18 +1,11 @@
 import json
 import logging
-from typing import Optional, Union
+from typing import Optional
 
 import discord
 from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
-from aiuser.abc import MixinMeta
-from aiuser.common.constants import FUNCTION_CALLING_SUPPORTED_MODELS
-from aiuser.common.enums import MentionType
-from aiuser.common.types import COMPATIBLE_CHANNELS, COMPATIBLE_MENTIONS
-from aiuser.common.utilities import (get_enabled_tools,
-                                     is_using_openai_endpoint,
-                                     is_using_openrouter_endpoint)
 from aiuser.settings.functions import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
 from aiuser.settings.image_request import ImageRequestSettings
@@ -22,7 +15,18 @@ from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.random_message import RandomMessageSettings
 from aiuser.settings.response import ResponseSettings
 from aiuser.settings.triggers import TriggerSettings
-from aiuser.settings.utilities import get_config_attribute, get_mention_type
+from aiuser.settings.utilities import (
+    get_available_models,
+    get_config_attribute,
+    get_mention_type,
+)
+from aiuser.types.abc import MixinMeta
+from aiuser.types.enums import MentionType
+from aiuser.types.types import COMPATIBLE_CHANNELS, COMPATIBLE_MENTIONS
+from aiuser.utils.utilities import (
+    get_enabled_tools,
+    is_using_openrouter_endpoint,
+)
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -239,7 +243,7 @@ class Settings(
         """
         mention_type = get_mention_type(mention)
         config_attr = get_config_attribute(self.config, mention_type, ctx, mention)
-        if percent == None and mention_type == MentionType.SERVER:
+        if percent is None and mention_type == MentionType.SERVER:
             return await ctx.send(":warning: No percent provided")
         if percent or mention_type == MentionType.SERVER:
             await config_attr.reply_percent.set(percent / 100)
@@ -320,18 +324,8 @@ class Settings(
             - `model` The model to use eg. `gpt-4`
         """
         await ctx.message.add_reaction("🔄")
-        models_list = await self.openai_client.models.list()
+        models = await get_available_models(self.openai_client)
         await ctx.message.remove_reaction("🔄", ctx.me)
-
-        if is_using_openai_endpoint(self.openai_client):
-            models = [
-                model.id for model in models_list.data
-                if ("gpt" in model.id or "o3" in model.id.lower())
-                and "audio" not in model.id.lower()
-                and "realtime" not in model.id.lower()
-            ]
-        else:
-            models = [model.id for model in models_list.data]
 
         if model == "list":
             return await self._paginate_models(ctx, models)
@@ -340,15 +334,16 @@ class Settings(
             await ctx.send(":warning: Not a valid model!")
             return await self._paginate_models(ctx, models)
 
-        if await self.config.guild(ctx.guild).function_calling() and model not in FUNCTION_CALLING_SUPPORTED_MODELS:
-            return await ctx.send(":warning: Can not select model not whitelisted for function calling!\nSwitch function calling off using `[p]aiuser functions toggle` or select a model that supports function calling.")
-
         await self.config.guild(ctx.guild).model.set(model)
         embed = discord.Embed(
             title="This server's chat model is now set to:",
             description=model,
             color=await ctx.embed_color(),
         )
+
+        if await self.config.guild(ctx.guild).function_calling():
+            embed.set_footer(text="⚠️ Function calling is enabled - ensure selected model supports it")
+
         return await ctx.send(embed=embed)
 
     async def _paginate_models(self, ctx, models):

@@ -5,7 +5,7 @@ import aiohttp
 from redbot.core import commands
 from trafilatura import extract
 
-from aiuser.common.utilities import contains_youtube_link
+from aiuser.utils.utilities import contains_youtube_link
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

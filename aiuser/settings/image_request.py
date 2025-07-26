@@ -4,12 +4,13 @@ from typing import Optional
 import discord
 from redbot.core import checks, commands
 
-from aiuser.abc import MixinMeta, aiuser
-from aiuser.common.constants import (
+from aiuser.config.defaults import (
     DEFAULT_IMAGE_REQUEST_SD_GEN_PROMPT,
     DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
-    DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS)
+    DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS,
+)
 from aiuser.settings.utilities import get_tokens, truncate_prompt
+from aiuser.types.abc import MixinMeta, aiuser
 
 
 class ImageRequestSettings(MixinMeta):
@@ -59,7 +60,7 @@ class ImageRequestSettings(MixinMeta):
     @imagerequest.command(name="toggle")
     async def image_request_toggle(self, ctx: commands.Context):
         """Toggle requests to endpoint"""
-        if await self.config.guild(ctx.guild).image_requests_endpoint() == None:
+        if await self.config.guild(ctx.guild).image_requests_endpoint() is None:
             return await ctx.send(
                 ":warning: Please set a Stable Diffusion endpoint first!"
             )
@@ -152,7 +153,7 @@ class ImageRequestSettings(MixinMeta):
 
             if "prompt" in data.keys():
                 return await ctx.send(
-                    f':warning: Invalid JSON! Please remove "prompt" key from your JSON.'
+                    ':warning: Invalid JSON! Please remove "prompt" key from your JSON.'
                 )
 
             await self.config.guild(ctx.guild).image_requests_parameters.set(
@@ -248,7 +249,7 @@ class ImageRequestSettings(MixinMeta):
             return await ctx.send("That word is already in the list")
         words.append(word)
         await self.config.guild(ctx.guild).image_requests_trigger_words.set(words)
-        return await self.show_trigger_words(ctx, discord.Embed(
+        return await self.show_trigger_image_request_words(ctx, discord.Embed(
             title="The trigger words are now:",
             color=await ctx.embed_color()))
 
@@ -260,14 +261,14 @@ class ImageRequestSettings(MixinMeta):
             return await ctx.send("That word is not in the list")
         words.remove(word)
         await self.config.guild(ctx.guild).image_requests_trigger_words.set(words)
-        return await self.show_trigger_words(ctx, discord.Embed(
+        return await self.show_trigger_image_request_words(ctx, discord.Embed(
             title="The trigger words are now:",
             color=await ctx.embed_color()))
 
     @ imagerequest_trigger.command(name="list", aliases=["show"])
     async def imagerequest_trigger_list(self, ctx: commands.Context):
         """Show the trigger words list"""
-        return await self.show_trigger_words(ctx, discord.Embed(
+        return await self.show_trigger_image_request_words(ctx, discord.Embed(
             title="Trigger words for image requests",
             color=await ctx.embed_color()))
 
@@ -277,10 +278,10 @@ class ImageRequestSettings(MixinMeta):
         await self.config.guild(ctx.guild).image_requests_trigger_words.set(DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS)
         return await ctx.send("The trigger words list has been reset.")
 
-    async def show_trigger_words(self, ctx: commands.Context, embed: discord.Embed):
+    async def show_trigger_image_request_words(self, ctx: commands.Context, embed: discord.Embed):
         words = await self.config.guild(ctx.guild).image_requests_trigger_words()
         if words:
-            embed.description = ", ".join(words)
+            embed.description = ", ".join(f"`{word}`" for word in words)
         else:
             embed.description = "No trigger words set."
         return await ctx.send(embed=embed)

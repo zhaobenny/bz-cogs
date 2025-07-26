@@ -1,28 +1,36 @@
 import json
 import logging
 from dataclasses import asdict
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import httpx
 import openai
-from redbot.core import commands
+from openai.types.chat import ChatCompletion, ChatCompletionMessageToolCall
+from openai.types.completion import Completion
+from redbot.core import Config, commands
 
-from aiuser.abc import MixinMeta
-from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
-                                     UNSUPPORTED_LOGIT_BIAS_MODELS,
-                                     VISION_SUPPORTED_MODELS)
-from aiuser.common.utilities import get_enabled_tools
+from aiuser.config.models import (
+    UNSUPPORTED_LOGIT_BIAS_MODELS,
+    VISION_SUPPORTED_MODELS,
+)
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import ToolCallSchema
 from aiuser.messages_list.messages import MessagesList
-from aiuser.response.chat.generator import ChatGenerator
+from aiuser.types.abc import MixinMeta
+from aiuser.utils.utilities import get_enabled_tools
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class OpenAIAPIGenerator(ChatGenerator):
+class LLMPipeline:
     def __init__(self, cog: MixinMeta, ctx: commands.Context, messages: MessagesList):
-        super().__init__(cog, ctx, messages)
+        self.ctx: commands.Context = ctx
+        self.config: Config = cog.config
+        self.bot = cog.bot
+        self.msg_list = messages
+        self.model = messages.model
+        self.can_reply = messages.can_reply
+        self.messages = messages.get_json()
         self.openai_client = cog.openai_client
         self.enabled_tools: List[ToolCall] = []
         self.available_tools_schemas: List[ToolCallSchema] = []
@@ -43,28 +51,28 @@ class OpenAIAPIGenerator(ChatGenerator):
         return kwargs
 
     async def setup_tools(self):
-        if not (self.model in FUNCTION_CALLING_SUPPORTED_MODELS and await self.config.guild(self.ctx.guild).function_calling()):
+        if not (await self.config.guild(self.ctx.guild).function_calling()):
             return
         self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
         self.available_tools_schemas = [tool.schema for tool in self.enabled_tools]
 
-    async def create_completion(self, kwargs: Dict[str, Any]):
+    async def call_client(self, kwargs: Dict[str, Any]) -> Union[str, Tuple[str, List[ChatCompletionMessageToolCall]]]:
         if "gpt-3.5-turbo-instruct" in self.model:
             prompt = "\n".join(message["content"] for message in self.messages)
-            response = await self.openai_client.completions.create(
+            response: Completion = await self.openai_client.completions.create(
                 model=self.model, prompt=prompt, **kwargs
             )
             return response.choices[0].message.content
         else:
-            response = await self.openai_client.chat.completions.create(
+            response: ChatCompletion = await self.openai_client.chat.completions.create(
                 model=self.model, messages=self.msg_list.get_json(), **kwargs
             )
 
-            tools_calls = response.choices[0].message.tool_calls or []
+            tools_calls: List[ChatCompletionMessageToolCall] = response.choices[0].message.tool_calls or []
 
             return response.choices[0].message.content, tools_calls
 
-    async def request_openai(self) -> Optional[str]:
+    async def create_completion(self) -> Optional[str]:
         kwargs = await self.get_custom_parameters()
         await self.setup_tools()
 
@@ -72,7 +80,7 @@ class OpenAIAPIGenerator(ChatGenerator):
             if self.available_tools_schemas:
                 kwargs["tools"] = [asdict(schema) for schema in self.available_tools_schemas]
 
-            self.completion, tool_calls = await self.create_completion(kwargs)
+            self.completion, tool_calls = await self.call_client(kwargs)
 
             if tool_calls and not self.completion:
                 await self.handle_tool_calls(tool_calls)
@@ -82,13 +90,14 @@ class OpenAIAPIGenerator(ChatGenerator):
         logger.debug(f'Generated response in {self.ctx.guild.name}: "{self.completion}"')
         return self.completion
 
-    async def handle_tool_calls(self, tool_calls: List[Any]):
+    async def handle_tool_calls(self, tool_calls: List[ChatCompletionMessageToolCall]):
+        await self.msg_list.add_assistant(index=len(self.msg_list) + 1, tool_calls=tool_calls)
         for tool_call in tool_calls:
             function = tool_call.function
             arguments = json.loads(function.arguments)
             result = await self.run_tool(function.name, arguments)
             if result:
-                await self.msg_list.add_system(result, index=len(self.msg_list) + 1)
+                await self.msg_list.add_tool_result(result, tool_call.id, index=len(self.msg_list) + 1)
 
     async def run_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Optional[str]:
         for tool in self.enabled_tools:
@@ -101,9 +110,9 @@ class OpenAIAPIGenerator(ChatGenerator):
         logger.warning(f'Could not find tool "{tool_name}" in {self.ctx.guild.name}')
         return None
 
-    async def generate_message(self) -> Optional[str]:
+    async def run(self) -> Optional[str]:
         try:
-            return await self.request_openai()
+            return await self.create_completion()
         except httpx.ReadTimeout:
             logger.error("Failed request to LLM endpoint. Timed out.")
             await self.ctx.react_quietly("💤", message="`aiuser` request timed out")

@@ -7,7 +7,7 @@ import aiohttp
 from redbot.core import Config, commands
 from tenacity import retry, stop_after_attempt, stop_after_delay, wait_random
 
-from aiuser.response.image.generator import ImageGenerator
+from aiuser.response.image.providers.generator import ImageGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -42,7 +42,7 @@ class RunPodGenerator(ImageGenerator):
     async def generate_image(self, caption):
         url = await self.config.guild(self.ctx.guild).image_requests_endpoint()
 
-        if not "runsync" in url:
+        if "runsync" not in url:
             raise Exception("Incompatible Runpod endpoint, use /runsync instead of /run")
 
         payload = await self._prepare_payload(caption)

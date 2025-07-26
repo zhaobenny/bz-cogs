@@ -5,7 +5,7 @@ from typing import Optional
 import discord
 from redbot.core import checks, commands
 
-from aiuser.abc import MixinMeta, aiuser
+from aiuser.types.abc import MixinMeta, aiuser
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

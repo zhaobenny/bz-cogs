@@ -8,7 +8,7 @@ import random
 import aiohttp
 from tenacity import retry, stop_after_attempt, stop_after_delay, wait_random
 
-from aiuser.response.image.generator import ImageGenerator
+from aiuser.response.image.providers.generator import ImageGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

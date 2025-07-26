@@ -1,21 +1,22 @@
 import json
 import logging
 import random
-from dataclasses import asdict
 from datetime import datetime, timedelta
+from typing import List
 
 import discord
 import tiktoken
 from discord import Message
 from redbot.core import commands
 
-from aiuser.abc import MixinMeta
-from aiuser.common.constants import DEFAULT_PROMPT, OTHER_MODELS_LIMITS
-from aiuser.common.enums import ScanImageMode
-from aiuser.common.utilities import format_variables
+from aiuser.config.defaults import DEFAULT_PROMPT
+from aiuser.config.models import OTHER_MODELS_LIMITS
 from aiuser.messages_list.converter.converter import MessageConverter
 from aiuser.messages_list.entry import MessageEntry
 from aiuser.messages_list.opt_view import OptView
+from aiuser.types.abc import MixinMeta
+from aiuser.types.enums import ScanImageMode
+from aiuser.utils.utilities import format_variables
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -48,7 +49,7 @@ class MessagesList:
         self.ignore_regex = cog.ignore_regex.get(self.guild.id, None)
         self.start_time = cog.override_prompt_start_time.get(
             self.guild.id)
-        self.messages = []
+        self.messages: List[MessageEntry] = []
         self.messages_ids = set()
         self.tokens = 0
         self.model = None
@@ -128,7 +129,7 @@ class MessagesList:
             return False
         if (
             (not message.author.id == self.bot.user.id)
-            and not message.author.id in await self.config.optin()
+            and message.author.id not in await self.config.optin()
             and not await self.config.guild(self.guild).optin_by_default()
         ):
             return False
@@ -170,6 +171,20 @@ class MessagesList:
         if self.tokens > self.token_limit:
             return
         entry = MessageEntry("system", content)
+        self.messages.insert(index or 0, entry)
+        await self._add_tokens(content)
+
+    async def add_assistant(self, content: str = "", index: int = None, tool_calls: list = []):
+        if self.tokens > self.token_limit:
+            return
+        entry = MessageEntry("assistant", content, tool_calls=tool_calls)
+        self.messages.insert(index or 0, entry)
+        await self._add_tokens(content)
+
+    async def add_tool_result(self, content: str,  tool_call_id: int, index: int = None):
+        if self.tokens > self.token_limit:
+            return
+        entry = MessageEntry("tool", content, tool_call_id=tool_call_id)
         self.messages.insert(index or 0, entry)
         await self._add_tokens(content)
 
@@ -245,7 +260,15 @@ class MessagesList:
         await self.init_message.channel.send(embed=embed, view=view)
 
     def get_json(self):
-        return [asdict(message) for message in self.messages]
+        return [
+            {
+                "role": message.role,
+                "content": message.content,
+                **({"tool_calls": message.tool_calls} if message.tool_calls else {}),
+                **({"tool_call_id": message.tool_call_id} if hasattr(message, 'tool_call_id') and message.tool_call_id else {})
+            }
+            for message in self.messages
+        ]
 
     async def _add_tokens(self, content):
         if not self._encoding:
@@ -256,24 +279,23 @@ class MessagesList:
 
     @staticmethod
     def _get_token_limit(model) -> int:
-        limit = 3000
-        if "gpt-3.5" in model:
-            limit = 3000
-        if "gpt-4" in model:
-            limit = 7000
-        if "8k" in model:
-            limit = 7000
+        limit = 7000
+        
+        if 'gemini-2' in model or 'gpt-4.1' in model or 'llama-4.1' in model:
+            limit = 1000000
+        if "gpt-4o" in model or "llama-3.1" in model or "llama-3.2" in model or 'grok-3' in model:
+            limit = 123000
+        if "100k" in model or "claude" in model:
+            limit = 98000
         if "16k" in model:
             limit = 15000
         if "32k" in model:
             limit = 31000
-        if "100k" in model or "claude" in model:
-            limit = 99000
-        if "llama-3.1" in model:
-            limit = 123000
+
         model = model.split("/")[-1].split(":")[0]
         if model in OTHER_MODELS_LIMITS:
             limit = OTHER_MODELS_LIMITS.get(model, limit)
+
         return limit
 
     @staticmethod

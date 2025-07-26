@@ -2,9 +2,7 @@
 import discord
 from redbot.core import checks, commands
 
-from aiuser.abc import MixinMeta, aiuser
-from aiuser.common.constants import (FUNCTION_CALLING_SUPPORTED_MODELS,
-                                     OPENROUTER_URL)
+from aiuser.types.abc import MixinMeta, aiuser
 
 
 class FunctionCallingSettings(MixinMeta):
@@ -28,13 +26,6 @@ class FunctionCallingSettings(MixinMeta):
         """
 
         current_value = not await self.config.guild(ctx.guild).function_calling()
-        custom_endpoint = await self.config.custom_openai_endpoint()
-
-        if current_value and (not custom_endpoint or custom_endpoint.startswith(OPENROUTER_URL)):
-            model = await self.config.guild(ctx.guild).model()
-            if model not in FUNCTION_CALLING_SUPPORTED_MODELS:
-                return await ctx.send(f":warning: Currently selected model, `{model}` is not whitelisted for function calling. Set a compatible model first!")
-
         await self.config.guild(ctx.guild).function_calling.set(current_value)
 
         embed = discord.Embed(
@@ -42,6 +33,8 @@ class FunctionCallingSettings(MixinMeta):
             description=f"{current_value}",
             color=await ctx.embed_color(),
         )
+        if current_value:
+            embed.set_footer(text="⚠️ Ensure selected model supports function calling!")
         await ctx.send(embed=embed)
 
     @functions.command(name="location")
@@ -112,7 +105,10 @@ class FunctionCallingSettings(MixinMeta):
             See [Open-Meteo terms](https://open-meteo.com/en/terms) for their free API
         """
         from aiuser.functions.weather.tool_call import (
-            IsDaytimeToolCall, LocalWeatherToolCall, LocationWeatherToolCall)
+            IsDaytimeToolCall,
+            LocalWeatherToolCall,
+            LocationWeatherToolCall,
+        )
 
         tool_names = [IsDaytimeToolCall.function_name,
                       LocalWeatherToolCall.function_name, LocationWeatherToolCall.function_name]

@@ -5,7 +5,7 @@ from typing import Optional, Union
 import discord
 from redbot.core import checks, commands
 
-from aiuser.abc import MixinMeta, aiuser
+from aiuser.types.abc import MixinMeta, aiuser
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -51,7 +51,9 @@ class TriggerSettings(MixinMeta):
     @checks.is_owner()
     @trigger.command(name="conversation_reply_percent")
     async def conversation_reply_percent(self, ctx: commands.Context, percent: int):
-        """ Set a different percentage chance of the bot continuing to reply within `conversation_reply_time` time frame"""
+        """ Set a different percentage chance of the bot continuing to reply within `conversation_reply_time` time frame. 
+            This is a additional percentage that will be rolled if the bot has already send a message in the last `conversation_reply_time` time frame.
+        """
         if percent < 0 or percent > 100:
             return await ctx.send("Please enter a number between 0 and 100")
         await self.config.guild(ctx.guild).conversation_reply_percent.set(percent / 100)
@@ -64,7 +66,7 @@ class TriggerSettings(MixinMeta):
     @trigger.command(name="conversation_reply_time")
     async def conversation_reply_time(self, ctx: commands.Context, seconds: int):
         """ Set the max time frame in seconds for the bot to have a `conversation_reply_percent` chance of replying to a message 
-            When `conversation_reply_time` have lapsed for the last bot message, `conversation_reply_percent` will not be used.
+            When `conversation_reply_time` have lapsed for the last bot message, `conversation_reply_percent` will not be used and be skipped.
         """
         if seconds < 0:
             return await ctx.send("Please enter a positive number")
@@ -96,6 +98,69 @@ class TriggerSettings(MixinMeta):
             title="Anyone can use the forget command:",
             description=f"{value}",
             color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
+
+    @trigger.command(name="grok")
+    @checks.is_owner()
+    async def grok(self, ctx: commands.Context):
+        """ Toggles a trigger where it always respond on an short message (less than 25 words) contains the word 'grok' or 'gork' and 'true' or 'explain' or 'confirm' """
+        value = not await self.config.guild(ctx.guild).grok_trigger()
+        await self.config.guild(ctx.guild).grok_trigger.set(value)
+        embed = discord.Embed(
+            title="The grok trigger is now:",
+            description=f"{value}",
+            color=await ctx.embed_color())
+        return await ctx.send(embed=embed)
+
+    @trigger.group(name="words")
+    @commands.is_owner()
+    async def trigger_words(self, _):
+        """ Configure a list of words that will make the bot always be triggered to respond to a message """
+        pass
+
+    @trigger_words.command(name="add")
+    async def trigger_words_add(self, ctx: commands.Context, *, word: str):
+        """ Add a word to the trigger words list """
+        words = await self.config.guild(ctx.guild).always_reply_on_words()
+        if word in words:
+            return await ctx.send("That word is already in the list")
+        words.append(word)
+        await self.config.guild(ctx.guild).always_reply_on_words.set(words)
+        return await self.show_trigger_always_words(ctx, discord.Embed(
+            title="The trigger words are now:",
+            color=await ctx.embed_color()))
+
+    @trigger_words.command(name="remove")
+    async def trigger_words_remove(self, ctx: commands.Context, *, word: str):
+        """ Remove a word from the trigger words list """
+        words = await self.config.guild(ctx.guild).always_reply_on_words()
+        if word not in words:
+            return await ctx.send("That word is not in the list")
+        words.remove(word)
+        await self.config.guild(ctx.guild).always_reply_on_words.set(words)
+        return await self.show_trigger_always_words(ctx, discord.Embed(
+            title="The trigger words are now:",
+            color=await ctx.embed_color()))
+
+    @trigger_words.command(name="list", aliases=["show"])
+    async def trigger_words_list(self, ctx: commands.Context):
+        """ Show the trigger words list """
+        return await self.show_trigger_always_words(ctx, discord.Embed(
+            title="Trigger words that activate the bot",
+            color=await ctx.embed_color()))
+
+    @trigger_words.command(name="clear")
+    async def trigger_words_clear(self, ctx: commands.Context):
+        """ Clear the trigger words list """
+        await self.config.guild(ctx.guild).always_reply_on_words.set([])
+        return await ctx.send("The trigger words list has been cleared.")
+
+    async def show_trigger_always_words(self, ctx: commands.Context, embed: discord.Embed):
+        words = await self.config.guild(ctx.guild).always_reply_on_words()
+        if words:
+            embed.description = ", ".join(f"`{word}`" for word in words)
+        else:
+            embed.description = "No trigger words set."
         return await ctx.send(embed=embed)
 
     @trigger.group(name="whitelist", aliases=["whitelists"])
