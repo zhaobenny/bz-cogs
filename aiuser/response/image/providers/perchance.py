@@ -43,9 +43,7 @@ class PerchanceGenerator(ImageGenerator):
         guidance_scale = payload.get("cfg-scale", 7)
 
         eprompt = payload.get("prompt", "")
-        prompt = (
-            f"(anime art of {eprompt}:1.2), masterpiece, 4k, best quality, anime art"
-        )
+        prompt = f"(anime art of {eprompt}:1.2), masterpiece, 4k, best quality, anime art"
         shape = "portrait"
         gen = pc.ImageGenerator()
 
@@ -101,9 +99,7 @@ async def visit_and_close_url(url: str):
     async def poll_status(self, session: aiohttp.ClientSession):
 
         while True:
-            async with session.get(
-                "https://perchance.org/ai-text-to-image-generator"
-            ) as response:
+            async with session.get("https://perchance.org/ai-text-to-image-generator") as response:
                 response.raise_for_status()
 
                 status = await response.text()

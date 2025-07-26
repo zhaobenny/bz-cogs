@@ -47,8 +47,7 @@ class MessagesList:
         self.init_message = ctx.message
         self.guild = ctx.guild
         self.ignore_regex = cog.ignore_regex.get(self.guild.id, None)
-        self.start_time = cog.override_prompt_start_time.get(
-            self.guild.id)
+        self.start_time = cog.override_prompt_start_time.get(self.guild.id)
         self.messages: List[MessageEntry] = []
         self.messages_ids = set()
         self.tokens = 0
@@ -63,7 +62,9 @@ class MessagesList:
 
     async def _init(self, prompt=None):
         self.model = await self.config.guild(self.guild).model()
-        self.token_limit = await self.config.guild(self.guild).custom_model_tokens_limit() or self._get_token_limit(self.model)
+        self.token_limit = await self.config.guild(
+            self.guild
+        ).custom_model_tokens_limit() or self._get_token_limit(self.model)
         try:
             self._encoding = tiktoken.encoding_for_model(self.model)
         except KeyError:
@@ -86,12 +87,16 @@ class MessagesList:
             or await self.config.guild(self.guild).scan_images_mode() != ScanImageMode.LLM.value
         ):
             return False
-        if self.init_message.attachments and self.init_message.attachments[0].content_type.startswith('image/'):
+        if self.init_message.attachments and self.init_message.attachments[
+            0
+        ].content_type.startswith("image/"):
             return True
         elif self.init_message.reference:
             ref = self.init_message.reference
-            replied = ref.cached_message or await self.bot.get_channel(ref.channel_id).fetch_message(ref.message_id)
-            return replied.attachments and replied.attachments[0].content_type.startswith('image/')
+            replied = ref.cached_message or await self.bot.get_channel(
+                ref.channel_id
+            ).fetch_message(ref.message_id)
+            return replied.attachments and replied.attachments[0].content_type.startswith("image/")
         else:
             return False
 
@@ -104,12 +109,14 @@ class MessagesList:
                 role_prompt = await self.config.role(role).custom_text_prompt()
                 break
 
-        return (await self.config.member(self.init_message.author).custom_text_prompt()
-                or role_prompt
-                or await self.config.channel(self.init_message.channel).custom_text_prompt()
-                or await self.config.guild(self.guild).custom_text_prompt()
-                or await self.config.custom_text_prompt()
-                or DEFAULT_PROMPT)
+        return (
+            await self.config.member(self.init_message.author).custom_text_prompt()
+            or role_prompt
+            or await self.config.channel(self.init_message.channel).custom_text_prompt()
+            or await self.config.guild(self.guild).custom_text_prompt()
+            or await self.config.custom_text_prompt()
+            or DEFAULT_PROMPT
+        )
 
     async def check_if_add(self, message: Message, force: bool = False):
         if self.tokens > self.token_limit:
@@ -164,7 +171,11 @@ class MessagesList:
                 await self._add_tokens(entry.content)
 
         # TODO: proper reply chaining
-        if message.reference and isinstance(message.reference.resolved, discord.Message) and message.author.id != self.bot.user.id:
+        if (
+            message.reference
+            and isinstance(message.reference.resolved, discord.Message)
+            and message.author.id != self.bot.user.id
+        ):
             await self.add_msg(message.reference.resolved, index=0)
 
     async def add_system(self, content: str, index: int = None):
@@ -181,7 +192,7 @@ class MessagesList:
         self.messages.insert(index or 0, entry)
         await self._add_tokens(content)
 
-    async def add_tool_result(self, content: str,  tool_call_id: int, index: int = None):
+    async def add_tool_result(self, content: str, tool_call_id: int, index: int = None):
         if self.tokens > self.token_limit:
             return
         entry = MessageEntry("tool", content, tool_call_id=tool_call_id)
@@ -191,9 +202,7 @@ class MessagesList:
     async def add_history(self):
         limit = await self.config.guild(self.guild).messages_backread()
         max_seconds_gap = await self.config.guild(self.guild).messages_backread_seconds()
-        start_time: datetime = (
-            self.start_time - timedelta(seconds=1) if self.start_time else None
-        )
+        start_time: datetime = self.start_time - timedelta(seconds=1) if self.start_time else None
 
         past_messages = await self._get_past_messages(limit, start_time)
         if not past_messages:
@@ -240,10 +249,16 @@ class MessagesList:
     async def _process_past_messages(self, past_messages, max_seconds_gap):
         for i in range(len(past_messages) - 1):
             if self.tokens > self.token_limit:
-                return logger.debug(f"{self.tokens} tokens used - nearing limit, stopping context creation for message {self.init_message.id}")
-            if (past_messages[i].author.id == self.bot.user.id) and (past_messages[i].embeds and past_messages[i].embeds[0].title == OPTIN_EMBED_TITLE):
+                return logger.debug(
+                    f"{self.tokens} tokens used - nearing limit, stopping context creation for message {self.init_message.id}"
+                )
+            if (past_messages[i].author.id == self.bot.user.id) and (
+                past_messages[i].embeds and past_messages[i].embeds[0].title == OPTIN_EMBED_TITLE
+            ):
                 continue
-            if await self._is_valid_time_gap(past_messages[i], past_messages[i + 1], max_seconds_gap):
+            if await self._is_valid_time_gap(
+                past_messages[i], past_messages[i + 1], max_seconds_gap
+            ):
                 await self.add_msg(past_messages[i])
             else:
                 await self.add_msg(past_messages[i])
@@ -265,7 +280,11 @@ class MessagesList:
                 "role": message.role,
                 "content": message.content,
                 **({"tool_calls": message.tool_calls} if message.tool_calls else {}),
-                **({"tool_call_id": message.tool_call_id} if hasattr(message, 'tool_call_id') and message.tool_call_id else {})
+                **(
+                    {"tool_call_id": message.tool_call_id}
+                    if hasattr(message, "tool_call_id") and message.tool_call_id
+                    else {}
+                ),
             }
             for message in self.messages
         ]
@@ -280,10 +299,10 @@ class MessagesList:
     @staticmethod
     def _get_token_limit(model) -> int:
         limit = 7000
-        
-        if 'gemini-2' in model or 'gpt-4.1' in model or 'llama-4.1' in model:
+
+        if "gemini-2" in model or "gpt-4.1" in model or "llama-4.1" in model:
             limit = 1000000
-        if "gpt-4o" in model or "llama-3.1" in model or "llama-3.2" in model or 'grok-3' in model:
+        if "gpt-4o" in model or "llama-3.1" in model or "llama-3.2" in model or "grok-3" in model:
             limit = 123000
         if "100k" in model or "claude" in model:
             limit = 98000
@@ -299,7 +318,9 @@ class MessagesList:
         return limit
 
     @staticmethod
-    async def _is_valid_time_gap(message: discord.Message, next_message: discord.Message, max_seconds_gap: int) -> bool:
+    async def _is_valid_time_gap(
+        message: discord.Message, next_message: discord.Message, max_seconds_gap: int
+    ) -> bool:
         seconds_diff = abs(message.created_at - next_message.created_at).total_seconds()
         if seconds_diff > max_seconds_gap:
             return False

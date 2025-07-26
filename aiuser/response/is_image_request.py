@@ -38,12 +38,13 @@ async def _check_basic_conditions(message: discord.Message, guild_config: Config
     has_image_words = any(word in message_content for word in trigger_words)
     has_second_person = any(word in message_content for word in second_person_words)
     is_mentioned = displayname in message_content or message.guild.me.id in message.raw_mentions
-    is_reply = bool(message.reference and message.reference.resolved and
-                    message.reference.resolved.author.id == message.guild.me.id)
+    is_reply = bool(
+        message.reference
+        and message.reference.resolved
+        and message.reference.resolved.author.id == message.guild.me.id
+    )
 
-    return (has_image_words and
-            has_second_person and
-            (is_mentioned or is_reply))
+    return has_image_words and has_second_person and (is_mentioned or is_reply)
 
 
 async def _verify_with_llm(cog: MixinMeta, message: discord.Message) -> bool:
@@ -75,4 +76,4 @@ def _prepare_message_text(message: discord.Message) -> str:
 
     if message.reference and message.reference.resolved:
         text = f"{message.reference.resolved.content}\n {text}"
-    return text 
+    return text

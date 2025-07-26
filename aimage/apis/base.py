@@ -1,4 +1,3 @@
-
 from typing import Union
 
 import discord
@@ -8,7 +7,7 @@ from aimage.abc import MixinMeta
 from aimage.apis.response import ImageResponse
 
 
-class BaseAPI():
+class BaseAPI:
     def __init__(self, cog: MixinMeta, context: Union[commands.Context, discord.Interaction]):
         self.session = cog.session
         self.config = cog.config

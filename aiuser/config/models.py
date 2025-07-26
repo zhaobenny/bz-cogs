@@ -44,13 +44,9 @@ VISION_SUPPORTED_MODELS = [
     "mistralai/pixtral-12b:free",
     "mistralai/pixtral-large-2411",
     "meta-llama/llama-3.2-90b-vision-instruct",
-    "meta-llama/llama-3.2-11b-vision-instruct"
+    "meta-llama/llama-3.2-11b-vision-instruct",
 ]
-UNSUPPORTED_LOGIT_BIAS_MODELS = [
-    "openai/o3-mini",
-    "o3-mini",
-    "o3-mini-2025-01-31"
-]
+UNSUPPORTED_LOGIT_BIAS_MODELS = ["openai/o3-mini", "o3-mini", "o3-mini-2025-01-31"]
 OTHER_MODELS_LIMITS = {
     "nova-lite-v1": 280000,
     "nova-pro-v1": 280000,

@@ -1,4 +1,3 @@
-
 import base64
 import io
 import logging
@@ -24,6 +23,6 @@ class DalleImageGenerator(ImageGenerator):
             response_format="b64_json",
             n=1,
             size="1024x1024",
-            quality="standard"
+            quality="standard",
         )
         return io.BytesIO(base64.b64decode(response.data[0].b64_json))

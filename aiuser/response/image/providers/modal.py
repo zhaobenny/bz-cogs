@@ -13,7 +13,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 class ModalImageGenerator(ImageGenerator):
     """
-        This is specific to the serverless-img-gen Modal app
+    This is specific to the serverless-img-gen Modal app
     """
 
     def __init__(self, ctx: commands.Context, config: Config, token: str):
@@ -26,7 +26,8 @@ class ModalImageGenerator(ImageGenerator):
         payload = await self._prepare_payload(caption)
 
         logger.debug(
-            f"Sending request to serverless-img-gen Modal app with payload: {json.dumps(payload, indent=4)}")
+            f"Sending request to serverless-img-gen Modal app with payload: {json.dumps(payload, indent=4)}"
+        )
         image = await self._post_request(url, payload)
         return image
 

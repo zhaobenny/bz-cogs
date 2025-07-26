@@ -16,7 +16,8 @@ async def get_available_models(openai_client: AsyncOpenAI) -> list[str]:
 
     if is_using_openai_endpoint(openai_client):
         models = [
-            model.id for model in res.data
+            model.id
+            for model in res.data
             if ("gpt" in model.id or "o3" in model.id.lower())
             and "audio" not in model.id.lower()
             and "realtime" not in model.id.lower()
@@ -24,7 +25,10 @@ async def get_available_models(openai_client: AsyncOpenAI) -> list[str]:
     elif is_using_openrouter_endpoint(openai_client):
         models = sorted(
             [model.id for model in res.data],
-            key=lambda m: (0 if any(kw in m.lower() for kw in ["gpt", "gemini", "meta-llama"]) else 1, m)
+            key=lambda m: (
+                0 if any(kw in m.lower() for kw in ["gpt", "gemini", "meta-llama"]) else 1,
+                m,
+            ),
         )
     else:
         models = [model.id for model in res.data]
@@ -36,7 +40,10 @@ def get_mention_type(mention) -> MentionType:
         return MentionType.USER
     elif isinstance(mention, discord.Role):
         return MentionType.ROLE
-    elif isinstance(mention, (discord.TextChannel, discord.VoiceChannel, discord.StageChannel, discord.ForumChannel)):
+    elif isinstance(
+        mention,
+        (discord.TextChannel, discord.VoiceChannel, discord.StageChannel, discord.ForumChannel),
+    ):
         return MentionType.CHANNEL
     else:
         return MentionType.SERVER
@@ -51,7 +58,7 @@ def get_config_attribute(config, mention_type: MentionType, ctx: commands.Contex
         return config.role(mention)
     elif mention_type == MentionType.CHANNEL:
         return config.channel(mention)
- 
+
 
 async def get_tokens(config: Config, ctx: commands.Context, prompt: str) -> int:
     if not prompt:

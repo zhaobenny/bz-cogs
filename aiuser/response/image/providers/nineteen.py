@@ -38,15 +38,11 @@ class NineteenGenerator(ImageGenerator):
         payload = await self._prepare_payload(caption)
 
         async with aiohttp.ClientSession() as session:
-            async with session.post(
-                NINETEEN_API_URL, headers=headers, json=payload
-            ) as response:
+            async with session.post(NINETEEN_API_URL, headers=headers, json=payload) as response:
                 if response.status == 200:
                     res = await response.json()
                     image = io.BytesIO(base64.b64decode(res["image_b64"]))
                     return image
                 else:
                     error_text = await response.text()
-                    raise Exception(
-                        f"sn19.ai API error: {response.status} - {error_text}"
-                    )
+                    raise Exception(f"sn19.ai API error: {response.status} - {error_text}")

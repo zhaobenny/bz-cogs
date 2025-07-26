@@ -23,29 +23,35 @@ class NemusonaGenerator(ImageGenerator):
         payload = await self._prepare_payload(caption)
 
         logger.debug(
-            f"Sending SD request to Nemusona with payload: {json.dumps(payload, indent=4)}")
+            f"Sending SD request to Nemusona with payload: {json.dumps(payload, indent=4)}"
+        )
         async with aiohttp.ClientSession() as session:
-            async with session.post(url=f'{url}', json=payload) as response:
+            async with session.post(url=f"{url}", json=payload) as response:
                 response.raise_for_status()
                 self.id = await response.text()
 
             await self.poll_status(session)
 
-            async with session.get(f"https://waifus-api.nemusona.com/job/result/{self.model}/{self.id}") as response:
+            async with session.get(
+                f"https://waifus-api.nemusona.com/job/result/{self.model}/{self.id}"
+            ) as response:
                 response.raise_for_status()
                 r = await response.json()
 
-        image = (io.BytesIO(base64.b64decode(r["base64"])))
+        image = io.BytesIO(base64.b64decode(r["base64"]))
         return image
 
     @retry(
-        wait=wait_random(min=3, max=5), stop=(stop_after_attempt(4) | stop_after_delay(300)),
-        reraise=True
+        wait=wait_random(min=3, max=5),
+        stop=(stop_after_attempt(4) | stop_after_delay(300)),
+        reraise=True,
     )
     async def poll_status(self, session: aiohttp.ClientSession):
 
         while True:
-            async with session.get(f"https://waifus-api.nemusona.com/job/status/{self.model}/{self.id}") as response:
+            async with session.get(
+                f"https://waifus-api.nemusona.com/job/status/{self.model}/{self.id}"
+            ) as response:
                 response.raise_for_status()
 
                 status = await response.text()

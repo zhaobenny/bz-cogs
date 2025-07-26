@@ -12,9 +12,12 @@ GROK_MAX_WORDS = 25
 
 # regex patterns
 URL_PATTERN = re.compile(r"(https?://\S+)")
-YOUTUBE_URL_PATTERN = re.compile(r"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?(.+)")
+YOUTUBE_URL_PATTERN = re.compile(
+    r"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?(.+)"
+)
 YOUTUBE_VIDEO_ID_PATTERN = re.compile(
-    r"(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/|v\/|t\/\S*?\/?)([a-zA-Z0-9_-]{11})")
+    r"(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/|v\/|t\/\S*?\/?)([a-zA-Z0-9_-]{11})"
+)
 SINGULAR_MENTION_PATTERN = re.compile(r"^<@!?&?(\d+)>$")
 REGEX_RUN_TIMEOUT = 5
 
