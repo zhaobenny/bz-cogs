@@ -46,7 +46,7 @@ class LLMPipeline:
             if weights_dict:
                 kwargs["logit_bias"] = weights_dict
 
-        if kwargs.get("logit_bias") and self.model in VISION_SUPPORTED_MODELS or self.model in UNSUPPORTED_LOGIT_BIAS_MODELS:
+        if kwargs.get("logit_bias", False) and (self.model in VISION_SUPPORTED_MODELS or self.model in UNSUPPORTED_LOGIT_BIAS_MODELS):
             logger.warning(f"logit_bias is not supported for model {self.model}, removing...")
             del kwargs["logit_bias"]
 
