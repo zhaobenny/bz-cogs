@@ -49,7 +49,10 @@ VISION_SUPPORTED_MODELS = [
 UNSUPPORTED_LOGIT_BIAS_MODELS = [
     "openai/o3-mini",
     "o3-mini",
-    "o3-mini-2025-01-31"
+    "o3-mini-2025-01-31",
+    "gpt-5",
+    "gpt-5-mini",
+    "gpt-5-nano",
 ]
 OTHER_MODELS_LIMITS = {
     "nova-lite-v1": 280000,

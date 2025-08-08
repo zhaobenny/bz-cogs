@@ -42,7 +42,9 @@ class LLMPipeline:
 
         if "logit_bias" not in kwargs:
             weights = await self.config.guild(self.ctx.guild).weights()
-            kwargs["logit_bias"] = json.loads(weights or "{}")
+            weights_dict = json.loads(weights or "{}")
+            if weights_dict:
+                kwargs["logit_bias"] = weights_dict
 
         if kwargs.get("logit_bias") and self.model in VISION_SUPPORTED_MODELS or self.model in UNSUPPORTED_LOGIT_BIAS_MODELS:
             logger.warning(f"logit_bias is not supported for model {self.model}, removing...")
