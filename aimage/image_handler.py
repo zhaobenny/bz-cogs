@@ -60,7 +60,7 @@ class ImageHandler(MixinMeta):
         finally:
             self.generating[user.id] = False
 
-        if response.is_nsfw and not await self.config.guild(guild).allow_nsfw():
+        if response.is_nsfw and not await self.config.guild(guild).allow_nsfw() and not await self.config.guild(guild).nsfw_blurred():
             return await send_response(context, content=f"🔞 {user.mention} generated a possible NSFW image with prompt: `{prompt}`", allowed_mentions=discord.AllowedMentions.none())
 
         file = discord.File(io.BytesIO(response.data), filename=f"image.{response.extension}")

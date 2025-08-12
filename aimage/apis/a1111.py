@@ -135,8 +135,9 @@ class A1111(BaseAPI):
             payload["alwayson_scripts"].update(TILED_VAE_ARGS)
 
         if not (await self.config.guild(self.guild).nsfw()):
+            sensitivity = await self.config.guild(self.guild).nsfw_sensitivity()
             payload["script_name"] = "CensorScript"
-            payload["script_args"] = [True, True]
+            payload["script_args"] = [True, True, sensitivity]
 
         return payload
 

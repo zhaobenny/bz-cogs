@@ -44,6 +44,7 @@ class Settings(MixinMeta):
         embed.add_field(name="Default Sampling Steps", value=f"`{config['sampling_steps']}`")
         embed.add_field(name="Default Size", value=f"`{config['width']}x{config['height']}`")
         embed.add_field(name="NSFW allowed", value=f"`{config['nsfw']}`")
+        embed.add_field(name="NSFW sensitivity", value=f"`{config['nsfw_sensitivity']}`")
         embed.add_field(name="Use ADetailer", value=f"`{config['adetailer']}`")
         embed.add_field(name="Use Tiled VAE", value=f"`{config['tiledvae']}`")
         embed.add_field(name="Max img2img size", value=f"`{config['max_img2img']}`²")
@@ -94,10 +95,37 @@ class Settings(MixinMeta):
             data = self.autocomplete_cache[ctx.guild.id].get("scripts") or []
             await ctx.message.remove_reaction("🔄", ctx.me)
             if "censorscript" not in data:
-                return await ctx.send(":warning: Compatible censor script is not installed in A1111, install [CensorScript.py](<https://github.com/IOMisaka/sdapi-scripts>).")
+                return await ctx.send(":warning: Compatible censor script is not installed in A1111, install [the updated CensorScript.py](<https://github.com/hollowstrawberry/sd-webui-nsfw-checker>).")
 
         await self.config.guild(ctx.guild).nsfw.set(not nsfw)
         await ctx.send(f"NSFW filtering is now {'`disabled`' if not nsfw else '`enabled`'}")
+
+    @aimage.command(name="nsfw_sensitivity")
+    async def nsfw_sensitivity(self, ctx: commands.Context, value: Optional[float]):
+        """
+        Views or sets the sensitivity for the nsfw filter (A1111 only)
+        Valid values are between -0.2 and 0.2
+        """
+
+        if value is None:
+            nsfw_sensitivity = await self.config.guild(ctx.guild).nsfw_sensitivity()
+            await ctx.send(f"The sensitivity is currently set to `{nsfw_sensitivity:.3f}`")
+        elif value < -0.2 or value > 0.2:
+            await self.config.guild(ctx.guild).nsfw_sensitivity.set(value)
+            await ctx.send(f"The sensitivity is currently set to `{value:.3f}`"
+                           "\nNote that you need [the updated CensorScript.py](<https://github.com/hollowstrawberry/sd-webui-nsfw-checker>) in your A1111 to use this.")
+
+    @aimage.command(name="nsfw_blurred")
+    async def nsfw_blurred(self, ctx: commands.Context):
+        """
+        Toggles whether images blocked by the nsfw filter should still be shown, but blurred.
+        """
+
+        value = not await self.config.guild(ctx.guild).nsfw_blurred()
+        await self.config.guild(ctx.guild).nsfw_blurred.set(value)
+        await ctx.send(f"Show filtered images is now `{'enabled' if value else 'disabled'}`"
+                        "\nNote that you need [the updated CensorScript.py](<https://github.com/hollowstrawberry/sd-webui-nsfw-checker>) in your A1111 to use this.")
+
 
     @aimage.command(name="negative_prompt")
     async def negative_prompt(self, ctx: commands.Context, *, negative_prompt: Optional[str]):
