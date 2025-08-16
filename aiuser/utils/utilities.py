@@ -5,8 +5,7 @@ import logging
 import random
 from datetime import datetime
 from pathlib import Path
-import struct
-from typing import Callable, Coroutine, List
+from typing import Callable, Coroutine
 
 import discord
 from discord import Message
@@ -123,7 +122,3 @@ async def get_enabled_tools(config: Config, ctx: commands.Context) -> list:
     return [tool_classes[name](config=config, ctx=ctx)
             for name in enabled_tools
             if name in tool_classes]
-
-def serialize_f32(vector: List[float]) -> bytes:
-    """Serializes a list of floats into a compact "raw bytes" format."""
-    return struct.pack("%sf" % len(vector), *vector)
