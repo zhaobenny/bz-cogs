@@ -5,10 +5,8 @@ from datetime import datetime, timedelta
 from typing import List
 
 import discord
-import sqlite_vec
 import tiktoken
 from discord import Message
-from pysqlite3 import dbapi2 as sqlite3
 from redbot.core import commands
 from redbot.core.data_manager import cog_data_path
 from sentence_transformers import SentenceTransformer
@@ -20,7 +18,8 @@ from aiuser.messages_list.entry import MessageEntry
 from aiuser.messages_list.opt_view import OptView
 from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import ScanImageMode
-from aiuser.utils.utilities import format_variables, serialize_f32
+from aiuser.utils.sqlite3 import connect_db, serialize_f32
+from aiuser.utils.utilities import format_variables
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -235,27 +234,20 @@ class MessagesList:
 
         # Connect to the SQLite database
         db_path = self.cog_data_path / "embeddings.db"  
-        db = sqlite3.connect(db_path)
-        db.enable_load_extension(True)
-        sqlite_vec.load(db)
-        db.enable_load_extension(False)
+        with connect_db(db_path) as conn:
+            memory = conn.execute(
+                """
+                SELECT
+                    rowid, memory_name, memory_text, 
+                    distance
+                FROM memories
+                WHERE memory_vector MATCH ? and k=1
+                ORDER BY distance
+                """,
+                [serialize_f32(query_embedding)]
+            ).fetchall()
 
-        memory = db.execute(
-            """
-              SELECT
-                rowid, memory_name, memory_text, 
-                distance
-              FROM memories
-              WHERE memory_vector MATCH ? and k=1
-              ORDER BY distance
-            """,
-            [serialize_f32(query_embedding)]
-        ).fetchall()
-
-        print(query)
-        print(memory)
-
-        return memory[0][2] if memory and memory[0][3] < threshold else ""
+        return memory[0][2] if (memory and memory[0][3] < threshold) else ""
 
     async def _get_past_messages(self, limit, start_time):
         return [
