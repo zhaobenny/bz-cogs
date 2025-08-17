@@ -7,7 +7,7 @@ from discord.ext import tasks
 
 from aiuser.config.constants import RANDOM_MESSAGE_TASK_RETRY_SECONDS
 from aiuser.config.defaults import DEFAULT_PROMPT
-from aiuser.context.messages import create_messages_list
+from aiuser.context.setup import create_messages_thread
 from aiuser.response.dispatcher import dispatch_response
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import format_variables
@@ -42,7 +42,7 @@ class RandomMessageTask(MixinMeta):
                     f"No random message topics were found in {guild.name}, skipping")
 
             prompt = await self.config.channel(channel).custom_text_prompt() or await self.config.guild(guild).custom_text_prompt() or await self.config.custom_text_prompt() or DEFAULT_PROMPT
-            messages_list = await create_messages_list(self, ctx, prompt=prompt, history=False)
+            messages_list = await create_messages_thread(self, ctx, prompt=prompt, history=False)
             topic = await format_variables(
                 ctx, topics[random.randint(0, len(topics) - 1)])
             logger.debug(
