@@ -78,7 +78,7 @@ class A1111(BaseAPI):
             if page == "scripts":
                 choices = [choice for choice in data["txt2img"]] if data else []
             elif page == "loras":
-                choices = [f"<lora:{choice['name']}:1>" for choice in data] if data else []
+                choices = [choice['name'] for choice in data] if data else []
             elif page in ["sd-models", "sd-modules"]:
                 choices = [choice["model_name"] for choice in data] if data else []
             else:
