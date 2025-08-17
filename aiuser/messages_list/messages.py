@@ -15,7 +15,7 @@ from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.config.models import OTHER_MODELS_LIMITS
 from aiuser.messages_list.converter.converter import MessageConverter
 from aiuser.messages_list.entry import MessageEntry
-from aiuser.messages_list.opt_view import OptView
+from aiuser.messages_list.consent.manager import CONSENT_EMBED_TITLE, ConsentManager
 from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import ScanImageMode
 from aiuser.utils.sqlite3 import connect_db, serialize_f32
@@ -46,7 +46,6 @@ class MessagesList:
         self.bot = cog.bot
         self.config = cog.config
         self.ctx = ctx
-        self.converter = MessageConverter(cog, ctx)
         self.init_message = ctx.message
         self.guild = ctx.guild
         self.ignore_regex = cog.ignore_regex.get(self.guild.id, None)
@@ -58,6 +57,8 @@ class MessagesList:
         self.model = None
         self.can_reply = True
         self.cog_data_path = cog_data_path(cog)
+        self.converter = MessageConverter(cog, ctx)
+        self.consent_manager = ConsentManager(self.config, self.bot, self.guild)
 
     def __len__(self):
         return len(self.messages)
@@ -131,11 +132,7 @@ class MessagesList:
             return False
         if message.author.id in await self.config.optout():
             return False
-        if (
-            (not message.author.id == self.bot.user.id)
-            and message.author.id not in await self.config.optin()
-            and not await self.config.guild(self.guild).optin_by_default()
-        ):
+        if not await self.consent_manager.is_user_allowed(message.author):
             return False
 
         return True
@@ -208,15 +205,13 @@ class MessagesList:
         if not await self._is_valid_time_gap(self.init_message, past_messages[0], max_seconds_gap):
             return
 
-        users = await self._get_unopted_users(past_messages[:10])
+        users = await self.consent_manager.get_unknown_consent_users(past_messages[:10])
 
         await self._process_past_messages(past_messages, max_seconds_gap)
 
-        if users and not await self.config.guild(self.guild).optin_disable_embed():
-            if (random.random() <= 0.33) or (len(users) > 3):
-                await self._send_optin_embed(users)
+        if self.consent_manager.should_send_consent_embed(users):
+            await self.consent_manager.send_consent_embed(self.init_message.channel, users)
 
-    
     async def insert_relevant_memory(self):
         memory_content = await self.fetch_relevant_memory()
         if memory_content:
@@ -260,43 +255,17 @@ class MessagesList:
             )
         ]
 
-    async def _get_unopted_users(self, messages):
-        users = set()
-
-        if await self.config.guild(self.guild).optin_by_default():
-            return users
-
-        for message in messages:
-            if (
-                (not message.author.bot)
-                and (message.author.id not in await self.config.optin())
-                and (message.author.id not in await self.config.optout())
-            ):
-                users.add(message.author)
-
-        return users
-
     async def _process_past_messages(self, past_messages, max_seconds_gap):
         for i in range(len(past_messages) - 1):
             if self.tokens > self.token_limit:
                 return logger.debug(f"{self.tokens} tokens used - nearing limit, stopping context creation for message {self.init_message.id}")
-            if (past_messages[i].author.id == self.bot.user.id) and (past_messages[i].embeds and past_messages[i].embeds[0].title == OPTIN_EMBED_TITLE):
+            if (past_messages[i].author.id == self.bot.user.id) and (past_messages[i].embeds and past_messages[i].embeds[0].title == CONSENT_EMBED_TITLE):
                 continue
             if await self._is_valid_time_gap(past_messages[i], past_messages[i + 1], max_seconds_gap):
                 await self.add_msg(past_messages[i])
             else:
                 await self.add_msg(past_messages[i])
                 break
-
-    async def _send_optin_embed(self, users):
-        users = ", ".join([user.mention for user in users])
-        embed = discord.Embed(
-            title=OPTIN_EMBED_TITLE,
-            color=await self.bot.get_embed_color(self.init_message),
-        )
-        view = OptView(self.config)
-        embed.description = f"{users}\nPlease choose whether to allow a subset of your Discord messages from any server with the bot, to be sent to OpenAI or an external party.\nThis will allow the bot to reply to your messages or use your messages.\nThis message will disappear if all current chatters have made a choice."
-        await self.init_message.channel.send(embed=embed, view=view)
 
     def get_json(self):
         return [
