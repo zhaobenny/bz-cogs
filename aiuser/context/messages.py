@@ -21,9 +21,6 @@ from aiuser.utils.utilities import format_variables
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
-OPTIN_EMBED_TITLE = ":information_source: AI User Opt-In / Opt-Out"
-
-
 async def create_messages_list(
     cog: MixinMeta, ctx: commands.Context, prompt: str = None, history: bool = True
 ):
@@ -53,6 +50,7 @@ class MessagesList:
         self.messages_ids = set()
         self.tokens = 0
         self.model = None
+        self._encoding = None
         self.can_reply = True
         self.converter = MessageConverter(cog, ctx)
         self.consent_manager = ConsentManager(self.config, self.bot, self.guild)
@@ -68,10 +66,6 @@ class MessagesList:
     async def _init(self, prompt=None):
         self.model = await self.config.guild(self.guild).model()
         self.token_limit = await self.config.guild(self.guild).custom_model_tokens_limit() or self._get_token_limit(self.model)
-        try:
-            self._encoding = tiktoken.encoding_for_model(self.model)
-        except KeyError:
-            self._encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
         if not prompt:  # jank
             await self.add_msg(self.init_message)
@@ -115,11 +109,11 @@ class MessagesList:
                 or await self.config.custom_text_prompt()
                 or DEFAULT_PROMPT)
 
-    async def check_if_add(self, message: Message, force: bool = False):
+    async def check_if_add(self, message: Message, allow_dupes: bool = False):
         if self.tokens > self.token_limit:
             return False
 
-        if message.id in self.messages_ids and not force:
+        if message.id in self.messages_ids and not allow_dupes:
             logger.debug(
                 f"Skipping duplicate message in {message.guild.name} when creating context"
             )
@@ -209,11 +203,18 @@ class MessagesList:
         ]
 
     async def _add_tokens(self, content):
-        if not self._encoding:
-            await self._initialize_encoding()
         content = str(content)
-        tokens = self._encoding.encode(content, disallowed_special=())
+        tokens = self.encoding.encode(content, disallowed_special=())
         self.tokens += len(tokens)
+
+    @property
+    def encoding(self):
+        if not self._encoding:
+            try:
+                self._encoding = tiktoken.encoding_for_model(self.model)
+            except KeyError:
+                self._encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        return self._encoding
 
     @staticmethod
     def _get_token_limit(model) -> int:
@@ -238,9 +239,3 @@ class MessagesList:
 
         return limit
 
-    @staticmethod
-    async def _is_valid_time_gap(message: discord.Message, next_message: discord.Message, max_seconds_gap: int) -> bool:
-        seconds_diff = abs(message.created_at - next_message.created_at).total_seconds()
-        if seconds_diff > max_seconds_gap:
-            return False
-        return True
