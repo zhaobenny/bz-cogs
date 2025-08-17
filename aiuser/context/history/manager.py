@@ -7,12 +7,12 @@ import discord
 from aiuser.context.consent.manager import CONSENT_EMBED_TITLE
 
 if TYPE_CHECKING:
-    from aiuser.context.messages import MessagesList
+    from aiuser.context.messages import MessagesThread
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 class HistoryManager:
-    def __init__(self, messages_list: "MessagesList"):
+    def __init__(self, messages_list: "MessagesThread"):
         self.messages_list = messages_list
         self.config = messages_list.config
         self.guild = messages_list.guild
