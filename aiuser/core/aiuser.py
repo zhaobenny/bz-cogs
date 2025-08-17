@@ -60,6 +60,10 @@ class AIUser(
 
     async def cog_load(self):
         os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+        # hide for better debugging experience
+        logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING) 
+        logging.getLogger("openai._base_client").setLevel(logging.WARNING) 
         
         self.openai_client = await setup_openai_client(self.bot, self.config)
 

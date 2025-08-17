@@ -2,7 +2,7 @@ import random
 from typing import Set
 
 import discord
-from redbot.core import commands, Config
+from redbot.core import Config, commands
 
 CONSENT_EMBED_TITLE = ":information_source: AI User Opt-In / Opt-Out"
 
@@ -61,6 +61,8 @@ class ConsentManager:
     
     async def is_user_allowed(self, user: discord.Member) -> bool:
         """Check if a user is allowed to have their messages processed"""
+        if user.id == self.bot.user.id:
+            return True
         if user.id in await self.config.optout():
             return False
         if user.id in await self.config.optin():
