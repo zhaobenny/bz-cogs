@@ -8,28 +8,14 @@ from discord import Message
 from redbot.core import commands
 from redbot.core.data_manager import cog_data_path
 
-from aiuser.config.defaults import DEFAULT_PROMPT
-from aiuser.config.models import OTHER_MODELS_LIMITS
 from aiuser.context.consent.manager import ConsentManager
 from aiuser.context.converter.converter import MessageConverter
 from aiuser.context.entry import MessageEntry
 from aiuser.context.history.builder import HistoryBuilder
 from aiuser.context.memory.retriever import MemoryRetriever
 from aiuser.types.abc import MixinMeta
-from aiuser.types.enums import ScanImageMode
-from aiuser.utils.utilities import format_variables
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
-
-async def create_messages_list(
-    cog: MixinMeta, ctx: commands.Context, prompt: str = None, history: bool = True
-):
-    """to manage messages in ChatML format"""
-    thread = MessagesThread(cog, ctx)
-    await thread._init(prompt=prompt)
-    if history:
-        await thread.add_history()
-    return thread
 
 
 class MessagesThread:
@@ -49,7 +35,8 @@ class MessagesThread:
         self.messages: List[MessageEntry] = []
         self.messages_ids = set()
         self.tokens = 0
-        self.model = None
+        self.token_limit: int = None
+        self.model: str = None
         self._encoding = None
         self.can_reply = True
         self.converter = MessageConverter(cog, ctx)
@@ -62,52 +49,6 @@ class MessagesThread:
 
     def __repr__(self) -> str:
         return json.dumps(self.get_json(), indent=4)
-
-    async def _init(self, prompt=None):
-        self.model = await self.config.guild(self.guild).model()
-        self.token_limit = await self.config.guild(self.guild).custom_model_tokens_limit() or self._get_token_limit(self.model)
-
-        if not prompt:  # jank
-            await self.add_msg(self.init_message)
-
-        bot_prompt = prompt or await self._pick_prompt()
-
-        await self.add_system(await format_variables(self.ctx, bot_prompt))
-
-        if await self._check_if_inital_img():
-            self.model = await self.config.guild(self.guild).scan_images_model()
-
-    async def _check_if_inital_img(self) -> bool:
-        if (
-            self.ctx.interaction
-            or not await self.config.guild(self.guild).scan_images()
-            or await self.config.guild(self.guild).scan_images_mode() != ScanImageMode.LLM.value
-        ):
-            return False
-        if self.init_message.attachments and self.init_message.attachments[0].content_type.startswith('image/'):
-            return True
-        elif self.init_message.reference:
-            ref = self.init_message.reference
-            replied = ref.cached_message or await self.bot.get_channel(ref.channel_id).fetch_message(ref.message_id)
-            return replied.attachments and replied.attachments[0].content_type.startswith('image/')
-        else:
-            return False
-
-    async def _pick_prompt(self):
-        author = self.init_message.author
-        role_prompt = None
-
-        for role in author.roles:
-            if role.id in (await self.config.all_roles()):
-                role_prompt = await self.config.role(role).custom_text_prompt()
-                break
-
-        return (await self.config.member(self.init_message.author).custom_text_prompt()
-                or role_prompt
-                or await self.config.channel(self.init_message.channel).custom_text_prompt()
-                or await self.config.guild(self.guild).custom_text_prompt()
-                or await self.config.custom_text_prompt()
-                or DEFAULT_PROMPT)
 
     async def check_if_add(self, message: Message, allow_dupes: bool = False):
         if self.tokens > self.token_limit:
@@ -215,27 +156,4 @@ class MessagesThread:
             except KeyError:
                 self._encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
         return self._encoding
-
-    @staticmethod
-    def _get_token_limit(model) -> int:
-        limit = 7000
-        
-        if 'gemini-2' in model or 'gpt-4.1' in model or 'llama-4.1' in model:
-            limit = 1000000
-        if 'gpt-5' in model:
-            limit = 390000
-        if "gpt-4o" in model or "llama-3.1" in model or "llama-3.2" in model or 'grok-3' in model:
-            limit = 123000
-        if "100k" in model or "claude" in model:
-            limit = 98000
-        if "16k" in model:
-            limit = 15000
-        if "32k" in model:
-            limit = 31000
-
-        model = model.split("/")[-1].split(":")[0]
-        if model in OTHER_MODELS_LIMITS:
-            limit = OTHER_MODELS_LIMITS.get(model, limit)
-
-        return limit
 
