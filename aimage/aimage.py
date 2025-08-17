@@ -3,6 +3,7 @@ import io
 import logging
 from collections import defaultdict
 from copy import copy
+import re
 from typing import List, Union
 
 import aiohttp
@@ -85,18 +86,23 @@ class AImage(Settings,
     async def loras_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
         choices = self.autocomplete_cache[interaction.guild_id].get("loras") or []
 
-        if current:
-            current_loras = current.split(" ")
-            if any(part in current_loras for part in choices):  # TODO: currently only works with lora value of 1
-                new_choices = []
-                for choice in choices:
-                    choice_parts = choice.split(" ")
-                    if any(part in current_loras for part in choice_parts):
-                        continue
-                    new_choices.append(current + " " + choice)
-                choices = new_choices
+        if not choices:
+            await self._update_autocomplete_cache(interaction)
+            return []
 
-        return await self.object_autocomplete(interaction, current, choices)
+        weight = "1"
+        previous = ""
+        if current:
+            if m := re.search(r"^(<[^>]+>\s*)+([^<>]+)$", current): # multiple loras
+                current = m.group(2)
+                previous = m.group(1) + " "
+            if m := re.search(r"^([^:]+):([+-]?\d*\.?\d+)$", current): # lora weight
+                current = m.group(1)
+                weight = m.group(2)
+
+        choices = self.filter_list(choices, current, True)
+        choices = [f"{previous}<lora:{choice}:{weight}>" for choice in choices]
+        return [app_commands.Choice(name=choice, value=choice) for choice in choices][:25]
 
     async def style_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
         choices = self.autocomplete_cache[interaction.guild_id].get("styles") or []
@@ -123,14 +129,16 @@ class AImage(Settings,
         return await self.object_autocomplete(interaction, current, choices)
 
     @ staticmethod
-    def filter_list(options: list, current: str):
+    def filter_list(options: list, current: str, strict: bool = False):
         results = []
 
         ratios = [(item, fuzz.partial_ratio(current.lower(), item.lower())) for item in options]
 
         sorted_options = sorted(ratios, key=lambda x: x[1], reverse=True)
 
-        for item, _ in sorted_options:
+        for item, ratio in sorted_options:
+            if strict and ratio < 75:
+                continue
             results.append(item)
         return results
 
