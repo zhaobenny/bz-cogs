@@ -13,7 +13,7 @@ from aiuser.config.models import OTHER_MODELS_LIMITS
 from aiuser.context.consent.manager import ConsentManager
 from aiuser.context.converter.converter import MessageConverter
 from aiuser.context.entry import MessageEntry
-from aiuser.context.history.manager import HistoryManager
+from aiuser.context.history.builder import HistoryBuilder
 from aiuser.context.memory.retriever import MemoryRetriever
 from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import ScanImageMode
@@ -55,7 +55,7 @@ class MessagesThread:
         self.converter = MessageConverter(cog, ctx)
         self.consent_manager = ConsentManager(self.config, self.bot, self.guild)
         self.memory_retriever = MemoryRetriever(cog_data_path(cog))
-        self.history_manager = HistoryManager(self)
+        self.history_manager = HistoryBuilder(self)
 
     def __len__(self):
         return len(self.messages)
