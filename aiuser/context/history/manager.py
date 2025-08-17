@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING, List
 
 import discord
 
-from aiuser.messages_list.consent.manager import CONSENT_EMBED_TITLE
+from aiuser.context.consent.manager import CONSENT_EMBED_TITLE
 
 if TYPE_CHECKING:
-    from aiuser.messages_list.messages import MessagesList
+    from aiuser.context.messages import MessagesList
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

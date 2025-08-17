@@ -3,7 +3,7 @@ import logging
 
 from redbot.core import commands
 
-from aiuser.messages_list.messages import create_messages_list
+from aiuser.context.messages import create_messages_list
 from aiuser.response.chat.response import create_chat_response
 from aiuser.response.image.generator_factory import get_image_generator
 from aiuser.response.image.response import create_image_response

@@ -4,14 +4,14 @@ from typing import Optional
 
 import discord
 from openai import AsyncOpenAI
-from redbot.core import commands, Config
+from redbot.core import Config, commands
 
-from aiuser.response.chat.response import create_chat_response
-from aiuser.types.abc import MixinMeta
 from aiuser.config.constants import IMAGE_REQUEST_REPLY_PROMPT
-from aiuser.messages_list.messages import create_messages_list
-
+from aiuser.context.messages import create_messages_list
+from aiuser.response.chat.response import create_chat_response
 from aiuser.response.image.providers.generator import ImageGenerator
+from aiuser.types.abc import MixinMeta
+
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 

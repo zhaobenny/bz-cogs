@@ -6,7 +6,7 @@ from openai import AsyncOpenAI
 from redbot.core import Config, commands
 from redbot.core.bot import Red
 
-from aiuser.messages_list.entry import MessageEntry
+from aiuser.context.entry import MessageEntry
 from aiuser.utils.cache import Cache
 
 
