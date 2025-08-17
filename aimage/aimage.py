@@ -93,7 +93,7 @@ class AImage(Settings,
         weight = "1"
         previous = ""
         if current:
-            if m := re.search(r"^(<[^>]+>\s*)+([^<>]+)$", current): # multiple loras
+            if m := re.search(r"^((?:<[^>]+>\s*)+)([^<>]+)$", current): # multiple loras
                 current = m.group(2)
                 previous = m.group(1) + " "
             if m := re.search(r"^([^:]+):([+-]?\d*\.?\d+)$", current): # lora weight
