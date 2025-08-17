@@ -15,7 +15,7 @@ from aiuser.config.models import (
 )
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import ToolCallSchema
-from aiuser.messages_list.messages import MessagesList
+from aiuser.context.messages import MessagesList
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import get_enabled_tools
 

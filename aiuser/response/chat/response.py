@@ -8,7 +8,7 @@ from discord import AllowedMentions
 from redbot.core import Config, commands
 
 from aiuser.config.constants import REGEX_RUN_TIMEOUT
-from aiuser.messages_list.messages import MessagesList
+from aiuser.context.messages import MessagesList
 from aiuser.response.chat.llm_pipeline import LLMPipeline
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import to_thread

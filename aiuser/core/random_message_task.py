@@ -7,7 +7,7 @@ from discord.ext import tasks
 
 from aiuser.config.constants import RANDOM_MESSAGE_TASK_RETRY_SECONDS
 from aiuser.config.defaults import DEFAULT_PROMPT
-from aiuser.messages_list.messages import create_messages_list
+from aiuser.context.messages import create_messages_list
 from aiuser.response.dispatcher import dispatch_response
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import format_variables

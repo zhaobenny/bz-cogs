@@ -17,7 +17,7 @@ from aiuser.config.defaults import (
 from aiuser.core.handlers import handle_message, handle_slash_command
 from aiuser.core.random_message_task import RandomMessageTask
 from aiuser.dashboard.base import DashboardIntegration
-from aiuser.messages_list.entry import MessageEntry
+from aiuser.context.entry import MessageEntry
 from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
 from aiuser.utils.cache import Cache

@@ -11,10 +11,10 @@ from sentence_transformers import SentenceTransformer
 
 from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.config.models import OTHER_MODELS_LIMITS
-from aiuser.messages_list.consent.manager import ConsentManager
-from aiuser.messages_list.converter.converter import MessageConverter
-from aiuser.messages_list.entry import MessageEntry
-from aiuser.messages_list.history.manager import HistoryManager
+from aiuser.context.consent.manager import ConsentManager
+from aiuser.context.converter.converter import MessageConverter
+from aiuser.context.entry import MessageEntry
+from aiuser.context.history.manager import HistoryManager
 from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import ScanImageMode
 from aiuser.utils.sqlite3 import connect_db, serialize_f32

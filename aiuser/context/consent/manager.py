@@ -40,7 +40,7 @@ class ConsentManager:
     
     async def send_consent_embed(self, channel, users: Set[discord.Member]):
         """Send the consent embed to the channel"""
-        from aiuser.messages_list.consent.view import (
+        from aiuser.context.consent.view import (
             ConsentView,  # Import here to avoid circular imports
         )
         
