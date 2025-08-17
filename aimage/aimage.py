@@ -101,7 +101,8 @@ class AImage(Settings,
                 weight = m.group(2)
 
         choices = self.filter_list(choices, current, True)
-        choices = [f"{previous}<lora:{choice}:{weight}>" if len(f"{previous}<lora:{choice}:{weight}>") <= 100 else f"<lora:{choice}:{weight}>" for choice in choices]
+        choices = [f"{previous}<lora:{choice}:{weight}>" if len(f"{previous}<lora:{choice}:{weight}>") <= 100 else f"<lora:{choice}:{weight}>"
+                   for choice in choices]
         return [app_commands.Choice(name=choice, value=choice) for choice in choices][:25]
 
     async def style_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
