@@ -1,7 +1,5 @@
 import json
 import logging
-import random
-from datetime import datetime, timedelta
 from typing import List
 
 import discord
@@ -13,9 +11,10 @@ from sentence_transformers import SentenceTransformer
 
 from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.config.models import OTHER_MODELS_LIMITS
+from aiuser.messages_list.consent.manager import ConsentManager
 from aiuser.messages_list.converter.converter import MessageConverter
 from aiuser.messages_list.entry import MessageEntry
-from aiuser.messages_list.consent.manager import CONSENT_EMBED_TITLE, ConsentManager
+from aiuser.messages_list.history.manager import HistoryManager
 from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import ScanImageMode
 from aiuser.utils.sqlite3 import connect_db, serialize_f32
@@ -59,6 +58,7 @@ class MessagesList:
         self.cog_data_path = cog_data_path(cog)
         self.converter = MessageConverter(cog, ctx)
         self.consent_manager = ConsentManager(self.config, self.bot, self.guild)
+        self.history_manager = HistoryManager(self)
 
     def __len__(self):
         return len(self.messages)
@@ -190,27 +190,8 @@ class MessagesList:
         await self._add_tokens(content)
 
     async def add_history(self):
-        limit = await self.config.guild(self.guild).messages_backread()
-        max_seconds_gap = await self.config.guild(self.guild).messages_backread_seconds()
-        start_time: datetime = (
-            self.start_time - timedelta(seconds=1) if self.start_time else None
-        )
-
         await self.insert_relevant_memory()
-
-        past_messages = await self._get_past_messages(limit, start_time)
-        if not past_messages:
-            return
-
-        if not await self._is_valid_time_gap(self.init_message, past_messages[0], max_seconds_gap):
-            return
-
-        users = await self.consent_manager.get_unknown_consent_users(past_messages[:10])
-
-        await self._process_past_messages(past_messages, max_seconds_gap)
-
-        if self.consent_manager.should_send_consent_embed(users):
-            await self.consent_manager.send_consent_embed(self.init_message.channel, users)
+        await self.history_manager.add_history()
 
     async def insert_relevant_memory(self):
         memory_content = await self.fetch_relevant_memory()
@@ -243,29 +224,6 @@ class MessagesList:
             ).fetchall()
 
         return memory[0][2] if (memory and memory[0][3] < threshold) else ""
-
-    async def _get_past_messages(self, limit, start_time):
-        return [
-            message
-            async for message in self.init_message.channel.history(
-                limit=limit + 1,
-                before=self.init_message,
-                after=start_time,
-                oldest_first=False,
-            )
-        ]
-
-    async def _process_past_messages(self, past_messages, max_seconds_gap):
-        for i in range(len(past_messages) - 1):
-            if self.tokens > self.token_limit:
-                return logger.debug(f"{self.tokens} tokens used - nearing limit, stopping context creation for message {self.init_message.id}")
-            if (past_messages[i].author.id == self.bot.user.id) and (past_messages[i].embeds and past_messages[i].embeds[0].title == CONSENT_EMBED_TITLE):
-                continue
-            if await self._is_valid_time_gap(past_messages[i], past_messages[i + 1], max_seconds_gap):
-                await self.add_msg(past_messages[i])
-            else:
-                await self.add_msg(past_messages[i])
-                break
 
     def get_json(self):
         return [
