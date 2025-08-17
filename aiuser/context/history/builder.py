@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
-class HistoryManager:
+class HistoryBuilder:
     def __init__(self, messages_list: "MessagesThread"):
         self.messages_list = messages_list
         self.config = messages_list.config

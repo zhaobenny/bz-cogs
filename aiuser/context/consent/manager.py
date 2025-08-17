@@ -12,7 +12,7 @@ class ConsentManager:
         self.bot = bot
         self.guild = guild
     
-    async def get_unknown_consent_users(self, messages) -> Set[discord.Member]:
+    async def get_unknown_consent_users(self, messages: list[discord.Message]) -> Set[discord.Member]:
         """Find users who haven't made an opt-in/out choice yet"""
         users = set()
 
