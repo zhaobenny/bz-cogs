@@ -40,7 +40,7 @@ class HistoryManager:
 
         await self._process_past_messages(past_messages, max_seconds_gap)
 
-        if self.consent_manager.should_send_consent_embed(users):
+        if await self.consent_manager.should_send_consent_embed(users):
             await self.consent_manager.send_consent_embed(self.init_message.channel, users)
 
     async def _get_past_messages(self, limit: int, start_time: datetime) -> List[discord.Message]:

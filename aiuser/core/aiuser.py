@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 from datetime import datetime
 
@@ -14,10 +15,10 @@ from aiuser.config.defaults import (
     DEFAULT_MEMBER,
     DEFAULT_ROLE,
 )
+from aiuser.context.entry import MessageEntry
 from aiuser.core.handlers import handle_message, handle_slash_command
 from aiuser.core.random_message_task import RandomMessageTask
 from aiuser.dashboard.base import DashboardIntegration
-from aiuser.context.entry import MessageEntry
 from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
 from aiuser.utils.cache import Cache
@@ -58,6 +59,8 @@ class AIUser(
         self.config.register_global(**DEFAULT_GLOBAL)
 
     async def cog_load(self):
+        os.environ["TOKENIZERS_PARALLELISM"] = "false"
+        
         self.openai_client = await setup_openai_client(self.bot, self.config)
 
         all_config = await self.config.all_guilds()

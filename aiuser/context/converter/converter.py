@@ -3,15 +3,17 @@ import logging
 from discord import Message
 from redbot.core import commands
 
-from aiuser.types.abc import MixinMeta
-from aiuser.utils.utilities import contains_youtube_link, is_embed_valid
 from aiuser.context.converter.embed.formatter import format_embed_content
-from aiuser.context.converter.helpers import (format_embed_text_content,
-                                                    format_generic_image,
-                                                    format_sticker_content,
-                                                    format_text_content)
+from aiuser.context.converter.helpers import (
+    format_embed_text_content,
+    format_generic_image,
+    format_sticker_content,
+    format_text_content,
+)
 from aiuser.context.converter.image.caption import transcribe_image
 from aiuser.context.entry import MessageEntry
+from aiuser.types.abc import MixinMeta
+from aiuser.utils.utilities import contains_youtube_link, is_embed_valid
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -25,7 +27,7 @@ class MessageConverter():
         self.message_cache = cog.cached_messages
         self.ctx = ctx
 
-    async def convert(self, message: Message):
+    async def convert(self, message: Message) -> list[MessageEntry]:
         """Converts a Discord message to ChatML format message(s)"""
         res = []
         role = "user" if message.author.id != self.bot_id else "assistant"
