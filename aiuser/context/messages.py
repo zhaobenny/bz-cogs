@@ -17,7 +17,6 @@ from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
-
 class MessagesThread:
     def __init__(
         self,

@@ -110,8 +110,6 @@ class ThreadSetup:
 
         return limit
 
-
-
 async def create_messages_thread(
     cog: MixinMeta, 
     ctx: commands.Context, 
