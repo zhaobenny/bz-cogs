@@ -7,7 +7,6 @@ from aiuser.response.image.providers.aihorde import AIHordeGenerator
 from aiuser.response.image.providers.dalle import DalleImageGenerator
 from aiuser.response.image.providers.generic import GenericImageGenerator
 from aiuser.response.image.providers.modal import ModalImageGenerator
-from aiuser.response.image.providers.nemusona import NemusonaGenerator
 from aiuser.response.image.providers.runpod import RunPodGenerator
 from aiuser.response.image.providers.nineteen import NINETEEN_API_URL, NineteenGenerator
 from aiuser.response.image.providers.huggingface import HuggingFaceGenerator
@@ -35,7 +34,6 @@ async def get_image_generator(ctx: commands.Context, config: config):
         return HuggingFaceGenerator(ctx, config, sd_endpoint=sd_endpoint)
     elif sd_endpoint.startswith("https://perchance.org/ai-text-to-image-generator"):
         from aiuser.response.image.providers.perchance import PerchanceGenerator
-
         return PerchanceGenerator(ctx, config)
     elif sd_endpoint.endswith("imggen.modal.run/"):
         auth_token = (await ctx.bot.get_shared_api_tokens("modal-img-gen")).get("token")
