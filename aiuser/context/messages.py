@@ -7,7 +7,6 @@ import tiktoken
 from discord import Message
 from redbot.core import commands
 from redbot.core.data_manager import cog_data_path
-from sentence_transformers import SentenceTransformer
 
 from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.config.models import OTHER_MODELS_LIMITS
@@ -15,9 +14,9 @@ from aiuser.context.consent.manager import ConsentManager
 from aiuser.context.converter.converter import MessageConverter
 from aiuser.context.entry import MessageEntry
 from aiuser.context.history.manager import HistoryManager
+from aiuser.context.memory.retriever import MemoryRetriever
 from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import ScanImageMode
-from aiuser.utils.sqlite3 import connect_db, serialize_f32
 from aiuser.utils.utilities import format_variables
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -55,9 +54,9 @@ class MessagesList:
         self.tokens = 0
         self.model = None
         self.can_reply = True
-        self.cog_data_path = cog_data_path(cog)
         self.converter = MessageConverter(cog, ctx)
         self.consent_manager = ConsentManager(self.config, self.bot, self.guild)
+        self.memory_retriever = MemoryRetriever(cog_data_path(cog))
         self.history_manager = HistoryManager(self)
 
     def __len__(self):
@@ -194,36 +193,9 @@ class MessagesList:
         await self.history_manager.add_history()
 
     async def insert_relevant_memory(self):
-        memory_content = await self.fetch_relevant_memory()
-        if memory_content:
-            await self.add_system(
-            f"Looking into your memory, the following most relevant memory was found: {memory_content}", index=len(self.messages_ids))
-
-    async def fetch_relevant_memory(self, threshold: float = 1.1):
-        """Fetch the most relevant memory based on a similarity threshold."""
-        # Load the SentenceTransformer model
-        model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", cache_folder=self.cog_data_path)
-
-        # Extract the query from the initial message and generate the embedding
-        query = self.init_message.content
-        query_embedding = model.encode(query)
-
-        # Connect to the SQLite database
-        db_path = self.cog_data_path / "embeddings.db"  
-        with connect_db(db_path) as conn:
-            memory = conn.execute(
-                """
-                SELECT
-                    rowid, memory_name, memory_text, 
-                    distance
-                FROM memories
-                WHERE memory_vector MATCH ? and k=1
-                ORDER BY distance
-                """,
-                [serialize_f32(query_embedding)]
-            ).fetchall()
-
-        return memory[0][2] if (memory and memory[0][3] < threshold) else ""
+        relevant_memory = await self.memory_retriever.fetch_relevant(self.init_message.content)
+        if relevant_memory:
+            await self.add_system(relevant_memory, index=len(self.messages_ids))
 
     def get_json(self):
         return [
@@ -249,6 +221,8 @@ class MessagesList:
         
         if 'gemini-2' in model or 'gpt-4.1' in model or 'llama-4.1' in model:
             limit = 1000000
+        if 'gpt-5' in model:
+            limit = 390000
         if "gpt-4o" in model or "llama-3.1" in model or "llama-3.2" in model or 'grok-3' in model:
             limit = 123000
         if "100k" in model or "claude" in model:

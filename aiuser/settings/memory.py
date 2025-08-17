@@ -5,6 +5,7 @@ from redbot.core import commands
 from redbot.core.data_manager import cog_data_path
 from sentence_transformers import SentenceTransformer
 
+from aiuser.config.constants import EMBEDDING_DB_NAME, EMBEDDING_MODEL
 from aiuser.types.abc import MixinMeta, aiuser
 from aiuser.utils.sqlite3 import connect_db, serialize_f32
 
@@ -25,7 +26,7 @@ class MemorySettings(MixinMeta):
         """Shows all memories stored."""
 
         # Query all memories from the database
-        with connect_db(cog_data_path(self) / "embeddings.db") as conn:
+        with connect_db(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
             cursor = conn.execute("SELECT memory_name FROM memories")
             memories = cursor.fetchall()
 
@@ -43,7 +44,7 @@ class MemorySettings(MixinMeta):
     async def show_memory(self, ctx: commands.Context, memory_id: int):
         """Shows a memory by ID."""
 
-        with connect_db(cog_data_path(self) / "embeddings.db") as conn:
+        with connect_db(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
             # Query the memory by its ID (assumes 1-based index for user input)
             cursor = conn.execute("SELECT memory_name, memory_text FROM memories LIMIT ?, 1", (memory_id - 1,))
             memory = cursor.fetchone()
@@ -60,7 +61,7 @@ class MemorySettings(MixinMeta):
         """Removes a memory by ID."""
 
         # Delete the memory by its ID (assumes 1-based index for user input)
-        with connect_db(cog_data_path(self) / "embeddings.db") as conn:
+        with connect_db(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
             conn.execute("DELETE FROM memories WHERE rowid = ?", (memory_id,))
 
         await ctx.send(f"Memory {memory_id} successfully removed from the database.")
@@ -76,7 +77,7 @@ class MemorySettings(MixinMeta):
         memory_name, memory_text = memory.split(":", 1)
 
         # Load the embedding model
-        model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", cache_folder=cog_data_path(self))
+        model = SentenceTransformer(EMBEDDING_MODEL, cache_folder=cog_data_path(self))
 
         # Generate an embedding for the input memory
         embedding = model.encode(memory_text)
@@ -85,7 +86,7 @@ class MemorySettings(MixinMeta):
         logger.debug(f"Embedding shape: {embedding.shape}")
 
         current_timestamp = int(time.time())
-        with connect_db(cog_data_path(self) / "embeddings.db") as conn:
+        with connect_db(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
             conn.execute(
                 "INSERT INTO memories(memory_vector, memory_name, memory_text, last_updated) VALUES (?, ?, ?, ?)",
                 [serialize_f32(embedding.tolist()), memory_name, memory_text, current_timestamp],
