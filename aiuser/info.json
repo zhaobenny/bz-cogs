@@ -17,6 +17,7 @@
         "sqlite-vec==0.1.7a2",
         "pysqlite3",
         "sentence-transformers",
+        "tokenizers>=0.21",
         "tenacity",
         "tiktoken",
         "Pillow",
