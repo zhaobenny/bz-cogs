@@ -74,7 +74,7 @@ class ImageHandler(MixinMeta):
         imagescanner = self.bot.get_cog("ImageScanner")
         if imagescanner and response.extension == "png":
             if context.channel.id in imagescanner.scan_channels:
-                imagescanner.image_cache[msg.id] = ({1: response.info_string}, {1: response.data})
+                imagescanner.image_cache[msg.id] = ({0: response.info_string}, {0: response.data})
                 await msg.add_reaction("🔎")
 
     async def generate_image(self, context: Union[commands.Context, discord.Interaction],
