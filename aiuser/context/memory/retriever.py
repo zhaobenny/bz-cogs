@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 
 from aiuser.config.constants import EMBEDDING_DB_NAME, EMBEDDING_MODEL
 from aiuser.utils.sqlite3 import connect_db, serialize_f32
@@ -15,18 +15,8 @@ class MemoryRetriever:
     
     def __init__(self, cog_data_path: Path):
         self.cog_data_path = cog_data_path
-        self._model: Optional[SentenceTransformer] = None
+        self.model = TextEmbedding(lazy_load=True, cache_folder=self.cog_data_path)
         self._db_path = cog_data_path / EMBEDDING_DB_NAME
-    
-    @property
-    def model(self) -> SentenceTransformer:
-        """Lazy load the SentenceTransformer model."""
-        if self._model is None:
-            self._model = SentenceTransformer(
-                EMBEDDING_MODEL, 
-                cache_folder=self.cog_data_path
-            )
-        return self._model
     
     async def fetch_relevant(self, query: str, threshold: float = 1.1) -> Optional[str]:
         """
@@ -43,7 +33,7 @@ class MemoryRetriever:
             return None
             
         # Generate embedding for the query
-        query_embedding = self.model.encode(query)
+        query_embedding = list(self.model.embed(query))[0]
         
         # Search for similar memories in the database
         memory_results = self._search_memories(query_embedding)

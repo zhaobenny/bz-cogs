@@ -1,9 +1,9 @@
 import logging
 import time
 
+from fastembed import TextEmbedding
 from redbot.core import commands
 from redbot.core.data_manager import cog_data_path
-from sentence_transformers import SentenceTransformer
 
 from aiuser.config.constants import EMBEDDING_DB_NAME, EMBEDDING_MODEL
 from aiuser.types.abc import MixinMeta, aiuser
@@ -77,19 +77,16 @@ class MemorySettings(MixinMeta):
         memory_name, memory_text = memory.split(":", 1)
 
         # Load the embedding model
-        model = SentenceTransformer(EMBEDDING_MODEL, cache_folder=cog_data_path(self))
+        model = TextEmbedding(cache_folder=cog_data_path(self))
 
         # Generate an embedding for the input memory
-        embedding = model.encode(memory_text)
-
-        logger.debug(f"Embedding type: {type(embedding)}")
-        logger.debug(f"Embedding shape: {embedding.shape}")
+        embedding = list(model.embed(memory_text))[0]
 
         current_timestamp = int(time.time())
         with connect_db(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
             conn.execute(
                 "INSERT INTO memories(memory_vector, memory_name, memory_text, last_updated) VALUES (?, ?, ?, ?)",
-                [serialize_f32(embedding.tolist()), memory_name, memory_text, current_timestamp],
+                [serialize_f32(embedding), memory_name, memory_text, current_timestamp],
             )
 
         return await ctx.send("Memory successfully added to the database.")
