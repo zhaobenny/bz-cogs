@@ -34,7 +34,7 @@ class HiresView(discord.ui.View):
         self.payload["hr_upscaler"] = self.upscaler
         self.payload["hr_scale"] = self.scale
         self.payload["denoising_strength"] = self.denoising
-        self.payload["hr_second_pass_steps"] = self.payload["steps"] // 2
+        self.payload["hr_second_pass_steps"] = int(self.payload["steps"]) // 2
         self.payload["hr_prompt"] = self.payload["prompt"]
         self.payload["hr_negative_prompt"] = self.payload["negative_prompt"]
         self.payload["hr_resize_x"] = 0
@@ -42,6 +42,7 @@ class HiresView(discord.ui.View):
         params = self.src_view.get_params_dict()
         self.payload["seed"] = int(params["Seed"])
         self.payload["subseed"] = int(params.get("Variation seed", -1))
+        self.payload["subseed_strength"] = float(params.get("Variation seed strength", 0))
         if self.adetailer:
             self.payload["alwayson_scripts"].update(ADETAILER_ARGS)
         elif "ADetailer" in self.payload["alwayson_scripts"]:
