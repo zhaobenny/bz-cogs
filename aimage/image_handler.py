@@ -63,8 +63,9 @@ class ImageHandler(MixinMeta):
         if response.is_nsfw and not await self.config.guild(guild).allow_nsfw() and not await self.config.guild(guild).nsfw_blurred():
             return await send_response(context, content=f"🔞 {user.mention} generated a possible NSFW image with prompt: `{prompt}`", allowed_mentions=discord.AllowedMentions.none())
 
+        maxsize = await self.config.guild(context.guild).max_img2img()
         file = discord.File(io.BytesIO(response.data), filename=f"image.{response.extension}")
-        view = ImageActions(self, response.info_string, response.payload, user, context.channel)
+        view = ImageActions(self, response.info_string, response.payload, user, context.channel, maxsize)
         msg = await send_response(context, file=file, view=view)
         asyncio.create_task(delete_button_after(msg))
 

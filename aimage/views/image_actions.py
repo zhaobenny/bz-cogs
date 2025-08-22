@@ -16,7 +16,7 @@ from aimage.views.params import ParamsView
 
 
 class ImageActions(discord.ui.View):
-    def __init__(self, cog: MixinMeta, image_info: str, payload: dict, author: discord.Member, channel: discord.TextChannel):
+    def __init__(self, cog: MixinMeta, image_info: str, payload: dict, author: discord.Member, channel: discord.TextChannel, maxsize: int):
         super().__init__(timeout=VIEW_TIMEOUT)
         self.info_string = image_info
         self.payload = payload
@@ -25,6 +25,7 @@ class ImageActions(discord.ui.View):
         self.cache = cog.autocomplete_cache
         self.og_user = author
         self.channel = channel
+        self.maxsize = maxsize
         self.generate_image = cog.generate_image
         self.generate_img2img = cog.generate_img2img
 
@@ -32,6 +33,8 @@ class ImageActions(discord.ui.View):
         self.button_caption.callback = self.get_caption
         self.button_regenerate = discord.ui.Button(emoji='🔄')
         self.button_regenerate.callback = self.regenerate_image
+        self.button_variation = discord.ui.Button(emoji='🤏🏻')
+        self.button_variation.callback = self.variation_image
         self.button_upscale = discord.ui.Button(emoji='⬆')
         self.button_upscale.callback = self.upscale_image
         self.button_delete = discord.ui.Button(emoji='🗑️')
@@ -40,6 +43,7 @@ class ImageActions(discord.ui.View):
         self.add_item(self.button_caption)
         if not payload.get("enable_hr", False):
             self.add_item(self.button_regenerate)
+            self.add_item(self.button_variation)
             if not payload.get("init_images", []) and "AI Horde" not in self.info_string:
                 self.add_item(self.button_upscale)
         self.add_item(self.button_delete)
@@ -56,12 +60,9 @@ class ImageActions(discord.ui.View):
 
     async def regenerate_image(self, interaction: discord.Interaction):
         await interaction.response.defer(thinking=True)
-        params = self.get_params_dict()
-        if params and float(params.get("Variation seed strength", 0)) > 0:
-            self.payload["seed"] = int(params["Seed"])
-            self.payload["subseed"] = -1
-        else:
-            self.payload["seed"] = -1
+        self.payload["seed"] = -1
+        self.payload["subseed"] = -1
+        self.payload["subseed_strength"] = 0
         self.button_regenerate.disabled = True
         await interaction.message.edit(view=self)
         if self.payload.get("init_images", []):
@@ -75,10 +76,14 @@ class ImageActions(discord.ui.View):
             except:
                 pass
 
+    async def variation_image(self, interaction: discord.Interaction):
+        from aimage.views.variation import VariationView
+        view = VariationView(self, interaction)
+        await interaction.response.send_message(view=view, ephemeral=True)
+
     async def upscale_image(self, interaction: discord.Interaction):
-        maxsize = await self.config.guild(interaction.guild).max_img2img()
         from aimage.views.hi_res import HiresView
-        view = HiresView(self, interaction, maxsize)
+        view = HiresView(self, interaction, self.maxsize)
         await interaction.response.send_message(view=view, ephemeral=True)
 
     async def delete_image(self, interaction: discord.Interaction):
