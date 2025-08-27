@@ -33,6 +33,7 @@ async def process_image_response(cog: MixinMeta, ctx: commands.Context) -> bool:
         success = await create_image_response(cog, ctx, generator)
         return success
     except Exception:
+        logger.warning("Couldn't generate an image response!", exc_info=True)
         return False
     finally:
         await ctx.message.remove_reaction("🧐", ctx.me)

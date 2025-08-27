@@ -5,11 +5,12 @@ from redbot.core import commands, config
 from aiuser.config.constants import IMAGE_REQUEST_AIHORDE_URL
 from aiuser.response.image.providers.aihorde import AIHordeGenerator
 from aiuser.response.image.providers.dalle import DalleImageGenerator
+from aiuser.response.image.providers.gemini import GeminiImageGenerator
 from aiuser.response.image.providers.generic import GenericImageGenerator
-from aiuser.response.image.providers.modal import ModalImageGenerator
-from aiuser.response.image.providers.runpod import RunPodGenerator
-from aiuser.response.image.providers.nineteen import NINETEEN_API_URL, NineteenGenerator
 from aiuser.response.image.providers.huggingface import HuggingFaceGenerator
+from aiuser.response.image.providers.modal import ModalImageGenerator
+from aiuser.response.image.providers.nineteen import NINETEEN_API_URL, NineteenGenerator
+from aiuser.response.image.providers.runpod import RunPodGenerator
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -46,5 +47,8 @@ async def get_image_generator(ctx: commands.Context, config: config):
     elif sd_endpoint.startswith(IMAGE_REQUEST_AIHORDE_URL):
         api_key = (await ctx.bot.get_shared_api_tokens("aihorde")).get("apikey")
         return AIHordeGenerator(ctx, config, api_key)
+    elif sd_endpoint.startswith("https://generativelanguage.googleapis.com/v1beta/models"):
+        api_key = (await ctx.bot.get_shared_api_tokens("gemini")).get("apikey") or await ctx.bot.get_shared_api_tokens("openai").get("apikey")
+        return GeminiImageGenerator(ctx, config)
     else:
         return GenericImageGenerator(ctx, config)
