@@ -16,7 +16,11 @@ class MemorySettings(MixinMeta):
     @aiuser.group(name="memory")
     @commands.has_permissions(manage_guild=True)
     async def memory(self, _):
-        """ Manages long-term memory settings
+        """ 
+            **Expect breaking changes! 
+            This feature is still in development!**
+
+            Manages long-term memory settings
             (All subcommands are per server)
         """
         pass
@@ -77,7 +81,7 @@ class MemorySettings(MixinMeta):
         memory_name, memory_text = memory.split(":", 1)
 
         # Load the embedding model
-        model = TextEmbedding(cache_folder=cog_data_path(self))
+        model = TextEmbedding(EMBEDDING_MODEL, cache_folder=cog_data_path(self))
 
         # Generate an embedding for the input memory
         embedding = list(model.embed(memory_text))[0]

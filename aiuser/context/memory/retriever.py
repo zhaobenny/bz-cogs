@@ -15,7 +15,7 @@ class MemoryRetriever:
     
     def __init__(self, cog_data_path: Path):
         self.cog_data_path = cog_data_path
-        self.model = TextEmbedding(lazy_load=True, cache_folder=self.cog_data_path)
+        self.model = TextEmbedding(EMBEDDING_MODEL, lazy_load=True, cache_folder=self.cog_data_path)
         self._db_path = cog_data_path / EMBEDDING_DB_NAME
     
     async def fetch_relevant(self, query: str, threshold: float = 1.1) -> Optional[str]:
