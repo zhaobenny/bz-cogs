@@ -2,14 +2,13 @@ import logging
 import time
 
 import discord
-from fastembed import TextEmbedding
 from redbot.core import commands
 from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.menus import SimpleMenu
 
-from aiuser.config.constants import EMBEDDING_DB_NAME, EMBEDDING_MODEL
+from aiuser.config.constants import EMBEDDING_DB_NAME
 from aiuser.types.abc import MixinMeta, aiuser
-from aiuser.utils.sqlite3 import connect_db, serialize_f32
+from aiuser.utils.embeddings import connect_db, embed_text, serialize_f32
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -138,11 +137,8 @@ class MemorySettings(MixinMeta):
         memory_name = memory_name.strip()
         memory_text = memory_text.strip()
 
-        # Load the embedding model
-        model = TextEmbedding(EMBEDDING_MODEL, cache_folder=cog_data_path(self))
-
         # Generate an embedding for the input memory
-        embedding = list(model.embed(memory_text))[0]
+        embedding = await embed_text(memory_text, cog_data_path(self))
 
         current_timestamp = int(time.time())
         with connect_db(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:

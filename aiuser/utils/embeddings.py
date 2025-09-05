@@ -1,9 +1,14 @@
+import asyncio
 import struct
+from pathlib import Path
 from sqlite3 import Connection
 from typing import List
 
 import sqlite_vec
+from fastembed import TextEmbedding
 from pysqlite3 import dbapi2 as sqlite3
+
+from aiuser.config.constants import EMBEDDING_MODEL
 
 
 def connect_db(path: str) -> Connection:
@@ -22,8 +27,15 @@ def connect_db(path: str) -> Connection:
                     last_updated integer
                 )
             """)
-    conn.execute("PRAGMA user_version = 1;")  
+    conn.execute("PRAGMA user_version = 1;")
     return conn
+
+
+async def embed_text(query: str, cache_folder: Path) -> List[float]:
+    model = TextEmbedding(EMBEDDING_MODEL, cache_folder=cache_folder)
+    vecs = await asyncio.to_thread(lambda: list(model.embed([query])))
+    return vecs
+
 
 def serialize_f32(vector: List[float]) -> bytes:
     """Serializes a list of floats into a compact "raw bytes" format."""
