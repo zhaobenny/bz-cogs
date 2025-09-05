@@ -10,8 +10,8 @@ def connect_db(path: str) -> Connection:
     conn = sqlite3.connect(path)
     conn.enable_load_extension(True)
     sqlite_vec.load(conn)
-    conn.enable_load_extension(False)       
-    
+    conn.enable_load_extension(False)
+
     # TODO: schema once
     conn.execute("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS memories USING vec0(
@@ -22,12 +22,7 @@ def connect_db(path: str) -> Connection:
                     last_updated integer
                 )
             """)
-    
-    conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_memories_guild 
-                ON memories(guild_id)
-            """)
-    
+    conn.execute("PRAGMA user_version = 1;")  
     return conn
 
 def serialize_f32(vector: List[float]) -> bytes:
