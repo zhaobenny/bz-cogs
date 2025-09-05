@@ -29,7 +29,7 @@ class HistorySettings(MixinMeta):
         """
         await self.config.guild(ctx.guild).messages_backread.set(new_value)
         embed = discord.Embed(
-            title="The number of previous messages used for context on this server is now:",
+            title="📜 The number of previous messages used for context on this server is now:",
             description=f"{new_value}",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
@@ -43,7 +43,7 @@ class HistorySettings(MixinMeta):
         """
         await self.config.guild(ctx.guild).custom_model_tokens_limit.set(new_value)
         embed = discord.Embed(
-            title="The custom token limit for this server is now:",
+            title="🔧 The custom token limit for this server is now:",
             description=f"{new_value} \n\n-# The limit may need changing for different models.",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
@@ -58,7 +58,7 @@ class HistorySettings(MixinMeta):
         """
         await self.config.guild(ctx.guild).messages_backread_seconds.set(new_value)
         embed = discord.Embed(
-            title="The max time (s) allowed between messages for context on this server is now:",
+            title="⏱️ The max time (s) allowed between messages for context on this server is now:",
             description=f"{new_value}",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)

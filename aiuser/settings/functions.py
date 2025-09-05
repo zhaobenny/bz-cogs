@@ -29,7 +29,7 @@ class FunctionCallingSettings(MixinMeta):
         await self.config.guild(ctx.guild).function_calling.set(current_value)
 
         embed = discord.Embed(
-            title="Functions Calling now set to:",
+            title="🔀 Functions Calling now set to:",
             description=f"{current_value}",
             color=await ctx.embed_color(),
         )
@@ -49,7 +49,7 @@ class FunctionCallingSettings(MixinMeta):
         """
         await self.config.guild(ctx.guild).function_calling_default_location.set([latitude, longitude])
         embed = discord.Embed(
-            title="Location now set to:",
+            title="📍 Location now set to:",
             description=f"{latitude}, {longitude}",
             color=await ctx.embed_color(),
         )
@@ -67,7 +67,7 @@ class FunctionCallingSettings(MixinMeta):
         await self.config.guild(ctx.guild).function_calling_functions.set(enabled_tools)
 
         embed = discord.Embed(
-            title=f"{embed_title} function calling now set to:",
+            title=f"Tool calling for {embed_title} now set to:",
             description=f"{tool_names[0] in enabled_tools}",
             color=await ctx.embed_color(),
         )
@@ -83,7 +83,7 @@ class FunctionCallingSettings(MixinMeta):
 
         tool_names = [SearchToolCall.function_name]
 
-        await self.toggle_function_helper(ctx, tool_names, "Search")
+        await self.toggle_function_helper(ctx, tool_names, "🔎 Search")
 
     @functions.command(name="scrape")
     async def toggle_scrape_function(self, ctx: commands.Context):
@@ -96,7 +96,7 @@ class FunctionCallingSettings(MixinMeta):
 
         tool_names = [ScrapeToolCall.function_name]
 
-        await self.toggle_function_helper(ctx, tool_names, "Scrape")
+        await self.toggle_function_helper(ctx, tool_names, "📜 Scrape")
 
     @functions.command(name="weather")
     async def toggle_weather_function(self, ctx: commands.Context):
@@ -113,7 +113,7 @@ class FunctionCallingSettings(MixinMeta):
         tool_names = [IsDaytimeToolCall.function_name,
                       LocalWeatherToolCall.function_name, LocationWeatherToolCall.function_name]
 
-        await self.toggle_function_helper(ctx, tool_names, "Weather")
+        await self.toggle_function_helper(ctx, tool_names, "🌦️ Weather")
 
     @functions.command(name="noresponse")
     async def toggle_ignore_function(self, ctx: commands.Context):
@@ -126,7 +126,7 @@ class FunctionCallingSettings(MixinMeta):
 
         tool_names = [NoResponseToolCall.function_name]
 
-        await self.toggle_function_helper(ctx, tool_names, "No response")
+        await self.toggle_function_helper(ctx, tool_names, "🤫 No response")
 
     @functions.command(name="wolframalpha")
     async def toggle_wolfram_alpha_function(self, ctx: commands.Context):
@@ -138,4 +138,4 @@ class FunctionCallingSettings(MixinMeta):
 
         tool_names = [WolframAlphaFunctionCall.function_name]
 
-        await self.toggle_function_helper(ctx, tool_names, "Wolfram Alpha")
+        await self.toggle_function_helper(ctx, tool_names, "🐺 Wolfram Alpha")

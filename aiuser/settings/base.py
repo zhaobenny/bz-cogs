@@ -78,7 +78,7 @@ class Settings(
         embeds = []
 
         main_embed = discord.Embed(
-            title="AI User Settings", color=await ctx.embed_color()
+            title="⚙️ AI User Settings", color=await ctx.embed_color()
         )
 
         main_embed.add_field(name="Model", inline=True, value=f"`{config['model']}`")
@@ -217,7 +217,7 @@ class Settings(
         if parameters is not None:
             parameters = json.loads(parameters)
             parameters_embed = discord.Embed(
-                title="Custom Parameters to Endpoint", color=await ctx.embed_color()
+                title="🔧 Custom Parameters to Endpoint", color=await ctx.embed_color()
             )
             for key, value in parameters.items():
                 parameters_embed.add_field(
@@ -252,7 +252,7 @@ class Settings(
             await config_attr.reply_percent.set(None)
             desc = "`Custom percent no longer set, will default to other percents`"
         embed = discord.Embed(
-            title=f"Chance that the bot will reply on this {mention_type.name.lower()} is now:",
+            title=f"📈 Chance that the bot will reply on this {mention_type.name.lower()} is now:",
             description=desc,
             color=await ctx.embed_color(),
         )
@@ -279,7 +279,7 @@ class Settings(
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         self.channels_whitelist[ctx.guild.id] = new_whitelist
         embed = discord.Embed(
-            title="The server whitelist is now:", color=await ctx.embed_color()
+            title="✅ The server whitelist is now:", color=await ctx.embed_color()
         )
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.description = "\n".join(channels) if channels else "None"
@@ -306,7 +306,7 @@ class Settings(
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         self.channels_whitelist[ctx.guild.id] = new_whitelist
         embed = discord.Embed(
-            title="The server whitelist is now:", color=await ctx.embed_color()
+            title="❌ The server whitelist is now:", color=await ctx.embed_color()
         )
         channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
         embed.description = "\n".join(channels) if channels else "None"
@@ -336,7 +336,7 @@ class Settings(
 
         await self.config.guild(ctx.guild).model.set(model)
         embed = discord.Embed(
-            title="This server's chat model is now set to:",
+            title="🤖 This server's chat model is now set to:",
             description=model,
             color=await ctx.embed_color(),
         )
@@ -353,7 +353,7 @@ class Settings(
 
         for models_page in pagified_models:
             embed = discord.Embed(
-                title="Available Models",
+                title="🤖 Available Models",
                 color=await ctx.embed_color(),
             )
             embed.description = "\n".join(
@@ -426,7 +426,7 @@ class Settings(
         self.optindefault[ctx.guild.id] = value
         await self.config.guild(ctx.guild).optin_by_default.set(value)
         embed = discord.Embed(
-            title="Users are now opted in by default in this server:",
+            title="✅ Users are now opted in by default in this server:",
             description=f"{value}",
             color=await ctx.embed_color(),
         )

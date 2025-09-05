@@ -37,7 +37,7 @@ class PromptSettings(MixinMeta):
     async def prompt_reset(self, ctx: commands.Context):
         """ Reset ALL prompts in this guild to default (inc. channels and members) """
         embed = discord.Embed(
-            title="Are you sure?",
+            title="❓ Are you sure?",
             description="This will reset *ALL* prompts in this guild to default (including per channel, per role and per member)",
             color=await ctx.embed_color())
         confirm = await ctx.send(embed=embed)
@@ -46,9 +46,9 @@ class PromptSettings(MixinMeta):
         try:
             await ctx.bot.wait_for("reaction_add", timeout=10.0, check=pred)
         except asyncio.TimeoutError:
-            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+            return await confirm.edit(embed=discord.Embed(title="❌ Cancelled.", color=await ctx.embed_color()))
         if pred.result is False:
-            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+            return await confirm.edit(embed=discord.Embed(title="❌ Cancelled.", color=await ctx.embed_color()))
         else:
             self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
             await self.config.guild(ctx.guild).custom_text_prompt.set(None)
@@ -58,7 +58,7 @@ class PromptSettings(MixinMeta):
                 await self.config.channel(channel).custom_text_prompt.set(None)
             for role in ctx.guild.roles:
                 await self.config.role(role).custom_text_prompt.set(None)
-            return await confirm.edit(embed=discord.Embed(title="All prompts have been reset to default.", color=await ctx.embed_color()))
+            return await confirm.edit(embed=discord.Embed(title="✅ All prompts have been reset to default.", color=await ctx.embed_color()))
 
     @prompt.group(name="show", invoke_without_command=True)
     async def prompt_show(self, ctx: commands.Context, mention: Optional[COMPATIBLE_MENTIONS]):
@@ -74,16 +74,16 @@ class PromptSettings(MixinMeta):
         else:
             channel_prompt = await self.config.channel(ctx.channel).custom_text_prompt()
             prompt = channel_prompt or await self.config.guild(ctx.guild).custom_text_prompt() or DEFAULT_PROMPT
-            title = f"The prompt for {ctx.channel.mention if channel_prompt else 'this server'} is:"
+            title = f"📝 The prompt for {ctx.channel.mention if channel_prompt else 'this server'} is:"
 
         if mention and not prompt:
             embed = discord.Embed(
-                title=title,
+                title=f"📝 {title}",
                 description=f"`The {mention_type.name.lower()} does not have a specific custom prompt set.`",
                 color=await ctx.embed_color())
         else:
             embed = discord.Embed(
-                title=title,
+                title=f"📝 {title}",
                 description=truncate_prompt(prompt),
                 color=await ctx.embed_color()
             )
@@ -125,7 +125,7 @@ class PromptSettings(MixinMeta):
             return None
 
         embed = discord.Embed(
-            title=await self._get_embed_title(mention_type, entity),
+            title=f"📝 {await self._get_embed_title(mention_type, entity)}",
             description=truncate_prompt(custom_prompt),
             color=await ctx.embed_color()
         )
@@ -155,7 +155,7 @@ class PromptSettings(MixinMeta):
         """ Show the current server prompt """
         prompt = await self.config.guild(ctx.guild).custom_text_prompt() or await self.config.custom_text_prompt() or DEFAULT_PROMPT
         embed = discord.Embed(
-            title=f"The prompt for this server is:",
+            title=f"📝 The prompt for this server is:",
             description=truncate_prompt(prompt),
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
@@ -176,7 +176,7 @@ class PromptSettings(MixinMeta):
         pages = []
         for preset, prompt in presets.items():
             page = discord.Embed(
-                title=f"Preset `{preset}`",
+                title=f"🔖 Preset `{preset}`",
                 description=truncate_prompt(prompt),
                 color=await ctx.embed_color())
             page.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
@@ -209,7 +209,7 @@ class PromptSettings(MixinMeta):
         presets[preset] = prompt
         await self.config.guild(ctx.guild).presets.set(json.dumps(presets))
         embed = discord.Embed(
-            title=f"Added preset `{preset}`",
+            title=f"✅ Added preset `{preset}`",
             description=truncate_prompt(prompt),
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
@@ -231,7 +231,7 @@ class PromptSettings(MixinMeta):
         prompt = presets.pop(preset)
         await self.config.guild(ctx.guild).presets.set(json.dumps(presets))
         embed = discord.Embed(
-            title=f"Removed preset `{preset}`",
+            title=f"❌ Removed preset `{preset}`",
             description=truncate_prompt(prompt),
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
@@ -276,7 +276,7 @@ class PromptSettings(MixinMeta):
         self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
 
         embed = discord.Embed(
-            title=f"The {mention_type.name.lower()} will use the custom prompt:",
+            title=f"📝 The {mention_type.name.lower()} will use the custom prompt:",
             description=f"{truncate_prompt(prompt)}",
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))

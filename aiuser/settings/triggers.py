@@ -25,7 +25,7 @@ class TriggerSettings(MixinMeta):
         """ Set the minimum length of messages that the bot will respond to"""
         await self.config.guild(ctx.guild).messages_min_length.set(length)
         embed = discord.Embed(
-            title="The minimum length is now:",
+            title="📏 The minimum length is now:",
             description=f"{length}",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
@@ -43,7 +43,7 @@ class TriggerSettings(MixinMeta):
             return await ctx.send("Sorry, but that regex pattern seems to be invalid.")
         await self.config.guild(ctx.guild).ignore_regex.set(regex_pattern)
         embed = discord.Embed(
-            title="The ignore regex is now:",
+            title="🚫 The ignore regex is now:",
             description=f"`{regex_pattern}`",
             color=await ctx.embed_color())
         await ctx.send(embed=embed)
@@ -58,7 +58,7 @@ class TriggerSettings(MixinMeta):
             return await ctx.send("Please enter a number between 0 and 100")
         await self.config.guild(ctx.guild).conversation_reply_percent.set(percent / 100)
         embed = discord.Embed(
-            title="The conversation reply percent is now:",
+            title="📈 The conversation reply percent is now:",
             description=f"{percent}%",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
@@ -72,7 +72,7 @@ class TriggerSettings(MixinMeta):
             return await ctx.send("Please enter a positive number")
         await self.config.guild(ctx.guild).conversation_reply_time.set(seconds)
         embed = discord.Embed(
-            title="The conversation reply time is now:",
+            title="⏱️ The conversation reply time is now:",
             description=f"{seconds} seconds",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
@@ -84,7 +84,7 @@ class TriggerSettings(MixinMeta):
         value = not await self.config.guild(ctx.guild).reply_to_mentions_replies()
         await self.config.guild(ctx.guild).reply_to_mentions_replies.set(value)
         embed = discord.Embed(
-            title="Always replying to mentions or replies for this server now set to:",
+            title="💬 Always replying to mentions or replies for this server now set to:",
             description=f"{value}",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
@@ -95,7 +95,7 @@ class TriggerSettings(MixinMeta):
         value = not await self.config.guild(ctx.guild).public_forget()
         await self.config.guild(ctx.guild).public_forget.set(value)
         embed = discord.Embed(
-            title="Anyone can use the forget command:",
+            title="✅ Anyone can use the forget command:",
             description=f"{value}",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
@@ -107,7 +107,7 @@ class TriggerSettings(MixinMeta):
         value = not await self.config.guild(ctx.guild).grok_trigger()
         await self.config.guild(ctx.guild).grok_trigger.set(value)
         embed = discord.Embed(
-            title="The grok trigger is now:",
+            title="🤖 The grok trigger is now:",
             description=f"{value}",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
@@ -127,7 +127,7 @@ class TriggerSettings(MixinMeta):
         words.append(word)
         await self.config.guild(ctx.guild).always_reply_on_words.set(words)
         return await self.show_trigger_always_words(ctx, discord.Embed(
-            title="The trigger words are now:",
+            title="📝 The trigger words are now:",
             color=await ctx.embed_color()))
 
     @trigger_words.command(name="remove")
@@ -139,14 +139,14 @@ class TriggerSettings(MixinMeta):
         words.remove(word)
         await self.config.guild(ctx.guild).always_reply_on_words.set(words)
         return await self.show_trigger_always_words(ctx, discord.Embed(
-            title="The trigger words are now:",
+            title="📝 The trigger words are now:",
             color=await ctx.embed_color()))
 
     @trigger_words.command(name="list", aliases=["show"])
     async def trigger_words_list(self, ctx: commands.Context):
         """ Show the trigger words list """
         return await self.show_trigger_always_words(ctx, discord.Embed(
-            title="Trigger words that activate the bot",
+            title="📝 Trigger words that activate the bot",
             color=await ctx.embed_color()))
 
     @trigger_words.command(name="clear")
@@ -187,7 +187,7 @@ class TriggerSettings(MixinMeta):
             await self.config.guild(ctx.guild).members_whitelist.set(whitelist)
 
         return await self.show_trigger_whitelist(ctx, discord.Embed(
-            title="The whitelist is now:",
+            title="✅ The whitelist is now:",
             color=await ctx.embed_color()))
 
     @trigger_whitelist.command(name="remove")
@@ -207,14 +207,14 @@ class TriggerSettings(MixinMeta):
             whitelist.remove(rm.id)
             await self.config.guild(ctx.guild).members_whitelist.set(whitelist)
         return await self.show_trigger_whitelist(ctx, discord.Embed(
-            title="The whitelist is now:",
+            title="✅ The whitelist is now:",
             color=await ctx.embed_color()))
 
     @trigger_whitelist.command(name="list", aliases=["show"])
     async def trigger_whitelist_list(self, ctx: commands.Context):
         """ Show the whitelist """
         return await self.show_trigger_whitelist(ctx, discord.Embed(
-            title="Whitelist of users/roles that will trigger LLM",
+            title="📝 Whitelist of users/roles that will trigger LLM",
             color=await ctx.embed_color()))
 
     @trigger_whitelist.command(name="clear")

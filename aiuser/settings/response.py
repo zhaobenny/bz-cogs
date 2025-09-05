@@ -72,7 +72,7 @@ class ResponseSettings(MixinMeta):
         formatted_list = "\n".join(formatted_list)
         for text in pagify(formatted_list, page_length=888):
             page = discord.Embed(
-                title=f"List of regexes patterns to remove in bot responses in {ctx.guild.name}",
+                title=f"🚫 List of regexes patterns to remove in bot responses in {ctx.guild.name}",
                 description=box(text),
                 color=await ctx.embed_color())
             pages.append(page)
@@ -89,7 +89,7 @@ class ResponseSettings(MixinMeta):
     async def removelist_reset(self, ctx: commands.Context):
         """Reset the list of regexes to default """
         embed = discord.Embed(
-            title="Are you sure?",
+            title="❓ Are you sure?",
             description="This will reset this server's removelist to default.",
             color=await ctx.embed_color())
         confirm = await ctx.send(embed=embed)
@@ -98,12 +98,12 @@ class ResponseSettings(MixinMeta):
         try:
             await ctx.bot.wait_for("reaction_add", timeout=10.0, check=pred)
         except asyncio.TimeoutError:
-            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+            return await confirm.edit(embed=discord.Embed(title="❌ Cancelled.", color=await ctx.embed_color()))
         if pred.result is False:
-            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+            return await confirm.edit(embed=discord.Embed(title="❌ Cancelled.", color=await ctx.embed_color()))
         else:
             await self.config.guild(ctx.guild).removelist_regexes.set(DEFAULT_REMOVE_PATTERNS)
-            return await confirm.edit(embed=discord.Embed(title="Removelist reset.", color=await ctx.embed_color()))
+            return await confirm.edit(embed=discord.Embed(title="✅ Removelist reset.", color=await ctx.embed_color()))
 
     @response.command(name="toggleoptinembed")
     async def toggle_optin_embed(self, ctx):
@@ -111,7 +111,7 @@ class ResponseSettings(MixinMeta):
         current = await self.config.guild(ctx.guild).optin_disable_embed()
         await self.config.guild(ctx.guild).optin_disable_embed.set(not current)
 
-        embed = discord.Embed(title="Senting Opt-in Warning Embed", color=await ctx.embed_color())
+        embed = discord.Embed(title="📬 Senting Opt-in Warning Embed", color=await ctx.embed_color())
         embed.description = f"{current}"
         if not current:
             embed.add_field(
@@ -143,7 +143,7 @@ class ResponseSettings(MixinMeta):
         weights = {} if weights is None else json.loads(weights)
         if not weights:
             return await ctx.send(":warning: No weights set.")
-        embed = discord.Embed(title="Weights Used", color=await ctx.embed_color())
+        embed = discord.Embed(title="⚖️ Weights Used", color=await ctx.embed_color())
         try:
             encoding = tiktoken.encoding_for_model(await self.config.guild(ctx.guild).model())
         except KeyError:
@@ -186,7 +186,7 @@ class ResponseSettings(MixinMeta):
         if len(tokens) > 1:
             token_str = [encoding.decode([token]) for token in tokens]
             embed = discord.Embed(
-                title=f":warning: Unable to set weight for `{word}`",
+                title=f"⚠️ Unable to set weight for `{word}`",
                 color=await ctx.embed_color()
             )
             embed.add_field(
@@ -207,7 +207,7 @@ class ResponseSettings(MixinMeta):
                 weights[token] = weight
             await self.config.guild(ctx.guild).weights.set(json.dumps(weights))
             embed = discord.Embed(
-                title=f"Weight for `{word}` set to `{weight}`",
+                title=f"✅ Weight for `{word}` set to `{weight}`",
                 color=await ctx.embed_color()
             )
             return await ctx.send(embed=embed)
@@ -239,7 +239,7 @@ class ResponseSettings(MixinMeta):
             weights.pop(str(token))
         await self.config.guild(ctx.guild).weights.set(json.dumps(weights))
         embed = discord.Embed(
-            title=f"Weight for `{word}` removed.",
+            title=f"❌ Weight for `{word}` removed.",
             color=await ctx.embed_color()
         )
         return await ctx.send(embed=embed)
@@ -283,7 +283,7 @@ class ResponseSettings(MixinMeta):
             await self.config.guild(ctx.guild).parameters.set(None)
             return await ctx.send("Parameters reset to default")
 
-        embed = discord.Embed(title="Custom Parameters", color=await ctx.embed_color())
+        embed = discord.Embed(title="🔧 Custom Parameters", color=await ctx.embed_color())
         parameters = await self.config.guild(ctx.guild).parameters()
         data = {} if parameters is None else json.loads(parameters)
 
@@ -307,7 +307,7 @@ class ResponseSettings(MixinMeta):
 
             if data.get("logit_bias") and await self.config(ctx.guild).weights():
                 embed = discord.Embed(
-                    title="Existing logit bias found!",
+                    title="⚠️ Existing logit bias found!",
                     description="Wipe existing logit bias (from [p]aiuser response weights)?",
                 )
                 confirm = await ctx.send(embed=embed)

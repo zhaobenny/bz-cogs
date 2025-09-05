@@ -40,7 +40,7 @@ class OwnerSettings(MixinMeta):
             return await ctx.send("Please enter a positive integer.")
         await self.config.max_prompt_length.set(length)
         embed = discord.Embed(
-            title="The maximum prompt length is now:",
+            title="📏 The maximum prompt length is now:",
             description=f"{length}",
             color=await ctx.embed_color(),
         )
@@ -56,7 +56,7 @@ class OwnerSettings(MixinMeta):
             return await ctx.send("Please enter a positive integer.")
         await self.config.max_random_prompt_length.set(length)
         embed = discord.Embed(
-            title="The maximum topic length is now:",
+            title="📏 The maximum topic length is now:",
             description=f"{length}",
             color=await ctx.embed_color(),
         )
@@ -123,7 +123,7 @@ class OwnerSettings(MixinMeta):
             image_model = models.data[0].id
 
         embed = discord.Embed(
-            title="Bot Custom OpenAI endpoint", color=await ctx.embed_color()
+            title="🔧 Bot Custom OpenAI endpoint", color=await ctx.embed_color()
         )
         
         restored_count = 0
@@ -186,7 +186,7 @@ class OwnerSettings(MixinMeta):
         await self.initialize_openai_client()
 
         embed = discord.Embed(
-            title="The request timeout is now:",
+            title="⏱️ The request timeout is now:",
             description=f"`{seconds}` seconds",
             color=await ctx.embed_color(),
         )
@@ -231,7 +231,7 @@ class OwnerSettings(MixinMeta):
             return await ctx.send(":warning: Import is only supported for json backends")
 
         embed = discord.Embed(
-            title="Have you backed up your current config?",
+            title="❓ Have you backed up your current config?",
             description=f":warning: This will overwrite the current config, and you will lose existing settings! \
                 \n :warning: You may also break the cog or bot, if the config is invalid. \
                 \n To fix, make sure you can access the config file: \n `{path}`",
@@ -242,15 +242,15 @@ class OwnerSettings(MixinMeta):
         try:
             await ctx.bot.wait_for("reaction_add", timeout=30.0, check=pred)
         except asyncio.TimeoutError:
-            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+            return await confirm.edit(embed=discord.Embed(title="❌ Cancelled.", color=await ctx.embed_color()))
         if pred.result is False:
-            return await confirm.edit(embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()))
+            return await confirm.edit(embed=discord.Embed(title="❌ Cancelled.", color=await ctx.embed_color()))
 
         with path.open("w") as f:
             json.dump(new_config, f, indent=4)
 
         return await confirm.edit(embed=discord.Embed(
-            title="Overwritten!",
+            title="✅ Overwritten!",
             description="You will need to restart the bot for the changes to take effect.",
             color=await ctx.embed_color()))
 
@@ -275,7 +275,7 @@ class OwnerSettings(MixinMeta):
         await self.config.custom_text_prompt.set(prompt)
 
         embed = discord.Embed(
-            title="The global prompt is now changed to:",
+            title="📝 The global prompt is now changed to:",
             description=f"{truncate_prompt(prompt)}",
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))

@@ -35,7 +35,7 @@ class ImageRequestSettings(MixinMeta):
         """
         await self.config.guild(ctx.guild).image_requests_preprompt.set(preprompt)
         embed = discord.Embed(
-            title=" Stable Diffusion preprompt now set to:",
+            title="🖼️ Stable Diffusion preprompt now set to:",
             description=f"{preprompt}",
             color=await ctx.embed_color(),
         )
@@ -51,7 +51,7 @@ class ImageRequestSettings(MixinMeta):
         """
         await self.config.guild(ctx.guild).image_requests_subject.set(subject)
         embed = discord.Embed(
-            title=" Stable Diffusion subject now set to:",
+            title="👤 Stable Diffusion subject now set to:",
             description=f"{subject}",
             color=await ctx.embed_color(),
         )
@@ -67,7 +67,7 @@ class ImageRequestSettings(MixinMeta):
         value = not (await self.config.guild(ctx.guild).image_requests())
         await self.config.guild(ctx.guild).image_requests.set(value)
         embed = discord.Embed(
-            title="Stable Diffusion requests now set to:",
+            title="🖼️ Stable Diffusion requests now set to:",
             description=f"{value}",
             color=await ctx.embed_color(),
         )
@@ -83,7 +83,7 @@ class ImageRequestSettings(MixinMeta):
             url += "/"
         await self.config.guild(ctx.guild).image_requests_endpoint.set(url)
         embed = discord.Embed(
-            title="Image generation endpoint now set to:",
+            title="🔗 Image generation endpoint now set to:",
             description=f"{url}",
             color=await ctx.embed_color(),
         )
@@ -100,7 +100,7 @@ class ImageRequestSettings(MixinMeta):
         )
         await self.config.guild(ctx.guild).image_requests_reduced_llm_calls.set(value)
         embed = discord.Embed(
-            title="Reduced LLM calls for image requests now set to:",
+            title="📉 Reduced LLM calls for image requests now set to:",
             description=f"{value}",
             color=await ctx.embed_color(),
         )
@@ -115,7 +115,7 @@ class ImageRequestSettings(MixinMeta):
             add_title = " default"
         await self.config.guild(ctx.guild).image_requests_sd_gen_prompt.set(prompt)
         embed = discord.Embed(
-            title=f"Image generation caption prompt now set to{add_title}:",
+            title=f"📝 Image generation caption prompt now set to{add_title}:",
             description=f"{truncate_prompt(prompt)}",
             color=await ctx.embed_color(),
         )
@@ -134,7 +134,7 @@ class ImageRequestSettings(MixinMeta):
             await self.config.guild(ctx.guild).image_requests_parameters.set(None)
             return await ctx.send("Parameters reset to default")
 
-        embed = discord.Embed(title="Custom Parameters", color=await ctx.embed_color())
+        embed = discord.Embed(title="🔧 Custom Parameters", color=await ctx.embed_color())
         parameters = await self.config.guild(ctx.guild).image_requests_parameters()
         data = {} if parameters is None else json.loads(parameters)
 
@@ -182,7 +182,7 @@ class ImageRequestSettings(MixinMeta):
         embeds = []
 
         embed = discord.Embed(
-            title="Image Request Settings", color=await ctx.embed_color()
+            title="⚙️ Image Request Settings", color=await ctx.embed_color()
         )
         embed.add_field(
             name="Enabled", value=f"`{config['image_requests']}`", inline=True)
@@ -210,7 +210,7 @@ class ImageRequestSettings(MixinMeta):
 
         prompt = config["image_requests_sd_gen_prompt"]
         prompt_embed = discord.Embed(
-            title="Caption Creation Prompt", color=await ctx.embed_color()
+            title="📝 Caption Creation Prompt", color=await ctx.embed_color()
         )
         prompt_embed.add_field(
             name="Prompt", value=f"```{truncate_prompt(prompt, limit=1000)}```", inline=False
@@ -224,7 +224,7 @@ class ImageRequestSettings(MixinMeta):
         if parameters and parameters != "{}":
             parameters = json.loads(parameters)
             parameters_embed = discord.Embed(
-                title="Custom Parameters to Endpoint", color=await ctx.embed_color()
+                title="🔧 Custom Parameters to Endpoint", color=await ctx.embed_color()
             )
             for key, value in parameters.items():
                 parameters_embed.add_field(
@@ -250,7 +250,7 @@ class ImageRequestSettings(MixinMeta):
         words.append(word)
         await self.config.guild(ctx.guild).image_requests_trigger_words.set(words)
         return await self.show_trigger_image_request_words(ctx, discord.Embed(
-            title="The trigger words are now:",
+            title="📝 The trigger words are now:",
             color=await ctx.embed_color()))
 
     @ imagerequest_trigger.command(name="remove")
@@ -262,14 +262,14 @@ class ImageRequestSettings(MixinMeta):
         words.remove(word)
         await self.config.guild(ctx.guild).image_requests_trigger_words.set(words)
         return await self.show_trigger_image_request_words(ctx, discord.Embed(
-            title="The trigger words are now:",
+            title="📝 The trigger words are now:",
             color=await ctx.embed_color()))
 
     @ imagerequest_trigger.command(name="list", aliases=["show"])
     async def imagerequest_trigger_list(self, ctx: commands.Context):
         """Show the trigger words list"""
         return await self.show_trigger_image_request_words(ctx, discord.Embed(
-            title="Trigger words for image requests",
+            title="📝 Trigger words for image requests",
             color=await ctx.embed_color()))
 
     @ imagerequest_trigger.command(name="clear")
@@ -295,7 +295,7 @@ class ImageRequestSettings(MixinMeta):
         words.append(word)
         await self.config.guild(ctx.guild).image_requests_second_person_trigger_words.set(words)
         return await self.show_trigger_second_words(ctx, discord.Embed(
-            title="The second person words are now:",
+            title="👥 The second person words are now:",
             color=await ctx.embed_color()))
 
     @ imagerequest_trigger.command(name="sremove", aliases=["removesecond"])
@@ -307,14 +307,14 @@ class ImageRequestSettings(MixinMeta):
         words.remove(word)
         await self.config.guild(ctx.guild).image_requests_second_person_trigger_words.set(words)
         return await self.show_trigger_second_words(ctx, discord.Embed(
-            title="The second person words are now:",
+            title="👥 The second person words are now:",
             color=await ctx.embed_color()))
 
     @ imagerequest_trigger.command(name="slist", aliases=["showsecond", "sshow"])
     async def imagerequest_trigger_list_second(self, ctx: commands.Context):
         """Show the second person words list"""
         return await self.show_trigger_second_words(ctx, discord.Embed(
-            title="Second person words for image requests",
+            title="👥 Second person words for image requests",
             color=await ctx.embed_color()))
 
     @ imagerequest_trigger.command(name="sclear", aliases=["clearsecond"])

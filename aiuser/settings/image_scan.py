@@ -30,7 +30,7 @@ class ImageScanSettings(MixinMeta):
         value = not (await self.config.guild(ctx.guild).scan_images())
         await self.config.guild(ctx.guild).scan_images.set(value)
         embed = discord.Embed(
-            title="Scanning Images for this server now set to:",
+            title="🖼️ Scanning Images for this server now set to:",
             description=f"`{value}`",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
@@ -40,7 +40,7 @@ class ImageScanSettings(MixinMeta):
         """ Set max download size in Megabytes for image scanning """
         await self.config.guild(ctx.guild).max_image_size.set(size * 1024 * 1024)
         embed = discord.Embed(
-            title="Max download size to scan images now set to:",
+            title="💾 Max download size to scan images now set to:",
             description=f"`{size:.2f}` MB",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
@@ -60,7 +60,7 @@ class ImageScanSettings(MixinMeta):
 
         if mode == "list" or mode not in values:
             embed = discord.Embed(
-                title="Valid modes:",
+                title="📜 Valid modes:",
                 description="\n".join(values),
                 color=await ctx.embed_color())
             return await ctx.send(embed=embed)
@@ -72,7 +72,7 @@ class ImageScanSettings(MixinMeta):
                 importlib.import_module("torch")
                 importlib.import_module("transformers")
                 await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.LOCAL.value)
-                embed = discord.Embed(title="Scanning Images for this server now set to", color=await ctx.embed_color())
+                embed = discord.Embed(title="🖼️ Scanning Images for this server now set to", color=await ctx.embed_color())
                 embed.add_field(
                     name="❗ __WILL CAUSE HEAVY CPU LOAD__ ❗", value=f"`{mode.value}`", inline=False)
                 return await ctx.send(embed=embed)
@@ -83,7 +83,7 @@ class ImageScanSettings(MixinMeta):
                 return await ctx.send(":warning: Local image processing dependencies not available. Please install them (see cog README.md) to use this feature locally.")
         elif mode == ScanImageMode.AI_HORDE:
             await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.AI_HORDE.value)
-            embed = discord.Embed(title="Scanning Images for this server now set to", description=f"`{mode.value}`", color=await ctx.embed_color())
+            embed = discord.Embed(title="🖼️ Scanning Images for this server now set to", description=f"`{mode.value}`", color=await ctx.embed_color())
             embed.add_field(
                 name="👁️ __PRIVACY WARNING__",
                 value="This will send image attachments to a random volunteer worker machine for processing!",
@@ -105,7 +105,7 @@ class ImageScanSettings(MixinMeta):
             return await ctx.send(embed=embed)
         elif mode == ScanImageMode.LLM:
             await self.config.guild(ctx.guild).scan_images_mode.set(ScanImageMode.LLM.value)
-            embed = discord.Embed(title="Scanning Images for this server now set to", description=f"`{mode.value}`", color=await ctx.embed_color())
+            embed = discord.Embed(title="🖼️ Scanning Images for this server now set to", description=f"`{mode.value}`", color=await ctx.embed_color())
 
             embed.add_field(
                 name="👁️ __PRIVACY WARNING__",
@@ -145,7 +145,7 @@ class ImageScanSettings(MixinMeta):
 
         await self.config.guild(ctx.guild).scan_images_model.set(model_name)
         embed = discord.Embed(
-            title="LLM for scanning images now set to:",
+            title="🤖 LLM for scanning images now set to:",
             description=f"`{model_name}`",
             color=await ctx.embed_color())
         if warning_message:

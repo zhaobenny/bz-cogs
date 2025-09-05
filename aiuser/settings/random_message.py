@@ -34,7 +34,7 @@ class RandomMessageSettings(MixinMeta):
         value = not await self.config.guild(ctx.guild).random_messages_enabled()
         await self.config.guild(ctx.guild).random_messages_enabled.set(value)
         embed = discord.Embed(
-            title="Senting of random messages:",
+            title="🔀 Senting of random messages:",
             description=f"{value}",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
@@ -48,7 +48,7 @@ class RandomMessageSettings(MixinMeta):
         """
         await self.config.guild(ctx.guild).random_messages_percent.set(percent / 100)
         embed = discord.Embed(
-            title="The chance that a random message will be sent is:",
+            title="📈 The chance that a random message will be sent is:",
             description=f"{percent:.2f}%",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
@@ -66,7 +66,7 @@ class RandomMessageSettings(MixinMeta):
         pages = []
         for text in pagify(formatted_list, page_length=888):
             page = discord.Embed(
-                title=f"List of random message prompt in {ctx.guild.name}",
+                title=f"📝 List of random message prompt in {ctx.guild.name}",
                 description=box(text),
                 color=await ctx.embed_color())
             pages.append(page)
@@ -90,7 +90,7 @@ class RandomMessageSettings(MixinMeta):
         prompts.append(prompt)
         await self.config.guild(ctx.guild).random_messages_prompts.set(prompts)
         embed = discord.Embed(
-            title="Added topic to random message prompts:",
+            title="✅ Added topic to random message prompts:",
             description=f"{prompt}",
             color=await ctx.embed_color())
         embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
@@ -106,7 +106,7 @@ class RandomMessageSettings(MixinMeta):
         prompts.remove(prompt)
         await self.config.guild(ctx.guild).random_messages_prompts.set(prompts)
         embed = discord.Embed(
-            title="Removed topic from random message prompts:",
+            title="❌ Removed topic from random message prompts:",
             description=f"{prompt}",
             color=await ctx.embed_color())
         return await ctx.send(embed=embed)
