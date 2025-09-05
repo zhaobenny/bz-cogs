@@ -1,5 +1,4 @@
 import discord
-import tiktoken
 from openai import AsyncOpenAI
 from redbot.core import Config, commands
 
