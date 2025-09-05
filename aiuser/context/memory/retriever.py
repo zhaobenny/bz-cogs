@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from fastembed import TextEmbedding
+from redbot.core import commands
 
 from aiuser.config.constants import EMBEDDING_DB_NAME, EMBEDDING_MODEL
 from aiuser.utils.sqlite3 import connect_db, serialize_f32
@@ -13,10 +14,11 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 class MemoryRetriever:
     """Handles retrieval of relevant memories using semantic similarity search."""
     
-    def __init__(self, cog_data_path: Path):
+    def __init__(self, cog_data_path: Path, ctx: commands.Context):
         self.cog_data_path = cog_data_path
         self.model = TextEmbedding(EMBEDDING_MODEL, lazy_load=True, cache_folder=self.cog_data_path)
         self._db_path = cog_data_path / EMBEDDING_DB_NAME
+        self.ctx = ctx
     
     async def fetch_relevant(self, query: str, threshold: float = 1.1) -> Optional[str]:
         """
@@ -62,10 +64,12 @@ class MemoryRetriever:
                         rowid, memory_name, memory_text, 
                         distance
                     FROM memories
-                    WHERE memory_vector MATCH ? and k=1
+                    WHERE memory_vector MATCH ? 
+                    AND guild_id = ?
+                    AND k=1 
                     ORDER BY distance
                     """,
-                    [serialize_f32(query_embedding)]
+                    [serialize_f32(query_embedding), self.ctx.guild.id]
                 ).fetchall()
                 
             return results     

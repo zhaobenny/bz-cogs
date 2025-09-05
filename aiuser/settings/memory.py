@@ -1,9 +1,11 @@
 import logging
 import time
 
+import discord
 from fastembed import TextEmbedding
 from redbot.core import commands
 from redbot.core.data_manager import cog_data_path
+from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.constants import EMBEDDING_DB_NAME, EMBEDDING_MODEL
 from aiuser.types.abc import MixinMeta, aiuser
@@ -29,56 +31,130 @@ class MemorySettings(MixinMeta):
     async def list_memory(self, ctx: commands.Context):
         """Shows all memories stored."""
 
-        # Query all memories from the database
         with connect_db(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
-            cursor = conn.execute("SELECT memory_name FROM memories")
+            cursor = conn.execute(
+                "SELECT rowid, memory_name FROM memories WHERE guild_id = ? ORDER BY rowid",
+                (ctx.guild.id,)
+            )
             memories = cursor.fetchall()
 
         if not memories:
-            await ctx.send("No memories found.")
-            return
+            embed = discord.Embed(
+                title="No Memories Found",
+                color=await ctx.embed_color()
+            )
+            return await ctx.send(embed=embed)
 
-        # Prepare a formatted string to show the list of memories in markdown
-        memory_list = "\n".join(
-            [f"**{i+1}. `{mem[0]}`**\n" for i, mem in enumerate(memories)]
-        )
-        await ctx.send(f"**Stored memories**:\n{memory_list}")
+        memories_per_page = 15
+        pages = []
+        
+        for i in range(0, len(memories), memories_per_page):
+            page_memories = memories[i:i + memories_per_page]
+            memory_list = "\n".join(
+                [f"**{mem[0]}.** `{mem[1]}`" for mem in page_memories]
+            )
+            
+            embed = discord.Embed(
+                title="📚 Stored Memories",
+                description=memory_list,
+                color=await ctx.embed_color()
+            )
+            embed.set_footer(
+                text=f"Page {i//memories_per_page + 1}/{(len(memories)-1)//memories_per_page + 1} • Total: {len(memories)} memories"
+            )
+            pages.append(embed)
+
+        await SimpleMenu(pages).start(ctx)
 
     @memory.command(name="show")
     async def show_memory(self, ctx: commands.Context, memory_id: int):
         """Shows a memory by ID."""
 
         with connect_db(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
-            # Query the memory by its ID (assumes 1-based index for user input)
-            cursor = conn.execute("SELECT memory_name, memory_text FROM memories LIMIT ?, 1", (memory_id - 1,))
+            cursor = conn.execute(
+                "SELECT memory_name, memory_text FROM memories WHERE rowid = ? AND guild_id = ?", 
+                (memory_id, ctx.guild.id)
+            )
             memory = cursor.fetchone()
 
         if not memory:
-            await ctx.send(f"No memory found with ID {memory_id}.")
+            embed = discord.Embed(
+                title="Memory Not Found",
+                description=f"No memory found with ID {memory_id}.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
             return
 
         memory_name, memory_text = memory
-        await ctx.send(f"**Memory {memory_id}:**\n**Name:** {memory_name}\n**Content:**\n```{memory_text}```")
+        
+        if len(memory_text) > 1900:  
+            chunks = [memory_text[i:i+1900] for i in range(0, len(memory_text), 1900)]
+            pages = []
+            
+            for i, chunk in enumerate(chunks):
+                embed = discord.Embed(
+                    title=f"Memory #{memory_id}: {memory_name}",
+                    description=f"```{chunk}```",
+                    color=await ctx.embed_color()
+                )
+                embed.set_footer(text=f"Page {i+1}/{len(chunks)}")
+                pages.append(embed)
+            
+            await SimpleMenu(pages).start(ctx)
+        else:
+            embed = discord.Embed(
+                title=f"Memory #{memory_id}: {memory_name}",
+                description=f"```{memory_text}```",
+                color=await ctx.embed_color()
+            )
+            await ctx.send(embed=embed)
 
     @memory.command(name="remove", aliases=["delete"])
     async def remove_memory(self, ctx: commands.Context, memory_id: int):
         """Removes a memory by ID."""
 
-        # Delete the memory by its ID (assumes 1-based index for user input)
         with connect_db(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
+            cursor = conn.execute(
+                "SELECT rowid, memory_name FROM memories WHERE guild_id = ? ORDER BY rowid",
+                (ctx.guild.id,)
+            )
+            memory = cursor.fetchone()
+            
+            if not memory:
+                embed = discord.Embed(
+                    title="Memory Not Found",
+                    description=f"No memory found with ID {memory_id}.",
+                    color=await ctx.embed_color()
+                )
+                return await ctx.send(embed=embed)
+            
+            # Delete the memory
             conn.execute("DELETE FROM memories WHERE rowid = ?", (memory_id,))
 
-        await ctx.send(f"Memory {memory_id} successfully removed from the database.")
+        embed = discord.Embed(
+            title="Memory Removed",
+            description=f"Memory #{memory_id} (**{memory[0]}**) successfully removed from the database.",
+            color=await ctx.embed_color()
+        )
+        await ctx.send(embed=embed)
 
     @memory.command(name="add")
     async def add_memory(self, ctx: commands.Context, *, memory: str):
         """Adds a memory with its embedding where the format is `<MEMORY_NAME>: <MEMORY_CONTENT>`."""
 
         if ':' not in memory:
-            return await ctx.send("Formatting of memory is incorrect. Please use the format `<MEMORY_NAME>: <MEMORY_CONTENT>`.")
+            embed = discord.Embed(
+                title="Invalid Format",
+                description="Please use the format: `<MEMORY_NAME>: <MEMORY_CONTENT>`",
+                color=discord.Color.red()
+            )
+            return await ctx.send(embed=embed)
             
         # Split the memory into the name and content
         memory_name, memory_text = memory.split(":", 1)
+        memory_name = memory_name.strip()
+        memory_text = memory_text.strip()
 
         # Load the embedding model
         model = TextEmbedding(EMBEDDING_MODEL, cache_folder=cog_data_path(self))
@@ -88,9 +164,15 @@ class MemorySettings(MixinMeta):
 
         current_timestamp = int(time.time())
         with connect_db(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
-            conn.execute(
+            cursor = conn.execute(
                 "INSERT INTO memories(memory_vector, memory_name, memory_text, last_updated) VALUES (?, ?, ?, ?)",
                 [serialize_f32(embedding), memory_name, memory_text, current_timestamp],
             )
+            memory_id = cursor.lastrowid
 
-        return await ctx.send("Memory successfully added to the database.")
+        embed = discord.Embed(
+            title="Memory Added",
+            description=f"Successfully added memory: **{memory_name}** (ID: {memory_id})",
+            color=await ctx.embed_color()
+        )
+        return await ctx.send(embed=embed)

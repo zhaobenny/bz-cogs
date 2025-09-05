@@ -15,12 +15,19 @@ def connect_db(path: str) -> Connection:
     # TODO: schema once
     conn.execute("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS memories USING vec0(
+                    guild_id integer,
                     memory_name text,
                     memory_vector float[384], 
                     +memory_text text,
                     last_updated integer
                 )
             """)
+    
+    conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_memories_guild 
+                ON memories(guild_id)
+            """)
+    
     return conn
 
 def serialize_f32(vector: List[float]) -> bytes:

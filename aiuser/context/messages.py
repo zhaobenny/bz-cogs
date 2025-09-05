@@ -40,7 +40,7 @@ class MessagesThread:
         self.can_reply = True
         self.converter = MessageConverter(cog, ctx)
         self.consent_manager = ConsentManager(self.config, self.bot, self.guild)
-        self.memory_retriever = MemoryRetriever(cog_data_path(cog))
+        self.memory_retriever = MemoryRetriever(cog_data_path(cog), ctx)
         self.history_manager = HistoryBuilder(self)
 
     def __len__(self):
