@@ -67,7 +67,7 @@ class FunctionCallingSettings(MixinMeta):
         await self.config.guild(ctx.guild).function_calling_functions.set(enabled_tools)
 
         embed = discord.Embed(
-            title=f"Tool calling for {embed_title} now set to:",
+            title=f"{embed_title} function calling now set to:",
             description=f"{tool_names[0] in enabled_tools}",
             color=await ctx.embed_color(),
         )
