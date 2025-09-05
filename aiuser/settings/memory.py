@@ -8,7 +8,8 @@ from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.constants import EMBEDDING_DB_NAME
 from aiuser.types.abc import MixinMeta, aiuser
-from aiuser.utils.embeddings import get_conn, embed_text, serialize_f32
+from aiuser.utils.embeddings import embed_text, get_conn, serialize_f32
+from aiuser.utils.utilities import encode_text_to_tokens
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -41,7 +42,6 @@ class MemorySettings(MixinMeta):
                 color=await ctx.embed_color(),
             )
             return await ctx.send(embed=embed)
-        
 
         memories_per_page = 15
         total_pages = (len(memories) - 1) // memories_per_page + 1
@@ -136,6 +136,14 @@ class MemorySettings(MixinMeta):
         memory_name, memory_text = memory.split(":", 1)
         memory_name = memory_name.strip()
         memory_text = memory_text.strip()
+
+        if encode_text_to_tokens(memory_text) > 512:
+            embed = discord.Embed(
+                title="Memory too long!",
+                description="Please use a shorter memory!\nMemory text longer than 512 tokens are currently not supported yet.",
+                color=discord.Color.red(),
+            )
+            return await ctx.send(embed=embed)
 
         # Generate an embedding for the input memory
         embedding = await embed_text(memory_text, cog_data_path(self))
