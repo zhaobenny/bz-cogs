@@ -8,7 +8,7 @@ from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.constants import EMBEDDING_DB_NAME
 from aiuser.types.abc import MixinMeta, aiuser
-from aiuser.utils.embeddings import connect_db, embed_text, serialize_f32
+from aiuser.utils.embeddings import get_conn, embed_text, serialize_f32
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -26,15 +26,14 @@ class MemorySettings(MixinMeta):
         """
         pass
 
-    @memory.command(name="list")
     async def list_memory(self, ctx: commands.Context):
         """Shows all memories stored."""
-        with connect_db(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
-            cursor = conn.execute(
+        async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
+            cursor = await conn.execute(
                 "SELECT rowid, memory_name FROM memories WHERE guild_id = ? ORDER BY rowid",
                 (ctx.guild.id,),
             )
-            memories = cursor.fetchall()
+            memories = await cursor.fetchall()
 
         if not memories:
             embed = discord.Embed(
@@ -42,6 +41,7 @@ class MemorySettings(MixinMeta):
                 color=await ctx.embed_color(),
             )
             return await ctx.send(embed=embed)
+        
 
         memories_per_page = 15
         total_pages = (len(memories) - 1) // memories_per_page + 1
@@ -79,12 +79,12 @@ class MemorySettings(MixinMeta):
     @memory.command(name="show")
     async def show_memory(self, ctx: commands.Context, memory_id: int):
         """Shows a memory by ID."""
-        with connect_db(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
-            cursor = conn.execute(
+        async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
+            cursor = await conn.execute(
                 "SELECT memory_name, memory_text FROM memories WHERE rowid = ? AND guild_id = ?",
                 (memory_id, ctx.guild.id),
             )
-            memory = cursor.fetchone()
+            memory = await cursor.fetchone()
 
         if not memory:
             embed = discord.Embed(
@@ -141,8 +141,8 @@ class MemorySettings(MixinMeta):
         embedding = await embed_text(memory_text, cog_data_path(self))
 
         current_timestamp = int(time.time())
-        with connect_db(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
-            cursor = conn.execute(
+        async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
+            cursor = await conn.execute(
                 """
                 INSERT INTO memories (guild_id, memory_vector, memory_name, memory_text, last_updated)
                 VALUES (?, ?, ?, ?, ?)
@@ -167,12 +167,12 @@ class MemorySettings(MixinMeta):
     @memory.command(name="remove", aliases=["delete"])
     async def remove_memory(self, ctx: commands.Context, memory_id: int):
         """Removes a memory by ID."""
-        with connect_db(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
-            cursor = conn.execute(
+        async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
+            cursor = await conn.execute(
                 "SELECT memory_name FROM memories WHERE rowid = ? AND guild_id = ?",
                 (memory_id, ctx.guild.id),
             )
-            row = cursor.fetchone()
+            row = await cursor.fetchone()
 
             if not row:
                 embed = discord.Embed(

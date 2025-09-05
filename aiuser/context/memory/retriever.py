@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 from redbot.core import commands
 
 from aiuser.config.constants import EMBEDDING_DB_NAME
-from aiuser.utils.embeddings import connect_db, embed_text, serialize_f32
+from aiuser.utils.embeddings import embed_text, get_conn, serialize_f32
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -36,7 +36,7 @@ class MemoryRetriever:
         query_embedding = await embed_text(query, self.cog_data_path)
 
         # Search for similar memories in the database
-        memory_results = self._search_memories(query_embedding)
+        memory_results = await self._search_memories(query_embedding)
 
         # Return the most relevant memory formatted if it meets the threshold
         if memory_results and memory_results[0][3] < threshold:
@@ -44,7 +44,7 @@ class MemoryRetriever:
 
         return None
 
-    def _search_memories(self, query_embedding) -> List[Tuple]:
+    async def _search_memories(self, query_embedding) -> List[Tuple]:
         """
         Search for memories in the database using vector similarity.
 
@@ -55,8 +55,8 @@ class MemoryRetriever:
             List of tuples containing (rowid, memory_name, memory_text, distance)
         """
         try:
-            with connect_db(self._db_path) as conn:
-                results = conn.execute(
+            async with get_conn(self._db_path) as conn:
+                cursor = await conn.execute(
                     """
                     SELECT
                         rowid, memory_name, memory_text, 
@@ -68,7 +68,8 @@ class MemoryRetriever:
                     ORDER BY distance
                     """,
                     [serialize_f32(query_embedding), self.ctx.guild.id],
-                ).fetchall()
+                )
+                results = await cursor.fetchall()
 
             return results
         except Exception as e:

@@ -1,9 +1,10 @@
 import asyncio
 import struct
+from contextlib import asynccontextmanager
 from pathlib import Path
-from sqlite3 import Connection
-from typing import List
+from typing import AsyncIterator, List
 
+import aiosqlite
 import sqlite_vec
 from fastembed import TextEmbedding
 from pysqlite3 import dbapi2 as sqlite3
@@ -11,24 +12,28 @@ from pysqlite3 import dbapi2 as sqlite3
 from aiuser.config.constants import EMBEDDING_MODEL
 
 
-def connect_db(path: str) -> Connection:
-    conn = sqlite3.connect(path)
-    conn.enable_load_extension(True)
-    sqlite_vec.load(conn)
-    conn.enable_load_extension(False)
-
-    # TODO: schema once
-    conn.execute("""
-                CREATE VIRTUAL TABLE IF NOT EXISTS memories USING vec0(
-                    guild_id integer,
-                    memory_name text,
-                    memory_vector float[384], 
-                    +memory_text text,
-                    last_updated integer
-                )
-            """)
-    conn.execute("PRAGMA user_version = 1;")
-    return conn
+@asynccontextmanager
+async def get_conn(path: str) -> AsyncIterator[aiosqlite.Connection]:
+    conn = await aiosqlite.connect(path, factory=sqlite3.Connection)
+    await conn.enable_load_extension(True)
+    sqlite_vec.load(conn._conn)  # Load extension on the underlying connection
+    await conn.enable_load_extension(False)
+    try:
+        # TODO: schema once
+        conn.execute("""
+                    CREATE VIRTUAL TABLE IF NOT EXISTS memories USING vec0(
+                        guild_id integer,
+                        memory_name text,
+                        memory_vector float[384], 
+                        +memory_text text,
+                        last_updated integer
+                    )
+                """)
+        conn.execute("PRAGMA user_version = 1;")
+        conn.commit()
+        yield conn
+    finally:
+        await conn.close()
 
 
 async def embed_text(query: str, cache_folder: Path) -> List[float]:
