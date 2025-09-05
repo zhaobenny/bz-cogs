@@ -6,10 +6,12 @@ from typing import AsyncIterator, List
 
 import aiosqlite
 import sqlite_vec
+import tiktoken
 from fastembed import TextEmbedding
 from pysqlite3 import dbapi2 as sqlite3
 
-from aiuser.config.constants import EMBEDDING_MODEL
+from aiuser.config.constants import EMBEDDING_MODEL, FALLBACK_TOKENIZER
+from aiuser.utils.utilities import encode_text_to_tokens
 
 
 @asynccontextmanager
@@ -36,10 +38,24 @@ async def get_conn(path: str) -> AsyncIterator[aiosqlite.Connection]:
         await conn.close()
 
 
-async def embed_text(query: str, cache_folder: Path) -> List[float]:
+async def embed_text(text: str, cache_folder: Path) -> List[float]:
+    token_count = await encode_text_to_tokens(text)
+    if token_count > 512:
+        text = await truncate_text_to_tokens(text, FALLBACK_TOKENIZER)
     model = TextEmbedding(EMBEDDING_MODEL, cache_folder=cache_folder)
-    vecs = await asyncio.to_thread(lambda: list(model.embed([query])))
+    vecs = await asyncio.to_thread(lambda: list(model.embed([text])))
     return vecs
+
+
+async def truncate_text_to_tokens(text: str, max_tokens: int = 450) -> str:
+    """Helper function to truncate text to specified number of tokens."""
+    encoding = tiktoken.encoding_for_model(FALLBACK_TOKENIZER)
+
+    def _truncate():
+        tokens = encoding.encode(text)[:max_tokens]
+        return encoding.decode(tokens)
+
+    return await asyncio.to_thread(_truncate)
 
 
 def serialize_f32(vector: List[float]) -> bytes:

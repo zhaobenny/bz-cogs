@@ -3,7 +3,6 @@ import logging
 from typing import List
 
 import discord
-import tiktoken
 from discord import Message
 from redbot.core import commands
 from redbot.core.data_manager import cog_data_path
@@ -14,6 +13,7 @@ from aiuser.context.entry import MessageEntry
 from aiuser.context.history.builder import HistoryBuilder
 from aiuser.context.memory.retriever import MemoryRetriever
 from aiuser.types.abc import MixinMeta
+from aiuser.utils.utilities import encode_text_to_tokens
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -144,15 +144,6 @@ class MessagesThread:
 
     async def _add_tokens(self, content):
         content = str(content)
-        tokens = self.encoding.encode(content, disallowed_special=())
+        tokens = await encode_text_to_tokens(content, disallowed_special=())
         self.tokens += len(tokens)
-
-    @property
-    def encoding(self):
-        if not self._encoding:
-            try:
-                self._encoding = tiktoken.encoding_for_model(self.model)
-            except KeyError:
-                self._encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
-        return self._encoding
 
