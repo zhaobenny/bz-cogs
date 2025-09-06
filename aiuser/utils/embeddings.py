@@ -2,14 +2,13 @@ import asyncio
 import struct
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncIterator, List
+from typing import AsyncIterator
 
 import aiosqlite
 import sqlite_vec
 import tiktoken
 from fastembed import TextEmbedding
 from fastembed.common.types import NumpyArray
-from pysqlite3 import dbapi2 as sqlite3
 
 from aiuser.config.constants import EMBEDDING_MODEL, FALLBACK_TOKENIZER
 from aiuser.utils.utilities import encode_text_to_tokens
@@ -17,7 +16,7 @@ from aiuser.utils.utilities import encode_text_to_tokens
 
 @asynccontextmanager
 async def get_conn(path: str) -> AsyncIterator[aiosqlite.Connection]:
-    conn = await aiosqlite.connect(path, factory=sqlite3.Connection)
+    conn = await aiosqlite.connect(path)
     try:
         await conn.enable_load_extension(True)
         await conn.load_extension(sqlite_vec.loadable_path())
