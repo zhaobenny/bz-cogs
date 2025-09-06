@@ -13,7 +13,11 @@ from discord import Message
 from openai import AsyncOpenAI
 from redbot.core import Config, commands
 
-from aiuser.config.constants import FALLBACK_TOKENIZER, OPENROUTER_URL, YOUTUBE_URL_PATTERN
+from aiuser.config.constants import (
+    FALLBACK_TOKENIZER,
+    OPENROUTER_URL,
+    YOUTUBE_URL_PATTERN,
+)
 from aiuser.functions.tool_call import ToolCall
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -131,5 +135,7 @@ async def encode_text_to_tokens(text: str, model: str = FALLBACK_TOKENIZER) -> i
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
-        encoding = tiktoken.encoding_for_model(FALLBACK_TOKENIZER)
-    return asyncio.to_thread(lambda: len(encoding.encode(text, disallowed_special=())))
+        encoding = tiktoken.get_encoding(FALLBACK_TOKENIZER)
+    return await asyncio.to_thread(
+        lambda: len(encoding.encode(text, disallowed_special=()))
+    )

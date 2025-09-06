@@ -144,6 +144,5 @@ class MessagesThread:
 
     async def _add_tokens(self, content):
         content = str(content)
-        tokens = await encode_text_to_tokens(content, disallowed_special=())
-        self.tokens += len(tokens)
-
+        tokens = await encode_text_to_tokens(content)
+        self.tokens += tokens
