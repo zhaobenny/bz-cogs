@@ -37,7 +37,7 @@ class AIUser(
     metaclass=CompositeMetaClass,
 ):
     """
-        Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
+    Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
 
     def __init__(self, bot):
@@ -62,9 +62,10 @@ class AIUser(
         os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
         # hide for better debugging experience
-        logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING) 
-        logging.getLogger("openai._base_client").setLevel(logging.WARNING) 
-        
+        logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+        logging.getLogger("openai._base_client").setLevel(logging.WARNING)
+        logging.getLogger("aiosqlite").setLevel(logging.WARNING)
+
         self.openai_client = await setup_openai_client(self.bot, self.config)
 
         all_config = await self.config.all_guilds()

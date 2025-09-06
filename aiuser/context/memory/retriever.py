@@ -72,6 +72,6 @@ class MemoryRetriever:
                 results = await cursor.fetchall()
 
             return results
-        except Exception as e:
-            logger.error(f"Database error while searching memories: {e}")
+        except Exception:
+            logger.exception("Database error while searching memories")
             return []

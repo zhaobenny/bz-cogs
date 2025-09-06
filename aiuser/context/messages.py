@@ -17,6 +17,7 @@ from aiuser.utils.utilities import encode_text_to_tokens
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
+
 class MessagesThread:
     def __init__(
         self,
@@ -29,8 +30,7 @@ class MessagesThread:
         self.init_message = ctx.message
         self.guild = ctx.guild
         self.ignore_regex = cog.ignore_regex.get(self.guild.id, None)
-        self.start_time = cog.override_prompt_start_time.get(
-            self.guild.id)
+        self.start_time = cog.override_prompt_start_time.get(self.guild.id)
         self.messages: List[MessageEntry] = []
         self.messages_ids = set()
         self.tokens = 0
@@ -98,7 +98,11 @@ class MessagesThread:
                 await self._add_tokens(entry.content)
 
         # TODO: proper reply chaining
-        if message.reference and isinstance(message.reference.resolved, discord.Message) and message.author.id != self.bot.user.id:
+        if (
+            message.reference
+            and isinstance(message.reference.resolved, discord.Message)
+            and message.author.id != self.bot.user.id
+        ):
             await self.add_msg(message.reference.resolved, index=0)
 
     async def add_system(self, content: str, index: int = None):
@@ -108,14 +112,16 @@ class MessagesThread:
         self.messages.insert(index or 0, entry)
         await self._add_tokens(content)
 
-    async def add_assistant(self, content: str = "", index: int = None, tool_calls: list = []):
+    async def add_assistant(
+        self, content: str = "", index: int = None, tool_calls: list = []
+    ):
         if self.tokens > self.token_limit:
             return
         entry = MessageEntry("assistant", content, tool_calls=tool_calls)
         self.messages.insert(index or 0, entry)
         await self._add_tokens(content)
 
-    async def add_tool_result(self, content: str,  tool_call_id: int, index: int = None):
+    async def add_tool_result(self, content: str, tool_call_id: int, index: int = None):
         if self.tokens > self.token_limit:
             return
         entry = MessageEntry("tool", content, tool_call_id=tool_call_id)
@@ -123,11 +129,14 @@ class MessagesThread:
         await self._add_tokens(content)
 
     async def add_history(self):
-        await self.insert_relevant_memory()
+        if await self.config.guild(self.guild).query_memories():
+            await self.insert_relevant_memory()
         await self.history_manager.add_history()
 
     async def insert_relevant_memory(self):
-        relevant_memory = await self.memory_retriever.fetch_relevant(self.init_message.content)
+        relevant_memory = await self.memory_retriever.fetch_relevant(
+            self.init_message.content
+        )
         if relevant_memory:
             await self.add_system(relevant_memory, index=len(self.messages_ids))
 
@@ -137,7 +146,11 @@ class MessagesThread:
                 "role": message.role,
                 "content": message.content,
                 **({"tool_calls": message.tool_calls} if message.tool_calls else {}),
-                **({"tool_call_id": message.tool_call_id} if hasattr(message, 'tool_call_id') and message.tool_call_id else {})
+                **(
+                    {"tool_call_id": message.tool_call_id}
+                    if hasattr(message, "tool_call_id") and message.tool_call_id
+                    else {}
+                ),
             }
             for message in self.messages
         ]

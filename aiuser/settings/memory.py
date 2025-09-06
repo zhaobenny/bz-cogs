@@ -19,14 +19,32 @@ class MemorySettings(MixinMeta):
     @commands.has_permissions(manage_guild=True)
     async def memory(self, _):
         """
-        **Expect breaking changes!
-        This feature is still in development!**
+        **This feature is WIP!
+        Breaking changes could happen! (such as losing all saved memories)**
 
-        Manages long-term memory settings
+        Manages saved memory settings
         (All subcommands are per server)
         """
         pass
 
+    @memory.command(name="toggle")
+    @commands.has_permissions(manage_guild=True)
+    async def toggle_memory_usage(self, ctx: commands.Context):
+        """Enable/disable querying saved memories whenever responding to a message"""
+        current = await self.config.guild(ctx.guild).query_memories()
+        new_value = not current
+        await self.config.guild(ctx.guild).query_memories.set(new_value)
+        embed = discord.Embed(
+            title="Querying of saved memories for this server now set to:",
+            description=f"{new_value}",
+            color=await ctx.embed_color(),
+        )
+        embed.set_footer(
+            text="This feature is WIP! Breaking changes could happen! (such as losing all saved memories)"
+        )
+        await ctx.send(embed=embed)
+
+    @memory.command(name="list")
     async def list_memory(self, ctx: commands.Context):
         """Shows all memories stored."""
         async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
@@ -123,7 +141,7 @@ class MemorySettings(MixinMeta):
 
     @memory.command(name="add")
     async def add_memory(self, ctx: commands.Context, *, memory: str):
-        """Adds a memory with its embedding where the format is `<MEMORY_NAME>: <MEMORY_CONTENT>`."""
+        """Adds a memory where the format is `<MEMORY_NAME>: <MEMORY_CONTENT>`."""
         if ":" not in memory:
             embed = discord.Embed(
                 title="Invalid Format",
@@ -137,7 +155,7 @@ class MemorySettings(MixinMeta):
         memory_name = memory_name.strip()
         memory_text = memory_text.strip()
 
-        if encode_text_to_tokens(memory_text) > 512:
+        if await encode_text_to_tokens(memory_text) > 512:
             embed = discord.Embed(
                 title="Memory too long!",
                 description="Please use a shorter memory!\nMemory text longer than 512 tokens are currently not supported yet.",
@@ -164,13 +182,17 @@ class MemorySettings(MixinMeta):
                 ),
             )
             memory_id = cursor.lastrowid
+            await conn.commit()
 
-        embed = discord.Embed(
-            title="Memory Added",
-            description=f"Successfully added memory: #`{memory_id}` - `{memory_name}` ",
-            color=await ctx.embed_color(),
-        )
-        return await ctx.send(embed=embed)
+            embed = discord.Embed(
+                title="Memory Added",
+                description=f"Successfully added memory: #`{memory_id}` - `{memory_name}` ",
+                color=await ctx.embed_color(),
+            )
+            embed.set_footer(
+                text="This feature is WIP! Breaking changes could happen! (such as losing all saved memories)"
+            )
+            return await ctx.send(embed=embed)
 
     @memory.command(name="remove", aliases=["delete"])
     async def remove_memory(self, ctx: commands.Context, memory_id: int):
@@ -194,6 +216,7 @@ class MemorySettings(MixinMeta):
                 "DELETE FROM memories WHERE rowid = ? AND guild_id = ?",
                 (memory_id, ctx.guild.id),
             )
+            await conn.commit()
 
         embed = discord.Embed(
             title="Memory Removed",
