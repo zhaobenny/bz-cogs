@@ -4,14 +4,13 @@ from typing import Optional
 
 import discord
 from openai import AsyncOpenAI
-from redbot.core import commands, Config
+from redbot.core import Config, commands
 
-from aiuser.response.chat.response import create_chat_response
-from aiuser.types.abc import MixinMeta
 from aiuser.config.constants import IMAGE_REQUEST_REPLY_PROMPT
-from aiuser.messages_list.messages import create_messages_list
-
+from aiuser.context.setup import create_messages_thread
+from aiuser.response.chat.response import create_chat_response
 from aiuser.response.image.providers.generator import ImageGenerator
+from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -35,7 +34,7 @@ async def create_image_response(cog: MixinMeta, ctx: commands.Context, image_gen
 
     saved_caption = await format_saved_caption(cog.config, ctx.message.guild, caption)
 
-    message_list = await create_messages_list(cog, ctx)
+    message_list = await create_messages_thread(cog, ctx)
     await message_list.add_system(saved_caption, index=len(message_list) + 1)
     await message_list.add_system(IMAGE_REQUEST_REPLY_PROMPT, index=len(message_list) + 1)
 

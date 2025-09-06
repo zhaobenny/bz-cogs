@@ -10,6 +10,8 @@ GROK_PRIMARY_TRIGGERS = ["grok", "gork"]
 GROK_SECONDARY_TRIGGERS = ["true", "explain", "confirm"]
 GROK_MAX_WORDS = 25
 
+FALLBACK_TOKENIZER = "cl100k_base"
+
 # regex patterns
 URL_PATTERN = re.compile(r"(https?://\S+)")
 YOUTUBE_URL_PATTERN = re.compile(r"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?(.+)")
@@ -20,3 +22,6 @@ REGEX_RUN_TIMEOUT = 5
 
 
 OPENROUTER_URL = "https://openrouter.ai/api/"
+
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_DB_NAME = "embeddings.db"

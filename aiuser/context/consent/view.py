@@ -2,7 +2,7 @@ import discord
 from redbot.core import Config
 
 
-class OptView(discord.ui.View):
+class ConsentView(discord.ui.View):
     def __init__(self, config: Config):
         self.config = config
         super().__init__()
