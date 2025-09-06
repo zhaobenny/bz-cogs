@@ -13,9 +13,9 @@ from aiuser.config.models import (
     UNSUPPORTED_LOGIT_BIAS_MODELS,
     VISION_SUPPORTED_MODELS,
 )
+from aiuser.context.messages import MessagesThread
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import ToolCallSchema
-from aiuser.messages_list.messages import MessagesList
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import get_enabled_tools
 
@@ -23,7 +23,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class LLMPipeline:
-    def __init__(self, cog: MixinMeta, ctx: commands.Context, messages: MessagesList):
+    def __init__(self, cog: MixinMeta, ctx: commands.Context, messages: MessagesThread):
         self.ctx: commands.Context = ctx
         self.config: Config = cog.config
         self.bot = cog.bot

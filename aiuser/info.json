@@ -13,7 +13,11 @@
         "add_reactions"
     ],
     "requirements": [
-        "openai>=1.3.8",
+        "openai>=1.99.9",
+        "sqlite-vec==0.1.7a2",
+        "pysqlite3",
+        "aiosqlite",
+        "fastembed",
         "tenacity",
         "tiktoken",
         "Pillow",

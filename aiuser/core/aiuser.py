@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 from datetime import datetime
 
@@ -14,10 +15,10 @@ from aiuser.config.defaults import (
     DEFAULT_MEMBER,
     DEFAULT_ROLE,
 )
+from aiuser.context.entry import MessageEntry
 from aiuser.core.handlers import handle_message, handle_slash_command
 from aiuser.core.random_message_task import RandomMessageTask
 from aiuser.dashboard.base import DashboardIntegration
-from aiuser.messages_list.entry import MessageEntry
 from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
 from aiuser.utils.cache import Cache
@@ -36,7 +37,7 @@ class AIUser(
     metaclass=CompositeMetaClass,
 ):
     """
-        Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
+    Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
 
     def __init__(self, bot):
@@ -58,6 +59,13 @@ class AIUser(
         self.config.register_global(**DEFAULT_GLOBAL)
 
     async def cog_load(self):
+        os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+        # hide for better debugging experience
+        logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+        logging.getLogger("openai._base_client").setLevel(logging.WARNING)
+        logging.getLogger("aiosqlite").setLevel(logging.WARNING)
+
         self.openai_client = await setup_openai_client(self.bot, self.config)
 
         all_config = await self.config.all_guilds()

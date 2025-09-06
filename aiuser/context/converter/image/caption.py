@@ -8,8 +8,8 @@ from PIL import Image
 
 from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import ScanImageMode
-from aiuser.messages_list.converter.helpers import format_text_content
-from aiuser.messages_list.converter.image.AI_horde import \
+from aiuser.context.converter.helpers import format_text_content
+from aiuser.context.converter.image.AI_horde import \
     process_image_ai_horde
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -39,7 +39,7 @@ async def process_image(cog: MixinMeta, message: Message, image: Image, mode: Sc
         return await process_image_ai_horde(cog, message, image)
     elif mode == ScanImageMode.LOCAL:
         try:
-            from aiuser.messages_list.converter.image.local import \
+            from aiuser.context.converter.image.local import \
                 process_image_locally
             return await process_image_locally(cog, message, image)
         except ImportError:
