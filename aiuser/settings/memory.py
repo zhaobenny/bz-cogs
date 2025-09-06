@@ -212,7 +212,7 @@ class MemorySettings(MixinMeta):
                 )
                 return await ctx.send(embed=embed)
 
-            conn.execute(
+            await conn.execute(
                 "DELETE FROM memories WHERE rowid = ? AND guild_id = ?",
                 (memory_id, ctx.guild.id),
             )
