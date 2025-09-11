@@ -1,5 +1,3 @@
-from dataclasses import asdict
-
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import (Function, Parameters,
                                                   ToolCallSchema)
@@ -52,7 +50,7 @@ class LocationWeatherToolCall(ToolCall):
         if local_weather_schema in available_tools:
             available_tools.remove(local_weather_schema)
 
-    async def _handle(self, arguments):
+    async def _handle(self, _, arguments):
         days = arguments.get("days", 1)
         return await get_weather(arguments["location"], days=days)
 
@@ -67,7 +65,7 @@ class LocalWeatherToolCall(ToolCall):
         if local_weather_schema in available_tools:
             available_tools.remove(location_weather_schema)
 
-    async def _handle(self, arguments):
+    async def _handle(self, _, arguments):
         days = arguments.get("days", 1)
         return await get_local_weather(self.config, self.ctx, days=days)
 
@@ -82,5 +80,5 @@ class IsDaytimeToolCall(ToolCall):
     ))
     function_name = schema.function.name
 
-    async def _handle(self, _):
+    async def _handle(self, _, _):
         return await is_daytime(self.config, self.ctx)

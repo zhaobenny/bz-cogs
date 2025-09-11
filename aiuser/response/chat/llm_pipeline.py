@@ -1,12 +1,17 @@
+from __future__ import annotations
+
 import json
 import logging
-from dataclasses import asdict
-from typing import Any, Dict, List, Optional, Tuple, Union
+from dataclasses import asdict, dataclass
+from typing import Any, Dict, List, Optional
 
 import httpx
 import openai
-from openai.types.chat import ChatCompletion, ChatCompletionMessageToolCall
-from openai.types.completion import Completion
+from openai.types.chat import (
+    ChatCompletion,
+    ChatCompletionMessageParam,
+    ChatCompletionMessageToolCall,
+)
 from redbot.core import Config, commands
 
 from aiuser.config.models import (
@@ -21,100 +26,34 @@ from aiuser.utils.utilities import get_enabled_tools
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
+MAX_TOOL_CALL_ROUNDS = 8  
+
+
+@dataclass
+class ChatStepResult:
+    content: Optional[str]
+    tool_calls: List[ChatCompletionMessageToolCall]
+
 
 class LLMPipeline:
     def __init__(self, cog: MixinMeta, ctx: commands.Context, messages: MessagesThread):
         self.ctx: commands.Context = ctx
         self.config: Config = cog.config
         self.bot = cog.bot
-        self.msg_list = messages
-        self.model = messages.model
-        self.can_reply = messages.can_reply
-        self.messages = messages.get_json()
+
+        self.msg_list: MessagesThread = messages
+        self.model: str = messages.model
+
         self.openai_client = cog.openai_client
+
         self.enabled_tools: List[ToolCall] = []
         self.available_tools_schemas: List[ToolCallSchema] = []
+
         self.completion: Optional[str] = None
-
-    async def get_custom_parameters(self) -> Dict[str, Any]:
-        custom_parameters = await self.config.guild(self.ctx.guild).parameters()
-        kwargs = json.loads(custom_parameters) if custom_parameters else {}
-
-        if "logit_bias" not in kwargs:
-            weights = await self.config.guild(self.ctx.guild).weights()
-            weights_dict = json.loads(weights or "{}")
-            if weights_dict:
-                kwargs["logit_bias"] = weights_dict
-
-        if kwargs.get("logit_bias", False) and (self.model in VISION_SUPPORTED_MODELS or self.model in UNSUPPORTED_LOGIT_BIAS_MODELS):
-            logger.warning(f"logit_bias is not supported for model {self.model}, removing...")
-            del kwargs["logit_bias"]
-
-        return kwargs
-
-    async def setup_tools(self):
-        if not (await self.config.guild(self.ctx.guild).function_calling()):
-            return
-        self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
-        self.available_tools_schemas = [tool.schema for tool in self.enabled_tools]
-
-    async def call_client(self, kwargs: Dict[str, Any]) -> Union[str, Tuple[str, List[ChatCompletionMessageToolCall]]]:
-        if "gpt-3.5-turbo-instruct" in self.model:
-            prompt = "\n".join(message["content"] for message in self.messages)
-            response: Completion = await self.openai_client.completions.create(
-                model=self.model, prompt=prompt, **kwargs
-            )
-            return response.choices[0].message.content
-        else:
-            response: ChatCompletion = await self.openai_client.chat.completions.create(
-                model=self.model, messages=self.msg_list.get_json(), **kwargs
-            )
-
-            tools_calls: List[ChatCompletionMessageToolCall] = response.choices[0].message.tool_calls or []
-
-            return response.choices[0].message.content, tools_calls
-
-    async def create_completion(self) -> Optional[str]:
-        kwargs = await self.get_custom_parameters()
-        await self.setup_tools()
-
-        while not self.completion:
-            if self.available_tools_schemas:
-                kwargs["tools"] = [asdict(schema) for schema in self.available_tools_schemas]
-
-            self.completion, tool_calls = await self.call_client(kwargs)
-
-            if tool_calls and not self.completion:
-                await self.handle_tool_calls(tool_calls)
-            else:
-                break
-
-        logger.debug(f'Generated response in {self.ctx.guild.name}: "{self.completion}"')
-        return self.completion
-
-    async def handle_tool_calls(self, tool_calls: List[ChatCompletionMessageToolCall]):
-        await self.msg_list.add_assistant(index=len(self.msg_list) + 1, tool_calls=tool_calls)
-        for tool_call in tool_calls:
-            function = tool_call.function
-            arguments = json.loads(function.arguments)
-            result = await self.run_tool(function.name, arguments)
-            if result:
-                await self.msg_list.add_tool_result(result, tool_call.id, index=len(self.msg_list) + 1)
-
-    async def run_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Optional[str]:
-        for tool in self.enabled_tools:
-            if tool.function_name == tool_name:
-                logger.info(f'Handling tool call in {self.ctx.guild.name}: "{tool_name}" with arguments: "{arguments}"')
-                arguments["request"] = self
-                return await tool.run(arguments, self.available_tools_schemas)
-
-        self.available_tools_schemas = []
-        logger.warning(f'Could not find tool "{tool_name}" in {self.ctx.guild.name}')
-        return None
 
     async def run(self) -> Optional[str]:
         try:
-            return await self.create_completion()
+            return await self._create_completion()
         except httpx.ReadTimeout:
             logger.error("Failed request to LLM endpoint. Timed out.")
             await self.ctx.react_quietly("💤", message="`aiuser` request timed out")
@@ -124,3 +63,128 @@ class LLMPipeline:
             logger.exception("Failed API request(s) to LLM endpoint")
             await self.ctx.react_quietly("⚠️", message="`aiuser` request failed")
         return None
+
+    async def _create_completion(self) -> Optional[str]:
+        base_kwargs = await self._build_base_parameters()
+        await self._setup_tools()
+
+        for round_idx in range(MAX_TOOL_CALL_ROUNDS):
+            kwargs = dict(base_kwargs)
+            if self.available_tools_schemas:
+                kwargs["tools"] = [asdict(schema) for schema in self.available_tools_schemas]
+
+            step = await self._call_client(kwargs)
+
+            if step.content:
+                self.completion = step.content
+                break
+
+            if step.tool_calls:
+                await self._handle_tool_calls(step.tool_calls)
+                continue
+
+            logger.debug(
+                f"Max round reached {round_idx} for response in {self.ctx.guild.name}."
+            )
+            break
+
+        if self.completion:
+            preview = self.completion.strip().replace("\n", " ")
+            logger.debug(
+                f'Generated response in {self.ctx.guild.name}: "{preview[:200]}{"..." if len(preview) > 200 else ""}"'
+            )
+        else:
+            logger.debug(f"No completion generated in {self.ctx.guild.name}")
+
+        return self.completion
+
+    async def _build_base_parameters(self) -> Dict[str, Any]:
+        """
+        Build a base kwargs dict for the OpenAI call, including logit_bias handling.
+        """
+        params = await self.config.guild(self.ctx.guild).parameters()
+        kwargs: Dict[str, Any] = json.loads(params) if params else {}
+
+        if "logit_bias" not in kwargs:
+            weights = await self.config.guild(self.ctx.guild).weights()
+            weights_dict = json.loads(weights or "{}")
+            if weights_dict:
+                kwargs["logit_bias"] = weights_dict
+
+        if kwargs.get("logit_bias", False) and (
+            self.model in VISION_SUPPORTED_MODELS or self.model in UNSUPPORTED_LOGIT_BIAS_MODELS
+        ):
+            logger.warning(f"logit_bias is not supported for model {self.model}, removing...")
+            kwargs.pop("logit_bias", None)
+
+        return kwargs
+
+    async def _setup_tools(self) -> None:
+        """
+        Discover and cache enabled tools and their schemas.
+        """
+        if not (await self.config.guild(self.ctx.guild).function_calling()):
+            self.enabled_tools = []
+            self.available_tools_schemas = []
+            return
+
+        self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
+        self.available_tools_schemas = [tool.schema for tool in self.enabled_tools]
+
+    async def _call_client(self, kwargs: Dict[str, Any]) -> ChatStepResult:
+        """
+        Call the OpenAI chat endpoint with the current message thread and kwargs.
+        """
+        context : List[ChatCompletionMessageParam] = self.msg_list.get_json()
+        response: ChatCompletion = await self.openai_client.chat.completions.create(
+            model=self.model,
+            messages=context,
+            **kwargs,
+        )
+
+        message = response.choices[0].message
+        content: Optional[str] = message.content
+        tool_calls_raw = message.tool_calls
+
+        tool_calls: List[ChatCompletionMessageToolCall] = (
+            list(tool_calls_raw) if tool_calls_raw else []
+        )
+
+        return ChatStepResult(content=content, tool_calls=tool_calls)
+
+    async def _handle_tool_calls(self, tool_calls: List[ChatCompletionMessageToolCall]) -> None:
+        """
+        Append an assistant message with the tool calls, run tools, and append tool results.
+        """
+        await self.msg_list.add_assistant(index=self._next_index(), tool_calls=tool_calls)
+
+        for tool_call in tool_calls:
+            function = tool_call.function
+            try:
+                arguments = json.loads(function.arguments or "{}")
+            except json.JSONDecodeError:
+                logger.exception(
+                    f"Could not decode tool call arguments for {function.name}; arguments: {function.arguments!r}"
+                )
+                continue
+
+            result = await self._run_tool(function.name, arguments)
+            if result is not None:
+                await self.msg_list.add_tool_result(result, tool_call.id, index=self._next_index())
+
+    async def _run_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Optional[str]:
+        """
+        Execute a tool by name. 
+        """
+        for tool in self.enabled_tools:
+            if tool.function_name == tool_name:
+                logger.info(
+                    f'Handling tool call in {self.ctx.guild.name}: "{tool_name}" with args keys: {list(arguments.keys())}'
+                )
+                return await tool.run(self, dict(arguments), self.available_tools_schemas)
+
+        logger.warning(f'Could not find tool "{tool_name}" in {self.ctx.guild.name}')
+        return None
+
+    def _next_index(self) -> int:
+        return len(self.msg_list) + 1
