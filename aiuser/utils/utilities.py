@@ -58,9 +58,9 @@ async def format_variables(ctx: commands.Context, text: str):
     randomnumber = random.randint(0, 100)
 
     if isinstance(ctx.message.channel, discord.Thread):
-        channeltopic = ctx.message.channel.parent.topic
+        channeltopic = getattr(ctx.message.channel.parent, "topic", "No topic found")
     else:
-        channeltopic = getattr(ctx.message.channel, "topic", "") 
+        channeltopic = getattr(ctx.message.channel, "topic", "No topic found") 
 
 
     serveremojis = [str(e) for e in ctx.message.guild.emojis]
