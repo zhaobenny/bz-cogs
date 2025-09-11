@@ -2,6 +2,7 @@
 .python-version
 .dashboard-venv/
 .cursor/
+.basedpyright/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -60,7 +60,8 @@ async def format_variables(ctx: commands.Context, text: str):
     if isinstance(ctx.message.channel, discord.Thread):
         channeltopic = ctx.message.channel.parent.topic
     else:
-        channeltopic = ctx.message.channel.topic
+        channeltopic = getattr(ctx.message.channel, "topic", "") 
+
 
     serveremojis = [str(e) for e in ctx.message.guild.emojis]
     random.shuffle(serveremojis)
