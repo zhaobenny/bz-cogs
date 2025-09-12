@@ -47,8 +47,8 @@ class LLMPipeline:
         self.openai_client = cog.openai_client
 
         self.enabled_tools: List[ToolCall] = []
+        self.enabled_tools_map: Dict[str, ToolCall] = {}
         self.available_tools_schemas: List[ToolCallSchema] = []
-
         self.completion: Optional[str] = None
 
     async def run(self) -> Optional[str]:
@@ -125,10 +125,12 @@ class LLMPipeline:
         """
         if not (await self.config.guild(self.ctx.guild).function_calling()):
             self.enabled_tools = []
+            self.enabled_tools_map = {}
             self.available_tools_schemas = []
             return
 
         self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
+        self.enabled_tools_map = {tool.function_name: tool for tool in self.enabled_tools}
         self.available_tools_schemas = [tool.schema for tool in self.enabled_tools]
 
     async def _call_client(self, kwargs: Dict[str, Any]) -> ChatStepResult:
@@ -174,14 +176,14 @@ class LLMPipeline:
 
     async def _run_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Optional[str]:
         """
-        Execute a tool by name. 
+        Execute a tool by name
         """
-        for tool in self.enabled_tools:
-            if tool.function_name == tool_name:
-                logger.info(
-                    f'Handling tool call in {self.ctx.guild.name}: "{tool_name}" with args keys: {list(arguments.keys())}'
-                )
-                return await tool.run(self, dict(arguments), self.available_tools_schemas)
+        tool = self.enabled_tools_map.get(tool_name)
+        if tool:
+            logger.info(
+                f'Handling tool call in {self.ctx.guild.name}: "{tool_name}" with args keys: {list(arguments.keys())}'
+            )
+            return await tool.run(self, dict(arguments), self.available_tools_schemas)
 
         logger.warning(f'Could not find tool "{tool_name}" in {self.ctx.guild.name}')
         return None
