@@ -19,7 +19,7 @@ class MemorySettings(MixinMeta):
     @commands.has_permissions(manage_guild=True)
     async def memory(self, _):
         """
-        **This feature is WIP!
+        **This feature is WIP! Manual memory creation / English is only supported for now.
         Breaking changes could happen! (such as losing all saved memories)**
 
         Manages saved memory settings
@@ -141,7 +141,7 @@ class MemorySettings(MixinMeta):
 
     @memory.command(name="add")
     async def add_memory(self, ctx: commands.Context, *, memory: str):
-        """Adds a memory where the format is `<MEMORY_NAME>: <MEMORY_CONTENT>`."""
+        """Adds a memory where the format is `<MEMORY_NAME>: <MEMORY_CONTENT>`, where MEMORY_NAME is currently only used for easier identification."""
         if ":" not in memory:
             embed = discord.Embed(
                 title="Invalid Format",
