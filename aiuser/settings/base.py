@@ -8,7 +8,6 @@ from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.settings.functions import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
-from aiuser.settings.image_request import ImageRequestSettings
 from aiuser.settings.image_scan import ImageScanSettings
 from aiuser.settings.memory import MemorySettings
 from aiuser.settings.owner import OwnerSettings
@@ -25,7 +24,6 @@ from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import MentionType
 from aiuser.types.types import COMPATIBLE_CHANNELS, COMPATIBLE_MENTIONS
 from aiuser.utils.utilities import (
-    get_enabled_tools,
     is_using_openrouter_endpoint,
 )
 
@@ -34,7 +32,6 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 class Settings(
     PromptSettings,
     ImageScanSettings,
-    ImageRequestSettings,
     HistorySettings,
     ResponseSettings,
     TriggerSettings,

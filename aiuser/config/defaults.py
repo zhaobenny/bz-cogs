@@ -18,14 +18,6 @@ DEFAULT_RANDOM_PROMPTS = [
     "Talk about how you are currently ordering takeout. State the specific cuisine ordered, and any other details you'd like to the Discord channel.",
     "Make up a topic in the news. State that you just read about it in the news. Talk about that topic.",
 ]
-DEFAULT_IMAGE_REQUEST_SD_GEN_PROMPT = """
-I want you to act as a Stable Diffusion Art Prompt Generator. The formula for a prompt is made of parts, the parts are indicated by brackets. The [Subject] is the person place or thing the image is focused on. [Emotions] is the emotional look the subject or scene might have. [Verb] is What the subject is doing, such as standing, jumping, working and other varied that match the subject. [Adjectives] like beautiful, rendered, realistic, tiny, colorful and other varied that match the subject. The [Environment] in which the subject is in, [Lighting] of the scene like moody, ambient, sunny, foggy and others that match the Environment and compliment the subject. [Photography type] like Polaroid, long exposure, monochrome, GoPro, fisheye, bokeh and others. And [Quality] like High definition, 4K, 8K, 64K UHD, SDR and other. The subject and environment should match and have the most emphasis.
-It is ok to omit one of the other formula parts. Each formula part should be less then four words.
-
-Here is a sample output: "Beautiful woman, contemplative and reflective, sitting on a bench, cozy sweater, autumn park with colorful leaves, soft overcast light, muted color photography style, 4K quality."
-
-Convert the below message to a Stable Diffusion Art Prompt.  The prompt should have no second person references, no line breaks, no delimiters, and be kept as concise as possible while still conveying a full scene.
-"""
 DEFAULT_REMOVE_PATTERNS = [
     r"<think>[\s\S]*?<\/think>",  # for thinking LLMs
     r"^As an AI language model,?",
@@ -41,17 +33,7 @@ DEFAULT_REMOVE_PATTERNS = [
     r"^{authorname}:",
     r"\n*\[Image[^\]]+\]",
 ]
-DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS = [
-    "image",
-    "images",
-    "picture",
-    "pictures",
-    "photo",
-    "photos",
-    "photograph",
-    "photographs",
-]
-DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS = ["yourself", "you"]
+
 DEFAULT_REPLY_PERCENT = 0.5
 DEFAULT_MIN_MESSAGE_LENGTH = 2
 DEFAULT_IMAGE_UPLOAD_LIMIT = 10 * (1024 * 1024)  # 10 MB
@@ -95,15 +77,6 @@ DEFAULT_GUILD = {
     "random_messages_percent": 0.012,
     "random_messages_prompts": DEFAULT_RANDOM_PROMPTS,
     "presets": json.dumps(DEFAULT_PRESETS),
-    "image_requests": False,
-    "image_requests_endpoint": "dall-e-2",
-    "image_requests_parameters": None,
-    "image_requests_sd_gen_prompt": DEFAULT_IMAGE_REQUEST_SD_GEN_PROMPT,
-    "image_requests_preprompt": "",
-    "image_requests_subject": "woman",
-    "image_requests_reduced_llm_calls": False,
-    "image_requests_trigger_words": DEFAULT_IMAGE_REQUEST_TRIGGER_WORDS,
-    "image_requests_second_person_trigger_words": DEFAULT_IMAGE_REQUEST_TRIGGER_SECOND_PERSON_WORDS,
     "function_calling": False,
     "function_calling_functions": [],
     "function_calling_default_location": [49.24966, -123.11934],
@@ -117,5 +90,4 @@ DEFAULT_GUILD = {
 
 DEFAULT_CHANNEL = {"custom_text_prompt": None, "reply_percent": None}
 DEFAULT_ROLE = {"custom_text_prompt": None, "reply_percent": None}
-
 DEFAULT_MEMBER = {"custom_text_prompt": None, "reply_percent": None}
