@@ -93,6 +93,7 @@ class Settings(
         main_embed.add_field(
             name="Opt In By Default", inline=True, value=f"`{config['optin_by_default']}`"
         )
+
         main_embed.add_field(
             name="Always Reply if Pinged",
             inline=True,
@@ -132,15 +133,15 @@ class Settings(
         )
 
         main_embed.add_field(
-            name="Function Calling",
+            name="Memories",
             inline=True,
-            value=f"`{config['function_calling']}`",
+            value=f"`{config['query_memories']}`",
         )
 
         main_embed.add_field(
-            name="Enabled Functions",
+            name="Function Calling",
             inline=True,
-            value=f"`{len(await get_enabled_tools(self.config, ctx))}`",
+            value=f"`{config['function_calling']}`",
         )
 
         main_embed.add_field(
