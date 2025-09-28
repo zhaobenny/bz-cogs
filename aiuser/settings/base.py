@@ -159,21 +159,6 @@ class Settings(
             value=f"`{config['max_image_size'] / 1024 / 1024:.2f}` MB",
         )
 
-        main_embed.add_field(
-            name="Image Requests", value=f"`{config['image_requests']}`", inline=True)
-
-        main_embed.add_field(
-            name="Image Req. Less Calls",
-            value=f"`{config['image_requests_reduced_llm_calls']}`",
-            inline=True,
-        )
-
-        main_embed.add_field(
-            name="",
-            value="",
-            inline=True,
-        )
-
         whitelisted_trigger = bool(
             config["members_whitelist"] or config["roles_whitelist"])
 

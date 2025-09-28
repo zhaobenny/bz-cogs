@@ -139,3 +139,12 @@ class FunctionCallingSettings(MixinMeta):
         tool_names = [WolframAlphaFunctionCall.function_name]
 
         await self.toggle_function_helper(ctx, tool_names, "Wolfram Alpha")
+
+    @functions.command(name="imagerequest")
+    async def toggle_image_request_function(self, ctx: commands.Context):
+        """ Enable/disable the functionality for the LLM to generate images."""
+        from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
+
+        tool_names = [ImageRequestToolCall.function_name]
+
+        await self.toggle_function_helper(ctx, tool_names, "Image Request")

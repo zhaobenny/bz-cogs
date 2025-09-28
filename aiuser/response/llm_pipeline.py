@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 import openai
+import discord
 from openai.types.chat import (
     ChatCompletion,
     ChatCompletionMessageParam,
@@ -45,6 +46,7 @@ class LLMPipeline:
         self.openai_client = cog.openai_client
         self.tool_manager = ToolManager(self)
         self.completion: Optional[str] = None
+        self.files_to_send: List[discord.File] = []
 
     async def run(self) -> Optional[str]:
         kwargs = await self._build_base_parameters()
