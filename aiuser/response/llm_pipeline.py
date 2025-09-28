@@ -19,7 +19,7 @@ from aiuser.config.models import (
     VISION_SUPPORTED_MODELS,
 )
 from aiuser.context.messages import MessagesThread
-from aiuser.response.chat.tool_manager import ToolManager
+from aiuser.response.tool_manager import ToolManager
 from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")

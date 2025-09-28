@@ -12,7 +12,7 @@ from aiuser.config.constants import URL_PATTERN
 from aiuser.config.defaults import DEFAULT_REPLY_PERCENT
 from aiuser.core.triggers import check_triggers
 from aiuser.core.validators import is_valid_message
-from aiuser.response.chat.response import create_response
+from aiuser.response.response import create_response
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import is_embed_valid
 

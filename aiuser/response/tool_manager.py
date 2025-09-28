@@ -8,7 +8,7 @@ from openai.types.chat import ChatCompletionMessageToolCall
 
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import ToolCallSchema
-from aiuser.response.chat.llm_pipeline import LLMPipeline
+from aiuser.response.llm_pipeline import LLMPipeline
 from aiuser.utils.utilities import get_enabled_tools
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
