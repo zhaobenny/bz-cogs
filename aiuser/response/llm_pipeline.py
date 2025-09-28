@@ -47,46 +47,38 @@ class LLMPipeline:
         self.completion: Optional[str] = None
 
     async def run(self) -> Optional[str]:
-        try:
-            return await self._create_completion()
-        except httpx.ReadTimeout:
-            logger.error("Failed request to LLM endpoint. Timed out.")
-            await self.ctx.react_quietly("💤", message="`aiuser` request timed out")
-        except openai.RateLimitError:
-            await self.ctx.react_quietly("💤", message="`aiuser` request ratelimited")
-        except Exception:
-            logger.exception("Failed API request(s) to LLM endpoint")
-            await self.ctx.react_quietly("⚠️", message="`aiuser` request failed")
-        return None
-
-    async def _create_completion(self) -> Optional[str]:
-        base_kwargs = await self._build_base_parameters()
+        kwargs = await self._build_base_parameters()
         await self.tool_manager.setup()
 
         for round_idx in range(MAX_TOOL_CALL_ROUNDS):
-            kwargs = dict(base_kwargs)
             if self.tool_manager.available_tools_schemas:
                 kwargs["tools"] = [asdict(s) for s in self.tool_manager.available_tools_schemas]
 
-            step = await self._call_client(kwargs)
+            try:
+                step = await self._call_client(kwargs)
+            except httpx.ReadTimeout:
+                logger.error("Failed request to LLM endpoint. Timed out.")
+                await self.ctx.react_quietly("💤", message="`aiuser` request timed out")
+                return None
+            except openai.RateLimitError:
+                await self.ctx.react_quietly("💤", message="`aiuser` request ratelimited")
+                return None
+            except Exception:
+                logger.exception("Failed API request(s) to LLM endpoint")
+                await self.ctx.react_quietly("⚠️", message="`aiuser` request failed")
+                return None
 
             if step.content:
                 self.completion = step.content
                 break
-
-            if step.tool_calls:
+            elif step.tool_calls:
                 await self.tool_manager.handle_tool_calls(step.tool_calls)
-                continue
-
-            logger.debug(
-                f"Max round reached {round_idx} for response in {self.ctx.guild.name}."
-            )
-            break
+            else:
+                logger.debug(f"No content or tool calls received in {self.ctx.guild.name} during round {round_idx}")
 
         if self.completion:
-            preview = self.completion.strip().replace("\n", " ")
             logger.debug(
-                f'Generated response in {self.ctx.guild.name}: "{preview[:200]}{"..." if len(preview) > 200 else ""}"'
+                f'Generated response in {self.ctx.guild.name}: "{self.completion[:200].strip().replace("\n", " ")}{"..." if len(self.completion) > 200 else ""}"'
             )
         else:
             logger.debug(f"No completion generated in {self.ctx.guild.name}")
