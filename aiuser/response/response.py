@@ -69,29 +69,34 @@ async def should_reply(ctx: commands.Context) -> bool:
             return True
     return False
 
-async def send_response(ctx: commands.Context, response: str, can_reply: bool) -> bool:
+async def send_response(ctx: commands.Context, response: str, can_reply: bool, files=None) -> bool:
     allowed = AllowedMentions(everyone=False, roles=False, users=[ctx.message.author])
     if len(response) >= 2000:
+        # discord does not support files with multi-part messages
         for i in range(0, len(response), 2000):
             await ctx.send(response[i:i + 2000], allowed_mentions=allowed)
     elif can_reply and await should_reply(ctx):
-        await ctx.message.reply(response, mention_author=False, allowed_mentions=allowed)
+        await ctx.message.reply(response, mention_author=False, allowed_mentions=allowed, files=files)
     elif ctx.interaction:
-        await ctx.interaction.followup.send(response, allowed_mentions=allowed)
+        await ctx.interaction.followup.send(response, allowed_mentions=allowed, files=files)
     else:
-        await ctx.send(response, allowed_mentions=allowed)
+        await ctx.send(response, allowed_mentions=allowed, files=files)
     return True
 
-async def create_response(cog: MixinMeta, ctx: commands.Context, messages_list: MessagesThread) -> bool:
+async def create_response(cog: MixinMeta, ctx: commands.Context, messages_list: MessagesThread = None) -> bool:
     async with ctx.message.channel.typing():
         messages_list = messages_list or await create_messages_thread(cog, ctx)
         pipeline = LLMPipeline(cog, ctx, messages=messages_list)
         response = await pipeline.run()
-        if not response:
+
+        if not response and not pipeline.files_to_send:
             return False
 
-        cleaned_response = await remove_patterns_from_response(ctx, cog.config, response)
-        if not cleaned_response:
+        cleaned_response = ""
+        if response:
+            cleaned_response = await remove_patterns_from_response(ctx, cog.config, response)
+
+        if not cleaned_response and not pipeline.files_to_send:
             return False
 
-        return await send_response(ctx, cleaned_response, messages_list.can_reply)
+        return await send_response(ctx, cleaned_response, messages_list.can_reply, files=pipeline.files_to_send)
