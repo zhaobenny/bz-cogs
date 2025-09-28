@@ -19,10 +19,8 @@ from aiuser.config.models import (
     VISION_SUPPORTED_MODELS,
 )
 from aiuser.context.messages import MessagesThread
-from aiuser.functions.tool_call import ToolCall
-from aiuser.functions.types import ToolCallSchema
+from aiuser.response.chat.tool_manager import ToolManager
 from aiuser.types.abc import MixinMeta
-from aiuser.utils.utilities import get_enabled_tools
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -45,10 +43,7 @@ class LLMPipeline:
         self.model: str = messages.model
 
         self.openai_client = cog.openai_client
-
-        self.enabled_tools: List[ToolCall] = []
-        self.enabled_tools_map: Dict[str, ToolCall] = {}
-        self.available_tools_schemas: List[ToolCallSchema] = []
+        self.tool_manager = ToolManager(self)
         self.completion: Optional[str] = None
 
     async def run(self) -> Optional[str]:
@@ -66,12 +61,12 @@ class LLMPipeline:
 
     async def _create_completion(self) -> Optional[str]:
         base_kwargs = await self._build_base_parameters()
-        await self._setup_tools()
+        await self.tool_manager.setup()
 
         for round_idx in range(MAX_TOOL_CALL_ROUNDS):
             kwargs = dict(base_kwargs)
-            if self.available_tools_schemas:
-                kwargs["tools"] = [asdict(schema) for schema in self.available_tools_schemas]
+            if self.tool_manager.available_tools_schemas:
+                kwargs["tools"] = [asdict(s) for s in self.tool_manager.available_tools_schemas]
 
             step = await self._call_client(kwargs)
 
@@ -80,7 +75,7 @@ class LLMPipeline:
                 break
 
             if step.tool_calls:
-                await self._handle_tool_calls(step.tool_calls)
+                await self.tool_manager.handle_tool_calls(step.tool_calls)
                 continue
 
             logger.debug(
@@ -119,20 +114,6 @@ class LLMPipeline:
 
         return kwargs
 
-    async def _setup_tools(self) -> None:
-        """
-        Discover and cache enabled tools and their schemas.
-        """
-        if not (await self.config.guild(self.ctx.guild).function_calling()):
-            self.enabled_tools = []
-            self.enabled_tools_map = {}
-            self.available_tools_schemas = []
-            return
-
-        self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
-        self.enabled_tools_map = {tool.function_name: tool for tool in self.enabled_tools}
-        self.available_tools_schemas = [tool.schema for tool in self.enabled_tools]
-
     async def _call_client(self, kwargs: Dict[str, Any]) -> ChatStepResult:
         """
         Call the OpenAI chat endpoint with the current message thread and kwargs.
@@ -153,40 +134,6 @@ class LLMPipeline:
         )
 
         return ChatStepResult(content=content, tool_calls=tool_calls)
-
-    async def _handle_tool_calls(self, tool_calls: List[ChatCompletionMessageToolCall]) -> None:
-        """
-        Append an assistant message with the tool calls, run tools, and append tool results.
-        """
-        await self.msg_list.add_assistant(index=self._next_index(), tool_calls=tool_calls)
-
-        for tool_call in tool_calls:
-            function = tool_call.function
-            try:
-                arguments = json.loads(function.arguments or "{}")
-            except json.JSONDecodeError:
-                logger.exception(
-                    f"Could not decode tool call arguments for {function.name}; arguments: {function.arguments!r}"
-                )
-                continue
-
-            result = await self._run_tool(function.name, arguments)
-            if result is not None:
-                await self.msg_list.add_tool_result(result, tool_call.id, index=self._next_index())
-
-    async def _run_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Optional[str]:
-        """
-        Execute a tool by name
-        """
-        tool = self.enabled_tools_map.get(tool_name)
-        if tool:
-            logger.info(
-                f'Handling tool call in {self.ctx.guild.name}: "{tool_name}" with args keys: {list(arguments.keys())}'
-            )
-            return await tool.run(self, dict(arguments), self.available_tools_schemas)
-
-        logger.warning(f'Could not find tool "{tool_name}" in {self.ctx.guild.name}')
-        return None
 
     def _next_index(self) -> int:
         return len(self.msg_list) + 1
