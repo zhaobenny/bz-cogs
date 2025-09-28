@@ -41,52 +41,17 @@ See other settings using:
 
 ![image_seeing](https://github.com/zhaobenny/bz-cogs/assets/46238123/8b0019f3-8b38-4578-b511-a350e10fce2d)
 
-Enabling image scanning will allow the bot to incorporate images in the triggering message into the prompt.
+Enabling image scanning will allow the bot to incorporate images in the triggering message into the prompt. This requires the currently used LLM to have vision capabilities.
 
-Bot owners can see settings here:
-```
-[p]aiuser imagescan
-```
+This will send image attachments to the specified endpoint for processing.
 
-### Supported-LLM mode
-
-This mode is superior in performance, but may cost more. It will use the selected LLM from this command:
-```
-[p]aiuser imagescan model <MODEL_NAME>
-```
-
-### AI-Horde Mode
-Utilize [AI Horde's](https://stablehorde.net/) Image Alchemy to caption images.
-
-AI Horde is a crowdsourced distributed cluster. Images will be uploaded to a **unknown third party** (a random volunteer worker machine)
-
-Recommended to set a [API key](https://stablehorde.net/register). (or some [kudos](https://dbzer0.com/blog/the-kudos-based-economy-for-the-koboldai-horde/))
-
-
-### Local Mode
-
-Local image scanning mode will be **very CPU intensive**. *(Not recommended for busy servers/channel)*
-
-First, images will be OCR'ed for text to use. If the OCR is not of significant confidence, it will be captioned instead using [BLIP](https://huggingface.co/Salesforce/blip-image-captioning-base).
-
-<details>
-  <summary>Instructions on installing the necessary dependencies (x86 only) </summary>
-
-  #### 1. Install Python Dependencies
-
-  ```
-  source ~/redenv/bin/activate # or however you activate your virtual environment in your OS
-  pip install -U pytesseract transformers[torch]
-  ```
-
-  #### 2. Install Tessaract OCR
-
-  See [here](https://tesseract-ocr.github.io/tessdoc/Installation.html) for instructions on installing TessaractOCR, or alternatively just use the phasecorex/red-discordbot:full image.
-
-
-  First time scans will require some time to download processing models. (~1gb)
-
-</details>
+Bot owners can configure image scanning with the following commands:
+- `[p]aiuser imagescan toggle`
+  - Toggles scanning on or off.
+- `[p]aiuser imagescan maxsize <size_in_mb>`
+  - Sets the maximum size in Megabytes for an image to be scanned.
+- `[p]aiuser imagescan model <model_name | reset>`
+  - Sets a specific model for image scanning. By default, the main model is used. Use `reset` to revert to using the main model.
 
 ---
 ## Image requests 🖼️
