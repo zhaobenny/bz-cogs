@@ -29,5 +29,5 @@ class ScrapeToolCall(ToolCall):
         try:
             return await scrape_page(arguments["url"])
         except Exception:
-            logger.debug(f"Failed to scrape {arguments['url']}")
-            return None
+            logger.debug(f"Failed to scrape {arguments['url']}", exc_info=True)
+            return f"Unable to open the requested {arguments['url']}.."

@@ -17,11 +17,18 @@ async def scrape_page(link: str):
         async with session.get(link) as response:
             response.raise_for_status()
             content_type = response.headers.get('Content-Type', '').lower()
-            if not 'text/html' in content_type:
-                raise ValueError("Content type is not text/html")
-
-            html_content = await response.text()
-            res = "Link content: " + extract(html_content)
+            if 'text/html' in content_type:
+                html_content = await response.text()
+                extracted = extract(html_content) or ''
+                res = "Link content: " + extracted
+            else:
+                logger.debug("Non-HTML content type: %s", content_type)
+                raw = await response.read()
+                text_preview = raw.decode('utf-8', errors='replace')
+                res = (
+                    f"Content-Type: {content_type}). "
+                    "Content: " + text_preview
+                )
 
             if len(res) > 5000:
                 res = res[:5000] + "..."
