@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List
 
 from openai.types.chat import ChatCompletionMessageToolCall
 
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import ToolCallSchema
-from aiuser.response.llm_pipeline import LLMPipeline
+if TYPE_CHECKING:
+    from aiuser.response.llm_pipeline import LLMPipeline
 from aiuser.utils.utilities import get_enabled_tools
 
 logger = logging.getLogger("red.bz_cogs.aiuser")

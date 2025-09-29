@@ -77,9 +77,9 @@ class LLMPipeline:
                 logger.debug(f"No content or tool calls received in {self.ctx.guild.name} during round {round_idx}")
 
         if self.completion:
-            logger.debug(
-                f'Generated response in {self.ctx.guild.name}: "{self.completion[:200].strip().replace("\n", " ")}{"..." if len(self.completion) > 200 else ""}"'
-            )
+            cleaned = self.completion[:200].strip().replace("\n", " ")
+            ellipsis = "..." if len(self.completion) > 200 else ""
+            logger.debug(f'Generated response in {self.ctx.guild.name}: "{cleaned}{ellipsis}"')
         else:
             logger.debug(f"No completion generated in {self.ctx.guild.name}")
 
