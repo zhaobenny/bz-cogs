@@ -13,8 +13,9 @@ from redbot.core import Config, app_commands, checks, commands
 from redbot.core.bot import Red
 
 from aimage.abc import CompositeMetaClass
-from aimage.common.constants import (DEFAULT_BADWORDS_BLACKLIST,
-                                     DEFAULT_NEGATIVE_PROMPT, API_Type)
+from aimage.common.constants import (A1111_SAMPLERS,
+                                     DEFAULT_BADWORDS_BLACKLIST,
+                                     DEFAULT_NEGATIVE_PROMPT)
 from aimage.common.params import ImageGenParams
 from aimage.image_handler import ImageHandler
 from aimage.settings import Settings
@@ -35,7 +36,6 @@ class AImage(Settings,
 
         default_guild = {
             "endpoint": None,
-            "api_type": API_Type.AUTOMATIC1111.value,
             "nsfw": True,
             "nsfw_sensitivity": -0.025,
             "nsfw_blurred": False,
@@ -181,7 +181,7 @@ class AImage(Settings,
             asyncio.create_task(self._update_autocomplete_cache(ctx))
 
         params = ImageGenParams(prompt=prompt)
-        await self.generate_image(ctx, params=params)
+        await self.generate_image(ctx, params)
 
     @ app_commands.command(name="imagine")
     @ app_commands.describe(width="Default image width is 512, or 1024 for SDXL.",
@@ -321,13 +321,8 @@ class AImage(Settings,
         return can
 
     async def get_api_instance(self, ctx: Union[commands.Context, discord.Interaction]):
-        api_type = await self.config.guild(ctx.guild).api_type()
-        if api_type == API_Type.AUTOMATIC1111.value:
-            from aimage.apis.a1111 import A1111
-            instance = A1111(self, ctx)
-        elif api_type == API_Type.AIHorde.value:
-            from aimage.apis.aihorde import AIHorde
-            instance = AIHorde(self, ctx)
+        from aimage.apis.a1111 import A1111
+        instance = A1111(self, ctx)
         await instance._init()
         return instance
 

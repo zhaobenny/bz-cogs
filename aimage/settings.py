@@ -1,4 +1,3 @@
-import asyncio
 from typing import Optional
 
 import discord
@@ -6,9 +5,6 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aimage.abc import MixinMeta
-from aimage.common.constants import API_Type
-from aimage.common.helpers import delete_button_after
-from aimage.views.api_type import APITypeView
 
 
 class Settings(MixinMeta):
@@ -63,29 +59,23 @@ class Settings(MixinMeta):
     @aimage.command(name="endpoint")
     async def endpoint(self, ctx: commands.Context, endpoint: str):
         """
-        Set the endpoint URL for AI Image (eg. `https://localhost/sdapi/v1/` or `https://aihorde.net/api/`)
+        Set the endpoint URL for AI Image (eg. `http://localhost:7860/sdapi/v1/`)
         """
         if not endpoint:
             endpoint = None
         elif not endpoint.endswith("/"):
             endpoint += "/"
 
-        valid_endings = ['/sdapi/v1/', '/api/']
-
-        is_valid = endpoint and any(endpoint.endswith(ending) for ending in valid_endings)
-        if endpoint and not is_valid:
-            await ctx.send(f"⚠️ Endpoint URL does not end with `/sdapi/v1/` or `/api/`. Continuing anyways...")
+        if endpoint and not endpoint.endswith("/sdapi/v1/"):
+            await ctx.send(f"⚠️ Endpoint URL does not end with `/sdapi/v1/`. Continuing anyways...")
 
         await self.config.guild(ctx.guild).endpoint.set(endpoint)
-        await self.config.guild(ctx.guild).api_type.set(API_Type.AUTOMATIC1111.value)
-
-        msg = await ctx.send("Endpoint set. Select what type of API this endpoint is ⤵️ ", view=APITypeView(self, ctx))
-        asyncio.create_task(delete_button_after(msg))
+        await ctx.send("Endpoint set.")
 
     @aimage.command(name="nsfw")
     async def nsfw(self, ctx: commands.Context):
         """
-        Toggles filtering of NSFW images (A1111 only)
+        Toggles filtering of NSFW images
         """
 
         nsfw = await self.config.guild(ctx.guild).nsfw()
@@ -103,7 +93,7 @@ class Settings(MixinMeta):
     @aimage.command(name="nsfw_sensitivity")
     async def nsfw_sensitivity(self, ctx: commands.Context, value: Optional[float]):
         """
-        Views or sets the sensitivity for the nsfw filter (A1111 only)
+        Views or sets the sensitivity for the nsfw filter
         Valid values are between -0.2 and 0.2
         """
 

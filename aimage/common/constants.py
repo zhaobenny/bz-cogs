@@ -1,12 +1,6 @@
 import re
 from enum import Enum
 
-
-class API_Type(Enum):
-    AUTOMATIC1111 = "Automatic1111"
-    AIHorde = "AI Horde"
-
-
 DEFAULT_NEGATIVE_PROMPT = "(worst quality, low quality:1.4)"
 
 # taken from https://www.greataiprompts.com/imageprompt/list-of-banned-words-in-midjourney/
@@ -95,4 +89,28 @@ PARAMS_BLACKLIST = [
     "Template",
     "ADetailer confidence", "ADetailer mask", "ADetailer dilate", "ADetailer denoising", "ADetailer steps",
     "ADetailer inpaint", "ADetailer version", "ADetailer prompt", "ADetailer use", "ADetailer checkpoint",
+]
+
+A1111_SAMPLERS = [
+    "DPM++ 2M",
+    "DPM++ SDE",
+    "DPM++ 2M SDE",
+    "DPM++ 2M SDE Heun",
+    "DPM++ 2S a",
+    "DPM++ 3M SDE",
+    "Euler a",
+    "Euler",
+    "LMS",
+    "Heun",
+    "DPM2",
+    "DPM2 a",
+    "DPM fast",
+    "DPM adaptive",
+    "Restart",
+    "DDIM",
+    "DDIM CFG++",
+    "PLMS",
+    "UniPC",
+    "LCM",
+    "DDPM"
 ]
