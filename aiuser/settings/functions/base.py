@@ -1,8 +1,8 @@
 import discord
 from redbot.core import checks, commands
 
-from aiuser.settings.functions.utilities import FunctionToggleHelperMixin
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
+from aiuser.settings.functions.utilities import FunctionToggleHelperMixin
 from aiuser.settings.functions.weather import WeatherFunctionSettings
 from aiuser.types.abc import MixinMeta, aiuser
 
@@ -39,6 +39,111 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, WeatherFunctionSettings
             embed.set_footer(text="⚠️ Ensure selected model supports function calling!")
         await ctx.send(embed=embed)
 
+
+    @functions.command(name="config", aliases=["show", "settings"])
+    async def functions_config(self, ctx: commands.Context):
+        """Show function calling configuration for this server
+        """
+        guild_conf = self.config.guild(ctx.guild)
+        enabled = await guild_conf.function_calling()
+        enabled_tools: list = await guild_conf.function_calling_functions()
+        if not enabled_tools:
+            enabled_tools = []
+
+        from aiuser.functions.imagerequest.tool_call import (
+            ImageRequestToolCall,
+        )
+        from aiuser.functions.noresponse.tool_call import (
+            NoResponseToolCall,
+        )
+        from aiuser.functions.scrape.tool_call import ScrapeToolCall
+        from aiuser.functions.search.tool_call import SearchToolCall
+        from aiuser.functions.weather.tool_call import (
+            IsDaytimeToolCall,
+            LocalWeatherToolCall,
+            LocationWeatherToolCall,
+        )
+        from aiuser.functions.wolframalpha.tool_call import (
+            WolframAlphaFunctionCall,
+        )
+
+        groups = {
+            "Weather": [
+                IsDaytimeToolCall.function_name,
+                LocalWeatherToolCall.function_name,
+                LocationWeatherToolCall.function_name,
+            ],
+            "Image Request": [ImageRequestToolCall.function_name],
+            "Search": [SearchToolCall.function_name],
+            "Scrape": [ScrapeToolCall.function_name],
+            "No response": [NoResponseToolCall.function_name],
+            "Wolfram Alpha": [WolframAlphaFunctionCall.function_name],
+        }
+
+        # Build main overview embed
+        main_embed = discord.Embed(
+            title="Function Calling Settings", color=await ctx.embed_color()
+        )
+        main_embed.add_field(
+            name="Function Calling Enabled", value=f"`{enabled}`", inline=True
+        )
+
+        # Location
+        location = await guild_conf.function_calling_default_location()
+        if location and isinstance(location, list) and len(location) == 2:
+            loc_value = f"`{location[0]:.4f}, {location[1]:.4f}`"
+        else:
+            loc_value = "`Not set`"
+        main_embed.add_field(name="Location", value=loc_value, inline=True)
+
+        # Spacer field for layout consistency (mirrors style in other settings embeds)
+        main_embed.add_field(name="", value="", inline=True)
+
+        # For each group show enabled + list of tool names (compact)
+        for group_name, tool_names in groups.items():
+            is_enabled = any(t in enabled_tools for t in tool_names)
+            # Show tool names inline code, truncated if very long
+            tools_display = ", ".join(f"`{t}`" for t in tool_names)
+            main_embed.add_field(
+                name=group_name,
+                value=f"Enabled: `{is_enabled}`\n{tools_display}",
+                inline=True,
+            )
+
+        embeds = [main_embed]
+
+        # Image Request detailed embed
+        image_tools = groups["Image Request"]
+        image_enabled = any(t in enabled_tools for t in image_tools)
+        image_endpoint = await guild_conf.function_calling_image_custom_endpoint() or "Autodetected"
+        image_model = await guild_conf.function_calling_image_model() or "Default"
+        image_preprompt = await guild_conf.function_calling_image_preprompt()
+        preprompt_display = image_preprompt or "(None)"
+        if len(preprompt_display) > 500:
+            preprompt_display = preprompt_display[:497] + "..."
+
+        image_embed = discord.Embed(
+            title="Image Request Function Settings", color=await ctx.embed_color()
+        )
+        image_embed.add_field(
+            name="Enabled", value=f"`{image_enabled}`", inline=True
+        )
+        image_embed.add_field(
+            name="Custom Endpoint", value=f"`{image_endpoint}`", inline=True
+        )
+        image_embed.add_field(
+            name="Model", value=f"`{image_model}`", inline=True
+        )
+        image_embed.add_field(
+            name="Preprompt", value=f"```{preprompt_display}```", inline=False
+        )
+
+        embeds.append(image_embed)
+
+        for embed in embeds:
+            await ctx.send(embed=embed)
+        return
+
     @functions.command(name="location")
     async def set_location(self, ctx: commands.Context, latitude: float, longitude: float):
         """ Set the location where the bot will canonically be in
@@ -56,9 +161,7 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, WeatherFunctionSettings
             color=await ctx.embed_color(),
         )
         await ctx.send(embed=embed)
-
-    # toggle_function_helper now supplied by FunctionToggleHelperMixin
-
+        
     @functions.command(name="search")
     async def toggle_search_function(self, ctx: commands.Context):
         """ Enable/disable searching/scraping the Internet using Serper.dev """
