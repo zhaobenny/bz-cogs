@@ -37,20 +37,14 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, We
 
     @functions.command(name="config", aliases=["show", "settings"])
     async def functions_config(self, ctx: commands.Context):
-        """Show function calling configuration for this server
-        """
+        """Show function calling configuration overview."""
         guild_conf = self.config.guild(ctx.guild)
         enabled = await guild_conf.function_calling()
-        enabled_tools: list = await guild_conf.function_calling_functions()
-        if not enabled_tools:
-            enabled_tools = []
+        enabled_tools: list = await guild_conf.function_calling_functions() or []
 
-        from aiuser.functions.imagerequest.tool_call import (
-            ImageRequestToolCall,
-        )
-        from aiuser.functions.noresponse.tool_call import (
-            NoResponseToolCall,
-        )
+        # Imports kept local to avoid cost when command not used elsewhere
+        from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
+        from aiuser.functions.noresponse.tool_call import NoResponseToolCall
         from aiuser.functions.scrape.tool_call import ScrapeToolCall
         from aiuser.functions.search.tool_call import SearchToolCall
         from aiuser.functions.weather.tool_call import (
@@ -63,24 +57,32 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, We
         )
 
         groups = {
-            "Weather": [
+            "weather": [
                 IsDaytimeToolCall.function_name,
                 LocalWeatherToolCall.function_name,
                 LocationWeatherToolCall.function_name,
             ],
-            "Image Request": [ImageRequestToolCall.function_name],
-            "Search": [SearchToolCall.function_name],
-            "Scrape": [ScrapeToolCall.function_name],
-            "No response": [NoResponseToolCall.function_name],
-            "Wolfram Alpha": [WolframAlphaFunctionCall.function_name],
+            "image request": [ImageRequestToolCall.function_name],
+            "search": [SearchToolCall.function_name],
+            "scrape": [ScrapeToolCall.function_name],
+            "no response": [NoResponseToolCall.function_name],
+            "wolfram alpha": [WolframAlphaFunctionCall.function_name],
         }
 
-        # Build main overview embed
+        # Helper for status icon
+        def icon(active: bool) -> str:
+            return "✅" if active else "❌"
+
+        total_tools = sum(len(v) for v in groups.values())
+        enabled_count = sum(1 for v in groups.values() for t in v if t in enabled_tools)
+
+        # Summary / main embed
+        colour = await ctx.embed_color()
         main_embed = discord.Embed(
-            title="Function Calling Settings", color=await ctx.embed_color()
+            title="Function Calling Settings", color=colour
         )
         main_embed.add_field(
-            name="Function Calling Enabled", value=f"`{enabled}`", inline=True
+            name="Function Calling", value=f"{icon(enabled)} `{enabled}`", inline=True
         )
 
         # Location
@@ -91,26 +93,38 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, We
             loc_value = "`Not set`"
         main_embed.add_field(name="Location", value=loc_value, inline=True)
 
-        # Spacer field for layout consistency (mirrors style in other settings embeds)
-        main_embed.add_field(name="", value="", inline=True)
+        # Spacer (zero width space to keep grid layout consistent)
+        main_embed.add_field(name="\u200b", value="\u200b", inline=True)
 
-        # For each group show enabled + list of tool names (compact)
+        # Overview of each group (compact)
         for group_name, tool_names in groups.items():
-            is_enabled = any(t in enabled_tools for t in tool_names)
-            # Show tool names inline code, truncated if very long
-            tools_display = ", ".join(f"`{t}`" for t in tool_names)
-            main_embed.add_field(
-                name=group_name,
-                value=f"Enabled: `{is_enabled}`\n{tools_display}",
-                inline=True,
+            enabled_tools_in_group = [t for t in tool_names if t in enabled_tools]
+            group_enabled = bool(enabled_tools_in_group)
+            per_tool = ", ".join(
+                f"`{t}`" for t in tool_names
+            )  # simple list (details below)
+            value = (
+                f"Enabled: {icon(group_enabled)}\n"
+                f"Tools: {per_tool}\n"
+                f"Active {len(enabled_tools_in_group)}/{len(tool_names)}"
             )
+            main_embed.add_field(name=group_name.title(), value=value, inline=True)
+
+        # Summary line
+        main_embed.add_field(
+            name="Totals",
+            value=f"Enabled tools: **{enabled_count}/{total_tools}**",
+            inline=False,
+        )
 
         embeds = [main_embed]
 
-        # Image Request detailed embed
-        image_tools = groups["Image Request"]
+        # Always include Image Request detail (even when filtered to image request)
+        image_tools = groups["image request"]
         image_enabled = any(t in enabled_tools for t in image_tools)
-        image_endpoint = await guild_conf.function_calling_image_custom_endpoint() or "Autodetected"
+        image_endpoint = (
+            await guild_conf.function_calling_image_custom_endpoint() or "Autodetected"
+        )
         image_model = await guild_conf.function_calling_image_model() or "Default"
         image_preprompt = await guild_conf.function_calling_image_preprompt()
         preprompt_display = image_preprompt or "(None)"
@@ -118,25 +132,20 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, We
             preprompt_display = preprompt_display[:497] + "..."
 
         image_embed = discord.Embed(
-            title="Image Request Function Settings", color=await ctx.embed_color()
+            title="Image Request Function Settings", color=colour
         )
-        image_embed.add_field(
-            name="Enabled", value=f"`{image_enabled}`", inline=True
-        )
+        image_embed.add_field(name="Enabled", value=f"{icon(image_enabled)}", inline=True)
         image_embed.add_field(
             name="Custom Endpoint", value=f"`{image_endpoint}`", inline=True
         )
-        image_embed.add_field(
-            name="Model", value=f"`{image_model}`", inline=True
-        )
+        image_embed.add_field(name="Model", value=f"`{image_model}`", inline=True)
         image_embed.add_field(
             name="Preprompt", value=f"```{preprompt_display}```", inline=False
         )
-
         embeds.append(image_embed)
 
-        for embed in embeds:
-            await ctx.send(embed=embed)
+        for em in embeds:
+            await ctx.send(embed=em)
         return
 
     @functions.command(name="location")
