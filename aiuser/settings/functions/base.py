@@ -42,7 +42,6 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, We
         enabled = await guild_conf.function_calling()
         enabled_tools: list = await guild_conf.function_calling_functions() or []
 
-        # Imports kept local to avoid cost when command not used elsewhere
         from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
         from aiuser.functions.noresponse.tool_call import NoResponseToolCall
         from aiuser.functions.scrape.tool_call import ScrapeToolCall
@@ -85,15 +84,7 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, We
             name="Function Calling", value=f"{icon(enabled)} `{enabled}`", inline=True
         )
 
-        # Location
-        location = await guild_conf.function_calling_default_location()
-        if location and isinstance(location, list) and len(location) == 2:
-            loc_value = f"`{location[0]:.4f}, {location[1]:.4f}`"
-        else:
-            loc_value = "`Not set`"
-        main_embed.add_field(name="Location", value=loc_value, inline=True)
-
-        # Spacer (zero width space to keep grid layout consistent)
+        # Spacer to keep grid layout consistent
         main_embed.add_field(name="\u200b", value="\u200b", inline=True)
 
         # Overview of each group (compact)
@@ -148,23 +139,7 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, We
             await ctx.send(embed=em)
         return
 
-    @functions.command(name="location")
-    async def set_location(self, ctx: commands.Context, latitude: float, longitude: float):
-        """ Set the location where the bot will canonically be in
-
-            Used for some functions.
-
-            **Arguments**
-            - `latitude` decimal latitude
-            - `longitude` decimal longitude
-        """
-        await self.config.guild(ctx.guild).function_calling_default_location.set([latitude, longitude])
-        embed = discord.Embed(
-            title="Location now set to:",
-            description=f"{latitude}, {longitude}",
-            color=await ctx.embed_color(),
-        )
-        await ctx.send(embed=embed)
+    # Removed location command and setting as location is now provided directly to functions when needed.
 
     @functions.command(name="search")
     async def toggle_search_function(self, ctx: commands.Context):
@@ -175,8 +150,7 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, We
         from aiuser.functions.search.tool_call import SearchToolCall
 
         tool_names = [SearchToolCall.function_name]
-
-        await self.toggle_function_helper(ctx, tool_names, "Search")
+        await self.toggle_function_group(ctx, tool_names, "Search")
 
     @functions.command(name="scrape")
     async def toggle_scrape_function(self, ctx: commands.Context):
@@ -188,8 +162,7 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, We
         from aiuser.functions.scrape.tool_call import ScrapeToolCall
 
         tool_names = [ScrapeToolCall.function_name]
-
-        await self.toggle_function_helper(ctx, tool_names, "Scrape")
+        await self.toggle_function_group(ctx, tool_names, "Scrape")
 
     @functions.command(name="noresponse")
     async def toggle_ignore_function(self, ctx: commands.Context):
@@ -201,8 +174,7 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, We
         from aiuser.functions.noresponse.tool_call import NoResponseToolCall
 
         tool_names = [NoResponseToolCall.function_name]
-
-        await self.toggle_function_helper(ctx, tool_names, "No response")
+        await self.toggle_function_group(ctx, tool_names, "No response")
 
     @functions.command(name="wolframalpha")
     async def toggle_wolfram_alpha_function(self, ctx: commands.Context):
@@ -213,6 +185,5 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, We
             return await ctx.send(f"Wolfram Alpha app id not set! Set it using `{ctx.clean_prefix}set api wolfram_alpha app_id,APPID`.")
 
         tool_names = [WolframAlphaFunctionCall.function_name]
-
-        await self.toggle_function_helper(ctx, tool_names, "Wolfram Alpha")
+        await self.toggle_function_group(ctx, tool_names, "Wolfram Alpha")
 

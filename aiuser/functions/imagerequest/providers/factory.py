@@ -21,7 +21,6 @@ PROVIDERS = {
 }
 
 def detect_provider(endpoint, client):
-    """Return provider string only. Caller keeps original endpoint for generate()."""
     endpoint = str(endpoint or "").lower()
     if endpoint:
         if "openrouter.ai" in endpoint:

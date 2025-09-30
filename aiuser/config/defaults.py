@@ -79,7 +79,6 @@ DEFAULT_GUILD = {
     "presets": json.dumps(DEFAULT_PRESETS),
     "function_calling": False,
     "function_calling_functions": [],
-    "function_calling_default_location": [49.24966, -123.11934],
     "function_calling_image_custom_endpoint": None,
     "function_calling_image_model": None,
     "function_calling_image_preprompt": None,

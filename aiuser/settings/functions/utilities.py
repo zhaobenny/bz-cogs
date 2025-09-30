@@ -7,7 +7,7 @@ from aiuser.types.abc import MixinMeta, aiuser
 class FunctionsGroupMixin(MixinMeta):
     @aiuser.group()
     @checks.is_owner()
-    async def functions(self, ctx: commands.Context):  # type: ignore[override]
+    async def functions(self, ctx: commands.Context): 
         """Settings to manage function calling
 
         (All subcommands are per server)
@@ -19,8 +19,8 @@ class FunctionsGroupMixin(MixinMeta):
 functions = FunctionsGroupMixin.functions
 
 class FunctionToggleHelperMixin(MixinMeta):
-    async def toggle_function_helper(self, ctx: commands.Context, tool_names: list, embed_title: str):  # type: ignore[override]
-        """Toggle one or more tool names on/off for the guild.
+    async def toggle_function_group(self, ctx: commands.Context, tool_names: list, embed_title: str):  
+        """Toggle a group of related function-calling tools on or off for the guild.
 
         Args:
             ctx: Redbot command invocation context.
@@ -47,7 +47,7 @@ class FunctionToggleHelperMixin(MixinMeta):
         )
         await ctx.send(embed=embed)
 
-    async def toggle_single_function(self, ctx: commands.Context, tool_name: str, display_name: str):  # type: ignore[override]
+    async def toggle_single_function(self, ctx: commands.Context, tool_name: str, display_name: str):  
         """Toggle a single function/tool on or off.
 
         Args:

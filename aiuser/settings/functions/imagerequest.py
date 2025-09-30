@@ -1,11 +1,11 @@
 import discord
 from redbot.core import commands
 
-from aiuser.settings.functions.utilities import functions
+from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
 from aiuser.types.abc import MixinMeta
 
 
-class ImageRequestFunctionSettings(MixinMeta):
+class ImageRequestFunctionSettings(MixinMeta, FunctionToggleHelperMixin):
     @functions.group(name="imagerequest")
     async def imagerequest(self, ctx: commands.Context): 
         """ Image generation function settings (per server) """
@@ -14,7 +14,7 @@ class ImageRequestFunctionSettings(MixinMeta):
     @imagerequest.command(name="toggle")
     async def imagerequest_toggle(self, ctx: commands.Context):
         from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
-        await self.toggle_function_helper(ctx, [ImageRequestToolCall.function_name], "Image Request")
+        await self.toggle_function_group(ctx, [ImageRequestToolCall.function_name], "Image Request")
 
     @imagerequest.command(name="endpoint")
     async def imagerequest_endpoint(self, ctx: commands.Context, *, endpoint: str = None):
