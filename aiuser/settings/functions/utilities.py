@@ -1,13 +1,22 @@
 import discord
-from redbot.core import commands
+from redbot.core import checks, commands
 
 from aiuser.types.abc import MixinMeta, aiuser
 
 
-@aiuser.group(name="functions")
-async def functions(self, _):
-    """Settings to manage function calling"""
-    pass
+class FunctionsGroupMixin(MixinMeta):
+    @aiuser.group()
+    @checks.is_owner()
+    async def functions(self, ctx: commands.Context):  # type: ignore[override]
+        """Settings to manage function calling
+
+        (All subcommands are per server)
+        """
+        pass
+
+# Provide a module-level alias so other settings modules can use `@functions.command(...)`
+# during class body execution (the class attribute on the mixin isn't in the module scope).
+functions = FunctionsGroupMixin.functions
 
 class FunctionToggleHelperMixin(MixinMeta):
     async def toggle_function_helper(self, ctx: commands.Context, tool_names: list, embed_title: str):  # type: ignore[override]

@@ -1,22 +1,17 @@
 import discord
-from redbot.core import checks, commands
+from redbot.core import commands
 
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
-from aiuser.settings.functions.utilities import FunctionToggleHelperMixin
+from aiuser.settings.functions.utilities import (
+    FunctionsGroupMixin,
+    FunctionToggleHelperMixin,
+    functions,
+)
 from aiuser.settings.functions.weather import WeatherFunctionSettings
-from aiuser.types.abc import MixinMeta, aiuser
+from aiuser.types.abc import MixinMeta
 
 
-class FunctionCallingSettings(FunctionToggleHelperMixin, WeatherFunctionSettings, ImageRequestFunctionSettings, MixinMeta):
-    @aiuser.group()
-    @checks.is_owner()
-    async def functions(self, _):
-        """Settings to manage function calling
-
-        (All subcommands are per server)
-        """
-        pass
-
+class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, WeatherFunctionSettings, ImageRequestFunctionSettings, MixinMeta):
     @functions.command(name="toggle")
     async def toggle_function_calling(self, ctx: commands.Context):
         """Toggle functions calling
@@ -161,7 +156,7 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, WeatherFunctionSettings
             color=await ctx.embed_color(),
         )
         await ctx.send(embed=embed)
-        
+
     @functions.command(name="search")
     async def toggle_search_function(self, ctx: commands.Context):
         """ Enable/disable searching/scraping the Internet using Serper.dev """

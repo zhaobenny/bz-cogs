@@ -1,7 +1,7 @@
 from redbot.core import commands
 
-from aiuser.types.abc import MixinMeta
 from aiuser.settings.functions.utilities import functions
+from aiuser.types.abc import MixinMeta
 
 
 class WeatherFunctionSettings(MixinMeta):

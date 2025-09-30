@@ -7,7 +7,7 @@ from aiuser.types.abc import MixinMeta
 
 class ImageRequestFunctionSettings(MixinMeta):
     @functions.group(name="imagerequest")
-    async def imagerequest(self, _):
+    async def imagerequest(self, ctx: commands.Context): 
         """ Image generation function settings (per server) """
         pass
 
