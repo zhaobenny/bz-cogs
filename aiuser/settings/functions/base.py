@@ -1,17 +1,19 @@
-
 import discord
 from redbot.core import checks, commands
 
+from aiuser.settings.functions.utilities import FunctionToggleHelperMixin
+from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
+from aiuser.settings.functions.weather import WeatherFunctionSettings
 from aiuser.types.abc import MixinMeta, aiuser
 
 
-class FunctionCallingSettings(MixinMeta):
+class FunctionCallingSettings(FunctionToggleHelperMixin, WeatherFunctionSettings, ImageRequestFunctionSettings, MixinMeta):
     @aiuser.group()
     @checks.is_owner()
     async def functions(self, _):
-        """ Settings to manage function calling
+        """Settings to manage function calling
 
-            (All subcommands are per server)
+        (All subcommands are per server)
         """
         pass
 
@@ -55,23 +57,7 @@ class FunctionCallingSettings(MixinMeta):
         )
         await ctx.send(embed=embed)
 
-    async def toggle_function_helper(self, ctx: commands.Context, tool_names: list, embed_title: str):
-        enabled_tools: list = await self.config.guild(ctx.guild).function_calling_functions()
-
-        if tool_names[0] not in enabled_tools:
-            enabled_tools.extend(tool_names)
-        else:
-            for tool in tool_names:
-                enabled_tools.remove(tool)
-
-        await self.config.guild(ctx.guild).function_calling_functions.set(enabled_tools)
-
-        embed = discord.Embed(
-            title=f"{embed_title} function calling now set to:",
-            description=f"{tool_names[0] in enabled_tools}",
-            color=await ctx.embed_color(),
-        )
-        await ctx.send(embed=embed)
+    # toggle_function_helper now supplied by FunctionToggleHelperMixin
 
     @functions.command(name="search")
     async def toggle_search_function(self, ctx: commands.Context):
@@ -98,23 +84,6 @@ class FunctionCallingSettings(MixinMeta):
 
         await self.toggle_function_helper(ctx, tool_names, "Scrape")
 
-    @functions.command(name="weather")
-    async def toggle_weather_function(self, ctx: commands.Context):
-        """ Enable/disable a group of functions to getting weather using Open-Meteo
-
-            See [Open-Meteo terms](https://open-meteo.com/en/terms) for their free API
-        """
-        from aiuser.functions.weather.tool_call import (
-            IsDaytimeToolCall,
-            LocalWeatherToolCall,
-            LocationWeatherToolCall,
-        )
-
-        tool_names = [IsDaytimeToolCall.function_name,
-                      LocalWeatherToolCall.function_name, LocationWeatherToolCall.function_name]
-
-        await self.toggle_function_helper(ctx, tool_names, "Weather")
-
     @functions.command(name="noresponse")
     async def toggle_ignore_function(self, ctx: commands.Context):
         """
@@ -140,34 +109,3 @@ class FunctionCallingSettings(MixinMeta):
 
         await self.toggle_function_helper(ctx, tool_names, "Wolfram Alpha")
 
-    @functions.group(name="imagerequest")
-    async def imagerequest(self, _):
-        """ Image generation function settings (per server) """
-        pass
-
-    @imagerequest.command(name="toggle")
-    async def imagerequest_toggle(self, ctx: commands.Context):
-        from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
-        await self.toggle_function_helper(ctx, [ImageRequestToolCall.function_name], "Image Request")
-
-    @imagerequest.command(name="endpoint")
-    async def imagerequest_endpoint(self, ctx: commands.Context, *, endpoint: str = None):
-        await self.config.guild(ctx.guild).function_calling_image_custom_endpoint.set(endpoint or None)
-        e = discord.Embed(title="Image request endpoint set to:", description=f"{endpoint or 'Autodetected'}", color=await ctx.embed_color())
-        await ctx.send(embed=e)
-
-    @imagerequest.command(name="model")
-    async def imagerequest_model(self, ctx: commands.Context, *, model: str = None):
-        await self.config.guild(ctx.guild).function_calling_image_model.set(model or None)
-        desc = f"{model}" if model else "Default"
-        e = discord.Embed(title="Image request model set to:", description=desc, color=await ctx.embed_color())
-        await ctx.send(embed=e)
-
-    @imagerequest.command(name="preprompt")
-    async def imagerequest_preprompt(self, ctx: commands.Context, *, preprompt: str = None):
-        limit = 3200 
-        if preprompt and len(preprompt) > limit:
-            return await ctx.send(f"Preprompt too long ({len(preprompt)}/{limit}). Please shorten it.")
-        await self.config.guild(ctx.guild).function_calling_image_preprompt.set(preprompt or None)
-        e = discord.Embed(title="Image request preprompt set to:", description=f"{(preprompt or 'Cleared')}", color=await ctx.embed_color())
-        await ctx.send(embed=e)

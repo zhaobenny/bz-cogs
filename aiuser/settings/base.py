@@ -6,7 +6,7 @@ import discord
 from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
-from aiuser.settings.functions import FunctionCallingSettings
+from aiuser.settings.functions.base import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
 from aiuser.settings.image_scan import ImageScanSettings
 from aiuser.settings.memory import MemorySettings
