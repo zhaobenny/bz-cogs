@@ -30,6 +30,9 @@ class ImageRequestToolCall(ToolCall):
 
     async def _handle(self, request: LLMPipeline, arguments):
         description = arguments["description"]
+        preprompt = await request.config.guild(request.ctx.guild).function_calling_image_preprompt() or ""
+        if preprompt:
+            description = f"{preprompt} {description}"[:2000]
         endpoint = await request.config.guild(request.ctx.guild).function_calling_image_custom_endpoint() or None
         provider = detect_provider(endpoint, request.openai_client)
         try:

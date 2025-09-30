@@ -5,8 +5,8 @@ from aiuser.functions.imagerequest.providers.util import fetch_image_bytes
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
-async def generate(description, request, endpoint=None):  
-    model = endpoint or f"google/{GEMINI_IMAGE_MODEL}"
+async def generate(description, request, _):  
+    model = await request.config.guild(request.ctx.guild).function_calling_image_model() or f"google/{GEMINI_IMAGE_MODEL}"
     r = await request.openai_client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": description}],

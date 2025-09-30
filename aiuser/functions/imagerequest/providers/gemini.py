@@ -11,31 +11,31 @@ async def generate(description: str, request, endpoint: str | None = None) -> by
     tokens = await request.bot.get_shared_api_tokens("gemini")
     api_key = tokens.get("apikey") or tokens.get("api_key")
     if not api_key:
-        ot = await request.bot.get_shared_api_tokens("openai")
-        api_key = ot.get("apikey") or ot.get("api_key")
+        tokens = await request.bot.get_shared_api_tokens("openai")
+        api_key = tokens.get("apikey") or tokens.get("api_key")
     if not api_key:
         raise ValueError("Gemini API key not configured. Set with: [p]set api gemini apikey,<KEY>")
 
-    model = endpoint or GEMINI_IMAGE_MODEL
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-    payload = {"contents": [{"parts": [{"text": description}]}]}
+    model = await request.config.guild(request.ctx.guild).function_calling_image_model()
+    if not model and endpoint and "models/" in endpoint:
+        seg = endpoint.split("models/", 1)[1].split(":", 1)[0].split("?", 1)[0]
+        if seg:
+            model = seg
+    model = model or GEMINI_IMAGE_MODEL
 
-    async with httpx.AsyncClient(timeout=120) as client:
-        resp = await client.post(url, json=payload)
+    async with httpx.AsyncClient(timeout=240) as client:
+        resp = await client.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+            json={"contents": [{"parts": [{"text": description}]}]},
+        )
         resp.raise_for_status()
         data = resp.json()
 
     for cand in data.get("candidates", []):
-        content = cand.get("content") or {}
-        for part in content.get("parts", []):
+        for part in (cand.get("content") or {}).get("parts", []):
             inline = part.get("inline_data") or part.get("inlineData")
-            if not inline:
-                continue
-            b64 = inline.get("data")
-            if not b64:
-                continue
-            return base64.b64decode(b64)
-
-    raise ValueError(
-        "Gemini response contained no inline image data")
+            b64 = inline and inline.get("data")
+            if b64:
+                return base64.b64decode(b64)
+    raise ValueError("Gemini response contained no inline image data")
 
