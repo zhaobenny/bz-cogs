@@ -20,6 +20,11 @@ Admins can modify prompt settings in:
 [p]aiuser prompt
 ```
 
+Bot owners can manage memory (eg. recalling information via embeddings) using:
+```
+[p]aiuser memory
+```
+
 Bot owners can also manage/enable function calling (eg. opening links or performing Google searches) using:
 ```
 [p]aiuser functions

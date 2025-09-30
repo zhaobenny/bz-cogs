@@ -5,6 +5,9 @@ from aiuser.functions.imagerequest.providers import (
     openai,
     openrouter,
 )
+from aiuser.utils.utilities import (
+    is_using_openrouter_endpoint,
+)
 
 OPENAI = "openai"
 OPENROUTER = "openrouter"
@@ -30,7 +33,6 @@ def detect_provider(endpoint, client):
         if "/sdapi/v1" in endpoint or ":7860" in endpoint or "localhost:7860" in endpoint or "127.0.0.1:7860" in endpoint:
             return AUTOMATIC1111
         return CUSTOM_HTTP
-    base_url = str(getattr(client, "base_url", "") or "").lower()
-    if "openrouter.ai" in base_url:
+    if client and is_using_openrouter_endpoint(client):
         return OPENROUTER
     return OPENAI
