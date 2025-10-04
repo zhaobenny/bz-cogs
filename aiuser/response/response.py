@@ -72,9 +72,12 @@ async def should_reply(ctx: commands.Context) -> bool:
 async def send_response(ctx: commands.Context, response: str, can_reply: bool, files=None) -> bool:
     allowed = AllowedMentions(everyone=False, roles=False, users=[ctx.message.author])
     if len(response) >= 2000:
-        # discord does not support files with multi-part messages
-        for i in range(0, len(response), 2000):
-            await ctx.send(response[i:i + 2000], allowed_mentions=allowed)
+        chunks = [response[i:i + 2000] for i in range(0, len(response), 2000)]
+        for idx, chunk in enumerate(chunks):
+            if (idx == len(chunks) - 1):
+                await ctx.send(chunk, allowed_mentions=allowed, files=files)
+            else:
+                await ctx.send(chunk, allowed_mentions=allowed)
     elif can_reply and await should_reply(ctx):
         await ctx.message.reply(response, mention_author=False, allowed_mentions=allowed, files=files)
     elif ctx.interaction:

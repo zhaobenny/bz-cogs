@@ -16,7 +16,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 class ImageRequestToolCall(ToolCall):
     schema = ToolCallSchema(function=Function(
         name="image_request",
-        description="Generates a image of the providen description using AI. Use a highly detailed description.",
+        description="Generates a image of the provided description using AI and sends it to the chat.",
         parameters=Parameters(
             properties={
                 "description": {
@@ -42,6 +42,6 @@ class ImageRequestToolCall(ToolCall):
             bio.seek(0)
             request.files_to_send.append(discord.File(bio, filename="image.png"))
         except Exception as e:
-            logger.exception(f"Failed to get image for description: {description}", exc_info=e)
+            logger.exception(f"Failed to get image for description: {description[:500]}", exc_info=e)
             return "Couldn't generate an image..."
-        return f"An image of \"{description}\" was generated and was sent as a message."
+        return "The requested image was generated and was sent."
