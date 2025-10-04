@@ -1,10 +1,9 @@
 from redbot.core import commands
 
 from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
-from aiuser.types.abc import MixinMeta
 
 
-class WeatherFunctionSettings(MixinMeta, FunctionToggleHelperMixin):
+class WeatherFunctionSettings(FunctionToggleHelperMixin):
     @functions.group(name="weather")
     async def weather(self, ctx: commands.Context):  # type: ignore[override]
         """Weather function settings (per server)

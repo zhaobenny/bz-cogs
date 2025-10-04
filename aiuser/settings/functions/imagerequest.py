@@ -2,10 +2,9 @@ import discord
 from redbot.core import commands
 
 from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
-from aiuser.types.abc import MixinMeta
 
 
-class ImageRequestFunctionSettings(MixinMeta, FunctionToggleHelperMixin):
+class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
     @functions.group(name="imagerequest")
     async def imagerequest(self, ctx: commands.Context): 
         """ Image generation function settings (per server) """

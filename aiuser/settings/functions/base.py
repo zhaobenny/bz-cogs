@@ -4,14 +4,12 @@ from redbot.core import commands
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
 from aiuser.settings.functions.utilities import (
     FunctionsGroupMixin,
-    FunctionToggleHelperMixin,
     functions,
 )
 from aiuser.settings.functions.weather import WeatherFunctionSettings
-from aiuser.types.abc import MixinMeta
 
 
-class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, WeatherFunctionSettings, ImageRequestFunctionSettings, MixinMeta):
+class FunctionCallingSettings(FunctionsGroupMixin, WeatherFunctionSettings, ImageRequestFunctionSettings):
     @functions.command(name="toggle")
     async def toggle_function_calling(self, ctx: commands.Context):
         """Toggle functions calling
@@ -48,7 +46,6 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, We
         from aiuser.functions.search.tool_call import SearchToolCall
         from aiuser.functions.weather.tool_call import (
             IsDaytimeToolCall,
-            LocalWeatherToolCall,
             LocationWeatherToolCall,
         )
         from aiuser.functions.wolframalpha.tool_call import (
@@ -58,7 +55,6 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, We
         groups = {
             "weather": [
                 IsDaytimeToolCall.function_name,
-                LocalWeatherToolCall.function_name,
                 LocationWeatherToolCall.function_name,
             ],
             "image request": [ImageRequestToolCall.function_name],
@@ -81,30 +77,23 @@ class FunctionCallingSettings(FunctionToggleHelperMixin, FunctionsGroupMixin, We
             title="Function Calling Settings", color=colour
         )
         main_embed.add_field(
-            name="Function Calling", value=f"{icon(enabled)} `{enabled}`", inline=True
+            name="Functions Calling Enabled", value=f"{icon(enabled)}", inline=True
         )
 
         # Spacer to keep grid layout consistent
         main_embed.add_field(name="\u200b", value="\u200b", inline=True)
+        main_embed.add_field(name="\u200b", value="\u200b", inline=True)
 
         # Overview of each group (compact)
+        # Only show a checkmark for whether the group has any enabled tools.
         for group_name, tool_names in groups.items():
-            enabled_tools_in_group = [t for t in tool_names if t in enabled_tools]
-            group_enabled = bool(enabled_tools_in_group)
-            per_tool = ", ".join(
-                f"`{t}`" for t in tool_names
-            )  # simple list (details below)
-            value = (
-                f"Enabled: {icon(group_enabled)}\n"
-                f"Tools: {per_tool}\n"
-                f"Active {len(enabled_tools_in_group)}/{len(tool_names)}"
-            )
-            main_embed.add_field(name=group_name.title(), value=value, inline=True)
+            group_enabled = any(t in enabled_tools for t in tool_names)
+            main_embed.add_field(name=group_name.title(), value=icon(group_enabled), inline=True)
 
         # Summary line
         main_embed.add_field(
             name="Totals",
-            value=f"Enabled tools: **{enabled_count}/{total_tools}**",
+            value=f"Enabled tools: **`{enabled_count}/{total_tools}`**",
             inline=False,
         )
 
