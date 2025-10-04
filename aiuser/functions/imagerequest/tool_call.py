@@ -15,13 +15,13 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 class ImageRequestToolCall(ToolCall):
     schema = ToolCallSchema(function=Function(
-        name="image_request",
-        description="Generates a image of the provided description using AI and sends it to the chat.",
+        name="image_request", 
+        description="Generates or sents a image of the provided description and sends it to the chat.",
         parameters=Parameters(
             properties={
                 "description": {
                     "type": "string",
-                    "description": "The description of the image to generate. Make it highly detailed.",
+                    "description": "The description of the image to generate or send. Make it highly detailed.",
                 },
             },
             required=["description"]
