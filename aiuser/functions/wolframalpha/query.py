@@ -19,7 +19,7 @@ async def ask_wolfram_alpha(query: str, app_id: str, ctx: commands.Context):
             async with session.get(url, params=payload) as response:
                 response.raise_for_status()
                 result = await response.text()
-    except:
+    except Exception:
         logger.exception("Asking Wolfram Alpha")
         return "An error occured while asking Wolfram Alpha."
 
@@ -29,7 +29,7 @@ async def ask_wolfram_alpha(query: str, app_id: str, ctx: commands.Context):
         if pt.text:
             plaintext.append(pt.text.capitalize())
     if not plaintext:
-        return f"Wolfram Alpha is unable to answer the question. Try to answer with your own knowledge."
+        return "Wolfram Alpha is unable to answer the question. Try to answer with your own knowledge."
     # lines after the 3rd are often irrelevant in answers such as currency conversion
     content = "\n".join(plaintext[:3])
 

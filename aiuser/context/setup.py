@@ -6,7 +6,6 @@ from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.config.models import OTHER_MODELS_LIMITS
 from aiuser.context.messages import MessagesThread
 from aiuser.types.abc import MixinMeta
-from aiuser.types.enums import ScanImageMode
 from aiuser.utils.utilities import format_variables
 
 
@@ -34,16 +33,17 @@ class ThreadSetup:
             or self._get_token_limit(thread.model)
         )
 
-        if not prompt: # jank
+        if not prompt:  # jank
             await thread.add_msg(thread.init_message)
 
         bot_prompt = prompt or await self._pick_prompt()
         formatted_prompt = await format_variables(self.ctx, bot_prompt)
         await thread.add_system(formatted_prompt)
 
-
         if await self._should_use_image_model():
-            thread.model = await self.config.guild(self.guild).scan_images_model()
+            scan_model = await self.config.guild(self.guild).scan_images_model()
+            if scan_model:
+                thread.model = scan_model
 
         if history:
             await thread.add_history()
@@ -70,8 +70,7 @@ class ThreadSetup:
     async def _should_use_image_model(self) -> bool:
         """Check if we should switch to image scanning model"""
         if (self.ctx.interaction
-            or not await self.config.guild(self.guild).scan_images()
-            or await self.config.guild(self.guild).scan_images_mode() != ScanImageMode.LLM.value):
+            or not await self.config.guild(self.guild).scan_images()):
             return False
 
         message = self.ctx.message
@@ -81,6 +80,8 @@ class ThreadSetup:
 
         if message.reference:
             ref = message.reference
+            if not ref.channel_id or not ref.message_id:
+                return False
             replied = ref.cached_message or await self.bot.get_channel(ref.channel_id).fetch_message(ref.message_id)
             return replied.attachments and replied.attachments[0].content_type.startswith('image/')
 

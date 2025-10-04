@@ -112,7 +112,7 @@ def is_using_openrouter_endpoint(client: AsyncOpenAI):
     return str(client.base_url).startswith(OPENROUTER_URL)
 
 
-async def get_enabled_tools(config: Config, ctx: commands.Context) -> list:
+async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolCall]:
     functions_dir = Path(__file__).parent.parent / "functions"
 
     for item in functions_dir.iterdir():
