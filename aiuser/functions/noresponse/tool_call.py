@@ -28,9 +28,11 @@ class NoResponseToolCall(ToolCall):
         )))
     function_name = schema.function.name
 
-    async def _handle(self, request, arguments):
+    async def _handle(self, arguments):
         if arguments["respond"]:
             return None
+
+        request = arguments["request"]
         request.completion = ""
         logger.debug(f"Decided to not respond in guild {self.ctx.guild.id} because: \"{arguments['reason']}\"")
         return None

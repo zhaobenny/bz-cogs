@@ -1,13 +1,8 @@
 
-from typing import TYPE_CHECKING, Any, Dict, List
-
 from redbot.core import Config, commands
 from redbot.core.bot import Red
 
 from aiuser.functions.types import ToolCallSchema
-
-if TYPE_CHECKING:  
-    from aiuser.response.llm_pipeline import LLMPipeline
 
 
 class ToolCall:
@@ -19,13 +14,13 @@ class ToolCall:
         self.ctx = ctx
         self.bot: Red = ctx.bot
 
-    async def run(self, request: "LLMPipeline", arguments: Dict[str, Any], available_tools: List[ToolCallSchema]):
+    def run(self, arguments: dict, available_tools: list):
         self.remove_tool_from_available(available_tools)
-        return await self._handle(request, arguments)
+        return self._handle(arguments)
 
-    async def _handle(self, request: "LLMPipeline", arguments: Dict[str, Any]):
+    def _handle(arguments: dict):
         raise NotImplementedError
 
-    def remove_tool_from_available(self, available_tools: List[ToolCallSchema]):
+    def remove_tool_from_available(self, available_tools: list):
         if self.schema in available_tools:
             available_tools.remove(self.schema)

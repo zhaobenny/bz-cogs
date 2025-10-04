@@ -320,17 +320,3 @@ class AImage(Settings,
             can = False
         return can
 
-    async def get_api_instance(self, ctx: Union[commands.Context, discord.Interaction]):
-        from aimage.apis.a1111 import A1111
-        instance = A1111(self, ctx)
-        await instance._init()
-        return instance
-
-    async def _update_autocomplete_cache(self, ctx: Union[commands.Context, discord.Interaction]):
-        api = await self.get_api_instance(ctx)
-        try:
-            logger.debug(f"Ran a update to get possible autocomplete terms in server {ctx.guild.id}")
-            await api.update_autocomplete_cache(self.autocomplete_cache)
-        except NotImplementedError:
-            logger.debug(f"Autocomplete terms is not supported by the api in server {ctx.guild.id}")
-            pass

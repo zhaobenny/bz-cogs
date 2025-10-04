@@ -3,7 +3,6 @@
 .dashboard-venv/
 .cursor/
 .basedpyright/
-.github/instructions/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
