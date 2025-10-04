@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import base64
+from typing import TYPE_CHECKING
 
 import httpx
 
 from aiuser.config.constants import GEMINI_IMAGE_MODEL
 
+if TYPE_CHECKING:
+    from aiuser.response.llm_pipeline import LLMPipeline
 
-async def generate(description: str, request, endpoint: str | None = None) -> bytes:
+
+async def generate(description: str, request: "LLMPipeline", endpoint: str) -> bytes:
     tokens = await request.bot.get_shared_api_tokens("gemini")
     api_key = tokens.get("apikey") or tokens.get("api_key")
     if not api_key:

@@ -1,9 +1,17 @@
+from __future__ import annotations
+
 import base64
+from typing import TYPE_CHECKING
 
 import httpx
 
+if TYPE_CHECKING:
+    from aiuser.response.llm_pipeline import LLMPipeline
 
-async def generate(description, _, endpoint):
+
+async def generate(description: str, _: "LLMPipeline", endpoint: str) -> bytes:
+    if not endpoint:
+        raise ValueError("Automatic1111 provider requires an endpoint")
     endpoint = f"{endpoint.split('/sdapi/')[0].rstrip('/')}/sdapi/v1/txt2img"
     async with httpx.AsyncClient(timeout=240) as c:
         r = await c.post(endpoint, json={"prompt": description})
