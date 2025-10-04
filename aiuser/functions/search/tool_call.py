@@ -21,5 +21,9 @@ class SearchToolCall(ToolCall):
         )))
     function_name = schema.function.name
 
-    async def _handle(self, arguments):
-        return await search_google(arguments["query"], (await self.bot.get_shared_api_tokens("serper")).get("api_key"), self.ctx)
+    async def _handle(self, _, arguments):
+        return await search_google(
+            arguments["query"],
+            (await self.bot.get_shared_api_tokens("serper")).get("api_key"),
+            self.ctx,
+        )

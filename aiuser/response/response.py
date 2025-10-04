@@ -9,7 +9,8 @@ from redbot.core import Config, commands
 
 from aiuser.config.constants import REGEX_RUN_TIMEOUT
 from aiuser.context.messages import MessagesThread
-from aiuser.response.chat.llm_pipeline import LLMPipeline
+from aiuser.context.setup import create_messages_thread
+from aiuser.response.llm_pipeline import LLMPipeline
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import to_thread
 
@@ -68,27 +69,37 @@ async def should_reply(ctx: commands.Context) -> bool:
             return True
     return False
 
-async def send_response(ctx: commands.Context, response: str, can_reply: bool) -> bool:
+async def send_response(ctx: commands.Context, response: str, can_reply: bool, files=None) -> bool:
     allowed = AllowedMentions(everyone=False, roles=False, users=[ctx.message.author])
     if len(response) >= 2000:
-        for i in range(0, len(response), 2000):
-            await ctx.send(response[i:i + 2000], allowed_mentions=allowed)
+        chunks = [response[i:i + 2000] for i in range(0, len(response), 2000)]
+        for idx, chunk in enumerate(chunks):
+            if (idx == len(chunks) - 1):
+                await ctx.send(chunk, allowed_mentions=allowed, files=files)
+            else:
+                await ctx.send(chunk, allowed_mentions=allowed)
     elif can_reply and await should_reply(ctx):
-        await ctx.message.reply(response, mention_author=False, allowed_mentions=allowed)
+        await ctx.message.reply(response, mention_author=False, allowed_mentions=allowed, files=files)
     elif ctx.interaction:
-        await ctx.interaction.followup.send(response, allowed_mentions=allowed)
+        await ctx.interaction.followup.send(response, allowed_mentions=allowed, files=files)
     else:
-        await ctx.send(response, allowed_mentions=allowed)
+        await ctx.send(response, allowed_mentions=allowed, files=files)
     return True
 
-async def create_chat_response(cog: MixinMeta, ctx: commands.Context, messages_list: MessagesThread) -> bool:
-    pipeline = LLMPipeline(cog, ctx, messages=messages_list)
-    response = await pipeline.run()
-    if not response:
-        return False
+async def create_response(cog: MixinMeta, ctx: commands.Context, messages_list: MessagesThread = None) -> bool:
+    async with ctx.message.channel.typing():
+        messages_list = messages_list or await create_messages_thread(cog, ctx)
+        pipeline = LLMPipeline(cog, ctx, messages=messages_list)
+        response = await pipeline.run()
 
-    cleaned_response = await remove_patterns_from_response(ctx, cog.config, response)
-    if not cleaned_response:
-        return False
+        if not response and not pipeline.files_to_send:
+            return False
 
-    return await send_response(ctx, cleaned_response, messages_list.can_reply)
+        cleaned_response = ""
+        if response:
+            cleaned_response = await remove_patterns_from_response(ctx, cog.config, response)
+
+        if not cleaned_response and not pipeline.files_to_send:
+            return False
+
+        return await send_response(ctx, cleaned_response, messages_list.can_reply, files=pipeline.files_to_send)
