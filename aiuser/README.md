@@ -20,12 +20,8 @@ Admins can modify prompt settings in:
 [p]aiuser prompt
 ```
 
-Bot owners can manage memory (eg. recalling information via embeddings) using:
-```
-[p]aiuser memory
-```
 
-Bot owners can also manage/enable function calling (eg. opening links or performing Google searches) using:
+Bot owners can also manage/enable function calling (eg. generating images or performing Google searches) using:
 ```
 [p]aiuser functions
 ```
@@ -92,6 +88,19 @@ First, images will be OCR'ed for text to use. If the OCR is not of significant c
   First time scans will require some time to download processing models. (~1gb)
 
 </details>
+
+## Memory 🧠
+
+Memory lets the bot recall stored information automatically without stuffing the prompt.
+It works by including relevant (only manually saved memories currently) details when generating responses. (via embeddings querying)
+
+You can combine this with function calling for more advanced behavior.
+For example: a memory could store “when asked for a photo of the [bot], use this description for the image request: [...]”, and the bot will automatically apply that description when generating the image.
+
+The command for bot owners is:
+```
+[p]aiuser memory
+```
 
 ## Random Messages 🎲
 
