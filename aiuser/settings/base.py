@@ -6,9 +6,8 @@ import discord
 from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
-from aiuser.settings.functions import FunctionCallingSettings
+from aiuser.settings.functions.base import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
-from aiuser.settings.image_request import ImageRequestSettings
 from aiuser.settings.image_scan import ImageScanSettings
 from aiuser.settings.memory import MemorySettings
 from aiuser.settings.owner import OwnerSettings
@@ -25,7 +24,6 @@ from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import MentionType
 from aiuser.types.types import COMPATIBLE_CHANNELS, COMPATIBLE_MENTIONS
 from aiuser.utils.utilities import (
-    get_enabled_tools,
     is_using_openrouter_endpoint,
 )
 
@@ -34,7 +32,6 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 class Settings(
     PromptSettings,
     ImageScanSettings,
-    ImageRequestSettings,
     HistorySettings,
     ResponseSettings,
     TriggerSettings,
@@ -160,21 +157,6 @@ class Settings(
             name="Scan Image Max Size",
             inline=True,
             value=f"`{config['max_image_size'] / 1024 / 1024:.2f}` MB",
-        )
-
-        main_embed.add_field(
-            name="Image Requests", value=f"`{config['image_requests']}`", inline=True)
-
-        main_embed.add_field(
-            name="Image Req. Less Calls",
-            value=f"`{config['image_requests_reduced_llm_calls']}`",
-            inline=True,
-        )
-
-        main_embed.add_field(
-            name="",
-            value="",
-            inline=True,
         )
 
         whitelisted_trigger = bool(

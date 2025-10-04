@@ -14,7 +14,6 @@ from aiuser.config.defaults import DEFAULT_LLM_MODEL
 from aiuser.core.openai_utils import setup_openai_client
 from aiuser.settings.utilities import get_tokens, truncate_prompt
 from aiuser.types.abc import MixinMeta
-from aiuser.types.enums import ScanImageMode
 from aiuser.utils.utilities import (
     is_using_openai_endpoint,
     is_using_openrouter_endpoint,
@@ -147,7 +146,7 @@ class OwnerSettings(MixinMeta):
             total_guilds = len(await self.config.all_guilds())
             value = f"Restored previously set models on this endpoint for {restored_count} servers."
             if restored_count < total_guilds:
-                value += f"\nA further {total_guilds - restored_count} servers were set to `{chat_model}` for chat, and \n`{image_model}` for scanning images if set to `{ScanImageMode.LLM.value}` mode."
+                value += f"\nA further {total_guilds - restored_count} servers were set to `{chat_model}` for chat, and `{image_model}` for scanning images."
             embed.add_field(
                 name="🔄 Restored",
                 value=value,
@@ -156,7 +155,7 @@ class OwnerSettings(MixinMeta):
         else:
             embed.add_field(
                 name="🔄 Reset",
-                value=f"All per-server models have been set to use `{chat_model}` for chat \n and `{image_model}` for scanning images if set to `{ScanImageMode.LLM.value}` mode.",
+                value=f"All per-server models have been set to use `{chat_model}` for chat and `{image_model}` for scanning images.",
                 inline=False,
             )
 

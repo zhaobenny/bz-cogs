@@ -20,5 +20,9 @@ class WolframAlphaFunctionCall(ToolCall):
             )))
     function_name = schema.function.name
 
-    async def _handle(self, arguments):
-        return await ask_wolfram_alpha(arguments["query"], (await self.bot.get_shared_api_tokens("wolfram_alpha")).get("app_id"), self.ctx)
+    async def _handle(self, request, arguments):
+        return await ask_wolfram_alpha(
+            arguments["query"],
+            (await self.bot.get_shared_api_tokens("wolfram_alpha")).get("app_id"),
+            self.ctx,
+        )
