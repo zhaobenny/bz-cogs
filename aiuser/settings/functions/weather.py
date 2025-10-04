@@ -12,7 +12,7 @@ class WeatherFunctionSettings(FunctionToggleHelperMixin):
 
     @weather.command(name="toggle")
     async def weather_toggle(self, ctx: commands.Context):
-        """Toggle the default weather functions."""
+        """Toggle the weather functions."""
         from aiuser.functions.weather.tool_call import (
             IsDaytimeToolCall,
             LocationWeatherToolCall,
