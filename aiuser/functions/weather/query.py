@@ -3,7 +3,6 @@ import logging
 from itertools import islice
 
 import aiohttp
-from redbot.core import Config, commands
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -57,15 +56,13 @@ async def get_weather(location: str, days=1):
     return await request_weather(lat, lon, location, days=days)
 
 
-async def get_local_weather(config: Config, ctx: commands.Context, days=1):
-    location = await (config.guild(ctx.guild).function_calling_default_location())
-    lat, lon = location
-    return await request_weather(lat, lon, "current location", days=days)
+async def is_daytime(location: str):
+    try:
+        lat, lon = await find_lat_lon(location)
+    except Exception:
+        logger.exception(f"Failed request to determine lat/lon for location {location}")
+        return f"Unable to determine if it's daytime or nighttime at {location}"
 
-
-async def is_daytime(config: Config, ctx: commands.Context):
-    location = await (config.guild(ctx.guild).function_calling_default_location())
-    lat, lon = location
     params = {
         "latitude": lat,
         "longitude": lon,
@@ -76,12 +73,12 @@ async def is_daytime(config: Config, ctx: commands.Context):
         data = await get_endpoint_data(METEO_WEATHER_URL, params)
         is_day = data['current']['is_day']
         if is_day:
-            return "Use the following information about your location to generate your response: It's daytime."
+            return f"Use the following information for {location} to generate your response: It's daytime."
         else:
-            return "Use the following information about your location to generate your response: It's nighttime."
+            return f"Use the following information for {location} to generate your response: It's nighttime."
     except Exception:
         logger.exception("Failed request to open-meteo.com")
-        return "Unknown if it's daytime or nighttime."
+        return f"Unknown if it's daytime or nighttime at {location}."
 
 
 async def request_weather(lat, lon, location, days=1):

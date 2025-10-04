@@ -24,7 +24,7 @@ class ScrapeToolCall(ToolCall):
         )))
     function_name = schema.function.name
 
-    async def _handle(self, arguments):
+    async def _handle(self, _, arguments):
         logger.info(f'Attempting scrape of {arguments["url"]} in {self.ctx.guild}')
         try:
             return await scrape_page(arguments["url"])

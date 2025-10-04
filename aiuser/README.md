@@ -20,7 +20,8 @@ Admins can modify prompt settings in:
 [p]aiuser prompt
 ```
 
-Bot owners can also manage/enable function calling (eg. opening links or performing Google searches) using:
+
+Bot owners can also manage/enable function calling (eg. generating images or performing Google searches) using:
 ```
 [p]aiuser functions
 ```
@@ -53,32 +54,17 @@ Bot owners can configure image scanning with the following commands:
 - `[p]aiuser imagescan model <model_name | reset>`
   - Sets a specific model for image scanning. By default, the main model is used. Use `reset` to revert to using the main model.
 
----
-## Image requests 🖼️
+## Memory 🧠
 
-Bot owners can see settings here:
+Memory lets the bot recall stored information automatically without stuffing the prompt.
+It works by including relevant (only manually saved memories currently) details when generating responses. (via embeddings querying)
+
+You can combine this with function calling for more advanced behavior.
+For example: a memory could store “when asked for a photo of the [bot], use this description for the image request: [...]”, and the bot will automatically apply that description when generating the image.
+
+The command for bot owners is:
 ```
-[p]aiuser imagerequest
-```
-
-The bot can generate self-portraits images based on user request.
-
-Requests are classified by trigger words / LLM decision. (eg. *"hey @botname, can you show me a picture of a yourself?"*)
-
-A suitable Stable Diffusion endpoint (Automatic1111 in API mode) must be provided and a non-trial OpenAI account is recommended.
-
-For a cost-efficient hosted solution, you can use [modal.com](https://modal.com/) to get a SD endpoint running. I written a modal template, [serverless-img-gen](https://github.com/zhaobenny/serverless-img-gen), that is supported with this cog.
-
-When using serverless-img-gen, you might need to set an auth token:
-```
-[p]set api modal-img-gen token,AUTH_TOKEN
-```
-
-If you want a hosted A1111 instead, this [Runpod template](https://github.com/ashleykleynhans/runpod-worker-a1111/) is semi-compatible with the cog.
-
-Set an API key like this, and use the `/runsync` endpoint:
-```
-[p]set api runpod apikey,API_KEY
+[p]aiuser memory
 ```
 
 ## Random Messages 🎲
@@ -154,7 +140,7 @@ Bot owners may also want to set [custom parameters](https://openrouter.ai/docs#l
 
 ⚠️ For advanced users! ⚠️
 
-Other OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. `ollama` or `text-generation-webui`)
+Other OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. `ollama`)
 
 Compatibility may vary and is not guaranteed.
 
