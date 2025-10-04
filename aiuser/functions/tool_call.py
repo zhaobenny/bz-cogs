@@ -7,7 +7,7 @@ from redbot.core.bot import Red
 from aiuser.functions.types import ToolCallSchema
 
 if TYPE_CHECKING:  
-    from aiuser.response.chat.llm_pipeline import LLMPipeline
+    from aiuser.response.llm_pipeline import LLMPipeline
 
 
 class ToolCall:
