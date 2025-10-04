@@ -14,7 +14,7 @@ async def send_response(context: Union[commands.Context, discord.Interaction], *
     else:
         try:
             await context.message.remove_reaction("⏳", context.bot.user)
-        except:
+        except Exception:
             pass
         return await context.send(**kwargs)
 

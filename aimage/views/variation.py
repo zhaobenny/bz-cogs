@@ -20,7 +20,9 @@ class VariationView(discord.ui.View):
             self.add_item(VariationTypeSelect(self))
         self.add_item(VariationStrengthSelect(self))
 
-    @discord.ui.button(emoji='🤏🏻', label='Make Variation', style=discord.ButtonStyle.blurple, row=3)
+    @discord.ui.button(
+        emoji="🤏🏻", label="Make Variation", style=discord.ButtonStyle.blurple, row=3
+    )
     async def makevariation(self, interaction: discord.Interaction, _: discord.Button):
         await interaction.response.defer(thinking=True)
         params = self.src_view.get_params_dict()
@@ -37,15 +39,23 @@ class VariationView(discord.ui.View):
         if not self.src_view.is_finished():
             try:
                 await self.src_interaction.message.edit(view=self.src_view)
-            except:
+            except Exception:
                 pass
 
 
 class VariationStrengthSelect(discord.ui.Select):
-    def __init__(self, parent: VariationView,):
+    def __init__(
+        self,
+        parent: VariationView,
+    ):
         self.parent = parent
         default = round(parent.strength * 100)
-        options = [discord.SelectOption(label=f"{num}%", value=str(num), default=num==default) for num in range(1, 21)]
+        options = [
+            discord.SelectOption(
+                label=f"{num}%", value=str(num), default=num == default
+            )
+            for num in range(1, 21)
+        ]
         super().__init__(options=options)
 
     async def callback(self, interaction: discord.Interaction):
@@ -56,10 +66,15 @@ class VariationStrengthSelect(discord.ui.Select):
 
 
 class VariationTypeSelect(discord.ui.Select):
-    def __init__(self, parent: VariationView,):
+    def __init__(
+        self,
+        parent: VariationView,
+    ):
         self.parent = parent
-        options = [discord.SelectOption(label=f"Reroll subseed", value="1", default=True),
-                   discord.SelectOption(label=f"Keep subseed", value="0")]
+        options = [
+            discord.SelectOption(label="Reroll subseed", value="1", default=True),
+            discord.SelectOption(label="Keep subseed", value="0"),
+        ]
         super().__init__(options=options)
 
     async def callback(self, interaction: discord.Interaction):
