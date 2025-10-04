@@ -1,8 +1,6 @@
 import json
 from datetime import datetime
 
-from aiuser.types.enums import ScanImageMode
-
 DEFAULT_PROMPT = "You are {botname}. You are in a Discord text channel. \
 Respond to anything, including URLs, unhelpfully and cynically in a short message. \
 Fulfill your persona and don't speak in third person. \
@@ -60,8 +58,7 @@ DEFAULT_GUILD = {
     "messages_min_length": DEFAULT_MIN_MESSAGE_LENGTH,
     "reply_to_mentions_replies": True,
     "scan_images": False,
-    "scan_images_mode": ScanImageMode.LLM.value,
-    "scan_images_model": DEFAULT_LLM_MODEL,
+    "scan_images_model": None,
     "max_image_size": DEFAULT_IMAGE_UPLOAD_LIMIT,
     "model": DEFAULT_LLM_MODEL,
     "custom_text_prompt": None,
