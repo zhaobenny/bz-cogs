@@ -1,9 +1,8 @@
 import asyncio
-import io
 import logging
+import re
 from collections import defaultdict
 from copy import copy
-import re
 from typing import List, Union
 
 import aiohttp
@@ -14,7 +13,7 @@ from redbot.core.bot import Red
 
 from aimage.abc import CompositeMetaClass
 from aimage.common.constants import (DEFAULT_BADWORDS_BLACKLIST,
-                                     DEFAULT_NEGATIVE_PROMPT, API_Type)
+                                     DEFAULT_NEGATIVE_PROMPT)
 from aimage.common.params import ImageGenParams
 from aimage.image_handler import ImageHandler
 from aimage.settings import Settings
@@ -35,7 +34,6 @@ class AImage(Settings,
 
         default_guild = {
             "endpoint": None,
-            "api_type": API_Type.AUTOMATIC1111.value,
             "nsfw": True,
             "nsfw_sensitivity": -0.025,
             "nsfw_blurred": False,
@@ -320,22 +318,3 @@ class AImage(Settings,
             can = False
         return can
 
-    async def get_api_instance(self, ctx: Union[commands.Context, discord.Interaction]):
-        api_type = await self.config.guild(ctx.guild).api_type()
-        if api_type == API_Type.AUTOMATIC1111.value:
-            from aimage.apis.a1111 import A1111
-            instance = A1111(self, ctx)
-        elif api_type == API_Type.AIHorde.value:
-            from aimage.apis.aihorde import AIHorde
-            instance = AIHorde(self, ctx)
-        await instance._init()
-        return instance
-
-    async def _update_autocomplete_cache(self, ctx: Union[commands.Context, discord.Interaction]):
-        api = await self.get_api_instance(ctx)
-        try:
-            logger.debug(f"Ran a update to get possible autocomplete terms in server {ctx.guild.id}")
-            await api.update_autocomplete_cache(self.autocomplete_cache)
-        except NotImplementedError:
-            logger.debug(f"Autocomplete terms is not supported by the api in server {ctx.guild.id}")
-            pass

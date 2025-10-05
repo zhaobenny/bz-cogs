@@ -1,10 +1,4 @@
 import re
-from enum import Enum
-
-
-class API_Type(Enum):
-    AUTOMATIC1111 = "Automatic1111"
-    AIHorde = "AI Horde"
 
 
 DEFAULT_NEGATIVE_PROMPT = "(worst quality, low quality:1.4)"
@@ -95,4 +89,38 @@ PARAMS_BLACKLIST = [
     "Template",
     "ADetailer confidence", "ADetailer mask", "ADetailer dilate", "ADetailer denoising", "ADetailer steps",
     "ADetailer inpaint", "ADetailer version", "ADetailer prompt", "ADetailer use", "ADetailer checkpoint",
+]
+
+CACHE_MAPPING = {
+    "upscalers": "upscalers",
+    "scripts": "scripts",
+    "loras": "loras",
+    "sd-models": "checkpoints",
+    "sd-vae": "vaes",
+    "samplers": "samplers",
+    "prompt-styles": "styles"
+}
+
+A1111_SAMPLERS = [
+    "DPM++ 2M",
+    "DPM++ SDE",
+    "DPM++ 2M SDE",
+    "DPM++ 2M SDE Heun",
+    "DPM++ 2S a",
+    "DPM++ 3M SDE",
+    "Euler a",
+    "Euler",
+    "LMS",
+    "Heun",
+    "DPM2",
+    "DPM2 a",
+    "DPM fast",
+    "DPM adaptive",
+    "Restart",
+    "DDIM",
+    "DDIM CFG++",
+    "PLMS",
+    "UniPC",
+    "LCM",
+    "DDPM"
 ]
