@@ -1,12 +1,12 @@
 import asyncio
 import logging
 import struct
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncIterator
+from typing import TYPE_CHECKING, AsyncIterator
 
-import aiosqlite
-import sqlite_vec
+import pysqlite3
 import tiktoken
 from fastembed import TextEmbedding
 from fastembed.common.types import NumpyArray
@@ -14,13 +14,21 @@ from fastembed.common.types import NumpyArray
 from aiuser.config.constants import EMBEDDING_MODEL, FALLBACK_TOKENIZER
 from aiuser.utils.utilities import encode_text_to_tokens
 
+sys.modules["sqlite3"] = pysqlite3
+
+if TYPE_CHECKING:
+    import aiosqlite
+
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 @asynccontextmanager
-async def get_conn(path: str) -> AsyncIterator[aiosqlite.Connection]:
+async def get_conn(path: str) -> AsyncIterator["aiosqlite.Connection"]:
+    import aiosqlite
+    import sqlite_vec
+
     conn = await aiosqlite.connect(path)
-    if not hasattr(conn, "enable_load_extension"):
+    if not hasattr(conn, "enable_load_extension"): # TODO: remove after further testing
         logger.exception(
             """Your Python's SQLite distribution may not be compiled with loadable extensions enabled.\n 
             This is required for sqlite-vec to work. Please refer to https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.enable_load_extension for more information."""
@@ -31,7 +39,8 @@ async def get_conn(path: str) -> AsyncIterator[aiosqlite.Connection]:
         await conn.load_extension(sqlite_vec.loadable_path())
         await conn.enable_load_extension(False)
 
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE VIRTUAL TABLE IF NOT EXISTS memories USING vec0(
                 guild_id integer,
                 memory_name text,
@@ -39,7 +48,8 @@ async def get_conn(path: str) -> AsyncIterator[aiosqlite.Connection]:
                 memory_text text,
                 last_updated integer
             )
-        """)
+        """
+        )
         await conn.execute("PRAGMA user_version = 1;")
         await conn.commit()
         yield conn
