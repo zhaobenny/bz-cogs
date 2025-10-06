@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import struct
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -13,10 +14,18 @@ from fastembed.common.types import NumpyArray
 from aiuser.config.constants import EMBEDDING_MODEL, FALLBACK_TOKENIZER
 from aiuser.utils.utilities import encode_text_to_tokens
 
+logger = logging.getLogger("red.bz_cogs.aiuser")
+
 
 @asynccontextmanager
 async def get_conn(path: str) -> AsyncIterator[aiosqlite.Connection]:
     conn = await aiosqlite.connect(path)
+    if not hasattr(conn, "enable_load_extension"):
+        logger.exception(
+            """Your Python's SQLite distribution may not be compiled with loadable extensions enabled.\n 
+            This is required for sqlite-vec to work. Please refer to https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.enable_load_extension for more information."""
+        )
+        raise RuntimeError("SQLite loadable extensions are not enabled.")
     try:
         await conn.enable_load_extension(True)
         await conn.load_extension(sqlite_vec.loadable_path())

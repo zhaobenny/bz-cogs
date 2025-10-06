@@ -47,12 +47,16 @@ class MemorySettings(MixinMeta):
     @memory.command(name="list")
     async def list_memory(self, ctx: commands.Context):
         """Shows all memories stored."""
-        async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
-            cursor = await conn.execute(
-                "SELECT rowid, memory_name FROM memories WHERE guild_id = ? ORDER BY rowid",
-                (ctx.guild.id,),
-            )
-            memories = await cursor.fetchall()
+        try:
+            async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
+                cursor = await conn.execute(
+                    "SELECT rowid, memory_name FROM memories WHERE guild_id = ? ORDER BY rowid",
+                    (ctx.guild.id,),
+                )
+                memories = await cursor.fetchall()
+        except Exception:
+            logger.exception("Disconnection failed")
+            return await ctx.message.add_reaction("⚠️")
 
         if not memories:
             embed = discord.Embed(
@@ -97,12 +101,16 @@ class MemorySettings(MixinMeta):
     @memory.command(name="show")
     async def show_memory(self, ctx: commands.Context, memory_id: int):
         """Shows a memory by ID."""
-        async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
-            cursor = await conn.execute(
-                "SELECT memory_name, memory_text FROM memories WHERE rowid = ? AND guild_id = ?",
-                (memory_id, ctx.guild.id),
-            )
-            memory = await cursor.fetchone()
+        try:
+            async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
+                cursor = await conn.execute(
+                    "SELECT memory_name, memory_text FROM memories WHERE rowid = ? AND guild_id = ?",
+                    (memory_id, ctx.guild.id),
+                )
+                memory = await cursor.fetchone()
+        except Exception:
+            logger.exception("Disconnection failed")
+            return await ctx.message.add_reaction("⚠️")
 
         if not memory:
             embed = discord.Embed(
@@ -167,56 +175,64 @@ class MemorySettings(MixinMeta):
         embedding = await embed_text(memory_text, cog_data_path(self))
 
         current_timestamp = int(time.time())
-        async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
-            cursor = await conn.execute(
-                """
-                INSERT INTO memories (guild_id, memory_vector, memory_name, memory_text, last_updated)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    ctx.guild.id,
-                    serialize_f32(embedding),
-                    memory_name,
-                    memory_text,
-                    current_timestamp,
-                ),
-            )
-            memory_id = cursor.lastrowid
-            await conn.commit()
+        try:
+            async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
+                cursor = await conn.execute(
+                    """
+                    INSERT INTO memories (guild_id, memory_vector, memory_name, memory_text, last_updated)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        ctx.guild.id,
+                        serialize_f32(embedding),
+                        memory_name,
+                        memory_text,
+                        current_timestamp,
+                    ),
+                )
+                memory_id = cursor.lastrowid
+                await conn.commit()
 
-            embed = discord.Embed(
-                title="Memory Added",
-                description=f"Successfully added memory: #`{memory_id}` - `{memory_name}` ",
-                color=await ctx.embed_color(),
-            )
-            embed.set_footer(
-                text="This feature is WIP! Breaking changes could happen! (such as losing all saved memories)"
-            )
-            return await ctx.send(embed=embed)
+                embed = discord.Embed(
+                    title="Memory Added",
+                    description=f"Successfully added memory: #`{memory_id}` - `{memory_name}` ",
+                    color=await ctx.embed_color(),
+                )
+                embed.set_footer(
+                    text="This feature is WIP! Breaking changes could happen! (such as losing all saved memories)"
+                )
+                return await ctx.send(embed=embed)
+        except Exception:
+            logger.exception("Disconnection failed")
+            return await ctx.message.add_reaction("⚠️")
 
     @memory.command(name="remove", aliases=["delete"])
     async def remove_memory(self, ctx: commands.Context, memory_id: int):
         """Removes a memory by ID."""
-        async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
-            cursor = await conn.execute(
-                "SELECT memory_name FROM memories WHERE rowid = ? AND guild_id = ?",
-                (memory_id, ctx.guild.id),
-            )
-            row = await cursor.fetchone()
-
-            if not row:
-                embed = discord.Embed(
-                    title="Memory Not Found!",
-                    description=f"No memory found with ID `{memory_id}`.",
-                    color=discord.Color.red(),
+        try:
+            async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
+                cursor = await conn.execute(
+                    "SELECT memory_name FROM memories WHERE rowid = ? AND guild_id = ?",
+                    (memory_id, ctx.guild.id),
                 )
-                return await ctx.send(embed=embed)
+                row = await cursor.fetchone()
 
-            await conn.execute(
-                "DELETE FROM memories WHERE rowid = ? AND guild_id = ?",
-                (memory_id, ctx.guild.id),
-            )
-            await conn.commit()
+                if not row:
+                    embed = discord.Embed(
+                        title="Memory Not Found!",
+                        description=f"No memory found with ID `{memory_id}`.",
+                        color=discord.Color.red(),
+                    )
+                    return await ctx.send(embed=embed)
+
+                await conn.execute(
+                    "DELETE FROM memories WHERE rowid = ? AND guild_id = ?",
+                    (memory_id, ctx.guild.id),
+                )
+                await conn.commit()
+        except Exception:
+            logger.exception("Disconnection failed")
+            return await ctx.message.add_reaction("⚠️")
 
         embed = discord.Embed(
             title="Memory Removed",
