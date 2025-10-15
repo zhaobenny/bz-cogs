@@ -55,7 +55,7 @@ class MemorySettings(MixinMeta):
                 )
                 memories = await cursor.fetchall()
         except Exception:
-            logger.exception("Disconnection failed")
+            logger.exception("SQLite operation did not succeed")
             return await ctx.message.add_reaction("⚠️")
 
         if not memories:
@@ -109,7 +109,7 @@ class MemorySettings(MixinMeta):
                 )
                 memory = await cursor.fetchone()
         except Exception:
-            logger.exception("Disconnection failed")
+            logger.exception("SQLite operation did not succeed")
             return await ctx.message.add_reaction("⚠️")
 
         if not memory:
@@ -203,7 +203,7 @@ class MemorySettings(MixinMeta):
                 )
                 return await ctx.send(embed=embed)
         except Exception:
-            logger.exception("Disconnection failed")
+            logger.exception("SQLite operation did not succeed")
             return await ctx.message.add_reaction("⚠️")
 
     @memory.command(name="remove", aliases=["delete"])
@@ -231,7 +231,7 @@ class MemorySettings(MixinMeta):
                 )
                 await conn.commit()
         except Exception:
-            logger.exception("Disconnection failed")
+            logger.exception("SQLite operation did not succeed")
             return await ctx.message.add_reaction("⚠️")
 
         embed = discord.Embed(
