@@ -102,6 +102,8 @@ DEFAULT_GUILD = {
     "conversation_reply_time": 20,
     "grok_trigger": False,
     "custom_model_tokens_limit": None,
+    "searxng_url": None,
+    "searxng_max_results": 5,
 }
 
 DEFAULT_CHANNEL = {

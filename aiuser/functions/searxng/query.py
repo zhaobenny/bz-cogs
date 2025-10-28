@@ -11,25 +11,24 @@ from aiuser.utils.utilities import contains_youtube_link
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
-SEARXNG_ENDPOINT = "https://search.collective.lan/search"
-MAX_RESULTS = 5
 WORDS_LIMIT = 5000
 
 
-async def search_searxng(query: str, ctx: commands.Context):
-    return await SearXNGQuery(query, ctx).execute_search()
+async def search_searxng(query: str, endpoint: str, results: int, ctx: commands.Context):
+    return await SearXNGQuery(query, endpoint, results, ctx).execute_search()
 
 
 class SearXNGQuery:
-    def __init__(self, query: str, ctx: commands.Context):
+    def __init__(self, query: str, endpoint: str, results: int, ctx: commands.Context):
         self.query = query
         self.guild = ctx.guild.name
+        self.endpoint = endpoint
+        self.results = results
 
     async def execute_search(self):
         params = {}
         params["q"] = self.query
         params["format"] = "json"
-        payload = json.dumps({"q": self.query, "format": "json"})
         headers = {'Content-Type': 'application/json'}
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = False
@@ -37,12 +36,12 @@ class SearXNGQuery:
 
         try:
             async with aiohttp.ClientSession(headers=headers) as session:
-                async with session.get(SEARXNG_ENDPOINT, params=params, ssl=ssl_context) as response:
+                async with session.get(self.endpoint, params=params, ssl=ssl_context) as response:
                     response.raise_for_status()
-                    logger.info(f"Requesting {response.real_url} from search query \"{self.query}\" in {self.guild}")
+                    logger.debug(f"Requesting {response.real_url} from search query \"{self.query}\" in {self.guild}")
 
                     if response.content_type != "application/json":
-                        logger.info(f"Reponse: {await response.text()}")
+                        logger.debug(f"Reponse: {await response.text()}")
                         return "An error occured while searching."
                     else:
                         data = await response.json()
@@ -56,7 +55,12 @@ class SearXNGQuery:
         """Return data to the LLM."""
 
         results_json = []
+        x = 0
         for result in data["results"]:
+            if contains_youtube_link(result["url"]):
+                continue
+            if x >= self.results:
+                break
             title_site = self.remove_emojis(result["title"])
             url_site = result["url"]
             snippet = result.get("content", "")
@@ -73,11 +77,12 @@ class SearXNGQuery:
                     "content": truncated_content,
                     "snippet": self.remove_emojis(snippet),
                 })
+                x += 1
 
             except Exception as e:
-                return None
+                continue
 
-        return results_json[:MAX_RESULTS]
+        return results_json[:self.results]
 
 
     def remove_emojis(self, text):

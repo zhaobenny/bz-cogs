@@ -15,6 +15,7 @@ from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.random_message import RandomMessageSettings
 from aiuser.settings.response import ResponseSettings
 from aiuser.settings.triggers import TriggerSettings
+from aiuser.settings.searxng import SearXNGSettings
 from aiuser.settings.utilities import (
     get_available_models,
     get_config_attribute,
@@ -40,6 +41,7 @@ class Settings(
     OwnerSettings,
     RandomMessageSettings,
     FunctionCallingSettings,
+    SearXNGSettings,
     MixinMeta,
 ):
     @commands.group(aliases=["ai_user"])
