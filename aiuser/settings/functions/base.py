@@ -44,6 +44,7 @@ class FunctionCallingSettings(FunctionsGroupMixin, WeatherFunctionSettings, Imag
         from aiuser.functions.noresponse.tool_call import NoResponseToolCall
         from aiuser.functions.scrape.tool_call import ScrapeToolCall
         from aiuser.functions.search.tool_call import SearchToolCall
+        from aiuser.functions.searxng.tool_call import SearXNGToolCall
         from aiuser.functions.weather.tool_call import (
             IsDaytimeToolCall,
             LocationWeatherToolCall,
@@ -59,6 +60,7 @@ class FunctionCallingSettings(FunctionsGroupMixin, WeatherFunctionSettings, Imag
             ],
             "image request": [ImageRequestToolCall.function_name],
             "search": [SearchToolCall.function_name],
+            "searxng": [SearXNGToolCall.function_name],
             "scrape": [ScrapeToolCall.function_name],
             "no response": [NoResponseToolCall.function_name],
             "wolfram alpha": [WolframAlphaFunctionCall.function_name],
@@ -140,6 +142,15 @@ class FunctionCallingSettings(FunctionsGroupMixin, WeatherFunctionSettings, Imag
 
         tool_names = [SearchToolCall.function_name]
         await self.toggle_function_group(ctx, tool_names, "Search")
+
+    @functions.command(name="searxng")
+    async def toggle_searxg_function(self, ctx: commands.Context):
+        """ Enable/disable searching/scraping the Internet using SearXNG """
+        from aiuser.functions.searxng.tool_call import SearXNGToolCall
+
+        tool_names = [SearXNGToolCall.function_name]
+
+        await self.toggle_function_group(ctx, tool_names, "SearXNG")             
 
     @functions.command(name="scrape")
     async def toggle_scrape_function(self, ctx: commands.Context):
