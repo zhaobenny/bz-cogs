@@ -1,21 +1,27 @@
-import logging
-
 import discord
-from redbot.core import checks, commands
+from redbot.core import commands
 
-from aiuser.types.abc import MixinMeta, aiuser
+from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
 
-class SearXNGSettings(MixinMeta):
-    @aiuser.group()
-    @checks.is_owner()
-    async def searxng(self, _):
+class SearXNGFunctionSettings(FunctionToggleHelperMixin):
+    @functions.group(name="searxng")
+    async def searxng(self, ctx: commands.Context):
         """ Change the SearXNG setting
 
             (All subcommands are per server)
         """
         pass
+
+    @searxng.command(name="toggle")
+    async def searxng_toggle(self, ctx: commands.Context):
+        """Toggle the image request function on or off"""
+        from aiuser.functions.searxng.tool_call import SearXNGToolCall
+
+        await self.toggle_function_group(
+            ctx, [SearXNGToolCall.function_name], "SearXNG"
+        )
+
 
     @searxng.command(name="endpoint")
     async def searxng_endpoint(self, ctx: commands.Context, url: str):
@@ -24,9 +30,8 @@ class SearXNGSettings(MixinMeta):
         **Arguments:**
         - `url`: The url to set the endpoint to.
         """
-
         embed = discord.Embed(
-            title="Bot SearXNG endpoint", color=await ctx.embed_color()
+            title="SearXNG endpoint", color=await ctx.embed_color()
         )
 
         await self.config.guild(ctx.guild).searxng_url.set(url)
