@@ -23,7 +23,6 @@ class SearXNGToolCall(ToolCall):
 
     async def _handle(self, arguments):
         """Handle the function call."""
-        config = await self.config.guild(self.ctx.guild).get_raw()
-        endpoint = config['searxng_url']
-        results = config['searxng_max_results']        
+        endpoint = await self.config.guild(self.ctx.guild).function_calling_searxng_url()
+        results = await self.config.guild(self.ctx.guild).function_calling_searxng_max_results()
         return await search_searxng(arguments["query"], endpoint, results, self.ctx)
