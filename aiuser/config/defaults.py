@@ -85,8 +85,8 @@ DEFAULT_GUILD = {
     "custom_model_tokens_limit": None,
     "always_reply_on_words": [],
     "query_memories": False,
-    "searxng_url": None,
-    "searxng_max_results": 5,    
+    "function_calling_searxng_url": None,
+    "function_calling_searxng_max_results": 5,    
 }
 
 DEFAULT_CHANNEL = {"custom_text_prompt": None, "reply_percent": None}
