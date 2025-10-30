@@ -15,6 +15,9 @@ WORDS_LIMIT = 5000
 
 
 async def search_searxng(query: str, endpoint: str, results: int, ctx: commands.Context):
+    if not endpoint:
+        logger.error("SearXNG endpoint missing.")
+        return "SearXNG endpoing missing."
     return await SearXNGQuery(query, endpoint, results, ctx).execute_search()
 
 
