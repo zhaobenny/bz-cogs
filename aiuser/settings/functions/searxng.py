@@ -60,8 +60,8 @@ class SearXNGFunctionSettings(FunctionToggleHelperMixin):
     async def searxng_show_config(self, ctx: commands.Context):
         """Shows the SearXNG settings."""
 
-        endpoint = await self.config.guild(ctx.guild).searxng_url()
-        results = await self.config.guild(ctx.guild).searxng_max_results()
+        endpoint = await self.config.guild(ctx.guild).function_calling_searxng_url()
+        results = await self.config.guild(ctx.guild).function_calling_searxng_max_results()
 
         embed = discord.Embed(
             title="SearXNG settings:",
