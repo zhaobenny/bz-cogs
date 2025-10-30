@@ -28,5 +28,5 @@ class SearXNGToolCall(ToolCall):
         """Handle the function call."""
         endpoint = await request.config.guild(self.ctx.guild).function_calling_searxng_url()
         results = await request.config.guild(self.ctx.guild).function_calling_searxng_max_results()
-        logger.info(f'Attempting SearXNG url {endpoint} in {self.ctx.guild}')
+        logger.debug(f'Attempting SearXNG url {endpoint} in {self.ctx.guild}')
         return await search_searxng(arguments["query"], endpoint, results, self.ctx)
