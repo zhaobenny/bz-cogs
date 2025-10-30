@@ -21,7 +21,7 @@ class SearXNGToolCall(ToolCall):
         )))
     function_name = schema.function.name
 
-    async def _handle(self, arguments):
+    async def _handle(self, _, arguments):
         """Handle the function call."""
         endpoint = await self.config.guild(self.ctx.guild).function_calling_searxng_url()
         results = await self.config.guild(self.ctx.guild).function_calling_searxng_max_results()
