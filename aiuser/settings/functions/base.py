@@ -2,6 +2,7 @@ import discord
 from redbot.core import commands
 
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
+from aiuser.settings.functions.searxng import SearXNGFunctionSettings
 from aiuser.settings.functions.utilities import (
     FunctionsGroupMixin,
     functions,
@@ -9,7 +10,12 @@ from aiuser.settings.functions.utilities import (
 from aiuser.settings.functions.weather import WeatherFunctionSettings
 
 
-class FunctionCallingSettings(FunctionsGroupMixin, WeatherFunctionSettings, ImageRequestFunctionSettings):
+class FunctionCallingSettings(
+    FunctionsGroupMixin,
+    WeatherFunctionSettings,
+    ImageRequestFunctionSettings,
+    SearXNGFunctionSettings,
+):
     @functions.command(name="toggle")
     async def toggle_function_calling(self, ctx: commands.Context):
         """Toggle functions calling
@@ -44,6 +50,7 @@ class FunctionCallingSettings(FunctionsGroupMixin, WeatherFunctionSettings, Imag
         from aiuser.functions.noresponse.tool_call import NoResponseToolCall
         from aiuser.functions.scrape.tool_call import ScrapeToolCall
         from aiuser.functions.search.tool_call import SearchToolCall
+        from aiuser.functions.searxng.tool_call import SearXNGToolCall
         from aiuser.functions.weather.tool_call import (
             IsDaytimeToolCall,
             LocationWeatherToolCall,
@@ -59,6 +66,7 @@ class FunctionCallingSettings(FunctionsGroupMixin, WeatherFunctionSettings, Imag
             ],
             "image request": [ImageRequestToolCall.function_name],
             "search": [SearchToolCall.function_name],
+            "searxng": [SearXNGToolCall.function_name],
             "scrape": [ScrapeToolCall.function_name],
             "no response": [NoResponseToolCall.function_name],
             "wolfram alpha": [WolframAlphaFunctionCall.function_name],

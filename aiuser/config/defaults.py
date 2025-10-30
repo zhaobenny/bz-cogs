@@ -79,6 +79,8 @@ DEFAULT_GUILD = {
     "function_calling_image_custom_endpoint": None,
     "function_calling_image_model": None,
     "function_calling_image_preprompt": None,
+    "function_calling_searxng_url": None,
+    "function_calling_searxng_max_results": 5,
     "conversation_reply_percent": 0,
     "conversation_reply_time": 20,
     "grok_trigger": False,
