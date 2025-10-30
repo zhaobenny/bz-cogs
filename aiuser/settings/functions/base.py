@@ -2,6 +2,7 @@ import discord
 from redbot.core import commands
 
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
+from aiuser.settings.functions.searxng import SearXNGFunctionSettings
 from aiuser.settings.functions.utilities import (
     FunctionsGroupMixin,
     functions,
@@ -9,7 +10,12 @@ from aiuser.settings.functions.utilities import (
 from aiuser.settings.functions.weather import WeatherFunctionSettings
 
 
-class FunctionCallingSettings(FunctionsGroupMixin, WeatherFunctionSettings, ImageRequestFunctionSettings):
+class FunctionCallingSettings(
+    FunctionsGroupMixin,
+    WeatherFunctionSettings,
+    ImageRequestFunctionSettings,
+    SearXNGFunctionSettings,
+):
     @functions.command(name="toggle")
     async def toggle_function_calling(self, ctx: commands.Context):
         """Toggle functions calling
@@ -142,15 +148,6 @@ class FunctionCallingSettings(FunctionsGroupMixin, WeatherFunctionSettings, Imag
 
         tool_names = [SearchToolCall.function_name]
         await self.toggle_function_group(ctx, tool_names, "Search")
-
-    @functions.command(name="searxng")
-    async def toggle_searxg_function(self, ctx: commands.Context):
-        """ Enable/disable searching/scraping the Internet using SearXNG """
-        from aiuser.functions.searxng.tool_call import SearXNGToolCall
-
-        tool_names = [SearXNGToolCall.function_name]
-
-        await self.toggle_function_group(ctx, tool_names, "SearXNG")             
 
     @functions.command(name="scrape")
     async def toggle_scrape_function(self, ctx: commands.Context):
