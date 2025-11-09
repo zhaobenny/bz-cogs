@@ -137,8 +137,7 @@ class MessagesThread:
         relevant_memory = await self.memory_retriever.fetch_relevant(
             self.init_message.content
         )
-        if relevant_memory:
-            await self.add_system(relevant_memory, index=len(self.messages_ids))
+        return (await self.add_system(relevant_memory, index=len(self.messages_ids))) if relevant_memory else None
 
     def get_json(self):
         return [

@@ -20,6 +20,6 @@ REGEX_RUN_TIMEOUT = 5
 OPENROUTER_URL = "https://openrouter.ai/api/"
 
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-EMBEDDING_DB_NAME = "embeddings.db"
+EMBEDDING_DB_NAME = "lancedb"
 
 GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image-preview"
