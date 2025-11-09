@@ -36,6 +36,6 @@ class MemoryRetriever:
             return None
 
         if memory_results and memory_results[0][2] < threshold:
-            return f"Looking into your memory, the following most relevant memory was found: {memory_results[0][1]}"
+            return f"Looking into your memory, the following relevant memory was found that could be used in the response: `{memory_results[0][1]}`"
 
         return None

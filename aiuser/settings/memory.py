@@ -27,7 +27,10 @@ class MemorySettings(MixinMeta):
     @memory.command(name="toggle")
     @commands.has_permissions(manage_guild=True)
     async def toggle_memory_usage(self, ctx: commands.Context):
-        """Enable/disable querying saved memories whenever responding to a message"""
+        """Enable/disable querying saved memories whenever responding to a message
+
+           (Via just comparing semantic similarity of the previous message, no tool calling yet!)
+        """
         current = await self.config.guild(ctx.guild).query_memories()
         new_value = not current
         await self.config.guild(ctx.guild).query_memories.set(new_value)
