@@ -1,6 +1,7 @@
 import re
 from abc import ABC
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from openai import AsyncOpenAI
 from redbot.core import Config, commands
@@ -8,6 +9,9 @@ from redbot.core.bot import Red
 
 from aiuser.context.entry import MessageEntry
 from aiuser.utils.cache import Cache
+
+if TYPE_CHECKING:
+    from aiuser.utils.vectorstore import VectorStore
 
 
 # for other settings to use
@@ -32,4 +36,5 @@ class MixinMeta(ABC):
         self.ignore_regex: dict[int, re.Pattern]
         self.channels_whitelist: dict[int, list[int]]
         self.openai_client: AsyncOpenAI
-        self.optindefault: dict[int, bool] 
+        self.optindefault: dict[int, bool]
+        self.db: VectorStore

@@ -3,12 +3,9 @@ import time
 
 import discord
 from redbot.core import commands
-from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.menus import SimpleMenu
 
-from aiuser.config.constants import EMBEDDING_DB_NAME
 from aiuser.types.abc import MixinMeta, aiuser
-from aiuser.utils.embeddings import embed_text, get_conn, serialize_f32
 from aiuser.utils.utilities import encode_text_to_tokens
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -19,8 +16,8 @@ class MemorySettings(MixinMeta):
     @commands.has_permissions(manage_guild=True)
     async def memory(self, _):
         """
-        **This feature is WIP! Manual memory creation / English is only supported for now.
-        Breaking changes could happen! (such as losing all saved memories)**
+        This feature is **WIP**! Manual memory creation / English is only supported for now.
+        Breaking changes could happen! (such as losing all saved memories)
 
         Manages saved memory settings
         (All subcommands are per server)
@@ -30,7 +27,10 @@ class MemorySettings(MixinMeta):
     @memory.command(name="toggle")
     @commands.has_permissions(manage_guild=True)
     async def toggle_memory_usage(self, ctx: commands.Context):
-        """Enable/disable querying saved memories whenever responding to a message"""
+        """Enable/disable querying saved memories whenever responding to a message
+
+           (Via just comparing semantic similarity of the previous message, no tool calling yet!)
+        """
         current = await self.config.guild(ctx.guild).query_memories()
         new_value = not current
         await self.config.guild(ctx.guild).query_memories.set(new_value)
@@ -48,14 +48,9 @@ class MemorySettings(MixinMeta):
     async def list_memory(self, ctx: commands.Context):
         """Shows all memories stored."""
         try:
-            async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
-                cursor = await conn.execute(
-                    "SELECT rowid, memory_name FROM memories WHERE guild_id = ? ORDER BY rowid",
-                    (ctx.guild.id,),
-                )
-                memories = await cursor.fetchall()
+            memories = await self.db.list(ctx.guild.id)
         except Exception:
-            logger.exception("SQLite operation did not succeed")
+            logger.exception("Memory listing did not succeed")
             return await ctx.message.add_reaction("⚠️")
 
         if not memories:
@@ -102,14 +97,9 @@ class MemorySettings(MixinMeta):
     async def show_memory(self, ctx: commands.Context, memory_id: int):
         """Shows a memory by ID."""
         try:
-            async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
-                cursor = await conn.execute(
-                    "SELECT memory_name, memory_text FROM memories WHERE rowid = ? AND guild_id = ?",
-                    (memory_id, ctx.guild.id),
-                )
-                memory = await cursor.fetchone()
+            memory = await self.db.fetch_by_rowid(memory_id, ctx.guild.id)
         except Exception:
-            logger.exception("SQLite operation did not succeed")
+            logger.exception("Memory fetch did not succeed")
             return await ctx.message.add_reaction("⚠️")
 
         if not memory:
@@ -163,75 +153,52 @@ class MemorySettings(MixinMeta):
         memory_name = memory_name.strip()
         memory_text = memory_text.strip()
 
-        if await encode_text_to_tokens(memory_text) > 512:
+        if await encode_text_to_tokens(memory_text) > 500:
             embed = discord.Embed(
                 title="Memory too long!",
-                description="Please use a shorter memory!\nMemory text longer than 512 tokens are currently not supported yet.",
+                description="Please use a shorter memory text!\nMemory text longer than 500 tokens are currently not supported yet.",
                 color=discord.Color.red(),
             )
             return await ctx.send(embed=embed)
 
-        # Generate an embedding for the input memory
-        embedding = await embed_text(memory_text, cog_data_path(self))
-
         current_timestamp = int(time.time())
         try:
-            async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
-                cursor = await conn.execute(
-                    """
-                    INSERT INTO memories (guild_id, memory_vector, memory_name, memory_text, last_updated)
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    (
-                        ctx.guild.id,
-                        serialize_f32(embedding),
-                        memory_name,
-                        memory_text,
-                        current_timestamp,
-                    ),
-                )
-                memory_id = cursor.lastrowid
-                await conn.commit()
+            memory_id = await self.db.upsert(
+                ctx.guild.id,
+                memory_name,
+                memory_text,
+                current_timestamp,
+            )
 
-                embed = discord.Embed(
-                    title="Memory Added",
-                    description=f"Successfully added memory: #`{memory_id}` - `{memory_name}` ",
-                    color=await ctx.embed_color(),
-                )
-                embed.set_footer(
-                    text="This feature is WIP! Breaking changes could happen! (such as losing all saved memories)"
-                )
-                return await ctx.send(embed=embed)
+            embed = discord.Embed(
+                title="Memory Added",
+                description=f"Successfully added memory: #`{memory_id}` - `{memory_name}` ",
+                color=await ctx.embed_color(),
+            )
+            embed.set_footer(
+                text="This feature is WIP! Breaking changes could happen! (such as losing all saved memories)"
+            )
+            return await ctx.send(embed=embed)
         except Exception:
-            logger.exception("SQLite operation did not succeed")
+            logger.exception("Memory insert did not succeed")
             return await ctx.message.add_reaction("⚠️")
 
     @memory.command(name="remove", aliases=["delete"])
     async def remove_memory(self, ctx: commands.Context, memory_id: int):
         """Removes a memory by ID."""
         try:
-            async with get_conn(cog_data_path(self) / EMBEDDING_DB_NAME) as conn:
-                cursor = await conn.execute(
-                    "SELECT memory_name FROM memories WHERE rowid = ? AND guild_id = ?",
-                    (memory_id, ctx.guild.id),
+            row = await self.db.fetch_by_rowid(memory_id, ctx.guild.id)
+            if not row:
+                embed = discord.Embed(
+                    title="Memory Not Found!",
+                    description=f"No memory found with ID `{memory_id}`.",
+                    color=discord.Color.red(),
                 )
-                row = await cursor.fetchone()
+                return await ctx.send(embed=embed)
 
-                if not row:
-                    embed = discord.Embed(
-                        title="Memory Not Found!",
-                        description=f"No memory found with ID `{memory_id}`.",
-                        color=discord.Color.red(),
-                    )
-                    return await ctx.send(embed=embed)
-
-                await conn.execute(
-                    "DELETE FROM memories WHERE rowid = ? AND guild_id = ?",
-                    (memory_id, ctx.guild.id),
-                )
-                await conn.commit()
+            await self.db.delete(memory_id, ctx.guild.id)
         except Exception:
-            logger.exception("SQLite operation did not succeed")
+            logger.exception("Memory delete did not succeed")
             return await ctx.message.add_reaction("⚠️")
 
         embed = discord.Embed(

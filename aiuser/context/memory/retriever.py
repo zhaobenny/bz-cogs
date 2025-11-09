@@ -1,11 +1,9 @@
 import logging
-from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from redbot.core import commands
 
-from aiuser.config.constants import EMBEDDING_DB_NAME
-from aiuser.utils.embeddings import embed_text, get_conn, serialize_f32
+from aiuser.utils.vectorstore import VectorStore
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -13,10 +11,9 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 class MemoryRetriever:
     """Handles retrieval of relevant memories using semantic similarity search."""
 
-    def __init__(self, cog_data_path: Path, ctx: commands.Context):
-        self.cog_data_path = cog_data_path
-        self._db_path = cog_data_path / EMBEDDING_DB_NAME
+    def __init__(self, ctx: commands.Context, db: VectorStore):
         self.ctx = ctx
+        self.db = db
 
     async def fetch_relevant(self, query: str, threshold: float = 1.1) -> Optional[str]:
         """
@@ -32,46 +29,13 @@ class MemoryRetriever:
         if not query.strip():
             return None
 
-        # Generate embedding for the query
-        query_embedding = await embed_text(query, self.cog_data_path)
-
-        # Search for similar memories in the database
-        memory_results = await self._search_memories(query_embedding)
-
-        # Return the most relevant memory formatted if it meets the threshold
-        if memory_results and memory_results[0][3] < threshold:
-            return f"Looking into your memory, the following most relevant memory was found: {memory_results[0][2]}"
-
-        return None
-
-    async def _search_memories(self, query_embedding) -> List[Tuple]:
-        """
-        Search for memories in the database using vector similarity.
-
-        Args:
-            query_embedding: The encoded query vector
-
-        Returns:
-            List of tuples containing (rowid, memory_name, memory_text, distance)
-        """
         try:
-            async with get_conn(self._db_path) as conn:
-                cursor = await conn.execute(
-                    """
-                    SELECT
-                        rowid, memory_name, memory_text, 
-                        distance
-                    FROM memories
-                    WHERE memory_vector MATCH ? 
-                    AND guild_id = ?
-                    AND k=1 
-                    ORDER BY distance
-                    """,
-                    [serialize_f32(query_embedding), self.ctx.guild.id],
-                )
-                results = await cursor.fetchall()
-
-            return results
+            memory_results = await self.db.search_similar(query, self.ctx.guild.id, k=1)
         except Exception:
             logger.exception("Database error while searching memories")
-            return []
+            return None
+
+        if memory_results and memory_results[0][2] < threshold:
+            return f"Looking into your memory, the following relevant memory was found that could be used in the response: `{memory_results[0][1]}`"
+
+        return None
