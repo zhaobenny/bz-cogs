@@ -1,5 +1,3 @@
-
-
 import lancedb
 from lancedb.pydantic import LanceModel, Vector
 
@@ -12,7 +10,7 @@ class MemoryModel(LanceModel):
     memory_name: str
     memory_text: str
     last_updated: int
-    embedding: Vector[384]
+    embedding: Vector(384)  # type: ignore[call-arg]
 
 
 async def ensure_lance_db(db: lancedb.db.AsyncConnection) -> None:
@@ -25,4 +23,4 @@ async def ensure_lance_db(db: lancedb.db.AsyncConnection) -> None:
     await db.create_table(MEMORY_TABLE_NAME, schema=MemoryModel, exist_ok=False)
 
     mem_table = await db.open_table(MEMORY_TABLE_NAME)
-    await mem_table.tags.create(SCHEMA_VERSION, await mem_table.version())
+    await mem_table.tags.create(str(SCHEMA_VERSION), await mem_table.version())
