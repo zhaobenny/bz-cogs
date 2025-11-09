@@ -36,8 +36,8 @@ class MemoryRetriever:
         except Exception:
             logger.exception("Database error while searching memories")
             return None
-        
+
         if memory_results and memory_results[0][2] < threshold:
-            return f"Looking into your memory, the following most relevant memory was found: {memory_results[0][2]}"
+            return f"Looking into your memory, the following most relevant memory was found: {memory_results[0][1]}"
 
         return None
