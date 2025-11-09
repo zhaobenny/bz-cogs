@@ -4,17 +4,17 @@ import pytest
 
 pytest.importorskip("lancedb")
 
-from aiuser.utils.vectorstore.repository import Repository
+from aiuser.utils.vectorstore import VectorStore
 
 
 @pytest.fixture
 def repo(tmp_path):
-    repository = Repository(cog_data_path=tmp_path)
+    repository = VectorStore(cog_data_path=tmp_path)
     return repository
 
 
 @pytest.mark.asyncio
-async def test_upsert_and_list(repo: Repository):
+async def test_upsert_and_list(repo: VectorStore):
     n1 = await repo.upsert(123, "red_fox", "I saw a red fox.", 1)
     assert n1 == 1
     n2 = await repo.upsert(123, "blue_sun", "The blue sun winks.", 2)
@@ -25,7 +25,7 @@ async def test_upsert_and_list(repo: Repository):
 
 
 @pytest.mark.asyncio
-async def test_fetch_by_rowid(repo: Repository):
+async def test_fetch_by_rowid(repo: VectorStore):
     # ensure entries exist
     await repo.upsert(123, "green_leaf", "A green leaf dances.", 1)
     await repo.upsert(123, "tiny_star", "A tiny star hums.", 2)
@@ -35,7 +35,7 @@ async def test_fetch_by_rowid(repo: Repository):
 
 
 @pytest.mark.asyncio
-async def test_search_similar(repo: Repository):
+async def test_search_similar(repo: VectorStore):
     await repo.upsert(123, "purple_rain", "Purple rain laughs.", 1)
     await repo.upsert(123, "orange_moon", "Orange moon naps.", 2)
 
@@ -45,7 +45,7 @@ async def test_search_similar(repo: Repository):
 
 
 @pytest.mark.asyncio
-async def test_delete_and_list(repo: Repository):
+async def test_delete_and_list(repo: VectorStore):
     await repo.upsert(123, "swift_owl", "Swift owl blinks.", 1)
     await repo.upsert(123, "lazy_cat", "Lazy cat snores.", 2)
 

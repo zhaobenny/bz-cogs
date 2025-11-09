@@ -9,7 +9,7 @@ from aiuser.utils.vectorstore.embeddings import embed_text
 from aiuser.utils.vectorstore.schema import MEMORY_TABLE_NAME, ensure_lance_db
 
 
-class Repository:
+class VectorStore:
     def __init__(self, cog_data_path: Union[str, Path]):
         self.cog_data_path = Path(cog_data_path)
         self.db: Optional[lancedb.db.AsyncConnection] = None
@@ -72,6 +72,8 @@ class Repository:
         self, rowid: int, guild_id: int
     ) -> Optional[Tuple[str, str]]:
         """Fetch a memory by its 1-based row index for the guild."""
+        await self._connect()
+
         try:
             table = await self.db.open_table(MEMORY_TABLE_NAME)
         except FileNotFoundError:

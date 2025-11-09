@@ -7,6 +7,7 @@ import discord
 from openai import AsyncOpenAI
 from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
+from redbot.core.data_manager import cog_data_path
 
 from aiuser.config.defaults import (
     DEFAULT_CHANNEL,
@@ -22,6 +23,7 @@ from aiuser.dashboard.base import DashboardIntegration
 from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
 from aiuser.utils.cache import Cache
+from aiuser.utils.vectorstore import VectorStore
 
 from .openai_utils import setup_openai_client
 
@@ -45,6 +47,7 @@ class AIUser(
         self.bot: Red = bot
         self.config = Config.get_conf(self, identifier=754070)
         self.openai_client: AsyncOpenAI = None
+        self.db: VectorStore = None
         # cached options
         self.optindefault: dict[int, bool] = {}
         self.channels_whitelist: dict[int, list[int]] = {}
@@ -81,6 +84,12 @@ class AIUser(
             # for development
             test_guild = 744802856074346556
             self.override_prompt_start_time[test_guild] = datetime.now()
+
+        try:
+            self.db = VectorStore(cog_data_path(self))
+            await self.db._connect()
+        except Exception:
+            logger.exception("Failed to initialize vectorstore client on cog load")
 
         self.random_message_trigger.start()
 

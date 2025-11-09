@@ -1,10 +1,9 @@
 import logging
-from pathlib import Path
 from typing import Optional
 
 from redbot.core import commands
 
-from aiuser.utils.vectorstore.repository import Repository
+from aiuser.utils.vectorstore import VectorStore
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -12,9 +11,9 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 class MemoryRetriever:
     """Handles retrieval of relevant memories using semantic similarity search."""
 
-    def __init__(self, cog_data_path: Path, ctx: commands.Context):
-        self.cog_data_path = cog_data_path
+    def __init__(self, ctx: commands.Context, db: VectorStore):
         self.ctx = ctx
+        self.db = db
 
     async def fetch_relevant(self, query: str, threshold: float = 1.1) -> Optional[str]:
         """
@@ -31,8 +30,7 @@ class MemoryRetriever:
             return None
 
         try:
-            repo = Repository(self.cog_data_path)
-            memory_results = await repo.search_similar(query, self.ctx.guild.id, k=1)
+            memory_results = await self.db.search_similar(query, self.ctx.guild.id, k=1)
         except Exception:
             logger.exception("Database error while searching memories")
             return None

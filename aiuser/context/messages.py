@@ -5,7 +5,6 @@ from typing import List
 import discord
 from discord import Message
 from redbot.core import commands
-from redbot.core.data_manager import cog_data_path
 
 from aiuser.context.consent.manager import ConsentManager
 from aiuser.context.converter.converter import MessageConverter
@@ -40,7 +39,7 @@ class MessagesThread:
         self.can_reply = True
         self.converter = MessageConverter(cog, ctx)
         self.consent_manager = ConsentManager(self.config, self.bot, self.guild)
-        self.memory_retriever = MemoryRetriever(cog_data_path(cog), ctx)
+        self.memory_retriever = MemoryRetriever(ctx, db=cog.db)
         self.history_manager = HistoryBuilder(self)
 
     def __len__(self):
@@ -137,7 +136,11 @@ class MessagesThread:
         relevant_memory = await self.memory_retriever.fetch_relevant(
             self.init_message.content
         )
-        return (await self.add_system(relevant_memory, index=len(self.messages_ids))) if relevant_memory else None
+        return (
+            (await self.add_system(relevant_memory, index=len(self.messages_ids)))
+            if relevant_memory
+            else None
+        )
 
     def get_json(self):
         return [
