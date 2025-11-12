@@ -3,12 +3,12 @@ from typing import Optional
 
 from redbot.core import commands
 
-from aiuser.utils.vectorstore import VectorStore
-
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class MemoryRetriever:
+    from aiuser.utils.vectorstore import VectorStore
+
     """Handles retrieval of relevant memories using semantic similarity search."""
 
     def __init__(self, ctx: commands.Context, db: VectorStore):

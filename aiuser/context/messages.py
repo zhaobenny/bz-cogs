@@ -39,7 +39,9 @@ class MessagesThread:
         self.can_reply = True
         self.converter = MessageConverter(cog, ctx)
         self.consent_manager = ConsentManager(self.config, self.bot, self.guild)
-        self.memory_retriever = MemoryRetriever(ctx, db=cog.db)
+        self.memory_retriever = None
+        if cog.db:
+            self.memory_retriever = MemoryRetriever(ctx, db=cog.db)
         self.history_manager = HistoryBuilder(self)
 
     def __len__(self):
@@ -128,7 +130,10 @@ class MessagesThread:
         await self._add_tokens(content)
 
     async def add_history(self):
-        if await self.config.guild(self.guild).query_memories():
+        if (
+            await self.config.guild(self.guild).query_memories()
+            and self.memory_retriever
+        ):
             await self.insert_relevant_memory()
         await self.history_manager.add_history()
 

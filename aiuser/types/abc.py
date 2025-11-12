@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 from abc import ABC
 from datetime import datetime
@@ -37,4 +39,4 @@ class MixinMeta(ABC):
         self.channels_whitelist: dict[int, list[int]]
         self.openai_client: AsyncOpenAI
         self.optindefault: dict[int, bool]
-        self.db: VectorStore
+        self.db: "VectorStore | None"
