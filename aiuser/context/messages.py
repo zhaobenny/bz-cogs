@@ -10,7 +10,6 @@ from aiuser.context.consent.manager import ConsentManager
 from aiuser.context.converter.converter import MessageConverter
 from aiuser.context.entry import MessageEntry
 from aiuser.context.history.builder import HistoryBuilder
-from aiuser.context.memory.retriever import MemoryRetriever
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import encode_text_to_tokens
 
@@ -41,6 +40,7 @@ class MessagesThread:
         self.consent_manager = ConsentManager(self.config, self.bot, self.guild)
         self.memory_retriever = None
         if cog.db:
+            from aiuser.context.memory.retriever import MemoryRetriever
             self.memory_retriever = MemoryRetriever(ctx, db=cog.db)
         self.history_manager = HistoryBuilder(self)
 
