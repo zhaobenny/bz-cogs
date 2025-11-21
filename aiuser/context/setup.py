@@ -1,5 +1,6 @@
 from typing import Optional
 
+import discord
 from redbot.core import commands
 
 from aiuser.config.defaults import DEFAULT_PROMPT
@@ -55,12 +56,18 @@ class ThreadSetup:
         author = self.ctx.message.author
         role_prompt: Optional[str] = None
 
-        for role in author.roles:
-            if role.id in (await self.config.all_roles()):
-                role_prompt = await self.config.role(role).custom_text_prompt()
-                break
+        # Webhook messages have User objects instead of Member objects
+        if isinstance(author, discord.Member):
+            for role in author.roles:
+                if role.id in (await self.config.all_roles()):
+                    role_prompt = await self.config.role(role).custom_text_prompt()
+                    break
 
-        return (await self.config.member(author).custom_text_prompt()
+            member_prompt = await self.config.member(author).custom_text_prompt()
+        else:
+            member_prompt = None
+
+        return (member_prompt
                 or role_prompt
                 or await self.config.channel(self.ctx.channel).custom_text_prompt()
                 or await self.config.guild(self.guild).custom_text_prompt()

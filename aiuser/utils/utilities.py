@@ -46,7 +46,11 @@ async def format_variables(ctx: commands.Context, text: str):
     app_info = await ctx.bot.application_info()
     botowner = app_info.owner.name
     authorname = ctx.message.author.display_name
-    authortoprole = ctx.message.author.top_role.name
+    # Webhook messages have User objects instead of Member objects
+    if isinstance(ctx.message.author, discord.Member):
+        authortoprole = ctx.message.author.top_role.name
+    else:
+        authortoprole = "Webhook"  # Default for webhook messages
     authormention = ctx.message.author.mention
 
     servername = ctx.guild.name

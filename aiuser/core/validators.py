@@ -37,7 +37,7 @@ async def is_valid_message(cog: MixinMeta, ctx: commands.Context) -> bool:
     return True
 
 
-async def check_openai_client(cog: MixinMeta, _ : commands.Context) -> Tuple[bool, str]:
+async def check_openai_client(cog: MixinMeta, _: commands.Context) -> Tuple[bool, str]:
     """Validate and setup OpenAI client"""
     if not cog.openai_client:
         cog.openai_client = await setup_openai_client(cog.bot, cog.config)
@@ -54,13 +54,15 @@ async def check_guild_permissions(cog: MixinMeta, ctx: commands.Context) -> Tupl
     if await cog.bot.cog_disabled_in_guild(cog, ctx.guild):
         return False, "Cog disabled in guild"
 
-    if ctx.message.webhook_id is None:
-        try:
-            if not await cog.bot.ignored_channel_or_guild(ctx):
+    try:
+        # For webhook messages, skip the ignored_channel_or_guild check
+        if ctx.message.webhook_id is None:
+            ignored = await cog.bot.ignored_channel_or_guild(ctx)
+            if not ignored:
                 return False, "Channel or guild ignored"
-        except Exception:
-            logger.debug("Exception in checking if ignored channel or guild", exc_info=True)
-            return False, "Error checking channel/guild ignore status"
+    except Exception:
+        logger.debug("Exception in checking if ignored channel or guild", exc_info=True)
+        return False, "Error checking channel/guild ignore status"
 
     return True, ""
 
@@ -121,7 +123,11 @@ async def check_user_status(cog: MixinMeta, ctx: commands.Context) -> Tuple[bool
     whitelisted_roles = await cog.config.guild(ctx.guild).roles_whitelist()
     whitelisted_members = await cog.config.guild(ctx.guild).members_whitelist()
     if whitelisted_members or whitelisted_roles:
-        user_roles = set(role.id for role in ctx.author.roles) if ctx.author.roles else set()
+        # Webhook messages have User objects instead of Member objects
+        if isinstance(ctx.author, discord.Member):
+            user_roles = set(role.id for role in ctx.author.roles) if ctx.author.roles else set()
+        else:
+            user_roles = set()
         if not (
             (ctx.author.id in whitelisted_members) or
             (user_roles & set(whitelisted_roles))
