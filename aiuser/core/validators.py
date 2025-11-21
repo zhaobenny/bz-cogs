@@ -54,12 +54,13 @@ async def check_guild_permissions(cog: MixinMeta, ctx: commands.Context) -> Tupl
     if await cog.bot.cog_disabled_in_guild(cog, ctx.guild):
         return False, "Cog disabled in guild"
 
-    try:
-        if not await cog.bot.ignored_channel_or_guild(ctx):
-            return False, "Channel or guild ignored"
-    except Exception:
-        logger.debug("Exception in checking if ignored channel or guild", exc_info=True)
-        return False, "Error checking channel/guild ignore status"
+    if ctx.message.webhook_id is None:
+        try:
+            if not await cog.bot.ignored_channel_or_guild(ctx):
+                return False, "Channel or guild ignored"
+        except Exception:
+            logger.debug("Exception in checking if ignored channel or guild", exc_info=True)
+            return False, "Error checking channel/guild ignore status"
 
     return True, ""
 
