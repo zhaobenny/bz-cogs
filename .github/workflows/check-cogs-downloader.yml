@@ -1,0 +1,36 @@
+# Workflow using downloader-based cog installation tests
+name: "Check Cogs (Downloader)"
+
+on:
+  pull_request:
+
+env:
+  BUILD_ARTIFACT_NAME: "my-build-artifact"
+  COG_PATHS: "aiemote,aimage,aiuser,bittensorimg,oneletteronly"
+  RPC_PORT: "6133"
+
+jobs:
+  test-cogs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Red-DiscordBot
+        uses: nntin/d-flows/actions/install-red-discordbot@feature/use-downloader
+
+      - name: Configure Red-DiscordBot
+        uses: nntin/d-flows/actions/setup-red-discordbot@feature/use-downloader
+        with:
+          token: ${{ secrets.DISCORD_BOT_TOKEN }}
+          optional_args: "--no-cogs"
+          # test should call load downloader cog
+        continue-on-error: true
+
+      - name: Test cogs via Downloader
+        uses: nntin/d-flows/actions/test-red-discordbot-downloader@feature/use-downloader
+        with:
+          token: ${{ secrets.DISCORD_BOT_TOKEN }}
+          cog_paths: ${{ env.COG_PATHS }}
+          rpc_port: ${{ env.RPC_PORT }}
+          repo_name: pr-${{ github.event.pull_request.number || github.run_id }}
