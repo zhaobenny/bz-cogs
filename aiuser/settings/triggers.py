@@ -120,6 +120,92 @@ class TriggerSettings(MixinMeta):
         )
         return await ctx.send(embed=embed)
 
+    @trigger.group(name="webhook")
+    async def trigger_webhook(self, _):
+        """Configure webhook and application bot reply settings"""
+        pass
+
+    @trigger_webhook.command(name="toggle")
+    async def trigger_webhook_toggle(self, ctx: commands.Context):
+        """Toggles if the bot will reply to webhooks and application bots"""
+        value = not await self.config.guild(ctx.guild).reply_to_webhooks()
+        await self.config.guild(ctx.guild).reply_to_webhooks.set(value)
+        embed = discord.Embed(
+            title="Replying to webhooks and apps for this server now set to:",
+            description=f"{value}",
+            color=await ctx.embed_color(),
+        )
+        return await ctx.send(embed=embed)
+
+    @trigger_webhook.group(name="whitelist")
+    async def trigger_webhook_whitelist(self, _):
+        """Configure user ID whitelist for webhooks and application bots"""
+        pass
+
+    @trigger_webhook_whitelist.command(name="toggle")
+    async def trigger_webhook_whitelist_toggle(self, ctx: commands.Context):
+        """Toggles if the whitelist filtering is enabled for webhooks/apps"""
+        value = not await self.config.guild(ctx.guild).webhook_whitelist_enabled()
+        await self.config.guild(ctx.guild).webhook_whitelist_enabled.set(value)
+        embed = discord.Embed(
+            title="Webhook/app whitelist filtering is now:",
+            description=f"{value}",
+            color=await ctx.embed_color(),
+        )
+        return await ctx.send(embed=embed)
+
+    @trigger_webhook_whitelist.command(name="add")
+    async def trigger_webhook_whitelist_add(self, ctx: commands.Context, user_id: int):
+        """Add a user ID to the webhook/app whitelist"""
+        whitelist = await self.config.guild(ctx.guild).webhook_user_whitelist()
+        if user_id in whitelist:
+            return await ctx.send("That user ID is already in the whitelist")
+        whitelist.append(user_id)
+        await self.config.guild(ctx.guild).webhook_user_whitelist.set(whitelist)
+        return await self.show_webhook_whitelist(
+            ctx,
+            discord.Embed(title="The webhook/app whitelist is now:", color=await ctx.embed_color()),
+        )
+
+    @trigger_webhook_whitelist.command(name="remove")
+    async def trigger_webhook_whitelist_remove(self, ctx: commands.Context, user_id: int):
+        """Remove a user ID from the webhook/app whitelist"""
+        whitelist = await self.config.guild(ctx.guild).webhook_user_whitelist()
+        if user_id not in whitelist:
+            return await ctx.send("That user ID is not in the whitelist")
+        whitelist.remove(user_id)
+        await self.config.guild(ctx.guild).webhook_user_whitelist.set(whitelist)
+        return await self.show_webhook_whitelist(
+            ctx,
+            discord.Embed(title="The webhook/app whitelist is now:", color=await ctx.embed_color()),
+        )
+
+    @trigger_webhook_whitelist.command(name="list", aliases=["show"])
+    async def trigger_webhook_whitelist_list(self, ctx: commands.Context):
+        """Show the webhook/app whitelist"""
+        return await self.show_webhook_whitelist(
+            ctx,
+            discord.Embed(
+                title="Webhook/app user ID whitelist",
+                color=await ctx.embed_color(),
+            ),
+        )
+
+    @trigger_webhook_whitelist.command(name="clear")
+    async def trigger_webhook_whitelist_clear(self, ctx: commands.Context):
+        """Clear the webhook/app whitelist"""
+        await self.config.guild(ctx.guild).webhook_user_whitelist.set([])
+        return await ctx.send("The webhook/app whitelist has been cleared.")
+
+    async def show_webhook_whitelist(self, ctx: commands.Context, embed: discord.Embed):
+        """Helper function to display webhook/app whitelist"""
+        whitelist = await self.config.guild(ctx.guild).webhook_user_whitelist()
+        if whitelist:
+            embed.description = "\n".join([f"`{user_id}`" for user_id in whitelist])
+        else:
+            embed.description = "No user IDs whitelisted."
+        return await ctx.send(embed=embed)
+
     @trigger.group(name="words")
     @commands.is_owner()
     async def trigger_words(self, _):

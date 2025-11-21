@@ -84,6 +84,26 @@ async def check_channel_settings(cog: MixinMeta, ctx: commands.Context) -> Tuple
 
 async def check_user_status(cog: MixinMeta, ctx: commands.Context) -> Tuple[bool, str]:
     """Validate user permissions and opt-in status"""
+    # Check if message is from webhook or application bot
+    is_webhook = ctx.message.webhook_id is not None
+    is_app_bot = ctx.author.bot and ctx.author.id != cog.bot.user.id
+    
+    if is_webhook or is_app_bot:
+        # Check if webhook/app replies are enabled
+        reply_to_webhooks = await cog.config.guild(ctx.guild).reply_to_webhooks()
+        if not reply_to_webhooks:
+            return False, "Webhook/app replies disabled"
+        
+        # Check whitelist if enabled
+        whitelist_enabled = await cog.config.guild(ctx.guild).webhook_whitelist_enabled()
+        if whitelist_enabled:
+            webhook_whitelist = await cog.config.guild(ctx.guild).webhook_user_whitelist()
+            # Use webhook_id for webhooks, author.id for app bots
+            user_id = ctx.message.webhook_id if is_webhook else ctx.author.id
+            if user_id not in webhook_whitelist:
+                return False, "Webhook/app not in whitelist"
+        return True, ""
+    
     if ctx.author.bot:
         return False, "Author is bot"
 
