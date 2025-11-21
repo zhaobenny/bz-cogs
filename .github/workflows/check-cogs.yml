@@ -14,6 +14,14 @@ env:
   COG_PATHS: "aiemote,aimage,aiuser,bittensorimg,oneletteronly"  # comma-separated list of cog folder names
   RPC_PORT: "6133"
 
+#    todo: to test multiple python versions and windows/linux/osc we normally use matrix strategy
+#          however this should be achieved with only one discord bot token, furthermore we want to avoid
+#          multiple concurrent runs using the same token.
+#          Thus we have to come up with a system to queue the jobs to run them sequentially and also avoid
+#          duplicated code.
+#    idea: do a workflow dispatch to trigger separate workflows for each python version / os combination
+# blocker: wait for d-flows version 1.1.2, d-flows currently only supports python 3.11
+
 jobs:
   install:
     runs-on: ubuntu-latest
