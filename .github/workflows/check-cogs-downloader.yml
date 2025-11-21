@@ -1,12 +1,17 @@
-# Workflow using downloader-based cog installation tests
+# For tests with nektos/act use:
+# act -e .\.github\workflows\fixtures\push.json -W .\.github\workflows\check-cogs-downloader.yml --container-options "-v /c/privat/codex/d-cogs/.artifacts/dist:/tmp/dist:ro" --secret-file .secrets
+
+# To test with local Red-DiscordBot build artifact, mount the host folder containing the built wheels to /tmp/dist in the container.
+# docker run -it --rm -v /c/privat/codex/d-cogs/.artifacts/dist:/tmp/dist python:3.11 bash
 name: "Check Cogs (Downloader)"
 
 on:
   pull_request:
+  push:
 
 env:
   BUILD_ARTIFACT_NAME: "my-build-artifact"
-  COG_PATHS: "aiemote,aimage,aiuser,bittensorimg,oneletteronly"
+  COG_PATHS: "aiemote,aimage,aiuser,bittensorimg,oneletteronly"  # comma-separated list of cog folder names
   RPC_PORT: "6133"
 
 jobs:
@@ -24,7 +29,6 @@ jobs:
         with:
           token: ${{ secrets.DISCORD_BOT_TOKEN }}
           optional_args: "--no-cogs"
-          # test should call load downloader cog
         continue-on-error: true
 
       - name: Test cogs via Downloader
@@ -33,4 +37,6 @@ jobs:
           token: ${{ secrets.DISCORD_BOT_TOKEN }}
           cog_paths: ${{ env.COG_PATHS }}
           rpc_port: ${{ env.RPC_PORT }}
-          repo_name: pr-${{ github.event.pull_request.number || github.run_id }}
+          repo_name: bz-cogs
+          repo_url: https://github.com/zhaobenny/bz-cogs.git
+          repo_branch: main
