@@ -8,10 +8,6 @@ name: "Check Cogs (Downloader)"
 on:
   pull_request:
 
-# leaving COG_PATHS empty to test all cogs with info.json in the repo
-# env:
-#   COG_PATHS: "aiemote,aimage,aiuser,bittensorimg,oneletteronly"  # comma-separated list of cog folder names
-
 jobs:
   test-cogs:
     runs-on: ubuntu-latest
@@ -34,5 +30,5 @@ jobs:
         with:
           token: ${{ secrets.DISCORD_BOT_TOKEN }}
           # cog_paths: ${{ env.COG_PATHS }}
-          # repo_url: https://github.com/zhaobenny/bz-cogs.git
-          # repo_branch: main
+          repo_url: https://c.csw.im/cswimr/SeaCogs.git
+          repo_branch: main
