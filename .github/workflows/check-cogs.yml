@@ -1,70 +1,34 @@
-
-# For tests with nektos/act use:
-# act -e .\.github\workflows\fixtures\push.json -W .\.github\workflows\check-cogs.yml --container-options "-v /c/privat/codex/d-cogs/.artifacts/dist:/tmp/dist:ro" --secret-file .secrets
-
-# To test with local Red-DiscordBot build artifact, mount the host folder containing the built wheels to /tmp/dist in the container.
-# docker run -it --rm -v /c/privat/codex/d-cogs/.artifacts/dist:/tmp/dist python:3.11 bash
-name: "Check Cogs"
+name: "Check Cogs Load"
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
-
-env:
-  BUILD_ARTIFACT_NAME: "my-build-artifact"
-  COG_PATHS: "aiemote,aimage,aiuser,bittensorimg,oneletteronly"  # comma-separated list of cog folder names
-  RPC_PORT: "6133"
-
-#    todo: to test multiple python versions and windows/linux/osc we normally use matrix strategy
-#          however this should be achieved with only one discord bot token, furthermore we want to avoid
-#          multiple concurrent runs using the same token.
-#          Thus we have to come up with a system to queue the jobs to run them sequentially and also avoid
-#          duplicated code.
-#    idea: do a workflow dispatch to trigger separate workflows for each python version / os combination
-# blocker: wait for d-flows version 1.1.2, d-flows currently only supports python 3.11
+  workflow_dispatch:
 
 jobs:
-  install:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      # DEMO: how to install Red-DiscordBot, can install from PyPI directly!
-      - name: Build Red-DiscordBot
-        uses: nntin/d-flows/actions/build-red-discordbot@v1
-        with:
-          red_commit: ""                  # optional commit SHA
-          artifact_name: ${{ env.BUILD_ARTIFACT_NAME }}  # optional artifact name
-
   test-cogs:
     runs-on: ubuntu-latest
-    needs: install
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Skip artifact_name if installing from PyPI directly
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
       - name: Install Red-DiscordBot
-        uses: nntin/d-flows/actions/install-red-discordbot@v1
-        with:
-          artifact_name: ${{ env.BUILD_ARTIFACT_NAME }}  # same artifact name used for build
+        run: |
+          set -euo pipefail
+          echo "📦 Installing Red-DiscordBot from PyPI"
+          pip install Red-DiscordBot
 
-      # Configure Red-DiscordBot with instance name "tinkerer"
-      # todo: add input for skipping --dry-run
-      - name: Configure Red-DiscordBot
-        uses: nntin/d-flows/actions/setup-red-discordbot@v1
+      - name: Test cogs via Downloader
+        uses: nntin/d-flows/actions/test-red-discordbot-downloader@v1.1.2
         with:
           token: ${{ secrets.DISCORD_BOT_TOKEN }}
-          optional_args: "--no-cogs"  # Example optional argument to run without loading any cogs
-        # --dry-run fails due to bug in Red-DiscordBot https://github.com/Cog-Creators/Red-DiscordBot/issues/6572
-        continue-on-error: true
-
-      # Actual magic: test that cogs can be loaded/unloaded via RPC
-      - name: Test cogs via RPC
-        uses: nntin/d-flows/actions/test-red-discordbot@v1
-        with:
-          token: ${{ secrets.DISCORD_BOT_TOKEN }}
-          cog_paths: ${{ env.COG_PATHS }}
-          rpc_port: ${{ env.RPC_PORT }}
 
   ##################################################################
   ####     Build validation results for Discord notification    ####
@@ -72,7 +36,7 @@ jobs:
   build-validation-fields:
     name: Build Validation Fields
     runs-on: ubuntu-latest
-    needs: [install, test-cogs]
+    needs: [test-cogs]
     if: always()
     outputs:
       discord_fields: ${{ steps.discord_fields.outputs.fields }}
@@ -82,26 +46,16 @@ jobs:
       - name: Determine validation result
         id: validation_result
         run: |
-          BUILD_STATUS="${{ needs.install.result }}"
           TEST_STATUS="${{ needs['test-cogs'].result }}"
-
-          if [[ "$BUILD_STATUS" == "success" && "$TEST_STATUS" == "success" ]]; then
-            echo "result=success" >> "$GITHUB_OUTPUT"
-          else
-            echo "result=failed" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Build Discord Fields
         id: discord_fields
         run: |
-          BUILD_STATUS="${{ needs.install.result }}"
           TEST_STATUS="${{ needs['test-cogs'].result }}"
 
-          BUILD_EMOJI=$([[ "$BUILD_STATUS" == "success" ]] && echo "✅" || echo "❌")
           TEST_EMOJI=$([[ "$TEST_STATUS" == "success" ]] && echo "✅" || echo "❌")
 
           FIELDS=$(jq -n \
-            --arg build_status "$BUILD_EMOJI $BUILD_STATUS" \
             --arg test_status "$TEST_EMOJI $TEST_STATUS" \
             --arg cogs "${{ env.COG_PATHS }}" \
             --arg artifact "${{ env.BUILD_ARTIFACT_NAME }}" \
@@ -110,7 +64,6 @@ jobs:
             --arg pr_url "${{ github.event.pull_request.html_url }}" \
             --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '[
-              {"name": "Build Red-DiscordBot", "value": $build_status, "inline": true},
               {"name": "Cog Tests", "value": $test_status, "inline": true},
               {"name": "Cogs Tested", "value": $cogs, "inline": true},
               {"name": "Artifact", "value": $artifact, "inline": true},
@@ -131,7 +84,7 @@ jobs:
   display-validation-summary:
     name: Display Validation Summary
     runs-on: ubuntu-latest
-    needs: [install, test-cogs, build-validation-fields]
+    needs: [test-cogs, build-validation-fields]
     if: always()
 
     steps:
@@ -142,7 +95,6 @@ jobs:
           markdown: |
             | Stage | Status |
             |-------|--------|
-            | Build Red-DiscordBot | ${{ needs.install.result == 'success' && '✅ Passed' || '❌ Failed' }} |
             | Cog Tests | ${{ needs['test-cogs'].result == 'success' && '✅ Passed' || '❌ Failed' }} |
 
             **Artifact**: `${{ env.BUILD_ARTIFACT_NAME }}`
@@ -152,23 +104,24 @@ jobs:
             **Overall Result**: ${{ needs.build-validation-fields.outputs.validation_result == 'success' && '✅ All checks passed' || '⚠️ Some checks failed or were skipped' }}
           overwrite: false
 
-  ##################################################################
-  ####         Display validation results via Discord           ####
-  ##################################################################
-  notify-cog-validation:
-    name: Notify Validation Results
-    runs-on: ubuntu-latest
-    needs: [build-validation-fields, display-validation-summary]
-    if: always()
+  # requires: secrets.DISCORD_WEBHOOK_URL to be set in the repository
+  # ##################################################################
+  # ####         Display validation results via Discord           ####
+  # ##################################################################
+  # notify-cog-validation:
+  #   name: Notify Validation Results
+  #   runs-on: ubuntu-latest
+  #   needs: [build-validation-fields, display-validation-summary]
+  #   if: always()
 
-    steps:
-      - name: Send Discord Notification
-        uses: nntin/d-flows/actions/discord-notify@v1
-        with:
-          webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          message_type: 'embed'
-          title: ${{ needs.build-validation-fields.outputs.validation_result == 'success' && '✅ Cog Validation Completed Successfully' || '⚠️ Cog Validation Completed with Issues' }}
-          description: >-
-            ${{ needs.build-validation-fields.outputs.validation_result == 'success' && format('All cogs ({0}) passed build and RPC validation.', env.COG_PATHS) || format('One or more stages failed for cogs: {0}. Review the workflow logs.', env.COG_PATHS) }}
-          color: ${{ needs.build-validation-fields.outputs.validation_result == 'success' && '3066993' || '16776960' }}
-          fields: ${{ needs.build-validation-fields.outputs.discord_fields }}
+  #   steps:
+  #     - name: Send Discord Notification
+  #       uses: nntin/d-flows/actions/discord-notify@v1
+  #       with:
+  #         webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+  #         message_type: 'embed'
+  #         title: ${{ needs.build-validation-fields.outputs.validation_result == 'success' && '✅ Cog Validation Completed Successfully' || '⚠️ Cog Validation Completed with Issues' }}
+  #         description: >-
+  #           ${{ needs.build-validation-fields.outputs.validation_result == 'success' && format('All cogs ({0}) passed build and RPC validation.', env.COG_PATHS) || format('One or more stages failed for cogs: {0}. Review the workflow logs.', env.COG_PATHS) }}
+  #         color: ${{ needs.build-validation-fields.outputs.validation_result == 'success' && '3066993' || '16776960' }}
+  #         fields: ${{ needs.build-validation-fields.outputs.discord_fields }}
