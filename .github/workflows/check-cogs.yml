@@ -110,8 +110,5 @@ jobs:
         with:
           webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
           message_type: 'embed'
-          title: ${{ needs.build-validation-fields.outputs.validation_result == 'success' && '✅ Cog Validation Completed Successfully' || '⚠️ Cog Validation Completed with Issues' }}
-          description: >-
-            ${{ needs.build-validation-fields.outputs.validation_result == 'success' && format('All cogs ({0}) passed build and RPC validation.', env.COG_PATHS) || format('One or more stages failed for cogs: {0}. Review the workflow logs.', env.COG_PATHS) }}
           color: ${{ needs.build-validation-fields.outputs.validation_result == 'success' && '3066993' || '16776960' }}
           fields: ${{ needs.build-validation-fields.outputs.discord_fields }}
