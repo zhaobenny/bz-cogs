@@ -15,15 +15,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Red-DiscordBot
-        uses: nntin/d-flows/actions/install-red-discordbot@feature/downloader
-
-      - name: Configure Red-DiscordBot
-        uses: nntin/d-flows/actions/setup-red-discordbot@feature/downloader
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
         with:
-          token: ${{ secrets.DISCORD_BOT_TOKEN }}
-          optional_args: "--no-cogs"
-        continue-on-error: true
+          python-version: '3.11'
+
+      - name: Install Red-DiscordBot
+        run: |
+          set -euo pipefail
+          echo "📦 Installing Red-DiscordBot from PyPI"
+          pip install Red-DiscordBot
 
       - name: Test cogs via Downloader
         uses: nntin/d-flows/actions/test-red-discordbot-downloader@feature/downloader
