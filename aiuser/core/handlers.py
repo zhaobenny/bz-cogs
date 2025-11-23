@@ -86,14 +86,19 @@ async def get_percentage(cog: MixinMeta, ctx: commands.Context) -> float:
     role_percent = None
     author = ctx.author
 
-    for role in author.roles:
-        if role.id in (await cog.config.all_roles()):
-            role_percent = await cog.config.role(role).reply_percent()
-            break
+    # Webhook messages have User objects instead of Member objects
+    if isinstance(author, discord.Member):
+        for role in author.roles:
+            if role.id in (await cog.config.all_roles()):
+                role_percent = await cog.config.role(role).reply_percent()
+                break
 
-    percentage = await cog.config.member(author).reply_percent()
-    if percentage is None:
-        percentage = role_percent
+        percentage = await cog.config.member(author).reply_percent()
+        if percentage is None:
+            percentage = role_percent
+    else:
+        percentage = None
+
     if percentage is None:
         percentage = await cog.config.channel(ctx.channel).reply_percent()
     if percentage is None:

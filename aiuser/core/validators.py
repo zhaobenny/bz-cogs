@@ -1,12 +1,13 @@
 import logging
 from typing import Tuple
+from unittest.mock import MagicMock
 
 import discord
 from redbot.core import commands
 
+from aiuser.config.constants import SINGULAR_MENTION_PATTERN
 from aiuser.core.openai_utils import setup_openai_client
 from aiuser.types.abc import MixinMeta
-from aiuser.config.constants import SINGULAR_MENTION_PATTERN
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -37,7 +38,7 @@ async def is_valid_message(cog: MixinMeta, ctx: commands.Context) -> bool:
     return True
 
 
-async def check_openai_client(cog: MixinMeta, _ : commands.Context) -> Tuple[bool, str]:
+async def check_openai_client(cog: MixinMeta, _: commands.Context) -> Tuple[bool, str]:
     """Validate and setup OpenAI client"""
     if not cog.openai_client:
         cog.openai_client = await setup_openai_client(cog.bot, cog.config)
@@ -53,6 +54,12 @@ async def check_guild_permissions(cog: MixinMeta, ctx: commands.Context) -> Tupl
 
     if await cog.bot.cog_disabled_in_guild(cog, ctx.guild):
         return False, "Cog disabled in guild"
+
+    #  monkeypatch because cog.bot.ignored_channel_or_guild expects Member objects
+    if isinstance(ctx.author, discord.User):
+        ctx.author = MagicMock(wraps=ctx.author)
+        ctx.author._roles = set()
+        ctx.author.is_timed_out = lambda: False
 
     try:
         if not await cog.bot.ignored_channel_or_guild(ctx):
@@ -84,6 +91,26 @@ async def check_channel_settings(cog: MixinMeta, ctx: commands.Context) -> Tuple
 
 async def check_user_status(cog: MixinMeta, ctx: commands.Context) -> Tuple[bool, str]:
     """Validate user permissions and opt-in status"""
+    # Check if message is from webhook or application bot
+    is_webhook = ctx.message.webhook_id is not None
+    is_app_bot = ctx.author.bot and ctx.author.id != cog.bot.user.id
+    
+    if is_webhook or is_app_bot:
+        # Check if webhook/app replies are enabled
+        reply_to_webhooks = await cog.config.guild(ctx.guild).reply_to_webhooks()
+        if not reply_to_webhooks:
+            return False, "Webhook/app replies disabled"
+        
+        # Check whitelist if enabled
+        whitelist_enabled = await cog.config.guild(ctx.guild).webhook_whitelist_enabled()
+        if whitelist_enabled:
+            webhook_whitelist = await cog.config.guild(ctx.guild).webhook_user_whitelist()
+            # Use webhook_id for webhooks, author.id for app bots
+            user_id = ctx.message.webhook_id if is_webhook else ctx.author.id
+            if user_id not in webhook_whitelist:
+                return False, "Webhook/app not in whitelist"
+        return True, ""
+    
     if ctx.author.bot:
         return False, "Author is bot"
 
@@ -100,7 +127,11 @@ async def check_user_status(cog: MixinMeta, ctx: commands.Context) -> Tuple[bool
     whitelisted_roles = await cog.config.guild(ctx.guild).roles_whitelist()
     whitelisted_members = await cog.config.guild(ctx.guild).members_whitelist()
     if whitelisted_members or whitelisted_roles:
-        user_roles = set(role.id for role in ctx.author.roles) if ctx.author.roles else set()
+        # Webhook messages have User objects instead of Member objects
+        if isinstance(ctx.author, discord.Member):
+            user_roles = set(role.id for role in ctx.author.roles) if ctx.author.roles else set()
+        else:
+            user_roles = set()
         if not (
             (ctx.author.id in whitelisted_members) or
             (user_roles & set(whitelisted_roles))

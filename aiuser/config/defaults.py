@@ -87,6 +87,9 @@ DEFAULT_GUILD = {
     "custom_model_tokens_limit": None,
     "always_reply_on_words": [],
     "query_memories": False,
+    "reply_to_webhooks": False,
+    "webhook_whitelist_enabled": False,
+    "webhook_user_whitelist": [],
 }
 
 DEFAULT_CHANNEL = {"custom_text_prompt": None, "reply_percent": None}
