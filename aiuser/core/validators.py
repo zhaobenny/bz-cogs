@@ -1,12 +1,13 @@
 import logging
 from typing import Tuple
+from unittest.mock import MagicMock
 
 import discord
 from redbot.core import commands
 
+from aiuser.config.constants import SINGULAR_MENTION_PATTERN
 from aiuser.core.openai_utils import setup_openai_client
 from aiuser.types.abc import MixinMeta
-from aiuser.config.constants import SINGULAR_MENTION_PATTERN
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -53,6 +54,12 @@ async def check_guild_permissions(cog: MixinMeta, ctx: commands.Context) -> Tupl
 
     if await cog.bot.cog_disabled_in_guild(cog, ctx.guild):
         return False, "Cog disabled in guild"
+
+    #  monkeypatch because cog.bot.ignored_channel_or_guild expects Member objects
+    if isinstance(ctx.author, discord.User):
+        ctx.author = MagicMock(wraps=ctx.author)
+        ctx.author._roles = set()
+        ctx.author.is_timed_out = lambda: False
 
     try:
         if not await cog.bot.ignored_channel_or_guild(ctx):
