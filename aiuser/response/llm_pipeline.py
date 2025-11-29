@@ -5,9 +5,9 @@ import logging
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional
 
+import discord
 import httpx
 import openai
-import discord
 from openai.types.chat import (
     ChatCompletion,
     ChatCompletionMessageParam,
@@ -25,7 +25,7 @@ from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
-MAX_TOOL_CALL_ROUNDS = 8  
+MAX_TOOL_CALL_ROUNDS = 8
 
 
 @dataclass
@@ -54,7 +54,11 @@ class LLMPipeline:
 
         for round_idx in range(MAX_TOOL_CALL_ROUNDS):
             if self.tool_manager.available_tools_schemas:
-                kwargs["tools"] = [asdict(s) for s in self.tool_manager.available_tools_schemas]
+                kwargs["tools"] = [
+                    asdict(s) for s in self.tool_manager.available_tools_schemas
+                ]
+            else:
+                kwargs.pop("tools", None)
 
             try:
                 step = await self._call_client(kwargs)
@@ -63,7 +67,9 @@ class LLMPipeline:
                 await self.ctx.react_quietly("💤", message="`aiuser` request timed out")
                 return None
             except openai.RateLimitError:
-                await self.ctx.react_quietly("💤", message="`aiuser` request ratelimited")
+                await self.ctx.react_quietly(
+                    "💤", message="`aiuser` request ratelimited"
+                )
                 return None
             except Exception:
                 logger.exception("Failed API request(s) to LLM endpoint")
@@ -76,12 +82,16 @@ class LLMPipeline:
             elif step.tool_calls:
                 await self.tool_manager.handle_tool_calls(step.tool_calls)
             else:
-                logger.debug(f"No content or tool calls received in {self.ctx.guild.name} during round {round_idx}")
+                logger.debug(
+                    f"No content or tool calls received in {self.ctx.guild.name} during round {round_idx}"
+                )
 
         if self.completion:
             cleaned = self.completion[:200].strip().replace("\n", " ")
             ellipsis = "..." if len(self.completion) > 200 else ""
-            logger.debug(f'Generated response in {self.ctx.guild.name}: "{cleaned}{ellipsis}"')
+            logger.debug(
+                f'Generated response in {self.ctx.guild.name}: "{cleaned}{ellipsis}"'
+            )
         else:
             logger.debug(f"No completion generated in {self.ctx.guild.name}")
 
@@ -101,9 +111,12 @@ class LLMPipeline:
                 kwargs["logit_bias"] = weights_dict
 
         if kwargs.get("logit_bias", False) and (
-            self.model in VISION_SUPPORTED_MODELS or self.model in UNSUPPORTED_LOGIT_BIAS_MODELS
+            self.model in VISION_SUPPORTED_MODELS
+            or self.model in UNSUPPORTED_LOGIT_BIAS_MODELS
         ):
-            logger.warning(f"logit_bias is not supported for model {self.model}, removing...")
+            logger.warning(
+                f"logit_bias is not supported for model {self.model}, removing..."
+            )
             kwargs.pop("logit_bias", None)
 
         return kwargs
@@ -112,7 +125,7 @@ class LLMPipeline:
         """
         Call the OpenAI chat endpoint with the current message thread and kwargs.
         """
-        context : List[ChatCompletionMessageParam] = self.msg_list.get_json()
+        context: List[ChatCompletionMessageParam] = self.msg_list.get_json()
         response: ChatCompletion = await self.openai_client.chat.completions.create(
             model=self.model,
             messages=context,
