@@ -12,7 +12,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 class MemoryRetriever:
     """Handles retrieval of relevant memories using semantic similarity search."""
 
-    def __init__(self, ctx: commands.Context, db: 'VectorStore'):
+    def __init__(self, ctx: commands.Context, db: "VectorStore"):
         self.ctx = ctx
         self.db = db
 

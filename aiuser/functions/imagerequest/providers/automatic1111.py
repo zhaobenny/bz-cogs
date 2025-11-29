@@ -24,7 +24,7 @@ async def generate(description: str, request: "LLMPipeline", endpoint: str) -> b
         r = await c.post(endpoint, json=payload)
         r.raise_for_status()
         data = r.json()
-        
+
     imgs = data.get("images") or []
     if not imgs:
         raise ValueError("Automatic1111 response missing 'images'")

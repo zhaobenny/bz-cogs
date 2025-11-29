@@ -41,6 +41,7 @@ class MessagesThread:
         self.memory_retriever = None
         if cog.db:
             from aiuser.context.memory.retriever import MemoryRetriever
+
             self.memory_retriever = MemoryRetriever(ctx, db=cog.db)
         self.history_manager = HistoryBuilder(self)
 

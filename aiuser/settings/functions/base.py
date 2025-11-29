@@ -38,7 +38,6 @@ class FunctionCallingSettings(
             embed.set_footer(text="⚠️ Ensure selected model supports function calling!")
         await ctx.send(embed=embed)
 
-
     @functions.command(name="config", aliases=["show", "settings"])
     async def functions_config(self, ctx: commands.Context):
         """Show function calling configuration overview."""
@@ -81,9 +80,7 @@ class FunctionCallingSettings(
 
         # Summary / main embed
         colour = await ctx.embed_color()
-        main_embed = discord.Embed(
-            title="Function Calling Settings", color=colour
-        )
+        main_embed = discord.Embed(title="Function Calling Settings", color=colour)
         main_embed.add_field(
             name="Functions Calling Enabled", value=f"{icon(enabled)}", inline=True
         )
@@ -96,7 +93,9 @@ class FunctionCallingSettings(
         # Only show a checkmark for whether the group has any enabled tools.
         for group_name, tool_names in groups.items():
             group_enabled = any(t in enabled_tools for t in tool_names)
-            main_embed.add_field(name=group_name.title(), value=icon(group_enabled), inline=True)
+            main_embed.add_field(
+                name=group_name.title(), value=icon(group_enabled), inline=True
+            )
 
         # Summary line
         main_embed.add_field(
@@ -122,7 +121,9 @@ class FunctionCallingSettings(
         image_embed = discord.Embed(
             title="Image Request Function Settings", color=colour
         )
-        image_embed.add_field(name="Enabled", value=f"{icon(image_enabled)}", inline=True)
+        image_embed.add_field(
+            name="Enabled", value=f"{icon(image_enabled)}", inline=True
+        )
         image_embed.add_field(
             name="Custom Endpoint", value=f"`{image_endpoint}`", inline=True
         )
@@ -140,9 +141,11 @@ class FunctionCallingSettings(
 
     @functions.command(name="search")
     async def toggle_search_function(self, ctx: commands.Context):
-        """ Enable/disable searching/scraping the Internet using Serper.dev """
-        if (not (await self.bot.get_shared_api_tokens("serper")).get("api_key")):
-            return await ctx.send(f"Serper.dev key not set! Set it using `{ctx.clean_prefix}set api serper api_key,APIKEY`.")
+        """Enable/disable searching/scraping the Internet using Serper.dev"""
+        if not (await self.bot.get_shared_api_tokens("serper")).get("api_key"):
+            return await ctx.send(
+                f"Serper.dev key not set! Set it using `{ctx.clean_prefix}set api serper api_key,APIKEY`."
+            )
 
         from aiuser.functions.search.tool_call import SearchToolCall
 
@@ -175,12 +178,13 @@ class FunctionCallingSettings(
 
     @functions.command(name="wolframalpha")
     async def toggle_wolfram_alpha_function(self, ctx: commands.Context):
-        """ Enable/disable the functionality for the LLM to ask Wolfram Alpha about math, exchange rates, or the weather."""
+        """Enable/disable the functionality for the LLM to ask Wolfram Alpha about math, exchange rates, or the weather."""
         from aiuser.functions.wolframalpha.tool_call import WolframAlphaFunctionCall
 
-        if (not (await self.bot.get_shared_api_tokens("wolfram_alpha")).get("app_id")):
-            return await ctx.send(f"Wolfram Alpha app id not set! Set it using `{ctx.clean_prefix}set api wolfram_alpha app_id,APPID`.")
+        if not (await self.bot.get_shared_api_tokens("wolfram_alpha")).get("app_id"):
+            return await ctx.send(
+                f"Wolfram Alpha app id not set! Set it using `{ctx.clean_prefix}set api wolfram_alpha app_id,APPID`."
+            )
 
         tool_names = [WolframAlphaFunctionCall.function_name]
         await self.toggle_function_group(ctx, tool_names, "Wolfram Alpha")
-

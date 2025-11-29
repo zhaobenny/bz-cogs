@@ -13,7 +13,7 @@ logger = logging.getLogger("red.bz_cogs.aiemote")
 
 
 class AIEmote(commands.Cog, Settings):
-    """ Human-like Discord reacts to messages powered by OpenAI. """
+    """Human-like Discord reacts to messages powered by OpenAI."""
 
     def __init__(self, bot):
         super().__init__()
@@ -39,13 +39,13 @@ class AIEmote(commands.Cog, Settings):
             "optin": [],
             "optout": [],
             "llm_model": DEFAULT_LLM_MODEL,
-            "custom_openai_endpoint": None
+            "custom_openai_endpoint": None,
         }
 
         default_guild = {
             "server_emojis": [],
             "whitelist": [],
-            "optin_by_default": False
+            "optin_by_default": False,
         }
 
         self.config.register_guild(**default_guild)
@@ -57,7 +57,7 @@ class AIEmote(commands.Cog, Settings):
         self.percent = await self.config.percent()
         self.optin_users = await self.config.optin()
         self.optout_users = await self.config.optout()
-        self.llm_model = await self.config.llm_model() 
+        self.llm_model = await self.config.llm_model()
         try:
             self.encoding = tiktoken.encoding_for_model(self.llm_model)
         except KeyError:
@@ -73,13 +73,12 @@ class AIEmote(commands.Cog, Settings):
         if service_name in ["openai", "openrouter"]:
             self.aclient = await setup_openai_client(self.bot, self.config)
 
-
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
         ctx: commands.Context = await self.bot.get_context(message)
         if not (await self.is_valid_to_react(ctx)):
             return
-        if (self.percent < random.randint(0, 99)):
+        if self.percent < random.randint(0, 99):
             return
         emoji = await self.pick_emoji(message)
         if emoji:
@@ -91,7 +90,9 @@ class AIEmote(commands.Cog, Settings):
         emojis += await self.config.global_emojis() or []
 
         if not emojis:
-            logger.warning(f"Skipping react! No valid emojis to use in {message.guild.name}")
+            logger.warning(
+                f"Skipping react! No valid emojis to use in {message.guild.name}"
+            )
             return None
 
         for index, value in enumerate(emojis):
@@ -102,26 +103,30 @@ class AIEmote(commands.Cog, Settings):
             if not self.encoding:
                 raise KeyError
             for i in range(len(emojis)):
-                    encoded_value = self.encoding.encode(str(i))
-                    if len(encoded_value) == 1:
-                        logit_bias[encoded_value[0]] = 100
+                encoded_value = self.encoding.encode(str(i))
+                if len(encoded_value) == 1:
+                    logit_bias[encoded_value[0]] = 100
         except (KeyError, AttributeError):
-                logit_bias = {}
+            logit_bias = {}
 
-        system_prompt = f"You are in a chat room. You will pick an emoji for the following message. {await self.config.extra_instruction()} Here are your options: {options} Your answer will be a int between 0 and {len(emojis)-1}."
-        content = f"{message.author.display_name} : {self.stringify_any_mentions(message)}"
+        system_prompt = f"You are in a chat room. You will pick an emoji for the following message. {await self.config.extra_instruction()} Here are your options: {options} Your answer will be a int between 0 and {len(emojis) - 1}."
+        content = (
+            f"{message.author.display_name} : {self.stringify_any_mentions(message)}"
+        )
         try:
             response = await self.aclient.chat.completions.create(
                 model=self.llm_model,
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": content}
+                    {"role": "user", "content": content},
                 ],
                 max_tokens=1,
                 logit_bias=logit_bias,
             )
         except Exception:
-            logger.exception(f"Skipping react in {message.guild.name}! Failed to get response from OpenAI")
+            logger.exception(
+                f"Skipping react in {message.guild.name}! Failed to get response from OpenAI"
+            )
             return None
 
         response = response.choices[0].message.content
@@ -133,7 +138,8 @@ class AIEmote(commands.Cog, Settings):
             return partial_emoji
         else:
             logger.warning(
-                f"Skipping react in {message.guild.name}! Non-numeric response from OpenAI: {response}. (Please report to dev if this occurs often)")
+                f"Skipping react in {message.guild.name}! Non-numeric response from OpenAI: {response}. (Please report to dev if this occurs often)"
+            )
             return None
 
     async def is_valid_to_react(self, ctx: commands.Context):
@@ -144,9 +150,13 @@ class AIEmote(commands.Cog, Settings):
         if await self.bot.cog_disabled_in_guild(self, ctx.guild):
             return False
 
-        if (not isinstance(ctx.channel, discord.Thread) and (ctx.channel.id not in whitelist)):
+        if not isinstance(ctx.channel, discord.Thread) and (
+            ctx.channel.id not in whitelist
+        ):
             return False
-        if (isinstance(ctx.channel, discord.Thread) and (ctx.channel.parent_id not in whitelist)):
+        if isinstance(ctx.channel, discord.Thread) and (
+            ctx.channel.parent_id not in whitelist
+        ):
             return False
 
         if not await self.bot.ignored_channel_or_guild(ctx):
@@ -155,7 +165,9 @@ class AIEmote(commands.Cog, Settings):
             return False
         if ctx.author.id in self.optout_users:
             return False
-        if (ctx.author.id not in self.optin_users) and (not (await self.config.guild(ctx.guild).optin_by_default())):
+        if (ctx.author.id not in self.optin_users) and (
+            not (await self.config.guild(ctx.guild).optin_by_default())
+        ):
             return False
 
         if not self.aclient:
@@ -164,12 +176,16 @@ class AIEmote(commands.Cog, Settings):
                 return False
 
         # skipping images / embeds
-        if not ctx.message.content or (ctx.message.attachments and len(ctx.message.attachments) > 0):
+        if not ctx.message.content or (
+            ctx.message.attachments and len(ctx.message.attachments) > 0
+        ):
             return False
 
         # skipping long / short messages
         if len(ctx.message.content) > 1500 or len(ctx.message.content) < 10:
-            logger.debug(f"Skipping message in {ctx.guild.name} with length {len(ctx.message.content)}")
+            logger.debug(
+                f"Skipping message in {ctx.guild.name} with length {len(ctx.message.content)}"
+            )
             return False
 
         return True
@@ -186,10 +202,12 @@ class AIEmote(commands.Cog, Settings):
 
         for mentioned in mentions:
             if mentioned in message.channel_mentions:
-                content = content.replace(mentioned.mention, f'#{mentioned.name}')
+                content = content.replace(mentioned.mention, f"#{mentioned.name}")
             elif mentioned in message.role_mentions:
-                content = content.replace(mentioned.mention, f'@{mentioned.name}')
+                content = content.replace(mentioned.mention, f"@{mentioned.name}")
             else:
-                content = content.replace(mentioned.mention, f'@{mentioned.display_name}')
+                content = content.replace(
+                    mentioned.mention, f"@{mentioned.display_name}"
+                )
 
         return content

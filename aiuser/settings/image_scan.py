@@ -66,7 +66,9 @@ class ImageScanSettings(MixinMeta):
             )
             chat_model = await self.config.guild(ctx.guild).model()
             if chat_model not in VISION_SUPPORTED_MODELS:
-                embed.set_footer(text="⚠️ Model has not been validated for image scanning.")
+                embed.set_footer(
+                    text="⚠️ Model has not been validated for image scanning."
+                )
             return await ctx.send(embed=embed)
 
         custom_endpoint = await self.config.custom_openai_endpoint()

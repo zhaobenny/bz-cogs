@@ -1,4 +1,3 @@
-
 import logging
 from itertools import islice
 
@@ -9,34 +8,34 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 METEO_GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 METEO_WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 WMO_DESCRIPTIONS = {
-    0: 'clear sky',
-    1: 'mostly clear',
-    2: 'partly cloudy',
-    3: 'overcast',
-    45: 'foggy with depositing frost',
-    48: 'foggy with depositing frost',
-    51: 'light drizzle',
-    53: 'moderate drizzle',
-    55: 'heavy drizzle',
-    56: 'light freezing drizzle',
-    57: 'heavy freezing drizzle',
-    61: 'light rain',
-    63: 'moderate rain',
-    65: 'heavy rain',
-    66: 'light freezing rain',
-    67: 'heavy freezing rain',
-    71: 'slight snowfall',
-    73: 'moderate snowfall',
-    75: 'heavy snowfall',
-    77: 'snow grains',
-    80: 'slight rain showers',
-    81: 'moderate rain showers',
-    82: 'violent rain showers',
-    85: 'slight snow showers',
-    86: 'heavy snow showers',
-    95: 'slight or moderate thunderstorm',
-    96: 'thunderstorm with slight hail',
-    99: 'thunderstorm with heavy hail'
+    0: "clear sky",
+    1: "mostly clear",
+    2: "partly cloudy",
+    3: "overcast",
+    45: "foggy with depositing frost",
+    48: "foggy with depositing frost",
+    51: "light drizzle",
+    53: "moderate drizzle",
+    55: "heavy drizzle",
+    56: "light freezing drizzle",
+    57: "heavy freezing drizzle",
+    61: "light rain",
+    63: "moderate rain",
+    65: "heavy rain",
+    66: "light freezing rain",
+    67: "heavy freezing rain",
+    71: "slight snowfall",
+    73: "moderate snowfall",
+    75: "heavy snowfall",
+    77: "snow grains",
+    80: "slight rain showers",
+    81: "moderate rain showers",
+    82: "violent rain showers",
+    85: "slight snow showers",
+    86: "heavy snow showers",
+    95: "slight or moderate thunderstorm",
+    96: "thunderstorm with slight hail",
+    99: "thunderstorm with heavy hail",
 }
 
 
@@ -67,11 +66,11 @@ async def is_daytime(location: str):
         "latitude": lat,
         "longitude": lon,
         "current": "is_day",
-        "forecast_days": 1
+        "forecast_days": 1,
     }
     try:
         data = await get_endpoint_data(METEO_WEATHER_URL, params)
-        is_day = data['current']['is_day']
+        is_day = data["current"]["is_day"]
         if is_day:
             return f"Use the following information for {location} to generate your response: It's daytime."
         else:
@@ -87,7 +86,7 @@ async def request_weather(lat, lon, location, days=1):
         "longitude": lon,
         "current": ["temperature_2m", "weather_code"],
         "daily": "weather_code",
-        "forecast_days": days
+        "forecast_days": days,
     }
 
     try:
@@ -95,19 +94,21 @@ async def request_weather(lat, lon, location, days=1):
 
         res = f"Use the following information for {location} to generate your response: \n"
 
-        current_weather_code = data['current']['weather_code']
-        current_weather_description = WMO_DESCRIPTIONS.get(current_weather_code, 'Unknown')
+        current_weather_code = data["current"]["weather_code"]
+        current_weather_description = WMO_DESCRIPTIONS.get(
+            current_weather_code, "Unknown"
+        )
 
         res += f"The current weather is {current_weather_description}. "
 
-        daily_weather_code = data['daily']['weather_code'][0]
-        daily_weather_description = WMO_DESCRIPTIONS.get(daily_weather_code, 'Unknown')
+        daily_weather_code = data["daily"]["weather_code"][0]
+        daily_weather_description = WMO_DESCRIPTIONS.get(daily_weather_code, "Unknown")
 
         res += f"Today's forecast is {daily_weather_description}. "
 
-        current_units = data['current_units']
-        temperature_unit = current_units.get('temperature_2m', '°C')
-        temperature = data['current']['temperature_2m']
+        current_units = data["current_units"]
+        temperature_unit = current_units.get("temperature_2m", "°C")
+        temperature = data["current"]["temperature_2m"]
 
         res += f"The temperature currently is {temperature}{temperature_unit}. "
 
@@ -121,29 +122,28 @@ async def request_weather(lat, lon, location, days=1):
 
 
 def handle_multiple_days(data):
-    if not data.get('daily', False):
+    if not data.get("daily", False):
         return ""
     res = " "
     time_list = data["daily"]["time"]
     weather_code_list = data["daily"]["weather_code"]
-    res += (" ".join([f"On {time}, the forecasted weather is {WMO_DESCRIPTIONS.get(code, 'unknown')}." for time,
-            code in islice(zip(time_list, weather_code_list), 1, None)]))
+    res += " ".join(
+        [
+            f"On {time}, the forecasted weather is {WMO_DESCRIPTIONS.get(code, 'unknown')}."
+            for time, code in islice(zip(time_list, weather_code_list), 1, None)
+        ]
+    )
     return res
 
 
 async def find_lat_lon(location: str):
-    params = {
-        "name": location,
-        "count": 1,
-        "language": "en",
-        "format": "json"
-    }
+    params = {"name": location, "count": 1, "language": "en", "format": "json"}
 
     response = await get_endpoint_data(METEO_GEOCODE_URL, params)
 
-    if not (response.get('results', False)):
+    if not (response.get("results", False)):
         raise Exception("Location not found")
 
-    location = response['results'][0]
+    location = response["results"][0]
 
-    return location['latitude'], location['longitude']
+    return location["latitude"], location["longitude"]

@@ -86,6 +86,7 @@ class AIUser(
 
         try:
             from aiuser.utils.vectorstore import VectorStore
+
             self.db: VectorStore = VectorStore(cog_data_path(self))
             await self.db._connect()
         except ImportError:

@@ -21,7 +21,9 @@ class APITypeSelect(Select):
 
     async def callback(self, interaction: discord.Interaction):
         selected_value = self.values[0]
-        await interaction.response.send_message(f"Selected`{selected_value}`", ephemeral=True)
+        await interaction.response.send_message(
+            f"Selected`{selected_value}`", ephemeral=True
+        )
         await self.config.guild(self.ctx.guild).api_type.set(selected_value)
 
 

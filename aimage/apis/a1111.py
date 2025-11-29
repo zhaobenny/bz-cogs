@@ -30,7 +30,7 @@ cache_mapping = {
     "sd-models": "checkpoints",
     "sd-vae": "vaes",
     "samplers": "samplers",
-    "prompt-styles": "styles"
+    "prompt-styles": "styles",
 }
 
 A1111_SAMPLERS = [
@@ -54,12 +54,14 @@ A1111_SAMPLERS = [
     "PLMS",
     "UniPC",
     "LCM",
-    "DDPM"
+    "DDPM",
 ]
 
 
 class A1111(BaseAPI):
-    def __init__(self, cog: MixinMeta, context: Union[commands.Context, discord.Interaction]):
+    def __init__(
+        self, cog: MixinMeta, context: Union[commands.Context, discord.Interaction]
+    ):
         super().__init__(cog, context)
         cog.autocomplete_cache[self.guild.id]["samplers"] = A1111_SAMPLERS
 
@@ -72,13 +74,15 @@ class A1111(BaseAPI):
             try:
                 data = await self._get_terms(page)
             except Exception as e:
-                logger.warning(f"Failed to update autocomplete cache for {cache_key} in {self.guild.id}: \n {e}")
+                logger.warning(
+                    f"Failed to update autocomplete cache for {cache_key} in {self.guild.id}: \n {e}"
+                )
                 continue
 
             if page == "scripts":
                 choices = [choice for choice in data["txt2img"]] if data else []
             elif page == "loras":
-                choices = [choice['name'] for choice in data] if data else []
+                choices = [choice["name"] for choice in data] if data else []
             elif page in ["sd-models", "sd-vae"]:
                 choices = [choice["model_name"] for choice in data] if data else []
             else:
@@ -95,38 +99,48 @@ class A1111(BaseAPI):
         payload = payload or await self._generate_payload(params, init_image)
         return await self._post_image_gen(payload, ImageGenerationType.IMG2IMG)
 
-    async def _generate_payload(self, params: ImageGenParams, init_image: bytes = None) -> dict:
+    async def _generate_payload(
+        self, params: ImageGenParams, init_image: bytes = None
+    ) -> dict:
         payload = {
             "prompt": f"{params.prompt} {params.lora}",
-            "negative_prompt": params.negative_prompt or await self.config.guild(self.guild).negative_prompt(),
+            "negative_prompt": params.negative_prompt
+            or await self.config.guild(self.guild).negative_prompt(),
             "styles": params.style.split(", ") if params.style else [],
             "cfg_scale": params.cfg or await self.config.guild(self.guild).cfg(),
-            "steps": params.steps or await self.config.guild(self.guild).sampling_steps(),
+            "steps": params.steps
+            or await self.config.guild(self.guild).sampling_steps(),
             "seed": params.seed,
             "subseed": params.subseed,
             "subseed_strength": params.subseed_strength,
-            "sampler_name": params.sampler or await self.config.guild(self.guild).sampler(),
+            "sampler_name": params.sampler
+            or await self.config.guild(self.guild).sampler(),
             "scheduler": params.scheduler or "Automatic",
             "override_settings": {
-                "sd_model_checkpoint": params.checkpoint or await self.config.guild(self.guild).checkpoint(),
-                "sd_vae": params.vae or await self.config.guild(self.guild).vae()
+                "sd_model_checkpoint": params.checkpoint
+                or await self.config.guild(self.guild).checkpoint(),
+                "sd_vae": params.vae or await self.config.guild(self.guild).vae(),
             },
             "width": params.width or await self.config.guild(self.guild).width(),
             "height": params.height or await self.config.guild(self.guild).height(),
-            "alwayson_scripts": {}
+            "alwayson_scripts": {},
         }
 
         # force flux support for now
         if "flux" in payload["override_settings"]["sd_model_checkpoint"]:
-            logger.debug("Flux model detected, setting scheduler to Simple and cfg_scale to 1")
+            logger.debug(
+                "Flux model detected, setting scheduler to Simple and cfg_scale to 1"
+            )
             payload["scheduler"] = "Simple"
             payload["cfg_scale"] = 1
 
         if init_image:
-            payload.update({
-                "init_images": [base64.b64encode(init_image).decode("utf8")],
-                "denoising_strength": params.denoising
-            })
+            payload.update(
+                {
+                    "init_images": [base64.b64encode(init_image).decode("utf8")],
+                    "denoising_strength": params.denoising,
+                }
+            )
 
         if await self.config.guild(self.guild).adetailer():
             payload["alwayson_scripts"].update(ADETAILER_ARGS)
@@ -164,10 +178,14 @@ class A1111(BaseAPI):
                 del r["images"]
                 logger.debug(f"Requested with parameters: {json.dumps(r, indent=4)}")
 
-        return ImageResponse(data=data, info_string=info_string, is_nsfw=is_nsfw, payload=payload)
+        return ImageResponse(
+            data=data, info_string=info_string, is_nsfw=is_nsfw, payload=payload
+        )
 
     @retry(wait=wait_random(min=3, max=5), stop=stop_after_attempt(1), reraise=True)
     async def _get_terms(self, page):
         url = self.endpoint + page
-        async with self.session.get(url=url, auth=self.auth, raise_for_status=True) as response:
+        async with self.session.get(
+            url=url, auth=self.auth, raise_for_status=True
+        ) as response:
             return await response.json()

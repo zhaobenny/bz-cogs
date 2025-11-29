@@ -1,4 +1,3 @@
-import json
 import logging
 
 import aiohttp
@@ -14,7 +13,9 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 WORDS_LIMIT = 5000
 
 
-async def search_searxng(query: str, endpoint: str, results: int, ctx: commands.Context):
+async def search_searxng(
+    query: str, endpoint: str, results: int, ctx: commands.Context
+):
     if not endpoint:
         return "SearXNG endpoint missing."
     return await SearXNGQuery(query, endpoint, results, ctx).execute_search()
@@ -31,16 +32,20 @@ class SearXNGQuery:
         params = {}
         params["q"] = self.query
         params["format"] = "json"
-        headers = {'Content-Type': 'application/json'}
+        headers = {"Content-Type": "application/json"}
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
 
         try:
             async with aiohttp.ClientSession(headers=headers) as session:
-                async with session.get(self.endpoint, params=params, ssl=ssl_context) as response:
+                async with session.get(
+                    self.endpoint, params=params, ssl=ssl_context
+                ) as response:
                     response.raise_for_status()
-                    logger.debug(f"Requesting {response.real_url} from search query \"{self.query}\" in {self.guild}")
+                    logger.debug(
+                        f'Requesting {response.real_url} from search query "{self.query}" in {self.guild}'
+                    )
 
                     if response.content_type != "application/json":
                         logger.debug(f"Reponse: {await response.text()}")
@@ -69,40 +74,41 @@ class SearXNGQuery:
 
             try:
                 response_site = await self.scrape_page(url_site)
-                truncated_content = self.truncate_to_n_words(
-                    response_site, WORDS_LIMIT
-                )
+                truncated_content = self.truncate_to_n_words(response_site, WORDS_LIMIT)
 
-                results_json.append({
-                    "title": title_site,
-                    "url": url_site,
-                    "content": truncated_content,
-                    "snippet": self.remove_emojis(snippet),
-                })
+                results_json.append(
+                    {
+                        "title": title_site,
+                        "url": url_site,
+                        "content": truncated_content,
+                        "snippet": self.remove_emojis(snippet),
+                    }
+                )
                 x += 1
 
-            except Exception as e:
+            except Exception:
                 continue
 
-        return results_json[:self.results]
-
+        return results_json[: self.results]
 
     def remove_emojis(self, text):
         return "".join(c for c in text if not unicodedata.category(c).startswith("So"))
-    
+
     def truncate_to_n_words(self, text, token_limit):
         tokens = text.split()
         truncated_tokens = tokens[:token_limit]
-        return " ".join(truncated_tokens)    
-    
+        return " ".join(truncated_tokens)
+
     async def scrape_page(self, link: str):
         headers = {
             "Cache-Control": "no-cache",
             "Referer": "https://www.google.com/",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
         }
 
-        logger.info(f"Requesting {link} from search query \"{self.query}\" in {self.guild}")
+        logger.info(
+            f'Requesting {link} from search query "{self.query}" in {self.guild}'
+        )
         async with aiohttp.ClientSession(headers=headers) as session:
             async with session.get(link) as response:
                 response.raise_for_status()
@@ -112,4 +118,4 @@ class SearXNGQuery:
                 if len(text_content) > 5000:
                     text_content = text_content[:5000] + "..."
 
-                return text_content    
+                return text_content

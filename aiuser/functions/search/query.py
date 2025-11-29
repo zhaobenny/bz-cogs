@@ -24,7 +24,7 @@ class SerperQuery:
 
     async def execute_search(self):
         payload = json.dumps({"q": self.query})
-        headers = {'X-API-KEY': self.api_key, 'Content-Type': 'application/json'}
+        headers = {"X-API-KEY": self.api_key, "Content-Type": "application/json"}
 
         try:
             async with aiohttp.ClientSession(headers=headers) as session:
@@ -43,8 +43,11 @@ class SerperQuery:
         if answer_box and "snippet" in answer_box:
             return f"Use the following relevant information to generate your response: {answer_box['snippet']}"
 
-        organic_results = [result for result in data.get(
-            "organic", []) if not contains_youtube_link(result.get("link", ""))]
+        organic_results = [
+            result
+            for result in data.get("organic", [])
+            if not contains_youtube_link(result.get("link", ""))
+        ]
         if not organic_results:
             return "No relevant information was found using a Google search."
 
@@ -64,10 +67,12 @@ class SerperQuery:
         headers = {
             "Cache-Control": "no-cache",
             "Referer": "https://www.google.com/",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
         }
 
-        logger.info(f"Requesting {link} from Google query \"{self.query}\" in {self.guild}")
+        logger.info(
+            f'Requesting {link} from Google query "{self.query}" in {self.guild}'
+        )
         async with aiohttp.ClientSession(headers=headers) as session:
             async with session.get(link) as response:
                 response.raise_for_status()

@@ -24,6 +24,3 @@ async def fetch_image_bytes(source: str) -> bytes:
         _, _, b64 = source.partition(",")
         return base64.b64decode(b64)
     return base64.b64decode(source, validate=True)
-
-
-

@@ -6,13 +6,16 @@ from redbot.core import Config, commands
 
 CONSENT_EMBED_TITLE = ":information_source: AI User Opt-In / Opt-Out"
 
+
 class ConsentManager:
     def __init__(self, config: Config, bot: commands.Bot, guild: discord.Guild):
         self.config = config
         self.bot = bot
         self.guild = guild
-    
-    async def get_unknown_consent_users(self, messages: list[discord.Message]) -> Set[discord.Member]:
+
+    async def get_unknown_consent_users(
+        self, messages: list[discord.Message]
+    ) -> Set[discord.Member]:
         """Find users who haven't made an opt-in/out choice yet"""
         users = set()
 
@@ -28,7 +31,7 @@ class ConsentManager:
                 users.add(message.author)
 
         return users
-    
+
     async def should_send_consent_embed(self, users: Set[discord.Member]) -> bool:
         """Decide if we should send the opt-in embed"""
         if not users:
@@ -37,13 +40,13 @@ class ConsentManager:
             return False
         # 33% chance OR if more than 3 users need to opt in
         return (random.random() <= 0.33) or (len(users) > 3)
-    
+
     async def send_consent_embed(self, channel, users: Set[discord.Member]):
         """Send the consent embed to the channel"""
         from aiuser.context.consent.view import (
             ConsentView,  # Import here to avoid circular imports
         )
-        
+
         users_mentions = ", ".join([user.mention for user in users])
         embed = discord.Embed(
             title=CONSENT_EMBED_TITLE,
@@ -58,7 +61,7 @@ class ConsentManager:
             "This message will disappear if all current chatters have made a choice."
         )
         await channel.send(embed=embed, view=view)
-    
+
     async def is_user_allowed(self, user: discord.Member) -> bool:
         """Check if a user is allowed to have their messages processed"""
         if user.id == self.bot.user.id:
