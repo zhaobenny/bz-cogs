@@ -1,10 +1,15 @@
+import json
+import logging
+
 from discord import Message
 
-from aiuser.types.abc import MixinMeta
 from aiuser.config.constants import URL_PATTERN
-from aiuser.utils.utilities import contains_youtube_link
-from aiuser.functions.scrape.tool_call import ScrapeToolCall
 from aiuser.context.converter.embed.youtube import format_youtube_embed
+from aiuser.functions.scrape.tool_call import ScrapeToolCall
+from aiuser.types.abc import MixinMeta
+from aiuser.utils.utilities import contains_youtube_link
+
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 async def format_embed_content(cog: MixinMeta, message: Message):
@@ -17,5 +22,11 @@ async def format_embed_content(cog: MixinMeta, message: Message):
         in await cog.config.guild(message.guild).function_calling_functions()
     ):
         return None
-    else:
+    try:
         return f'User "{message.author.display_name}" sent: [Embed with title "{message.embeds[0].title}" and description "{message.embeds[0].description}"]'
+    except Exception:
+        logger.debug(
+            "Failed to format embed content! \n Embeds in the message was: %s",
+            json.dumps(message.embeds, indent=4),
+        )
+        return None
