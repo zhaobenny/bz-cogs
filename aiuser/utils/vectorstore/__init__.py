@@ -9,9 +9,9 @@ if platform.system() != "Darwin":
         cpu_info: dict = get_cpu_info()
         flags = [f.lower() for f in cpu_info.get("flags", [])]
 
-        if "avx" not in flags:
+        if "avx2" not in flags:
             raise ImportError(
-                "VectorStore is not supported on this CPU. AVX support is required."
+                "VectorStore is not supported on this CPU. AVX2 support is required."
             )
 
 from .vectorstore import VectorStore
