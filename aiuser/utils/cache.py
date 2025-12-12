@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+
 class Cache(OrderedDict):
     def __init__(self, limit: int):
         super().__init__()
