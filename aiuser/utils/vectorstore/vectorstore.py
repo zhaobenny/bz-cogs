@@ -20,7 +20,14 @@ class VectorStore:
         ensure_sqlite_db(str(self.db_path))
 
     @to_thread()
-    def _upsert(self, guild_id: int, memory_name: str, memory_text: str, last_updated: int, embedding: bytes):
+    def _upsert(
+        self,
+        guild_id: int,
+        memory_name: str,
+        memory_text: str,
+        last_updated: int,
+        embedding: bytes,
+    ):
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
         cursor.execute(
@@ -28,7 +35,7 @@ class VectorStore:
             INSERT INTO memories (guild_id, memory_name, memory_text, last_updated, embedding)
             VALUES (?, ?, ?, ?, ?)
             """,
-            (guild_id, memory_name, memory_text, last_updated, embedding)
+            (guild_id, memory_name, memory_text, last_updated, embedding),
         )
         conn.commit()
 
@@ -47,7 +54,9 @@ class VectorStore:
         embedding_array = await embed_text(memory_text, str(self.cog_data_path))
         embedding_bytes = np.array(embedding_array, dtype=np.float32).tobytes()
 
-        return await self._upsert(guild_id, memory_name, memory_text, last_updated, embedding_bytes)
+        return await self._upsert(
+            guild_id, memory_name, memory_text, last_updated, embedding_bytes
+        )
 
     @to_thread()
     def _list(self, guild_id: int) -> List[Tuple[int, str]]:
@@ -55,7 +64,7 @@ class VectorStore:
         cursor = conn.cursor()
         cursor.execute(
             "SELECT memory_name FROM memories WHERE guild_id = ? ORDER BY rowid ASC",
-            (guild_id,)
+            (guild_id,),
         )
         res = cursor.fetchall()
         conn.close()
@@ -75,7 +84,7 @@ class VectorStore:
         cursor = conn.cursor()
         cursor.execute(
             "SELECT memory_name, memory_text FROM memories WHERE guild_id = ? ORDER BY rowid ASC",
-            (guild_id,)
+            (guild_id,),
         )
         res = cursor.fetchall()
         conn.close()
@@ -105,7 +114,7 @@ class VectorStore:
         # Get all rowids for the guild to find the correct one to delete
         cursor.execute(
             "SELECT rowid FROM memories WHERE guild_id = ? ORDER BY rowid ASC",
-            (guild_id,)
+            (guild_id,),
         )
         rows = cursor.fetchall()
 
@@ -131,12 +140,14 @@ class VectorStore:
         return await self._delete(rowid, guild_id)
 
     @to_thread()
-    def _search_similar(self, query_embedding: np.ndarray, guild_id: int, k: int) -> List[Tuple[str, str, float]]:
+    def _search_similar(
+        self, query_embedding: np.ndarray, guild_id: int, k: int
+    ) -> List[Tuple[str, str, float]]:
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
         cursor.execute(
             "SELECT memory_name, memory_text, embedding FROM memories WHERE guild_id = ?",
-            (guild_id,)
+            (guild_id,),
         )
         res = cursor.fetchall()
         conn.close()
