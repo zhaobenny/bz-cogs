@@ -20,14 +20,7 @@ class VectorStore:
         ensure_sqlite_db(str(self.db_path))
 
     @to_thread()
-    def _upsert(
-        self,
-        guild_id: int,
-        memory_name: str,
-        memory_text: str,
-        last_updated: int,
-        embedding: bytes,
-    ):
+    def _upsert(self, guild_id: int, memory_name: str, memory_text: str, last_updated: int, embedding: bytes):
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
         cursor.execute(
@@ -35,7 +28,7 @@ class VectorStore:
             INSERT INTO memories (guild_id, memory_name, memory_text, last_updated, embedding)
             VALUES (?, ?, ?, ?, ?)
             """,
-            (guild_id, memory_name, memory_text, last_updated, embedding),
+            (guild_id, memory_name, memory_text, last_updated, embedding)
         )
         conn.commit()
 
@@ -54,9 +47,7 @@ class VectorStore:
         embedding_array = await embed_text(memory_text, str(self.cog_data_path))
         embedding_bytes = np.array(embedding_array, dtype=np.float32).tobytes()
 
-        return await self._upsert(
-            guild_id, memory_name, memory_text, last_updated, embedding_bytes
-        )
+        return await self._upsert(guild_id, memory_name, memory_text, last_updated, embedding_bytes)
 
     @to_thread()
     def _list(self, guild_id: int) -> List[Tuple[int, str]]:
@@ -64,7 +55,7 @@ class VectorStore:
         cursor = conn.cursor()
         cursor.execute(
             "SELECT memory_name FROM memories WHERE guild_id = ? ORDER BY rowid ASC",
-            (guild_id,),
+            (guild_id,)
         )
         res = cursor.fetchall()
         conn.close()
@@ -84,7 +75,7 @@ class VectorStore:
         cursor = conn.cursor()
         cursor.execute(
             "SELECT memory_name, memory_text FROM memories WHERE guild_id = ? ORDER BY rowid ASC",
-            (guild_id,),
+            (guild_id,)
         )
         res = cursor.fetchall()
         conn.close()
@@ -114,7 +105,7 @@ class VectorStore:
         # Get all rowids for the guild to find the correct one to delete
         cursor.execute(
             "SELECT rowid FROM memories WHERE guild_id = ? ORDER BY rowid ASC",
-            (guild_id,),
+            (guild_id,)
         )
         rows = cursor.fetchall()
 
@@ -140,14 +131,12 @@ class VectorStore:
         return await self._delete(rowid, guild_id)
 
     @to_thread()
-    def _search_similar(
-        self, query_embedding: np.ndarray, guild_id: int, k: int
-    ) -> List[Tuple[str, str, float]]:
+    def _search_similar(self, query_embedding: np.ndarray, guild_id: int, k: int) -> List[Tuple[str, str, float]]:
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
         cursor.execute(
             "SELECT memory_name, memory_text, embedding FROM memories WHERE guild_id = ?",
-            (guild_id,),
+            (guild_id,)
         )
         res = cursor.fetchall()
         conn.close()
@@ -156,43 +145,15 @@ class VectorStore:
             return []
 
         # Cosine similarity calculation
+        # fastembed returns normalized vectors (L2 norm = 1.0)
+        # So Cosine Similarity = Dot Product (u . v) / (||u|| * ||v||) => (u . v) / 1 => u . v
+
         q = query_embedding
-        q_norm = np.linalg.norm(q)
 
         similarities = []
         for name, text, emb_bytes in res:
             emb = np.frombuffer(emb_bytes, dtype=np.float32)
-            emb_norm = np.linalg.norm(emb)
-
-            if emb_norm == 0 or q_norm == 0:
-                score = 0.0
-            else:
-                score = np.dot(q, emb) / (q_norm * emb_norm)
-
-            # LanceDB returns distance, where lower is better?
-            # Wait, the original code used `table.search(q)` which likely does Euclidean distance or Cosine distance.
-            # LanceDB documentation says search returns distance. By default L2.
-            # But here the method is named `search_similar`.
-            # Typically vector search returns closest vectors.
-            # If the user wants cosine comparison, usually higher score is better (1.0).
-            # But the original method returns `dist`.
-            # Let's see how `search_similar` is used.
-            # The return type is List[Tuple[str, str, float]].
-
-            # Re-checking original code:
-            # dist = float(row.get("_distance"))
-            # out.append((name, text, dist))
-
-            # If LanceDB defaults to L2, smaller is closer.
-            # If we use cosine similarity, larger is closer.
-            # I should invert it or return similarity?
-            # The prompt asked for "simple math or cosin comparison".
-            # If I return cosine similarity (0 to 1), I should verify if consumers expect distance (0 to infinity).
-
-            # Let's assume for now we return cosine similarity.
-            # Actually, `dist` in LanceDB with cosine metric is usually 1 - cosine_similarity.
-            # But default is L2.
-
+            score = np.dot(q, emb)
             similarities.append((name, text, float(score)))
 
         # Sort by score descending (highest similarity first)

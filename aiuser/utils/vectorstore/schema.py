@@ -1,6 +1,5 @@
 import sqlite3
 
-
 def ensure_sqlite_db(db_path: str):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
