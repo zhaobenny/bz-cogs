@@ -16,16 +16,16 @@ class MemoryRetriever:
         self.ctx = ctx
         self.db = db
 
-    async def fetch_relevant(self, query: str, threshold: float = 1.1) -> Optional[str]:
+    async def fetch_relevant(self, query: str, threshold: float = 0.4) -> Optional[str]:
         """
         Fetch the most relevant memory based on a similarity threshold.
 
         Args:
             query: The text to search for similar memories
-            threshold: Maximum distance threshold for relevance (lower is more similar)
+            threshold: Minimum similarity threshold for relevance (higher is more similar)
 
         Returns:
-            The most relevant memory text if found and below threshold, None otherwise
+            The most relevant memory text if found and above threshold, None otherwise
         """
         if not query.strip():
             return None
@@ -36,7 +36,7 @@ class MemoryRetriever:
             logger.exception("Database error while searching memories")
             return None
 
-        if memory_results and memory_results[0][2] < threshold:
+        if memory_results and memory_results[0][2] >= threshold:
             return f"Looking into your memory, the following relevant memory was found that could be used in the response: `{memory_results[0][1]}`"
 
         return None
