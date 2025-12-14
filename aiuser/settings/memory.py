@@ -31,8 +31,7 @@ class MemorySettings(MixinMeta):
 
         (Via just comparing semantic similarity of the previous message, no tool calling yet!)
         """
-        if not await self._is_db(ctx):
-            return await self.config.guild(ctx.guild).query_memories.set(False)
+
         current = await self.config.guild(ctx.guild).query_memories()
         new_value = not current
         await self.config.guild(ctx.guild).query_memories.set(new_value)
@@ -49,8 +48,7 @@ class MemorySettings(MixinMeta):
     @memory.command(name="list")
     async def list_memory(self, ctx: commands.Context):
         """Shows all memories stored."""
-        if not await self._is_db(ctx):
-            return
+
         try:
             memories = await self.db.list(ctx.guild.id)
         except Exception:
@@ -100,8 +98,7 @@ class MemorySettings(MixinMeta):
     @memory.command(name="show")
     async def show_memory(self, ctx: commands.Context, memory_id: int):
         """Shows a memory by ID."""
-        if not await self._is_db(ctx):
-            return
+
         try:
             memory = await self.db.fetch_by_rowid(memory_id, ctx.guild.id)
         except Exception:
@@ -146,8 +143,6 @@ class MemorySettings(MixinMeta):
     @memory.command(name="add")
     async def add_memory(self, ctx: commands.Context, *, memory: str):
         """Adds a memory where the format is `<MEMORY_NAME>: <MEMORY_CONTENT>`, where MEMORY_NAME is currently only used for easier identification."""
-        if not await self._is_db(ctx):
-            return
 
         if ":" not in memory:
             embed = discord.Embed(
@@ -195,8 +190,7 @@ class MemorySettings(MixinMeta):
     @memory.command(name="remove", aliases=["delete"])
     async def remove_memory(self, ctx: commands.Context, memory_id: int):
         """Removes a memory by ID."""
-        if not await self._is_db(ctx):
-            return
+
         try:
             row = await self.db.fetch_by_rowid(memory_id, ctx.guild.id)
             if not row:
@@ -218,12 +212,3 @@ class MemorySettings(MixinMeta):
             color=await ctx.embed_color(),
         )
         await ctx.send(embed=embed)
-
-    async def _is_db(self, ctx: commands.Context) -> bool:
-        if self.db is None:
-            await ctx.message.add_reaction("⚠️")
-            logger.warning(
-                "LanceDB client was not initialized; cannot use memory features."
-            )
-            return False
-        return True

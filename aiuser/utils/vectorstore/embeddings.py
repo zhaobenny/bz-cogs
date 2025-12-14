@@ -17,7 +17,7 @@ async def embed_text(text: str, cache_folder: str) -> NumpyArray:
 
 @to_thread()
 def embed_sync(text: str, cache_folder: str) -> NumpyArray:
-    model = TextEmbedding(EMBEDDING_MODEL, cache_folder=cache_folder)
+    model = TextEmbedding(EMBEDDING_MODEL, cache_dir=cache_folder)
     res = model.embed([text])
     return next(iter(res))
 

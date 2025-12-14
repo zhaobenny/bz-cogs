@@ -23,6 +23,7 @@ from aiuser.dashboard.base import DashboardIntegration
 from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
 from aiuser.utils.cache import Cache
+from aiuser.utils.vectorstore.vectorstore import VectorStore
 
 from .openai_utils import setup_openai_client
 
@@ -84,17 +85,7 @@ class AIUser(
             test_guild = 744802856074346556
             self.override_prompt_start_time[test_guild] = datetime.now()
 
-        try:
-            from aiuser.utils.vectorstore import VectorStore
-
-            self.db: VectorStore = VectorStore(cog_data_path(self))
-            await self.db._connect()
-        except ImportError:
-            logger.warning(
-                "LanceDB client could not be initialized on cog load due to CPU missing AVX/AVX2 support."
-            )
-        except Exception:
-            logger.exception("Failed to initialize LanceDB client on cog load")
+        self.db: VectorStore = VectorStore(cog_data_path(self))
 
         self.random_message_trigger.start()
 
