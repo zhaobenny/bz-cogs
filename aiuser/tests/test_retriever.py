@@ -2,8 +2,6 @@ from types import SimpleNamespace
 
 import pytest
 
-pytest.importorskip("lancedb")
-
 from aiuser.context.memory.retriever import MemoryRetriever
 from aiuser.utils.vectorstore import VectorStore
 
@@ -26,7 +24,7 @@ async def test_fetch_relevant_success(repo):
     ctx = SimpleNamespace(guild=SimpleNamespace(id=123))
     retriever = MemoryRetriever(ctx, repo)
 
-    out = await retriever.fetch_relevant("red", threshold=10.0)
+    out = await retriever.fetch_relevant("red", threshold=0.2)
     assert out is not None
     assert expected_text in out
 
@@ -38,8 +36,8 @@ async def test_fetch_relevant_no_match(repo):
     ctx = SimpleNamespace(guild=SimpleNamespace(id=123))
     retriever = MemoryRetriever(ctx, repo)
 
-    # use a very small threshold so the existing distance will be above it
-    out = await retriever.fetch_relevant("Toying", threshold=1e-6)
+    # use a very high threshold so the existing similarity will be below it
+    out = await retriever.fetch_relevant("Toying", threshold=0.99)
     assert out is None
 
 

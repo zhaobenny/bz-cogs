@@ -2,8 +2,6 @@ import pytest
 
 # ./.venv/bin/python -m pytest aiuser/tests/test_vectorstore.py -q -s
 
-pytest.importorskip("lancedb")
-
 from aiuser.utils.vectorstore import VectorStore
 
 

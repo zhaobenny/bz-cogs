@@ -1,149 +1,146 @@
+import re
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
-import lancedb
+import aiosqlite
 import numpy as np
+from rank_bm25 import BM25Okapi
 
 from aiuser.config.constants import EMBEDDING_DB_NAME
 from aiuser.utils.vectorstore.embeddings import embed_text
-from aiuser.utils.vectorstore.schema import MEMORY_TABLE_NAME, ensure_lance_db
+from aiuser.utils.vectorstore.schema import ensure_sqlite_db
 
 
 class VectorStore:
     def __init__(self, cog_data_path: Union[str, Path]):
         self.cog_data_path = Path(cog_data_path)
-        self.db: Optional[lancedb.db.AsyncConnection] = None
-
-    async def _connect(self):
-        if self.db is None or (not self.db.is_open()):
-            db_path = self.cog_data_path / EMBEDDING_DB_NAME
-            conn = await lancedb.connect_async(str(db_path))
-            await ensure_lance_db(conn)
-            self.db = conn
-        else:
-            return
+        self.db_path = self.cog_data_path / EMBEDDING_DB_NAME
 
     async def upsert(
         self, guild_id: int, memory_name: str, memory_text: str, last_updated: int
     ) -> int:
         """Insert a new memory row. Returns number of rows in table after insert."""
-        await self._connect()
+        await ensure_sqlite_db(str(self.db_path))
 
-        table = await self.db.open_table(MEMORY_TABLE_NAME)
+        embedding_array = await embed_text(memory_text, str(self.cog_data_path))
+        embedding_bytes = np.array(embedding_array, dtype=np.float32).tobytes()
 
-        embedding = await embed_text(memory_text, str(self.cog_data_path))
-        arr = np.array(embedding, dtype=np.float32).tolist()
+        async with aiosqlite.connect(self.db_path) as conn:
+            await conn.execute(
+                """
+                INSERT INTO memories (guild_id, memory_name, memory_text, last_updated, embedding)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (guild_id, memory_name, memory_text, last_updated, embedding_bytes),
+            )
+            await conn.commit()
 
-        data = [
-            {
-                "guild_id": int(guild_id),
-                "memory_name": memory_name,
-                "memory_text": memory_text,
-                "last_updated": int(last_updated),
-                "embedding": arr,
-            }
-        ]
-
-        await table.add(data)
-        try:
-            new_len = await table.count_rows()
-        except Exception:
-            return 1
-        return int(new_len)
+            cursor = await conn.execute(
+                "SELECT COUNT(*) FROM memories WHERE guild_id = ?", (guild_id,)
+            )
+            row = await cursor.fetchone()
+            return row[0] if row else 0
 
     async def list(self, guild_id: int) -> List[Tuple[int, str]]:
         """List memory names for a guild."""
-        await self._connect()
-
-        table = await self.db.open_table(MEMORY_TABLE_NAME)
-
-        res = await (
-            table.query()
-            .where(f"guild_id = {int(guild_id)}")
-            .select(["memory_name"])
-            .to_list()
-        )
+        await ensure_sqlite_db(str(self.db_path))
+        async with aiosqlite.connect(self.db_path) as conn:
+            cursor = await conn.execute(
+                "SELECT memory_name FROM memories WHERE guild_id = ? ORDER BY rowid ASC",
+                (guild_id,),
+            )
+            res = await cursor.fetchall()
 
         if not res:
             return []
-        return [(i + 1, r.get("memory_name")) for i, r in enumerate(res)]
+        return [(i + 1, r[0]) for i, r in enumerate(res)]
 
     async def fetch_by_rowid(
         self, rowid: int, guild_id: int
     ) -> Optional[Tuple[str, str]]:
         """Fetch a memory by its 1-based row index for the guild."""
-        await self._connect()
+        await ensure_sqlite_db(str(self.db_path))
+        async with aiosqlite.connect(self.db_path) as conn:
+            cursor = await conn.execute(
+                "SELECT memory_name, memory_text FROM memories WHERE guild_id = ? ORDER BY rowid ASC",
+                (guild_id,),
+            )
+            res = await cursor.fetchall()
 
-        try:
-            table = await self.db.open_table(MEMORY_TABLE_NAME)
-        except FileNotFoundError:
-            return None
-
-        res = await (
-            table.query()
-            .where(f"guild_id = {int(guild_id)}")
-            .select(["memory_name", "memory_text"])
-            .to_list()
-        )
         if not res:
             return None
+
         idx = rowid - 1
         if idx < 0 or idx >= len(res):
             return None
+
         r = res[idx]
-        return r.get("memory_name"), r.get("memory_text")
+        return r[0], r[1]
 
     async def delete(self, rowid: int, guild_id: int) -> bool:
         """Delete a memory by its 1-based row index for the guild."""
-        await self._connect()
-        try:
-            table = await self.db.open_table(MEMORY_TABLE_NAME)
-        except FileNotFoundError:
-            return False
+        await ensure_sqlite_db(str(self.db_path))
+        async with aiosqlite.connect(self.db_path) as conn:
+            cursor = await conn.execute(
+                "SELECT rowid FROM memories WHERE guild_id = ? ORDER BY rowid ASC",
+                (guild_id,),
+            )
+            rows = await cursor.fetchall()
 
-        rows = await (
-            table.query()
-            .where(f"guild_id = {int(guild_id)}")
-            .with_row_id()
-            .select(["_rowid", "memory_name"])
-            .to_list()
-        )
-        if not rows:
-            return False
-        idx = rowid - 1
-        if idx < 0 or idx >= len(rows):
-            return False
-        target = rows[idx]
-        global_rowid = target.get("_rowid")
-        if global_rowid is None:
-            return False
+            if not rows:
+                return False
 
-        await table.delete(f"_rowid = {int(global_rowid)}")
-        return True
+            idx = rowid - 1
+            if idx < 0 or idx >= len(rows):
+                return False
+
+            target_rowid = rows[idx][0]
+
+            await conn.execute("DELETE FROM memories WHERE rowid = ?", (target_rowid,))
+            await conn.commit()
+            return True
 
     async def search_similar(
         self, query: str, guild_id: int, k: int = 1
     ) -> List[Tuple[str, str, float]]:
-        """Search for similar memories using the provided embedding."""
-        await self._connect()
+        """Search for similar memories using BM25 pre-filtering + embedding similarity."""
+        await ensure_sqlite_db(str(self.db_path))
+
+        async with aiosqlite.connect(self.db_path) as conn:
+            cursor = await conn.execute(
+                "SELECT rowid, memory_text FROM memories WHERE guild_id = ?",
+                (guild_id,),
+            )
+            text_rows = await cursor.fetchall()
+
+            if not text_rows:
+                return []
+
+            tokenized_corpus = [re.findall(r"\w+", row[1].lower()) for row in text_rows]
+            bm25 = BM25Okapi(tokenized_corpus)
+            tokenized_query = re.findall(r"\w+", query.lower())
+            bm25_scores = bm25.get_scores(tokenized_query)
+
+            top_indices = np.argsort(bm25_scores)[-50:][::-1]
+            candidate_rowids = [text_rows[i][0] for i in top_indices]
+
+            if not candidate_rowids:
+                return []
+
+            placeholders = ",".join("?" * len(candidate_rowids))
+            cursor = await conn.execute(
+                f"SELECT memory_name, memory_text, embedding FROM memories WHERE rowid IN ({placeholders})",
+                candidate_rowids,
+            )
+            candidates = await cursor.fetchall()
+
         query_embedding = await embed_text(query, str(self.cog_data_path))
-        table = await self.db.open_table(MEMORY_TABLE_NAME)
 
-        q = np.array(query_embedding, dtype=np.float32).tolist()
+        similarities = []
+        for name, text, emb_bytes in candidates:
+            emb = np.frombuffer(emb_bytes, dtype=np.float32)
+            score = np.dot(query_embedding, emb)
+            similarities.append((name, text, float(score)))
 
-        res = await (
-            (await table.search(q))
-            .where(f"guild_id = {int(guild_id)}")
-            .limit(k)
-            .with_row_id()
-            .select(["_rowid", "memory_name", "memory_text", "_distance"])
-            .to_list()
-        )
-
-        out: List[Tuple[str, str, float]] = []
-        for row in res:
-            name = row.get("memory_name")
-            text = row.get("memory_text")
-            dist = float(row.get("_distance"))
-            out.append((name, text, dist))
-        return out
+        similarities.sort(key=lambda x: x[2], reverse=True)
+        return similarities[:k]
