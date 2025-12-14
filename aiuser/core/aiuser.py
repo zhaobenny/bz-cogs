@@ -23,7 +23,7 @@ from aiuser.dashboard.base import DashboardIntegration
 from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
 from aiuser.utils.cache import Cache
-from aiuser.utils.vectorstore.vectorstore import VectorStore
+from aiuser.utils.vectorstore import VectorStore
 
 from .openai_utils import setup_openai_client
 

@@ -16,7 +16,9 @@ class MemoryRetriever:
         self.ctx = ctx
         self.db = db
 
-    async def fetch_relevant(self, query: str, threshold: float = 0.4) -> Optional[str]:
+    async def fetch_relevant(
+        self, query: str, threshold: float = 0.85
+    ) -> Optional[str]:
         """
         Fetch the most relevant memory based on a similarity threshold.
 

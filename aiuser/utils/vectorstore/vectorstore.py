@@ -1,8 +1,10 @@
+import re
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 import aiosqlite
 import numpy as np
+from rank_bm25 import BM25Okapi
 
 from aiuser.config.constants import EMBEDDING_DB_NAME
 from aiuser.utils.vectorstore.embeddings import embed_text
@@ -101,29 +103,44 @@ class VectorStore:
     async def search_similar(
         self, query: str, guild_id: int, k: int = 1
     ) -> List[Tuple[str, str, float]]:
-        """Search for similar memories using the provided embedding."""
+        """Search for similar memories using BM25 pre-filtering + embedding similarity."""
         await ensure_sqlite_db(str(self.db_path))
-        query_embedding = await embed_text(query, str(self.cog_data_path))
 
         async with aiosqlite.connect(self.db_path) as conn:
             cursor = await conn.execute(
-                "SELECT memory_name, memory_text, embedding FROM memories WHERE guild_id = ?",
+                "SELECT rowid, memory_text FROM memories WHERE guild_id = ?",
                 (guild_id,),
             )
-            res = await cursor.fetchall()
+            text_rows = await cursor.fetchall()
 
-        if not res:
-            return []
+            if not text_rows:
+                return []
 
-        q = query_embedding
+            tokenized_corpus = [re.findall(r"\w+", row[1].lower()) for row in text_rows]
+            bm25 = BM25Okapi(tokenized_corpus)
+            tokenized_query = re.findall(r"\w+", query.lower())
+            bm25_scores = bm25.get_scores(tokenized_query)
+
+            top_indices = np.argsort(bm25_scores)[-50:][::-1]
+            candidate_rowids = [text_rows[i][0] for i in top_indices]
+
+            if not candidate_rowids:
+                return []
+
+            placeholders = ",".join("?" * len(candidate_rowids))
+            cursor = await conn.execute(
+                f"SELECT memory_name, memory_text, embedding FROM memories WHERE rowid IN ({placeholders})",
+                candidate_rowids,
+            )
+            candidates = await cursor.fetchall()
+
+        query_embedding = await embed_text(query, str(self.cog_data_path))
 
         similarities = []
-        for name, text, emb_bytes in res:
+        for name, text, emb_bytes in candidates:
             emb = np.frombuffer(emb_bytes, dtype=np.float32)
-            score = np.dot(q, emb)
+            score = np.dot(query_embedding, emb)
             similarities.append((name, text, float(score)))
 
         similarities.sort(key=lambda x: x[2], reverse=True)
-        top_k = similarities[:k]
-
-        return top_k
+        return similarities[:k]
