@@ -1,24 +1,19 @@
-class Cache(dict):
+from collections import OrderedDict
+
+
+class Cache(OrderedDict):
     def __init__(self, limit: int):
         super().__init__()
         self.limit = limit
-        self.keys = []
-
-    def __setitem__(self, key, value):
-        if key in self:
-            self.keys.remove(key)
-            self.keys.append(key)
-        else:
-            if len(self) >= self.limit:
-                oldest_key = self.keys.pop(0)
-                del self[oldest_key]
-            self.keys.append(key)
-        super().__setitem__(key, value)
 
     def __getitem__(self, key):
-        if key in self:
-            self.keys.remove(key)
-            self.keys.append(key)
-            return super().__getitem__(key)
-        else:
+        if key not in self:
             return None
+        self.move_to_end(key)
+        return super().__getitem__(key)
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        self.move_to_end(key)
+        if len(self) > self.limit:
+            self.popitem(last=False)
