@@ -40,3 +40,4 @@ class MixinMeta(ABC):
         self.openai_client: AsyncOpenAI
         self.optindefault: dict[int, bool]
         self.db: "VectorStore | None"
+        self.__version__: str

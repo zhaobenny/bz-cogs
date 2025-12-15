@@ -80,6 +80,7 @@ class Settings(
         main_embed = discord.Embed(
             title="AI User Settings", color=await ctx.embed_color()
         )
+        main_embed.add_field(name="Version", inline=True, value=f"`{self.__version__}`")
 
         main_embed.add_field(name="Model", inline=True, value=f"`{config['model']}`")
         main_embed.add_field(

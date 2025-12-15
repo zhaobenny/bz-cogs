@@ -42,6 +42,8 @@ class AIUser(
     Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
 
+    __version__ = "1.0.1"
+
     def __init__(self, bot):
         super().__init__()
         self.bot: Red = bot
@@ -88,6 +90,10 @@ class AIUser(
         self.db: VectorStore = VectorStore(cog_data_path(self))
 
         self.random_message_trigger.start()
+
+    def format_help_for_context(self, ctx):
+        pre_processed = super().format_help_for_context(ctx)
+        return f"{pre_processed}\nCog Version: {self.__version__}"
 
     async def cog_unload(self):
         if self.openai_client:
