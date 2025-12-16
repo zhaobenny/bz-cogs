@@ -1,9 +1,9 @@
-from aiuser.functions.search.query import search_google
+from aiuser.functions.serper.query import serper_search
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 
 
-class SearchToolCall(ToolCall):
+class SerperToolCall(ToolCall):
     schema = ToolCallSchema(
         function=Function(
             name="search_google",
@@ -22,7 +22,7 @@ class SearchToolCall(ToolCall):
     function_name = schema.function.name
 
     async def _handle(self, _, arguments):
-        return await search_google(
+        return await serper_search(
             arguments["query"],
             (await self.bot.get_shared_api_tokens("serper")).get("api_key"),
             self.ctx,

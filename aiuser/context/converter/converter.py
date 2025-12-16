@@ -3,14 +3,16 @@ import logging
 from discord import Message
 from redbot.core import commands
 
-from aiuser.context.converter.embed.formatter import format_embed_content
-from aiuser.context.converter.helpers import (
-    format_embed_text_content,
-    format_generic_image,
+from aiuser.context.converter.embeds import (
+    format_embed_content,
+    format_embed_message_content,
+)
+from aiuser.context.converter.formatters import (
+    format_image_placeholder,
     format_sticker_content,
     format_text_content,
 )
-from aiuser.context.converter.image.caption import transcribe_image
+from aiuser.context.converter.images import format_image
 from aiuser.context.entry import MessageEntry
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import contains_youtube_link, is_embed_valid
@@ -54,7 +56,7 @@ class MessageConverter:
             message.attachments[0].size
             > await self.config.guild(message.guild).max_image_size()
         ):
-            content = format_generic_image(message)
+            content = format_image_placeholder(message)
             await self.add_entry(content, res, role)
         # scans images only if the msg is the trigger, or if the msg was replied to by the trigger
         elif (
@@ -68,16 +70,14 @@ class MessageConverter:
             and not self.ctx.interaction
             and await self.config.guild(message.guild).scan_images()
         ):
-            content = await transcribe_image(self.cog, message) or format_generic_image(
-                message
-            )
+            content = format_image(self.cog, message)
             await self.add_entry(content, res, role)
             if isinstance(content, list):
                 return
         elif message.id in self.message_cache:
             await self.add_entry(self.message_cache[message.id], res, role)
         else:
-            content = format_generic_image(message)
+            content = format_image_placeholder(message)
             await self.add_entry(content, res, role)
 
         content = format_text_content(message)
@@ -90,7 +90,7 @@ class MessageConverter:
             await self.add_entry(content, res, role)
         else:
             await self.add_entry(content, res, role)
-            content = format_embed_text_content(message)
+            content = format_embed_message_content(message)
             await self.add_entry(content, res, role)
 
     async def add_entry(self, content, res, role):

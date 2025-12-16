@@ -2,8 +2,6 @@ import logging
 
 from discord import Message, MessageType
 
-from aiuser.config.constants import URL_PATTERN
-
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
@@ -18,17 +16,7 @@ def format_text_content(message: Message):
     return f'User "{message.author.display_name}" said: {content}'
 
 
-def format_embed_text_content(message: Message):
-    content = mention_to_text(message)
-    content = URL_PATTERN.sub("", content)
-    if not content or content == "" or content.isspace():
-        return None
-    if message.author.id == message.guild.me.id:
-        return f"{content}"
-    return f'User "{message.author.display_name}" said: {content}'
-
-
-def format_generic_image(message: Message):
+def format_image_placeholder(message: Message):
     if message.author.id == message.guild.me.id:
         return f'[Image: "{message.attachments[0].filename}"]'
     return f'User "{message.author.display_name}" sent: [Image: "{message.attachments[0].filename}"]'

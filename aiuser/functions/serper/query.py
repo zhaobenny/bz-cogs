@@ -12,7 +12,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 SERPER_ENDPOINT = "https://google.serper.dev/search"
 
 
-async def search_google(query: str, api_key: str, ctx: commands.Context):
+async def serper_search(query: str, api_key: str, ctx: commands.Context):
     return await SerperQuery(query, api_key, ctx).execute_search()
 
 

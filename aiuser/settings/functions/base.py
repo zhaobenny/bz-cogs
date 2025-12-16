@@ -48,8 +48,8 @@ class FunctionCallingSettings(
         from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
         from aiuser.functions.noresponse.tool_call import NoResponseToolCall
         from aiuser.functions.scrape.tool_call import ScrapeToolCall
-        from aiuser.functions.search.tool_call import SearchToolCall
         from aiuser.functions.searxng.tool_call import SearXNGToolCall
+        from aiuser.functions.serper.tool_call import SerperToolCall
         from aiuser.functions.weather.tool_call import (
             IsDaytimeToolCall,
             LocationWeatherToolCall,
@@ -64,7 +64,7 @@ class FunctionCallingSettings(
                 LocationWeatherToolCall.function_name,
             ],
             "image request": [ImageRequestToolCall.function_name],
-            "search": [SearchToolCall.function_name],
+            "search": [SerperToolCall.function_name],
             "searxng": [SearXNGToolCall.function_name],
             "scrape": [ScrapeToolCall.function_name],
             "no response": [NoResponseToolCall.function_name],
@@ -137,19 +137,17 @@ class FunctionCallingSettings(
             await ctx.send(embed=em)
         return
 
-    # Removed location command and setting as location is now provided directly to functions when needed.
-
-    @functions.command(name="search")
-    async def toggle_search_function(self, ctx: commands.Context):
+    @functions.command(name="serper")
+    async def toggle_serper_function(self, ctx: commands.Context):
         """Enable/disable searching/scraping the Internet using Serper.dev"""
         if not (await self.bot.get_shared_api_tokens("serper")).get("api_key"):
             return await ctx.send(
                 f"Serper.dev key not set! Set it using `{ctx.clean_prefix}set api serper api_key,APIKEY`."
             )
 
-        from aiuser.functions.search.tool_call import SearchToolCall
+        from aiuser.functions.serper.tool_call import SerperToolCall
 
-        tool_names = [SearchToolCall.function_name]
+        tool_names = [SerperToolCall.function_name]
         await self.toggle_function_group(ctx, tool_names, "Search")
 
     @functions.command(name="scrape")
