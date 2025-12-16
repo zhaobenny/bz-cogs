@@ -45,6 +45,7 @@ class FunctionCallingSettings(
         enabled = await guild_conf.function_calling()
         enabled_tools: list = await guild_conf.function_calling_functions() or []
 
+        from aiuser.functions.coderunner.tool_call import CodeRunnerToolCall
         from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
         from aiuser.functions.noresponse.tool_call import NoResponseToolCall
         from aiuser.functions.scrape.tool_call import ScrapeToolCall
@@ -59,16 +60,17 @@ class FunctionCallingSettings(
         )
 
         groups = {
-            "weather": [
+            "Weather": [
                 IsDaytimeToolCall.function_name,
                 LocationWeatherToolCall.function_name,
             ],
-            "image request": [ImageRequestToolCall.function_name],
-            "search": [SerperToolCall.function_name],
-            "searxng": [SearXNGToolCall.function_name],
-            "scrape": [ScrapeToolCall.function_name],
-            "no response": [NoResponseToolCall.function_name],
-            "wolfram alpha": [WolframAlphaFunctionCall.function_name],
+            "Image Request": [ImageRequestToolCall.function_name],
+            "Serper": [SerperToolCall.function_name],
+            "SearXNG": [SearXNGToolCall.function_name],
+            "Scrape": [ScrapeToolCall.function_name],
+            "No Response": [NoResponseToolCall.function_name],
+            "Wolfram Alpha": [WolframAlphaFunctionCall.function_name],
+            "Code Runner": [CodeRunnerToolCall.function_name],
         }
 
         # Helper for status icon
@@ -81,9 +83,7 @@ class FunctionCallingSettings(
         # Summary / main embed
         colour = await ctx.embed_color()
         main_embed = discord.Embed(title="Function Calling Settings", color=colour)
-        main_embed.add_field(
-            name="Functions Calling Enabled", value=f"{icon(enabled)}", inline=True
-        )
+        main_embed.add_field(name="Enabled", value=f"{icon(enabled)}", inline=True)
 
         # Spacer to keep grid layout consistent
         main_embed.add_field(name="\u200b", value="\u200b", inline=True)
@@ -94,7 +94,7 @@ class FunctionCallingSettings(
         for group_name, tool_names in groups.items():
             group_enabled = any(t in enabled_tools for t in tool_names)
             main_embed.add_field(
-                name=group_name.title(), value=icon(group_enabled), inline=True
+                name=group_name, value=icon(group_enabled), inline=True
             )
 
         # Summary line
@@ -106,8 +106,7 @@ class FunctionCallingSettings(
 
         embeds = [main_embed]
 
-        # Always include Image Request detail (even when filtered to image request)
-        image_tools = groups["image request"]
+        image_tools = groups["Image Request"]
         image_enabled = any(t in enabled_tools for t in image_tools)
         image_endpoint = (
             await guild_conf.function_calling_image_custom_endpoint() or "Autodetected"
@@ -131,7 +130,8 @@ class FunctionCallingSettings(
         image_embed.add_field(
             name="Preprompt", value=f"```{preprompt_display}```", inline=False
         )
-        embeds.append(image_embed)
+        if image_enabled:
+            embeds.append(image_embed)
 
         for em in embeds:
             await ctx.send(embed=em)
@@ -186,3 +186,18 @@ class FunctionCallingSettings(
 
         tool_names = [WolframAlphaFunctionCall.function_name]
         await self.toggle_function_group(ctx, tool_names, "Wolfram Alpha")
+
+    @functions.command(name="modalcoderunner")
+    async def toggle_modal_function(self, ctx: commands.Context):
+        """Enable/disable the functionality for the LLM to run Python code in a ephemeral environment backed by Modal."""
+        from aiuser.functions.coderunner.tool_call import CodeRunnerToolCall
+
+        tokens = await self.bot.get_shared_api_tokens("modal")
+        if not tokens.get("token_id") and not tokens.get("token_secret"):
+            return await ctx.send(
+                f"[Modal.com](https://modal.com/settings/) API Token not set! Set them using: \n`{ctx.clean_prefix}set api modal token_id,TOKENID` \n`{ctx.clean_prefix}set api modal token_secret,TOKENSECRET`.",
+                suppress_embeds=True,
+            )
+
+        tool_names = [CodeRunnerToolCall.function_name]
+        await self.toggle_function_group(ctx, tool_names, "Modal Code Runner")
