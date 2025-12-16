@@ -55,7 +55,7 @@ class ToolManager:
                     f'Handling tool call in {self.pipeline.ctx.guild.name}: "{fn.name}" with args keys: {list(arguments.keys())}'
                 )
                 result = await tool.run(
-                    self.pipeline, dict(arguments), self.available_tools_schemas
+                    self.pipeline, dict(arguments)
                 )
                 if result is not None:
                     await self.pipeline.msg_list.add_tool_result(

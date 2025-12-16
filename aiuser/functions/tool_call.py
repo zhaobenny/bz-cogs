@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict
 
 from redbot.core import Config, commands
 from redbot.core.bot import Red
@@ -22,14 +22,8 @@ class ToolCall:
         self,
         request: "LLMPipeline",
         arguments: Dict[str, Any],
-        available_tools: List[ToolCallSchema],
     ):
-        self.remove_tool_from_available(available_tools)
         return await self._handle(request, arguments)
 
     async def _handle(self, request: "LLMPipeline", arguments: Dict[str, Any]):
         raise NotImplementedError
-
-    def remove_tool_from_available(self, available_tools: List[ToolCallSchema]):
-        if self.schema in available_tools:
-            available_tools.remove(self.schema)
