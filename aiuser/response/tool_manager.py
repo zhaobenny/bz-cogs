@@ -54,9 +54,7 @@ class ToolManager:
                 logger.info(
                     f'Handling tool call in {self.pipeline.ctx.guild.name}: "{fn.name}" with args keys: {list(arguments.keys())}'
                 )
-                result = await tool.run(
-                    self.pipeline, dict(arguments)
-                )
+                result = await tool.run(self.pipeline, dict(arguments))
                 if result is not None:
                     await self.pipeline.msg_list.add_tool_result(
                         result, tool_call.id, index=self.pipeline._next_index()

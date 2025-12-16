@@ -71,7 +71,7 @@ class AIUser(
         logging.getLogger("openai._base_client").setLevel(logging.WARNING)
         logging.getLogger("aiosqlite").setLevel(logging.WARNING)
         logging.getLogger("hpack").setLevel(logging.WARNING)
-        
+
         self.openai_client = await setup_openai_client(self.bot, self.config)
 
         all_config = await self.config.all_guilds()
