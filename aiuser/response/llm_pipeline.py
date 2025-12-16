@@ -53,9 +53,9 @@ class LLMPipeline:
         await self.tool_manager.setup()
 
         for round_idx in range(MAX_TOOL_CALL_ROUNDS):
-            if self.tool_manager.available_tools_schemas:
+            if self.tool_manager.enabled_tools:
                 kwargs["tools"] = [
-                    asdict(s) for s in self.tool_manager.available_tools_schemas
+                    asdict(t.schema) for t in self.tool_manager.enabled_tools
                 ]
             else:
                 kwargs.pop("tools", None)

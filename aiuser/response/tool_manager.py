@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Dict, List
 from openai.types.chat import ChatCompletionMessageToolCall
 
 from aiuser.functions.tool_call import ToolCall
-from aiuser.functions.types import ToolCallSchema
 
 if TYPE_CHECKING:
     from aiuser.response.llm_pipeline import LLMPipeline
@@ -21,7 +20,6 @@ class ToolManager:
         self.pipeline = pipeline
         self.enabled_tools: List[ToolCall] = []
         self.enabled_tools_map: Dict[str, ToolCall] = {}
-        self.available_tools_schemas: List[ToolCallSchema] = []
 
     async def setup(self) -> None:
         cfg = self.pipeline.config.guild(self.pipeline.ctx.guild)
@@ -31,7 +29,6 @@ class ToolManager:
             self.pipeline.config, self.pipeline.ctx
         )
         self.enabled_tools_map = {t.function_name: t for t in self.enabled_tools}
-        self.available_tools_schemas = [t.schema for t in self.enabled_tools]
 
     async def handle_tool_calls(
         self, tool_calls: List[ChatCompletionMessageToolCall]
@@ -54,7 +51,9 @@ class ToolManager:
                 logger.info(
                     f'Handling tool call in {self.pipeline.ctx.guild.name}: "{fn.name}" with args keys: {list(arguments.keys())}'
                 )
-                result = await tool.run(self.pipeline, dict(arguments))
+                result = await tool.run(
+                    self.pipeline, dict(arguments)
+                )
                 if result is not None:
                     await self.pipeline.msg_list.add_tool_result(
                         result, tool_call.id, index=self.pipeline._next_index()
