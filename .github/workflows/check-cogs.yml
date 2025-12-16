@@ -30,25 +30,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Cache pip
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-${{ runner.arch }}-pip-${{ matrix.python-version }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-pip-
-
-      - name: Install Red-DiscordBot
-        run: |
-          set -euo pipefail
-          echo "📦 Installing Red-DiscordBot from PyPI"
-          pip install Red-DiscordBot
-
       - name: Detect Changed Cogs
         id: changed-cogs
         run: |
@@ -88,6 +69,28 @@ jobs:
 
           echo "📝 Changed cogs: $COG_LIST"
           echo "cogs=$COG_LIST" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        if: ${{ steps.changed-cogs.outputs.cogs != '' }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        if: ${{ steps.changed-cogs.outputs.cogs != '' }}
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-${{ runner.arch }}-pip-${{ matrix.python-version }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-pip-
+
+      - name: Install Red-DiscordBot
+        if: ${{ steps.changed-cogs.outputs.cogs != '' }}
+        run: |
+          set -euo pipefail
+          echo "📦 Installing Red-DiscordBot from PyPI"
+          pip install Red-DiscordBot
 
       - name: Test cogs via Downloader
         if: ${{ steps.changed-cogs.outputs.cogs != '' }}
