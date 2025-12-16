@@ -27,16 +27,16 @@ class MemorySettings(MixinMeta):
     @memory.command(name="toggle")
     @commands.has_permissions(manage_guild=True)
     async def toggle_memory_usage(self, ctx: commands.Context):
-        """Enable/disable querying saved memories whenever responding to a message
+        """Enable/disable automatic memory injection whenever responding to a message
 
-        (Via just comparing semantic similarity of the previous message, no tool calling yet!)
+        (Via just comparing semantic similarity of the previous message)
         """
 
         current = await self.config.guild(ctx.guild).query_memories()
         new_value = not current
         await self.config.guild(ctx.guild).query_memories.set(new_value)
         embed = discord.Embed(
-            title="Querying of saved memories for this server now set to:",
+            title="Automatic memory injection now set to:",
             description=f"{new_value}",
             color=await ctx.embed_color(),
         )
@@ -44,6 +44,32 @@ class MemorySettings(MixinMeta):
             text="This feature is WIP! Breaking changes could happen! (such as losing all saved memories)"
         )
         await ctx.send(embed=embed)
+
+    @memory.command(name="tools")
+    @commands.has_permissions(manage_guild=True)
+    async def toggle_memory_tools(self, ctx: commands.Context):
+        """Enable/disable the functionality for the LLM to create, edit, search, and delete long-term memories."""
+        from aiuser.functions.memory.tool_call import (
+            CreateMemoryTool,
+            DeleteMemoryTool,
+            EditMemoryTool,
+            SearchMemoryTool,
+        )
+
+        tool_names = [
+            CreateMemoryTool.function_name,
+            EditMemoryTool.function_name,
+            SearchMemoryTool.function_name,
+            DeleteMemoryTool.function_name,
+        ]
+
+        # Use the helper from FunctionToggleHelperMixin which is inherited via Settings -> FunctionCallingSettings
+        # But MemorySettings doesn't inherit from FunctionCallingSettings directly.
+        # However, the `Settings` class inherits from `MemorySettings` AND `FunctionCallingSettings`.
+        # This method is on `MemorySettings`. `self` will be the `Settings` instance at runtime.
+        # So we can just call self.toggle_function_group
+
+        await self.toggle_function_group(ctx, tool_names, "Memory Management")
 
     @memory.command(name="list")
     async def list_memory(self, ctx: commands.Context):

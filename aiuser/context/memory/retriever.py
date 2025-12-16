@@ -38,7 +38,7 @@ class MemoryRetriever:
             logger.exception("Database error while searching memories")
             return None
 
-        if memory_results and memory_results[0][2] >= threshold:
-            return f"Looking into your memory, the following relevant memory was found that could be used in the response: `{memory_results[0][1]}`"
+        if memory_results and memory_results[0][3] >= threshold:
+            return f"Looking into your memory, the following relevant memory was found that could be used in the response: `{memory_results[0][2]}`"
 
         return None

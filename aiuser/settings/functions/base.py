@@ -47,6 +47,12 @@ class FunctionCallingSettings(
 
         from aiuser.functions.coderunner.tool_call import CodeRunnerToolCall
         from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
+        from aiuser.functions.memory.tool_call import (
+            CreateMemoryTool,
+            DeleteMemoryTool,
+            EditMemoryTool,
+            SearchMemoryTool,
+        )
         from aiuser.functions.noresponse.tool_call import NoResponseToolCall
         from aiuser.functions.scrape.tool_call import ScrapeToolCall
         from aiuser.functions.searxng.tool_call import SearXNGToolCall
@@ -71,6 +77,12 @@ class FunctionCallingSettings(
             "No Response": [NoResponseToolCall.function_name],
             "Wolfram Alpha": [WolframAlphaFunctionCall.function_name],
             "Code Runner": [CodeRunnerToolCall.function_name],
+            "Memory Management": [
+                CreateMemoryTool.function_name,
+                EditMemoryTool.function_name,
+                SearchMemoryTool.function_name,
+                DeleteMemoryTool.function_name,
+            ],
         }
 
         # Helper for status icon
@@ -201,3 +213,21 @@ class FunctionCallingSettings(
 
         tool_names = [CodeRunnerToolCall.function_name]
         await self.toggle_function_group(ctx, tool_names, "Modal Code Runner")
+
+    @functions.command(name="memory")
+    async def toggle_memory_management(self, ctx: commands.Context):
+        """Enable/disable the functionality for the LLM to create, edit, search, and delete long-term memories."""
+        from aiuser.functions.memory.tool_call import (
+            CreateMemoryTool,
+            DeleteMemoryTool,
+            EditMemoryTool,
+            SearchMemoryTool,
+        )
+
+        tool_names = [
+            CreateMemoryTool.function_name,
+            EditMemoryTool.function_name,
+            SearchMemoryTool.function_name,
+            DeleteMemoryTool.function_name,
+        ]
+        await self.toggle_function_group(ctx, tool_names, "Memory Management")
