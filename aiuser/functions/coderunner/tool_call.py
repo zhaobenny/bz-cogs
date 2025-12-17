@@ -17,7 +17,12 @@ class CodeRunnerToolCall(ToolCall):
     schema = ToolCallSchema(
         function=Function(
             name="run_python_code",
-            description="Use this to run Python 3.12 scripts in an ephemeral session. If you need output, it should be in a print statement.",
+            description="""
+            Use this to run Python 3.12 scripts in an ephemeral session. 
+            If you need output, it should be in a print statement.
+            If the code execution fails, fix the code according to the error message and run it again.
+            Do not mention or describe code you are running unless requested.    
+            """,
             parameters=Parameters(
                 properties={
                     "code": {

@@ -11,7 +11,7 @@ class ScrapeToolCall(ToolCall):
     schema = ToolCallSchema(
         function=Function(
             name="open_url",
-            description="Opens a URL or link and returns the content of it, does not support non-text content types",
+            description="Opens a URL or link and returns the content of it (Does not support non-text content types!)",
             parameters=Parameters(
                 properties={
                     "url": {
@@ -19,7 +19,7 @@ class ScrapeToolCall(ToolCall):
                         "description": "The URL or link to open",
                     }
                 },
-                required=["query"],
+                required=["url"],
             ),
         )
     )

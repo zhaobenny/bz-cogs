@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Dict, List
+from dataclasses import asdict
+from typing import TYPE_CHECKING, Any, Dict, List
 
 from openai.types.chat import ChatCompletionMessageToolCall
 
@@ -30,6 +31,12 @@ class ToolManager:
         )
         self.enabled_tools_map = {t.function_name: t for t in self.enabled_tools}
 
+    def get_tools_kwargs(self) -> Dict[str, Any]:
+        """Return the tools parameter for the OpenAI API call, or empty dict if none."""
+        if self.enabled_tools:
+            return {"tools": [asdict(t.schema) for t in self.enabled_tools]}
+        return {}
+
     async def handle_tool_calls(
         self, tool_calls: List[ChatCompletionMessageToolCall]
     ) -> None:
@@ -51,9 +58,7 @@ class ToolManager:
                 logger.info(
                     f'Handling tool call in {self.pipeline.ctx.guild.name}: "{fn.name}" with args keys: {list(arguments.keys())}'
                 )
-                result = await tool.run(
-                    self.pipeline, dict(arguments)
-                )
+                result = await tool.run(self.pipeline, dict(arguments))
                 if result is not None:
                     await self.pipeline.msg_list.add_tool_result(
                         result, tool_call.id, index=self.pipeline._next_index()

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 import discord
@@ -49,16 +49,11 @@ class LLMPipeline:
         self.files_to_send: List[discord.File] = []
 
     async def run(self) -> Optional[str]:
-        kwargs = await self._build_base_parameters()
+        base_kwargs = await self._build_base_parameters()
         await self.tool_manager.setup()
 
         for round_idx in range(MAX_TOOL_CALL_ROUNDS):
-            if self.tool_manager.enabled_tools:
-                kwargs["tools"] = [
-                    asdict(t.schema) for t in self.tool_manager.enabled_tools
-                ]
-            else:
-                kwargs.pop("tools", None)
+            kwargs = {**base_kwargs, **self.tool_manager.get_tools_kwargs()}
 
             try:
                 step = await self._call_client(kwargs)
@@ -85,6 +80,7 @@ class LLMPipeline:
                 logger.debug(
                     f"No content or tool calls received in {self.ctx.guild.name} during round {round_idx}"
                 )
+                break
 
         if self.completion:
             cleaned = self.completion[:200].strip().replace("\n", " ")
