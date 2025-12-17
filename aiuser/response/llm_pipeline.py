@@ -77,8 +77,8 @@ class LLMPipeline:
             elif step.tool_calls:
                 await self.tool_manager.handle_tool_calls(step.tool_calls)
             else:
-                logger.debug(
-                    f"No content or tool calls received in {self.ctx.guild.name} during round {round_idx}"
+                logger.warning(
+                    f"No content or tool calls received in {self.ctx.guild.name} during round {round_idx} for {self.ctx.message.id}"
                 )
                 break
 
@@ -88,8 +88,6 @@ class LLMPipeline:
             logger.debug(
                 f'Generated response in {self.ctx.guild.name}: "{cleaned}{ellipsis}"'
             )
-        else:
-            logger.debug(f"No completion generated in {self.ctx.guild.name}")
 
         return self.completion
 
