@@ -28,10 +28,6 @@ class LocationWeatherToolCall(ToolCall):
     schema = location_weather_schema
     function_name = schema.function.name
 
-    def remove_tool_from_available(self, available_tools: list):
-        if self.schema in available_tools:
-            available_tools.remove(self.schema)
-
     async def _handle(self, _, arguments):
         days = arguments.get("days", 1)
         return await get_weather(arguments["location"], days=days)

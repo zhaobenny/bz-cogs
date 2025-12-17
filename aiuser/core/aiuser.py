@@ -42,7 +42,7 @@ class AIUser(
     Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
 
-    __version__ = "1.1.0"
+    __version__ = "1.2.0"
 
     def __init__(self, bot):
         super().__init__()
@@ -71,7 +71,7 @@ class AIUser(
         logging.getLogger("openai._base_client").setLevel(logging.WARNING)
         logging.getLogger("aiosqlite").setLevel(logging.WARNING)
         logging.getLogger("hpack").setLevel(logging.WARNING)
-        
+
         self.openai_client = await setup_openai_client(self.bot, self.config)
 
         all_config = await self.config.all_guilds()
