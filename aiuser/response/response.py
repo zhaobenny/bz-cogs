@@ -88,7 +88,9 @@ async def send_response(
         chunks = [response[i : i + 2000] for i in range(0, len(response), 2000)]
         for idx, chunk in enumerate(chunks):
             if idx == len(chunks) - 1:
-                messages.append(await ctx.send(chunk, allowed_mentions=allowed, files=files))
+                messages.append(
+                    await ctx.send(chunk, allowed_mentions=allowed, files=files)
+                )
             else:
                 messages.append(await ctx.send(chunk, allowed_mentions=allowed))
     elif can_reply and await should_reply(ctx):

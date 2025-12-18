@@ -1,4 +1,3 @@
-
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from types import SimpleNamespace
@@ -6,6 +5,7 @@ from datetime import datetime
 from aiuser.context.history.builder import HistoryBuilder
 from aiuser.context.entry import MessageEntry
 from aiuser.utils.cache import Cache
+
 
 @pytest.fixture
 def mock_cog():
@@ -16,6 +16,7 @@ def mock_cog():
     cog.bot = MagicMock()
     cog.bot.user.id = 12345
     return cog
+
 
 @pytest.fixture
 def mock_messages_thread(mock_cog):
@@ -29,18 +30,19 @@ def mock_messages_thread(mock_cog):
     thread.add_entries = AsyncMock()
     return thread
 
+
 @pytest.mark.asyncio
 async def test_history_builder_injects_tool_calls(mock_cog, mock_messages_thread):
     # Setup messages
     msg1 = MagicMock()
     msg1.id = 1001
     msg1.created_at = datetime.now()
-    msg1.author.id = 12345 # Bot
+    msg1.author.id = 12345  # Bot
 
     msg2 = MagicMock()
     msg2.id = 1002
     msg2.created_at = datetime.now()
-    msg2.author.id = 99999 # User (Boundary message)
+    msg2.author.id = 99999  # User (Boundary message)
 
     # Mock cached tool calls for msg1 (the bot response)
     tool_entry = MessageEntry("tool", "result", tool_call_id="call_1")
@@ -70,10 +72,10 @@ async def test_history_builder_injects_tool_calls(mock_cog, mock_messages_thread
 
     # Verify order of calls
     calls = mock_messages_thread.method_calls
-    relevant_calls = [c for c in calls if c[0] in ['add_msg', 'add_entries']]
+    relevant_calls = [c for c in calls if c[0] in ["add_msg", "add_entries"]]
 
     # Expect: add_msg(msg1) THEN add_entries(tools)
-    assert relevant_calls[0][0] == 'add_msg'
+    assert relevant_calls[0][0] == "add_msg"
     assert relevant_calls[0][1][0] == msg1
-    assert relevant_calls[1][0] == 'add_entries'
+    assert relevant_calls[1][0] == "add_entries"
     assert relevant_calls[1][1][0] == [tool_entry]
