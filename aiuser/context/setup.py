@@ -105,7 +105,12 @@ class ThreadSetup:
     def _get_token_limit(model) -> int:
         limit = 7000
 
-        if "gemini-2" in model or "gpt-4.1" in model or "llama-4.1" in model:
+        if (
+            "gemini-2" in model
+            or "gemini-3" in model
+            or "gpt-4.1" in model
+            or "llama-4.1" in model
+        ):
             limit = 1000000
         if "gpt-5" in model:
             limit = 390000

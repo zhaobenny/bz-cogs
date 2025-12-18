@@ -29,6 +29,8 @@ VISION_SUPPORTED_MODELS = [
     "google/gemini-flash-1.5",
     "google/gemini-flash-2.0",
     "google/gemini-2.5-flash-preview",
+    "google/gemini-3-pro-preview",
+    "google/gemini-3-flash-preview",
     "google/gemini-pro-1.5",
     "google/gemini-2.5-pro-exp-03-25",
     "x-ai/grok-vision-beta",
