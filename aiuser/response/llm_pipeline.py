@@ -19,6 +19,7 @@ from aiuser.config.models import (
     UNSUPPORTED_LOGIT_BIAS_MODELS,
     VISION_SUPPORTED_MODELS,
 )
+from aiuser.context.entry import MessageEntry
 from aiuser.context.messages import MessagesThread
 from aiuser.response.tool_manager import ToolManager
 from aiuser.types.abc import MixinMeta
@@ -48,9 +49,10 @@ class LLMPipeline:
         self.completion: Optional[str] = None
         self.files_to_send: List[discord.File] = []
 
-    async def run(self) -> Optional[str]:
+    async def run(self) -> Optional[tuple[str, List[MessageEntry]]]:
         base_kwargs = await self._build_base_parameters()
         await self.tool_manager.setup()
+        start_index = len(self.msg_list.messages)
 
         for round_idx in range(MAX_TOOL_CALL_ROUNDS):
             kwargs = {**base_kwargs, **self.tool_manager.get_tools_kwargs()}
@@ -89,7 +91,8 @@ class LLMPipeline:
                 f'Generated response in {self.ctx.guild.name}: "{cleaned}{ellipsis}"'
             )
 
-        return self.completion
+        new_entries = self.msg_list.messages[start_index:]
+        return self.completion, new_entries
 
     async def _build_base_parameters(self) -> Dict[str, Any]:
         """

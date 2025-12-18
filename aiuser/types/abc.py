@@ -9,6 +9,8 @@ from openai import AsyncOpenAI
 from redbot.core import Config, commands
 from redbot.core.bot import Red
 
+from typing import List
+
 from aiuser.context.entry import MessageEntry
 from aiuser.utils.cache import Cache
 
@@ -35,6 +37,7 @@ class MixinMeta(ABC):
         self.cached_options: dict
         self.override_prompt_start_time: dict[int, datetime]
         self.cached_messages: Cache[int, MessageEntry]
+        self.tool_call_cache: Cache[int, List[MessageEntry]]
         self.ignore_regex: dict[int, re.Pattern]
         self.channels_whitelist: dict[int, list[int]]
         self.openai_client: AsyncOpenAI

@@ -4,6 +4,7 @@ import random
 import re
 from datetime import datetime, timezone
 
+import discord
 from discord import AllowedMentions
 from redbot.core import Config, commands
 
@@ -80,26 +81,31 @@ async def should_reply(ctx: commands.Context) -> bool:
 
 async def send_response(
     ctx: commands.Context, response: str, can_reply: bool, files=None
-) -> bool:
+) -> list[discord.Message]:
     allowed = AllowedMentions(everyone=False, roles=False, users=[ctx.message.author])
+    messages = []
     if len(response) >= 2000:
         chunks = [response[i : i + 2000] for i in range(0, len(response), 2000)]
         for idx, chunk in enumerate(chunks):
             if idx == len(chunks) - 1:
-                await ctx.send(chunk, allowed_mentions=allowed, files=files)
+                messages.append(await ctx.send(chunk, allowed_mentions=allowed, files=files))
             else:
-                await ctx.send(chunk, allowed_mentions=allowed)
+                messages.append(await ctx.send(chunk, allowed_mentions=allowed))
     elif can_reply and await should_reply(ctx):
-        await ctx.message.reply(
-            response, mention_author=False, allowed_mentions=allowed, files=files
+        messages.append(
+            await ctx.message.reply(
+                response, mention_author=False, allowed_mentions=allowed, files=files
+            )
         )
     elif ctx.interaction:
-        await ctx.interaction.followup.send(
-            response, allowed_mentions=allowed, files=files
+        messages.append(
+            await ctx.interaction.followup.send(
+                response, allowed_mentions=allowed, files=files
+            )
         )
     else:
-        await ctx.send(response, allowed_mentions=allowed, files=files)
-    return True
+        messages.append(await ctx.send(response, allowed_mentions=allowed, files=files))
+    return messages
 
 
 async def create_response(
@@ -108,7 +114,11 @@ async def create_response(
     async with ctx.message.channel.typing():
         messages_list = messages_list or await create_messages_thread(cog, ctx)
         pipeline = LLMPipeline(cog, ctx, messages=messages_list)
-        response = await pipeline.run()
+        result = await pipeline.run()
+        if result is None:
+            return False
+
+        response, new_entries = result
 
         if not response and not pipeline.files_to_send:
             return False
@@ -122,6 +132,14 @@ async def create_response(
         if not cleaned_response and not pipeline.files_to_send:
             return False
 
-        return await send_response(
+        sent_msgs = await send_response(
             ctx, cleaned_response, messages_list.can_reply, files=pipeline.files_to_send
         )
+
+        if sent_msgs:
+            first_msg_id = sent_msgs[0].id
+            cog.tool_call_cache[first_msg_id] = new_entries
+            if response != cleaned_response:
+                cog.cached_messages[first_msg_id] = response
+
+        return bool(sent_msgs)

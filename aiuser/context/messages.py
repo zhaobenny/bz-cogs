@@ -22,6 +22,7 @@ class MessagesThread:
         cog: MixinMeta,
         ctx: commands.Context,
     ):
+        self.cog = cog
         self.bot = cog.bot
         self.config = cog.config
         self.ctx = ctx
@@ -129,6 +130,13 @@ class MessagesThread:
         entry = MessageEntry("tool", content, tool_call_id=tool_call_id)
         self.messages.insert(index or 0, entry)
         await self._add_tokens(content)
+
+    async def add_entries(self, entries: List[MessageEntry], index: int = 0):
+        for entry in reversed(entries):
+            if self.tokens > self.token_limit:
+                return
+            self.messages.insert(index, entry)
+            await self._add_tokens(entry.content)
 
     async def add_history(self):
         if (

@@ -91,6 +91,11 @@ class HistoryBuilder:
                 await self.messages_list.add_msg(past_messages[i])
                 break
 
+            if past_messages[i].id in self.messages_list.cog.tool_call_cache:
+                await self.messages_list.add_entries(
+                    self.messages_list.cog.tool_call_cache[past_messages[i].id]
+                )
+
     @staticmethod
     async def _is_valid_time_gap(
         message: discord.Message, next_message: discord.Message, max_seconds_gap: int

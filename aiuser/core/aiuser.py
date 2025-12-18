@@ -2,6 +2,7 @@ import logging
 import os
 import re
 from datetime import datetime
+from typing import List
 
 import discord
 from openai import AsyncOpenAI
@@ -56,6 +57,7 @@ class AIUser(
         self.ignore_regex: dict[int, re.Pattern] = {}
         self.override_prompt_start_time: dict[int, datetime] = {}
         self.cached_messages: Cache[int, MessageEntry] = Cache(limit=100)
+        self.tool_call_cache: Cache[int, List[MessageEntry]] = Cache(limit=100)
 
         self.config.register_member(**DEFAULT_MEMBER)
         self.config.register_role(**DEFAULT_ROLE)
