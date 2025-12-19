@@ -1,6 +1,7 @@
 import discord
 from redbot.core import commands
 
+from aiuser.config.models import TOOLS_SUPPORTED_MODELS
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
 from aiuser.settings.functions.searxng import SearXNGFunctionSettings
 from aiuser.settings.functions.utilities import (
@@ -34,7 +35,11 @@ class FunctionCallingSettings(
             description=f"{current_value}",
             color=await ctx.embed_color(),
         )
-        if current_value:
+
+        current_model = await self.config.guild(ctx.guild).model()
+        if current_value and not any(
+            m in current_model for m in TOOLS_SUPPORTED_MODELS
+        ):
             embed.set_footer(text="⚠️ Ensure selected model supports function calling!")
         await ctx.send(embed=embed)
 

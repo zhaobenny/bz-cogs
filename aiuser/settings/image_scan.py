@@ -3,7 +3,6 @@ import logging
 import discord
 from redbot.core import checks, commands
 
-from aiuser.config.constants import OPENROUTER_URL
 from aiuser.config.models import VISION_SUPPORTED_MODELS
 from aiuser.types.abc import MixinMeta, aiuser
 
@@ -35,12 +34,8 @@ class ImageScanSettings(MixinMeta):
             )
             scan_model = await self.config.guild(ctx.guild).scan_images_model()
             model = scan_model or await self.config.guild(ctx.guild).model()
-            if model not in VISION_SUPPORTED_MODELS:
-                embed.add_field(
-                    name=":warning: Unvalidated Model",
-                    value=f"The current model `{model}` has not been validated for image scanning.",
-                    inline=False,
-                )
+            if not any(m in model for m in VISION_SUPPORTED_MODELS):
+                embed.set_footer(text="⚠️ Ensure selected model supports vision")
         return await ctx.send(embed=embed)
 
     @imagescan.command(name="maxsize")
@@ -65,25 +60,18 @@ class ImageScanSettings(MixinMeta):
                 color=await ctx.embed_color(),
             )
             chat_model = await self.config.guild(ctx.guild).model()
-            if chat_model not in VISION_SUPPORTED_MODELS:
+            if not any(m in chat_model for m in VISION_SUPPORTED_MODELS):
                 embed.set_footer(
                     text="⚠️ Model has not been validated for image scanning."
                 )
             return await ctx.send(embed=embed)
 
-        custom_endpoint = await self.config.custom_openai_endpoint()
-        warning_message = None
+        await ctx.message.add_reaction("🔄")
+        models = [model.id for model in (await self.openai_client.models.list()).data]
+        await ctx.message.remove_reaction("🔄", ctx.me)
 
-        if not custom_endpoint or custom_endpoint.startswith(OPENROUTER_URL):
-            await ctx.message.add_reaction("🔄")
-            models = [
-                model.id for model in (await self.openai_client.models.list()).data
-            ]
-            models = list(set(models) & set(VISION_SUPPORTED_MODELS))
-            await ctx.message.remove_reaction("🔄", ctx.me)
-
-            if model_name not in models:
-                warning_message = "⚠️ Model has not been validated for image scanning."
+        if model_name not in models:
+            return await ctx.send("⚠️ Not a valid model!")
 
         await self.config.guild(ctx.guild).scan_images_model.set(model_name)
         embed = discord.Embed(
@@ -91,6 +79,7 @@ class ImageScanSettings(MixinMeta):
             description=f"`{model_name}`",
             color=await ctx.embed_color(),
         )
-        if warning_message:
-            embed.set_footer(text=warning_message)
+
+        if not any(m in model_name for m in VISION_SUPPORTED_MODELS):
+            embed.set_footer(text="⚠️ Model has not been validated for image scanning.")
         return await ctx.send(embed=embed)

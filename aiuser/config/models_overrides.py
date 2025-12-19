@@ -1,0 +1,2 @@
+
+UNSUPPORTED_LOGIT_BIAS_MODELS = ["o3-mini", "o3-mini-2025-01-31"]

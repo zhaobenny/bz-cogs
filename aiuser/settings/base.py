@@ -6,6 +6,7 @@ import discord
 from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
+from aiuser.config.models import TOOLS_SUPPORTED_MODELS
 from aiuser.settings.functions.base import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
 from aiuser.settings.image_scan import ImageScanSettings
@@ -331,7 +332,9 @@ class Settings(
             color=await ctx.embed_color(),
         )
 
-        if await self.config.guild(ctx.guild).function_calling():
+        if await self.config.guild(ctx.guild).function_calling() and not any(
+            m in model for m in TOOLS_SUPPORTED_MODELS
+        ):
             embed.set_footer(
                 text="⚠️ Function calling is enabled - ensure selected model supports it"
             )
