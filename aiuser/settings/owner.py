@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 import discord
+from openai import AuthenticationError
 from redbot.core import checks, commands
 from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.menus import start_adding_reactions
@@ -101,7 +102,16 @@ class OwnerSettings(MixinMeta):
         # test the endpoint works if not rollback
         try:
             models = await self.openai_client.models.list()
+        except AuthenticationError:
+            logger.exception("Authentication failed for endpoint.")
+            await self.config.custom_openai_endpoint.set(previous_url)
+            return await ctx.send(
+                f":warning: Authentication failed for endpoint. "
+                f"\nIf this endpoint requires an API key, please set it with "
+                f"`{ctx.clean_prefix}set api openai api_key,INSERT_API_KEY`"
+            )
         except Exception:
+            logger.exception("Invalid endpoint.")
             await self.config.custom_openai_endpoint.set(previous_url)
             return await ctx.send(
                 ":warning: Invalid endpoint. Please check logs for more information."
