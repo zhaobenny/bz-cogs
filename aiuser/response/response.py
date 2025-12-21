@@ -3,8 +3,9 @@ import logging
 import random
 import re
 from datetime import datetime, timezone
+from typing import List, Optional
 
-from discord import AllowedMentions
+import discord
 from redbot.core import Config, commands
 
 from aiuser.config.constants import REGEX_RUN_TIMEOUT
@@ -80,26 +81,40 @@ async def should_reply(ctx: commands.Context) -> bool:
 
 async def send_response(
     ctx: commands.Context, response: str, can_reply: bool, files=None
-) -> bool:
-    allowed = AllowedMentions(everyone=False, roles=False, users=[ctx.message.author])
+) -> Optional[discord.Message]:
+    allowed = discord.AllowedMentions(
+        everyone=False, roles=False, users=[ctx.message.author]
+    )
+    sent_message = None
     if len(response) >= 2000:
         chunks = [response[i : i + 2000] for i in range(0, len(response), 2000)]
         for idx, chunk in enumerate(chunks):
             if idx == len(chunks) - 1:
-                await ctx.send(chunk, allowed_mentions=allowed, files=files)
+                sent_message = await ctx.send(
+                    chunk, allowed_mentions=allowed, files=files
+                )
             else:
                 await ctx.send(chunk, allowed_mentions=allowed)
     elif can_reply and await should_reply(ctx):
-        await ctx.message.reply(
+        sent_message = await ctx.message.reply(
             response, mention_author=False, allowed_mentions=allowed, files=files
         )
     elif ctx.interaction:
-        await ctx.interaction.followup.send(
-            response, allowed_mentions=allowed, files=files
+        sent_message = await ctx.interaction.followup.send(
+            response, allowed_mentions=allowed, files=files, wait=True
         )
     else:
-        await ctx.send(response, allowed_mentions=allowed, files=files)
-    return True
+        sent_message = await ctx.send(response, allowed_mentions=allowed, files=files)
+    return sent_message
+
+
+def get_tool_call_entries(messages_list: MessagesThread) -> List:
+    """Extract tool call related entries (assistant with tool_calls, tool results) from message list"""
+    entries = []
+    for entry in messages_list.messages:
+        if entry.tool_calls or entry.role == "tool":
+            entries.append(entry)
+    return entries
 
 
 async def create_response(
@@ -122,6 +137,15 @@ async def create_response(
         if not cleaned_response and not pipeline.files_to_send:
             return False
 
-        return await send_response(
+        sent_message = await send_response(
             ctx, cleaned_response, messages_list.can_reply, files=pipeline.files_to_send
         )
+
+        # Cache tool call entries for future context rebuilding
+        if sent_message:
+            tool_entries = get_tool_call_entries(messages_list)
+            if tool_entries:
+                cache_key = (ctx.channel.id, sent_message.id)
+                cog.cached_tool_calls[cache_key] = tool_entries
+
+        return sent_message is not None

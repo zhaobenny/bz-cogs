@@ -26,7 +26,6 @@ class MessageConverter:
         self.config = cog.config
         self.bot_id = cog.bot.user.id
         self.init_msg = ctx.message
-        self.message_cache = cog.cached_messages
         self.ctx = ctx
 
     async def convert(self, message: Message) -> list[MessageEntry]:
@@ -74,8 +73,6 @@ class MessageConverter:
             await self.add_entry(content, res, role)
             if isinstance(content, list):
                 return
-        elif message.id in self.message_cache:
-            await self.add_entry(self.message_cache[message.id], res, role)
         else:
             content = format_image_placeholder(message)
             await self.add_entry(content, res, role)

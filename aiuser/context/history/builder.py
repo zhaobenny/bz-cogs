@@ -21,6 +21,7 @@ class HistoryBuilder:
         self.bot = messages_list.bot
         self.init_message = messages_list.init_message
         self.start_time = messages_list.start_time
+        self.cached_tool_calls = messages_list.cached_tool_calls
 
     async def add_history(self):
         """Add historical messages to the conversation context."""
@@ -90,6 +91,23 @@ class HistoryBuilder:
             else:
                 await self.messages_list.add_msg(past_messages[i])
                 break
+
+            if past_messages[i].author.id == self.bot.user.id:
+                await self._inject_cached_tool_calls(past_messages[i])
+
+    async def _inject_cached_tool_calls(self, bot_message: discord.Message):
+        """Inject possible cached tool call entries before a assistant response."""
+        cache_key = (bot_message.channel.id, bot_message.id)
+        cached_entries = self.cached_tool_calls[cache_key]
+        if not cached_entries:
+            return
+
+        # Insert cached entries at start (stack-based build)
+        # We process in reverse order so the first entry ends up at index 0
+        for entry in reversed(cached_entries):
+            if self.messages_list.tokens > self.messages_list.token_limit:
+                return
+            self.messages_list.messages.insert(0, entry)
 
     @staticmethod
     async def _is_valid_time_gap(
