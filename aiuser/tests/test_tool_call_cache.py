@@ -1,7 +1,4 @@
 # ./.venv/bin/python -m pytest aiuser/tests/test_tool_call_cache.py -q -s
-"""
-Tests for cached tool calls using HistoryBuilder with dpytest.
-"""
 
 import pytest
 from discord.ext.test import backend
@@ -32,6 +29,7 @@ async def test_cached_tool_calls(bot, openai_client, mock_messages_thread, mock_
     cfg = dpytest.get_config()
     channel = cfg.channels[0]
     member = cfg.members[0]
+    await mock_cog.config.guild(cfg.guilds[0]).optin_by_default.set(True)
 
     # Simulate conversation history in channel:
     # 1. User asks about weather
@@ -57,11 +55,7 @@ async def test_cached_tool_calls(bot, openai_client, mock_messages_thread, mock_
     new_user_msg = backend.make_message("Thanks! What about Tokyo?", member, channel)
 
     # Create thread using the new message as init, with history=True to trigger add_history
-    thread = await mock_messages_thread(
-        prompt="You are a weather assistant.", init_message=new_user_msg, history=True
-    )
-    # Explicitly add the new user message (mock_messages_thread/ThreadSetup doesn't do this automatically)
-    await thread.add_msg(new_user_msg)
+    thread = await mock_messages_thread(init_message=new_user_msg)
 
     # Verify tool calls were injected by HistoryBuilder
     # Check thread.messages directly since they contain the actual objects

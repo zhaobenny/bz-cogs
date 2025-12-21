@@ -69,7 +69,7 @@ class MessageConverter:
             and not self.ctx.interaction
             and await self.config.guild(message.guild).scan_images()
         ):
-            content = format_image(self.cog, message)
+            content = await format_image(self.cog, message)
             await self.add_entry(content, res, role)
             if isinstance(content, list):
                 return

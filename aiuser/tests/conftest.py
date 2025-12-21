@@ -135,19 +135,16 @@ async def mock_messages_thread(bot, mock_cog):
     """
     Factory fixture to create a MessagesThread using ThreadSetup.create_thread()
     with real dpytest Discord objects and a mock cog.
-
-    Usage:
-        thread = await mock_messages_thread()
-        thread = await mock_messages_thread(prompt="Custom prompt", history=False)
-        thread = await mock_messages_thread(init_message=custom_msg)  # Use existing message
     """
     from aiuser.context.setup import ThreadSetup
 
     async def _create(
-        prompt: str = "You are a helpful assistant.",
-        history: bool = False,
+        prompt: str = None,
         init_message: discord.Message = None,
     ) -> MessagesThread:
+        """
+        Prompt should only be provided when init_message is None.
+        """
         if init_message:
             # Use provided message
             ctx = await bot.get_context(init_message)
@@ -161,7 +158,7 @@ async def mock_messages_thread(bot, mock_cog):
 
         # Use ThreadSetup to create the thread properly
         setup = ThreadSetup(mock_cog, ctx)
-        thread = await setup.create_thread(prompt=prompt, history=history)
+        thread = await setup.create_thread(prompt=prompt)
 
         return thread
 
