@@ -50,7 +50,11 @@ def openai_client():
     """Async OpenAI client configured for OpenRouter."""
     if not API_KEY:
         pytest.skip("OpenRouter API key not available")
-    return AsyncOpenAI(api_key=API_KEY, base_url=API_BASE)
+    headers = {
+        "HTTP-Referer": "https://aiuser.zhao.gg",
+        "X-Title": "aiuser",
+    }
+    return AsyncOpenAI(api_key=API_KEY, base_url=API_BASE, default_headers=headers)
 
 
 @pytest.fixture(autouse=True)
@@ -105,6 +109,8 @@ async def redbot_config():
     config.register_channel(**DEFAULT_CHANNEL)
     config.register_guild(**DEFAULT_GUILD)
     config.register_global(**DEFAULT_GLOBAL)
+    config.register_guild(model="openai/gpt-4.1-nano")
+
     yield config
     # Cleanup
     await config.clear_all()

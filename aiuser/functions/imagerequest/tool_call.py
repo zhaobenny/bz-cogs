@@ -6,6 +6,7 @@ import discord
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 from aiuser.response.llm_pipeline import LLMPipeline
+from aiuser.utils.utilities import format_variables
 
 from .providers.factory import PROVIDERS, detect_provider
 
@@ -39,6 +40,7 @@ class ImageRequestToolCall(ToolCall):
             or ""
         )
         if preprompt:
+            preprompt = await format_variables(request.ctx, preprompt)
             description = f"{preprompt} {description}"
         endpoint = (
             await request.config.guild(

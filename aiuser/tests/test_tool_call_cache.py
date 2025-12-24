@@ -5,19 +5,6 @@ from discord.ext.test import backend
 
 from aiuser.context.entry import MessageEntry
 
-WEATHER_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "get_weather",
-        "description": "Get weather for a location",
-        "parameters": {
-            "type": "object",
-            "properties": {"location": {"type": "string"}},
-            "required": ["location"],
-        },
-    },
-}
-
 
 @pytest.mark.asyncio
 async def test_cached_tool_calls(bot, openai_client, mock_messages_thread, mock_cog):
@@ -25,6 +12,8 @@ async def test_cached_tool_calls(bot, openai_client, mock_messages_thread, mock_
     import discord.ext.test as dpytest
     from openai.types.chat import ChatCompletionMessageToolCall
     from openai.types.chat.chat_completion_message_tool_call import Function
+
+    from aiuser.response.llm_pipeline import LLMPipeline
 
     cfg = dpytest.get_config()
     channel = cfg.channels[0]
@@ -53,6 +42,7 @@ async def test_cached_tool_calls(bot, openai_client, mock_messages_thread, mock_
 
     # Create a new user message (the "init message" for new conversation)
     new_user_msg = backend.make_message("Thanks! What about Tokyo?", member, channel)
+    ctx = await bot.get_context(new_user_msg)
 
     # Create thread using the new message as init, with history=True to trigger add_history
     thread = await mock_messages_thread(init_message=new_user_msg)
@@ -67,11 +57,13 @@ async def test_cached_tool_calls(bot, openai_client, mock_messages_thread, mock_
     assert tool_call_entries[0].tool_calls[0].id == "call_paris_weather"
     assert tool_result_entries[0].tool_call_id == "call_paris_weather"
 
-    json_messages = thread.get_json()
+    # Use LLMPipeline (closer to real implementation)
+    mock_cog.openai_client = openai_client
+    pipeline = LLMPipeline(mock_cog, ctx, thread)
+    response = await pipeline.run()
 
-    response = await openai_client.chat.completions.create(
-        model="openai/gpt-4.1-nano", messages=json_messages, tools=[WEATHER_TOOL]
-    )
-    assert response.choices[0].message.content or response.choices[0].message.tool_calls
+    # Pipeline should return response if properly formatted
+    print(f"\n[DEBUG] Pipeline response: {response}")
+    assert response is not None
 
     await openai_client.close()
