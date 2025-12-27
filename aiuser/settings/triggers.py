@@ -164,11 +164,15 @@ class TriggerSettings(MixinMeta):
         await self.config.guild(ctx.guild).webhook_user_whitelist.set(whitelist)
         return await self.show_webhook_whitelist(
             ctx,
-            discord.Embed(title="The webhook/app whitelist is now:", color=await ctx.embed_color()),
+            discord.Embed(
+                title="The webhook/app whitelist is now:", color=await ctx.embed_color()
+            ),
         )
 
     @trigger_webhook_whitelist.command(name="remove")
-    async def trigger_webhook_whitelist_remove(self, ctx: commands.Context, user_id: int):
+    async def trigger_webhook_whitelist_remove(
+        self, ctx: commands.Context, user_id: int
+    ):
         """Remove a user ID from the webhook/app whitelist"""
         whitelist = await self.config.guild(ctx.guild).webhook_user_whitelist()
         if user_id not in whitelist:
@@ -177,7 +181,9 @@ class TriggerSettings(MixinMeta):
         await self.config.guild(ctx.guild).webhook_user_whitelist.set(whitelist)
         return await self.show_webhook_whitelist(
             ctx,
-            discord.Embed(title="The webhook/app whitelist is now:", color=await ctx.embed_color()),
+            discord.Embed(
+                title="The webhook/app whitelist is now:", color=await ctx.embed_color()
+            ),
         )
 
     @trigger_webhook_whitelist.command(name="list", aliases=["show"])

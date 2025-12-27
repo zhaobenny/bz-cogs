@@ -30,5 +30,7 @@ class MixinMeta(ABC):
     async def get_api_instance(self, ctx: Union[commands.Context, discord.Interaction]):
         pass
 
-    async def _update_autocomplete_cache(self, ctx: Union[commands.Context, discord.Interaction]):
+    async def _update_autocomplete_cache(
+        self, ctx: Union[commands.Context, discord.Interaction]
+    ):
         pass

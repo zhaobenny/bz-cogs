@@ -7,19 +7,23 @@ from aiuser.types.abc import MixinMeta, aiuser
 class FunctionsGroupMixin(MixinMeta):
     @aiuser.group()
     @checks.is_owner()
-    async def functions(self, ctx: commands.Context): 
+    async def functions(self, ctx: commands.Context):
         """Settings to manage function calling
 
         (All subcommands are per server)
         """
         pass
 
+
 # Provide a module-level alias so other settings modules can use `@functions.command(...)`
 # during class body execution (the class attribute on the mixin isn't in the module scope).
 functions = FunctionsGroupMixin.functions
 
+
 class FunctionToggleHelperMixin(MixinMeta):
-    async def toggle_function_group(self, ctx: commands.Context, tool_names: list, embed_title: str):  
+    async def toggle_function_group(
+        self, ctx: commands.Context, tool_names: list, embed_title: str
+    ):
         """Toggle a group of related function-calling tools on or off for the guild.
 
         Args:
@@ -27,7 +31,9 @@ class FunctionToggleHelperMixin(MixinMeta):
             tool_names: List of internal function/tool identifiers to toggle together.
             embed_title: Human friendly title for the resulting embed.
         """
-        enabled_tools: list = await self.config.guild(ctx.guild).function_calling_functions()
+        enabled_tools: list = await self.config.guild(
+            ctx.guild
+        ).function_calling_functions()
 
         if tool_names and tool_names[0] not in enabled_tools:
             # Enable all tools in the group
@@ -47,7 +53,9 @@ class FunctionToggleHelperMixin(MixinMeta):
         )
         await ctx.send(embed=embed)
 
-    async def toggle_single_function(self, ctx: commands.Context, tool_name: str, display_name: str):  
+    async def toggle_single_function(
+        self, ctx: commands.Context, tool_name: str, display_name: str
+    ):
         """Toggle a single function/tool on or off.
 
         Args:
@@ -55,7 +63,9 @@ class FunctionToggleHelperMixin(MixinMeta):
             tool_name: Internal function identifier.
             display_name: Human friendly display name for embeds.
         """
-        enabled_tools: list = await self.config.guild(ctx.guild).function_calling_functions()
+        enabled_tools: list = await self.config.guild(
+            ctx.guild
+        ).function_calling_functions()
         if tool_name in enabled_tools:
             enabled_tools.remove(tool_name)
             new_state = False

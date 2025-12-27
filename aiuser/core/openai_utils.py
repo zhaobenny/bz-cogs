@@ -16,9 +16,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 async def setup_openai_client(
-    bot: Red,
-    config: Config,
-    ctx: Optional[commands.Context] = None
+    bot: Red, config: Config, ctx: Optional[commands.Context] = None
 ) -> Optional[AsyncOpenAI]:
     """Initialize the OpenAI client with appropriate configuration.
 
@@ -56,7 +54,7 @@ async def setup_openai_client(
         else:
             logger.error(
                 f'{api_type} API key not set for "aiuser" yet! '
-                f'Please set it with: [p]set api {api_type} api_key,[API_KEY_HERE]'
+                f"Please set it with: [p]set api {api_type} api_key,[API_KEY_HERE]"
             )
             return None
 
@@ -64,7 +62,7 @@ async def setup_openai_client(
     client = httpx.AsyncClient(
         event_hooks={
             "request": [log_request_prompt],
-            "response": [create_ratelimit_hook(config)]
+            "response": [create_ratelimit_hook(config)],
         }
     )
 
@@ -73,7 +71,7 @@ async def setup_openai_client(
         base_url=base_url,
         timeout=timeout,
         default_headers=headers,
-        http_client=client
+        http_client=client,
     )
 
 
@@ -88,7 +86,7 @@ async def log_request_prompt(request: httpx.Request) -> None:
 
     try:
         bytes = await request.aread()
-        request_data = json.loads(bytes.decode('utf-8'))
+        request_data = json.loads(bytes.decode("utf-8"))
         messages = request_data.get("messages", {})
         if not messages:
             return
@@ -96,12 +94,14 @@ async def log_request_prompt(request: httpx.Request) -> None:
         # Truncate messages image uri
         last = messages[-1]
         if isinstance(last.get("content"), list):
-            for content_item in last['content']:
-                if 'image_url' in content_item:
-                    image_url = content_item['image_url']['url']
+            for content_item in last["content"]:
+                if "image_url" in content_item:
+                    image_url = content_item["image_url"]["url"]
                     point = image_url.find(";base64,") + len(";base64,")
-                    short_data = image_url[point:point+20] + "..."
-                    content_item['image_url']['url'] = f"data:{image_url[:point]}{short_data}"
+                    short_data = image_url[point : point + 20] + "..."
+                    content_item["image_url"]["url"] = (
+                        f"data:{image_url[:point]}{short_data}"
+                    )
 
         logger.debug(f"Sending request with prompt: \n{json.dumps(messages, indent=4)}")
     except Exception as e:
@@ -117,6 +117,7 @@ def create_ratelimit_hook(config: Config) -> Callable[[httpx.Response], None]:
     Returns:
         A hook function that updates rate limit information
     """
+
     async def update_ratelimit_hook(response: httpx.Response) -> None:
         if not str(response.url).startswith("https://api.openai.com/"):
             return
@@ -143,9 +144,7 @@ def create_ratelimit_hook(config: Config) -> Callable[[httpx.Response], None]:
                 f"OpenAI ratelimit reached! Next ratelimit reset at {timestamp}. "
                 "(Try a non-trial key)"
             )
-            await config.ratelimit_reset.set(
-                timestamp.strftime("%Y-%m-%d %H:%M:%S")
-            )
+            await config.ratelimit_reset.set(timestamp.strftime("%Y-%m-%d %H:%M:%S"))
 
     return update_ratelimit_hook
 
@@ -189,9 +188,4 @@ def extract_time_delta(time_str: Optional[str]) -> timedelta:
 
     seconds += random.randint(2, 3)
 
-    return timedelta(
-        days=days,
-        hours=hours,
-        minutes=minutes,
-        seconds=seconds
-    )
+    return timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds)

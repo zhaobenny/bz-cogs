@@ -5,13 +5,13 @@ from io import BytesIO
 from discord import Message
 from PIL import Image
 
-from aiuser.context.converter.helpers import format_text_content
+from aiuser.context.converter.formatters import format_text_content
 from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-async def transcribe_image(cog: MixinMeta, message: Message):
+async def format_image(cog: MixinMeta, message: Message):
     attachment = message.attachments[0]
 
     buffer = BytesIO()

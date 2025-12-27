@@ -32,13 +32,20 @@ class BitTensorImg(commands.Cog):
     async def _get_api_key(self, provider: str):
         """Get the API key from shared API tokens."""
         if provider == NINETEEN:
-            return (await self.bot.get_shared_api_tokens(NINETEEN)).get('api_key')
+            return (await self.bot.get_shared_api_tokens(NINETEEN)).get("api_key")
         elif provider == CHUTES:
-            return (await self.bot.get_shared_api_tokens(CHUTES)).get('api_key')
+            return (await self.bot.get_shared_api_tokens(CHUTES)).get("api_key")
         return None
 
-    async def _generate_image_nineteen(self, prompt: str, steps: int = 20, cfg_scale: float = 7.5,
-                                       height: int = 1024, width: int = 1024, negative_prompt: str = ""):
+    async def _generate_image_nineteen(
+        self,
+        prompt: str,
+        steps: int = 20,
+        cfg_scale: float = 7.5,
+        height: int = 1024,
+        width: int = 1024,
+        negative_prompt: str = "",
+    ):
         """Generate image using sn19.ai API."""
         api_key = await self._get_api_key(NINETEEN)
         if not api_key:
@@ -60,7 +67,9 @@ class BitTensorImg(commands.Cog):
             "negative_prompt": negative_prompt,
         }
 
-        async with self.session.post(NINETEEN_API_URL, headers=headers, json=data) as response:
+        async with self.session.post(
+            NINETEEN_API_URL, headers=headers, json=data
+        ) as response:
             if response.status == 200:
                 res = await response.json()
                 image_data = res["image_b64"]
@@ -69,8 +78,15 @@ class BitTensorImg(commands.Cog):
                 error_text = await response.text()
                 raise Exception(f"sn19.ai API error: {response.status} - {error_text}")
 
-    async def _generate_image_chutes(self, prompt: str, steps: int = 20, guidance_scale: float = 7.5,
-                                     height: int = 1024, width: int = 1024, negative_prompt: str = ""):
+    async def _generate_image_chutes(
+        self,
+        prompt: str,
+        steps: int = 20,
+        guidance_scale: float = 7.5,
+        height: int = 1024,
+        width: int = 1024,
+        negative_prompt: str = "",
+    ):
         """Generate image using Chutes API."""
         api_key = await self._get_api_key(CHUTES)
         if not api_key:
@@ -89,10 +105,12 @@ class BitTensorImg(commands.Cog):
             "guidance_scale": guidance_scale,
             "width": width,
             "height": height,
-            "num_inference_steps": steps
+            "num_inference_steps": steps,
         }
 
-        async with self.session.post(CHUTES_API_URL, headers=headers, json=data) as response:
+        async with self.session.post(
+            CHUTES_API_URL, headers=headers, json=data
+        ) as response:
             if response.status == 200:
                 return await response.read()
             else:
@@ -107,12 +125,14 @@ class BitTensorImg(commands.Cog):
         guidance_scale="Guidance scale (1-20)",
         height="Image height (256-1024)",
         width="Image width (256-1024)",
-        negative_prompt="Things to avoid in the image"
+        negative_prompt="Things to avoid in the image",
     )
-    @app_commands.choices(provider=[
-        app_commands.Choice(name="Nineteen", value=NINETEEN),
-        app_commands.Choice(name="Chutes", value=CHUTES)
-    ])
+    @app_commands.choices(
+        provider=[
+            app_commands.Choice(name="Nineteen", value=NINETEEN),
+            app_commands.Choice(name="Chutes", value=CHUTES),
+        ]
+    )
     @commands.bot_has_permissions(attach_files=True)
     @app_commands.checks.cooldown(1, 10)
     @app_commands.guild_only()
@@ -139,18 +159,22 @@ class BitTensorImg(commands.Cog):
                     prompt, steps, guidance_scale, height, width, negative_prompt
                 )
             else:
-                await interaction.followup.send(f"Invalid provider: {provider}", ephemeral=True)
+                await interaction.followup.send(
+                    f"Invalid provider: {provider}", ephemeral=True
+                )
 
             file = discord.File(io.BytesIO(image_bytes), filename="image.png")
             await interaction.followup.send(file=file)
-        except ValueError as e:
+        except ValueError:
             await interaction.followup.send(
                 f"No API key set for {provider}! Use `[p]set api {NINETEEN if provider == NINETEEN else CHUTES} api_key,[YOUR_API_KEY_HERE]`",
-                ephemeral=True
+                ephemeral=True,
             )
         except Exception as e:
             log.error(f"{e}")
-            await interaction.followup.send(f"Failed to generate image using `{provider}`.\n`{e}`", ephemeral=True)
+            await interaction.followup.send(
+                f"Failed to generate image using `{provider}`.\n`{e}`", ephemeral=True
+            )
 
     async def _handle_command(self, ctx: commands.Context, prompt: str, provider: str):
         thinking_emoji = "🤔"
@@ -179,7 +203,9 @@ class BitTensorImg(commands.Cog):
         except ValueError:
             await ctx.message.remove_reaction(thinking_emoji, ctx.bot.user)
             await ctx.message.add_reaction(error_emoji)
-            await ctx.send(f"No API key set for `{provider}`! Use `[p]set api {api_key_name} api_key,[YOUR_API_KEY_HERE]`")
+            await ctx.send(
+                f"No API key set for `{provider}`! Use `[p]set api {api_key_name} api_key,[YOUR_API_KEY_HERE]`"
+            )
 
         except Exception as e:
             await ctx.message.remove_reaction(thinking_emoji, ctx.bot.user)
@@ -187,7 +213,9 @@ class BitTensorImg(commands.Cog):
                 await ctx.message.add_reaction(credits_emoji)
             else:
                 await ctx.message.add_reaction(error_emoji)
-                await ctx.message.channel.send(f"Failed to generate image using `{provider}`.\n`{e}`")
+                await ctx.message.channel.send(
+                    f"Failed to generate image using `{provider}`.\n`{e}`"
+                )
             log.error(f"{e}")
 
     @commands.command(name="19gen")

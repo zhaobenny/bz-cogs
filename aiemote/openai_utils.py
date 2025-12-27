@@ -11,9 +11,7 @@ OPENROUTER_URL = "https://openrouter.ai"
 
 
 async def setup_openai_client(
-    bot: Red,
-    config: Config,
-    ctx: Optional[commands.Context] = None
+    bot: Red, config: Config, ctx: Optional[commands.Context] = None
 ) -> Optional[AsyncOpenAI]:
     """Initialize the OpenAI client with appropriate configuration."""
     base_url = await config.custom_openai_endpoint()
@@ -42,7 +40,7 @@ async def setup_openai_client(
         else:
             logger.error(
                 f'{api_type} API key not set for "aiemote" yet! '
-                f'Please set it with: [p]set api {api_type} api_key,[API_KEY_HERE]'
+                f"Please set it with: [p]set api {api_type} api_key,[API_KEY_HERE]"
             )
             return None
 
@@ -50,5 +48,5 @@ async def setup_openai_client(
         api_key=api_key or "sk-placeholderkey",
         base_url=base_url,
         timeout=15.0,
-        default_headers=headers
-    ) 
+        default_headers=headers,
+    )

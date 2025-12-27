@@ -1,0 +1,17 @@
+name: "Close stale issues and PRs"
+
+on:
+  schedule:
+    - cron: '1 1 * * 1'
+  workflow_dispatch:
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v4
+        with:
+          stale-issue-message: "This issue has been automatically marked as stale because it has not had recent activity. If you believe this is still relevant, please add a comment to keep it open."
+          stale-pr-message: "This pull request has been automatically marked as stale because it has not had recent activity. If you believe this is still relevant, please update or comment to keep it open."
+          close-issue-message: "Closing this issue due to prolonged inactivity. Please reopen or create a new issue if this is still relevant."
+          close-pr-message: "Closing this pull request due to prolonged inactivity. Please reopen or open a new PR if needed."

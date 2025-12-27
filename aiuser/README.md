@@ -29,8 +29,8 @@ Bot owners can also manage/enable function calling (eg. generating images or per
 Some additional settings are restricted to bot owner only.
 See other settings using:
 ```
-[p]aiuser
 [p]aiuserowner
+[p]aiuser
 ```
 
 ### Have fun. 🎉
@@ -57,10 +57,10 @@ Bot owners can configure image scanning with the following commands:
 ## Memory 🧠
 
 Memory lets the bot recall stored information automatically without stuffing the prompt.
-It works by including relevant (only manually saved memories currently) details when generating responses. (via embeddings querying)
+It works by including relevant (only manually saved memories currently) details when generating responses.
 
 You can combine this with function calling for more advanced behavior.
-For example: a memory could store “when asked for a photo of the [bot], use this description for the image request: [...]”, and the bot will automatically apply that description when generating the image.
+For example: a memory could store “when asked for a photo of the [bot], use this description for the image request: [...]”, and the bot will automatically apply that description when generating the image. (dependent on the LLM's intelligence)
 
 The command for bot owners is:
 ```
@@ -88,7 +88,7 @@ Admins also manage topics here:
 
 ## Prompt/Topics Dynamic Variables  📝
 
-Prompts and topics can include certain dynamic variables by including one of the following strings:
+Prompts, topics,and image pre-prompt can include certain dynamic variables by including one of the following strings:
 
 - `{botname}` - the bot's current nickname or username
 - `{botowner}` - the bot owner's username

@@ -9,7 +9,6 @@ import discord
 from redbot.core import commands
 
 from aimage.abc import MixinMeta
-from aimage.apis.a1111 import A1111
 from aimage.apis.response import ImageResponse
 from aimage.common.helpers import delete_button_after, send_response
 from aimage.common.params import ImageGenParams
@@ -19,16 +18,20 @@ logger = logging.getLogger("red.bz_cogs.aimage")
 
 
 class ImageHandler(MixinMeta):
-    async def _execute_image_generation(self, context: Union[commands.Context, discord.Interaction],
-                                        payload: dict = None,
-                                        params: ImageGenParams = None,
-                                        generate_method: str = 'generate_image'):
-
+    async def _execute_image_generation(
+        self,
+        context: Union[commands.Context, discord.Interaction],
+        payload: dict = None,
+        params: ImageGenParams = None,
+        generate_method: str = "generate_image",
+    ):
         if not isinstance(context, discord.Interaction):
             await context.message.add_reaction("⏳")
 
         guild = context.guild
-        user = context.user if isinstance(context, discord.Interaction) else context.author
+        user = (
+            context.user if isinstance(context, discord.Interaction) else context.author
+        )
 
         if self.generating[user.id]:
             content = ":warning: You must wait for your current image to finish generating before you can request a new one."
@@ -37,7 +40,9 @@ class ImageHandler(MixinMeta):
         prompt = params.prompt if params else payload.get("prompt", "")
 
         if await self._contains_blacklisted_word(guild, prompt):
-            return await send_response(context, content=":warning: Prompt contains blacklisted words!")
+            return await send_response(
+                context, content=":warning: Prompt contains blacklisted words!"
+            )
 
         try:
             self.generating[user.id] = True
@@ -45,48 +50,87 @@ class ImageHandler(MixinMeta):
             generate_func = getattr(api, generate_method)
             response: ImageResponse = await generate_func(params, payload)
         except ValueError as error:
-            return await send_response(context, content=f":warning: Invalid parameter: {error}", ephemeral=True)
-        except aiohttp.ClientResponseError as error:
+            return await send_response(
+                context, content=f":warning: Invalid parameter: {error}", ephemeral=True
+            )
+        except aiohttp.ClientResponseError:
             logger.exception(f"Failed request in host {guild.id}")
-            return await send_response(context, content=":warning: Timed out! Bad response from host!", ephemeral=True)
+            return await send_response(
+                context,
+                content=":warning: Timed out! Bad response from host!",
+                ephemeral=True,
+            )
         except aiohttp.ClientConnectorError:
             logger.exception(f"Failed request in server {guild.id}")
-            return await send_response(context, content=":warning: Timed out! Could not reach host!", ephemeral=True)
+            return await send_response(
+                context,
+                content=":warning: Timed out! Could not reach host!",
+                ephemeral=True,
+            )
         except NotImplementedError:
-            return await send_response(context, content=":warning: This method is not supported by the host!", ephemeral=True)
+            return await send_response(
+                context,
+                content=":warning: This method is not supported by the host!",
+                ephemeral=True,
+            )
         except Exception:
             logger.exception(f"Failed request in server {guild.id}")
-            return await send_response(context, content=":warning: Something went wrong!", ephemeral=True)
+            return await send_response(
+                context, content=":warning: Something went wrong!", ephemeral=True
+            )
         finally:
             self.generating[user.id] = False
 
-        if response.is_nsfw and not await self.config.guild(guild).allow_nsfw() and not await self.config.guild(guild).nsfw_blurred():
-            return await send_response(context, content=f"🔞 {user.mention} generated a possible NSFW image with prompt: `{prompt}`", allowed_mentions=discord.AllowedMentions.none())
+        if (
+            response.is_nsfw
+            and not await self.config.guild(guild).allow_nsfw()
+            and not await self.config.guild(guild).nsfw_blurred()
+        ):
+            return await send_response(
+                context,
+                content=f"🔞 {user.mention} generated a possible NSFW image with prompt: `{prompt}`",
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
 
         maxsize = await self.config.guild(context.guild).max_img2img()
-        file = discord.File(io.BytesIO(response.data), filename=f"image.{response.extension}")
-        view = ImageActions(self, response.info_string, response.payload, user, context.channel, maxsize)
+        file = discord.File(
+            io.BytesIO(response.data), filename=f"image.{response.extension}"
+        )
+        view = ImageActions(
+            self, response.info_string, response.payload, user, context.channel, maxsize
+        )
         msg = await send_response(context, file=file, view=view)
         asyncio.create_task(delete_button_after(msg))
 
-        if (random.random() > 0.51):  # update only half the time
+        if random.random() > 0.51:  # update only half the time
             asyncio.create_task(self._update_autocomplete_cache(context))
 
         imagescanner = self.bot.get_cog("ImageScanner")
         if imagescanner and response.extension == "png":
             if context.channel.id in imagescanner.scan_channels:
-                imagescanner.image_cache[msg.id] = ({0: response.info_string}, {0: response.data})
+                imagescanner.image_cache[msg.id] = (
+                    {0: response.info_string},
+                    {0: response.data},
+                )
                 await msg.add_reaction("🔎")
 
-    async def generate_image(self, context: Union[commands.Context, discord.Interaction],
-                             payload: dict = None,
-                             params: ImageGenParams = None):
-        await self._execute_image_generation(context, payload, params, 'generate_image')
+    async def generate_image(
+        self,
+        context: Union[commands.Context, discord.Interaction],
+        payload: dict = None,
+        params: ImageGenParams = None,
+    ):
+        await self._execute_image_generation(context, payload, params, "generate_image")
 
-    async def generate_img2img(self, context: discord.Interaction,
-                               payload: dict = None,
-                               params: ImageGenParams = None):
-        await self._execute_image_generation(context, payload, params, 'generate_img2img')
+    async def generate_img2img(
+        self,
+        context: discord.Interaction,
+        payload: dict = None,
+        params: ImageGenParams = None,
+    ):
+        await self._execute_image_generation(
+            context, payload, params, "generate_img2img"
+        )
 
     async def _contains_blacklisted_word(self, guild: discord.Guild, prompt: str):
         blacklist = await self.config.guild(guild).words_blacklist()

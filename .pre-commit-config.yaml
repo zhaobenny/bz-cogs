@@ -1,0 +1,29 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.8.4
+    hooks:
+      # Run the linter.
+      - id: ruff
+        args: [--fix]
+      # Run the formatter.
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: check-aiuser-version
+        name: Check aiuser __version__ updated
+        entry: uv run .githooks/check_version_update.py
+        language: system
+        files: ^aiuser/
+        pass_filenames: false
+
+      - id: update-models
+        name: Update models from OpenRouter API
+        entry: bash -c 'if [ "$(whoami)" = "zhao" ]; then uv run .githooks/update_models.py; fi'
+        language: system
+        stages: [post-commit]
+        files: ^aiuser/
+        pass_filenames: false

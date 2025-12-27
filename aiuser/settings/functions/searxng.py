@@ -47,7 +47,9 @@ class SearXNGFunctionSettings(FunctionToggleHelperMixin):
         if results < 1:
             return await ctx.send(":warning: Please enter a positive integer.")
 
-        await self.config.guild(ctx.guild).function_calling_searxng_max_results.set(results)
+        await self.config.guild(ctx.guild).function_calling_searxng_max_results.set(
+            results
+        )
 
         embed = discord.Embed(
             title="The max results is now:",
@@ -61,7 +63,9 @@ class SearXNGFunctionSettings(FunctionToggleHelperMixin):
         """Shows the SearXNG settings."""
 
         endpoint = await self.config.guild(ctx.guild).function_calling_searxng_url()
-        results = await self.config.guild(ctx.guild).function_calling_searxng_max_results()
+        results = await self.config.guild(
+            ctx.guild
+        ).function_calling_searxng_max_results()
 
         embed = discord.Embed(
             title="SearXNG settings:",

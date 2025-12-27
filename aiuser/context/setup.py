@@ -11,7 +11,7 @@ from aiuser.utils.utilities import format_variables
 
 
 class ThreadSetup:
-    """ Handles initialization logic for a MessagesThread """
+    """Handles initialization logic for a MessagesThread"""
 
     def __init__(self, cog: MixinMeta, ctx: commands.Context) -> None:
         self.cog = cog
@@ -21,18 +21,15 @@ class ThreadSetup:
         self.bot = cog.bot
 
     async def create_thread(
-        self,
-        prompt: Optional[str] = None,
-        history: bool = True
+        self, prompt: Optional[str] = None, history: bool = True
     ) -> MessagesThread:
         """Create and fully setup a MessagesThread"""
         thread = MessagesThread(self.cog, self.ctx)
 
         thread.model = await self.config.guild(self.guild).model()
-        thread.token_limit = (
-            await self.config.guild(self.guild).custom_model_tokens_limit()
-            or self._get_token_limit(thread.model)
-        )
+        thread.token_limit = await self.config.guild(
+            self.guild
+        ).custom_model_tokens_limit() or self._get_token_limit(thread.model)
 
         if not prompt:  # jank
             await thread.add_msg(thread.init_message)
@@ -67,62 +64,74 @@ class ThreadSetup:
         else:
             member_prompt = None
 
-        return (member_prompt
-                or role_prompt
-                or await self.config.channel(self.ctx.channel).custom_text_prompt()
-                or await self.config.guild(self.guild).custom_text_prompt()
-                or await self.config.custom_text_prompt()
-                or DEFAULT_PROMPT)
+        return (
+            member_prompt
+            or role_prompt
+            or await self.config.channel(self.ctx.channel).custom_text_prompt()
+            or await self.config.guild(self.guild).custom_text_prompt()
+            or await self.config.custom_text_prompt()
+            or DEFAULT_PROMPT
+        )
 
     async def _should_use_image_model(self) -> bool:
         """Check if we should switch to image scanning model"""
-        if (self.ctx.interaction
-            or not await self.config.guild(self.guild).scan_images()):
+        if (
+            self.ctx.interaction
+            or not await self.config.guild(self.guild).scan_images()
+        ):
             return False
 
         message = self.ctx.message
 
-        if message.attachments and message.attachments[0].content_type.startswith('image/'):
+        if message.attachments and message.attachments[0].content_type.startswith(
+            "image/"
+        ):
             return True
 
         if message.reference:
             ref = message.reference
             if not ref.channel_id or not ref.message_id:
                 return False
-            replied = ref.cached_message or await self.bot.get_channel(ref.channel_id).fetch_message(ref.message_id)
-            return replied.attachments and replied.attachments[0].content_type.startswith('image/')
+            replied = ref.cached_message or await self.bot.get_channel(
+                ref.channel_id
+            ).fetch_message(ref.message_id)
+            return replied.attachments and replied.attachments[
+                0
+            ].content_type.startswith("image/")
 
         return False
-
 
     @staticmethod
     def _get_token_limit(model) -> int:
         limit = 7000
 
-        if 'gemini-2' in model or 'gpt-4.1' in model or 'llama-4.1' in model:
-            limit = 1000000
-        if 'gpt-5' in model:
-            limit = 390000
-        if "gpt-4o" in model or "llama-3.1" in model or "llama-3.2" in model or 'grok-3' in model:
-            limit = 123000
-        if "100k" in model or "claude" in model:
+        if "gemini-2" in model or "gemini-3" in model:
+            limit = 940000
+        if "gpt-4.1" in model:
+            limit = 942818
+        if "gpt-5" in model:
+            limit = 115200
+
+        if "100k" in model:
             limit = 98000
         if "16k" in model:
             limit = 15000
         if "32k" in model:
             limit = 31000
 
-        model = model.split("/")[-1].split(":")[0]
-        if model in OTHER_MODELS_LIMITS:
-            limit = OTHER_MODELS_LIMITS.get(model, limit)
+        matching_keys = [key for key in OTHER_MODELS_LIMITS if key in model]
+        if matching_keys:
+            best_match = max(matching_keys, key=len)
+            limit = OTHER_MODELS_LIMITS[best_match]
 
         return limit
+
 
 async def create_messages_thread(
     cog: MixinMeta,
     ctx: commands.Context,
     prompt: Optional[str] = None,
-    history: bool = True
+    history: bool = True,
 ) -> MessagesThread:
     setup = ThreadSetup(cog, ctx)
     return await setup.create_thread(prompt, history)

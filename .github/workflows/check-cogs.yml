@@ -5,30 +5,100 @@ on:
     branches:
       - main
   pull_request:
+    types: [opened]
   workflow_dispatch:
+
+# Use concurrency to ensure that we don't run multiple jobs using the same token in parallel.
+# This prevents gateway disconnects and rate limits.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test-cogs:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        python-version: ['3.9', '3.11']
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+
+    runs-on: ${{ matrix.os }}
+    name: Test Cogs (Py ${{ matrix.python-version }} on ${{ matrix.os }})
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set up Python 3.11
+      - name: Detect Changed Cogs
+        id: changed-cogs
+        run: |
+          # Determine the diff range
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_REF="origin/${{ github.base_ref }}"
+          else
+            BASE_REF="${{ github.event.before }}"
+            # Handle force pushes or first commits where 'before' might be all zeros
+            if [[ "$BASE_REF" == "0000000000000000000000000000000000000000" ]]; then
+              BASE_REF="HEAD~1"
+            fi
+          fi
+
+          echo "🔍 Diffing against $BASE_REF"
+
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only "$BASE_REF" HEAD)
+
+          # Extract top-level directories
+          CHANGED_DIRS=$(echo "$CHANGED_FILES" | cut -d/ -f1 | sort | uniq)
+
+          # Filter for directories that likely contain cogs
+          # Excluding hidden dirs, file artifacts, and known non-cog directories
+          COG_LIST=""
+          for dir in $CHANGED_DIRS; do
+            if [[ -d "$dir" && "$dir" != .* && "$dir" != "tests" ]]; then
+              # Check if it looks like a python package (has __init__.py) or we just assume folders are cogs
+              if [[ -f "$dir/__init__.py" ]]; then
+                 COG_LIST+="$dir,"
+              fi
+            fi
+          done
+
+          # Remove trailing comma
+          COG_LIST=${COG_LIST%,}
+
+          echo "📝 Changed cogs: $COG_LIST"
+          echo "cogs=$COG_LIST" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        if: ${{ steps.changed-cogs.outputs.cogs != '' }}
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        if: ${{ steps.changed-cogs.outputs.cogs != '' }}
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-${{ runner.arch }}-pip-${{ matrix.python-version }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-pip-
 
       - name: Install Red-DiscordBot
+        if: ${{ steps.changed-cogs.outputs.cogs != '' }}
         run: |
           set -euo pipefail
           echo "📦 Installing Red-DiscordBot from PyPI"
           pip install Red-DiscordBot
 
       - name: Test cogs via Downloader
+        if: ${{ steps.changed-cogs.outputs.cogs != '' }}
         uses: nntin/d-flows/actions/test-red-discordbot-downloader@v1.1.2
         with:
           token: ${{ secrets.DISCORD_BOT_TOKEN }}
+          cog_paths: ${{ steps.changed-cogs.outputs.cogs }}
 
   ##################################################################
   ####     Build validation results for Discord notification    ####
@@ -47,6 +117,7 @@ jobs:
         id: validation_result
         run: |
           TEST_STATUS="${{ needs['test-cogs'].result }}"
+          echo "result=${TEST_STATUS}" >> "$GITHUB_OUTPUT"
 
       - name: Build Discord Fields
         id: discord_fields

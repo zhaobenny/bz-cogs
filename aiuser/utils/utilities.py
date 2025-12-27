@@ -23,6 +23,26 @@ from aiuser.functions.tool_call import ToolCall
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
+class RolesSet:
+    def __init__(self):
+        self._set = set()
+
+    def has(self, role_id):
+        return role_id in self._set
+
+    def add(self, role_id):
+        self._set.add(role_id)
+
+    def __iter__(self):
+        return iter(self._set)
+
+    def __contains__(self, role_id):
+        return role_id in self._set
+
+    def __repr__(self):
+        return repr(self._set)
+
+
 def to_thread(timeout=300):
     def decorator(func: Callable) -> Coroutine:
         @functools.wraps(func)
@@ -64,8 +84,7 @@ async def format_variables(ctx: commands.Context, text: str):
     if isinstance(ctx.message.channel, discord.Thread):
         channeltopic = getattr(ctx.message.channel.parent, "topic", "No topic found")
     else:
-        channeltopic = getattr(ctx.message.channel, "topic", "No topic found") 
-
+        channeltopic = getattr(ctx.message.channel, "topic", "No topic found")
 
     serveremojis = [str(e) for e in ctx.message.guild.emojis]
     random.shuffle(serveremojis)

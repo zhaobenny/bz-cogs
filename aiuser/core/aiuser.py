@@ -16,13 +16,13 @@ from aiuser.config.defaults import (
     DEFAULT_MEMBER,
     DEFAULT_ROLE,
 )
-from aiuser.context.entry import MessageEntry
 from aiuser.core.handlers import handle_message, handle_slash_command
 from aiuser.core.random_message_task import RandomMessageTask
 from aiuser.dashboard.base import DashboardIntegration
 from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
 from aiuser.utils.cache import Cache
+from aiuser.utils.vectorstore import VectorStore
 
 from .openai_utils import setup_openai_client
 
@@ -41,6 +41,8 @@ class AIUser(
     Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
 
+    __version__ = "1.3.3"
+
     def __init__(self, bot):
         super().__init__()
         self.bot: Red = bot
@@ -52,7 +54,7 @@ class AIUser(
         self.channels_whitelist: dict[int, list[int]] = {}
         self.ignore_regex: dict[int, re.Pattern] = {}
         self.override_prompt_start_time: dict[int, datetime] = {}
-        self.cached_messages: Cache[int, MessageEntry] = Cache(limit=100)
+        self.cached_tool_calls: Cache[tuple, list] = Cache(limit=100)
 
         self.config.register_member(**DEFAULT_MEMBER)
         self.config.register_role(**DEFAULT_ROLE)
@@ -67,6 +69,7 @@ class AIUser(
         logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
         logging.getLogger("openai._base_client").setLevel(logging.WARNING)
         logging.getLogger("aiosqlite").setLevel(logging.WARNING)
+        logging.getLogger("hpack").setLevel(logging.WARNING)
 
         self.openai_client = await setup_openai_client(self.bot, self.config)
 
@@ -84,18 +87,13 @@ class AIUser(
             test_guild = 744802856074346556
             self.override_prompt_start_time[test_guild] = datetime.now()
 
-        try:
-            from aiuser.utils.vectorstore import VectorStore
-            self.db: VectorStore = VectorStore(cog_data_path(self))
-            await self.db._connect()
-        except ImportError:
-            logger.warning(
-                "LanceDB client could not be initialized on cog load due to CPU missing AVX/AVX2 support."
-            )
-        except Exception:
-            logger.exception("Failed to initialize LanceDB client on cog load")
+        self.db: VectorStore = VectorStore(cog_data_path(self))
 
         self.random_message_trigger.start()
+
+    def format_help_for_context(self, ctx):
+        pre_processed = super().format_help_for_context(ctx)
+        return f"{pre_processed}\nCog Version: {self.__version__}"
 
     async def cog_unload(self):
         if self.openai_client:
@@ -107,8 +105,6 @@ class AIUser(
             member = guild.get_member(user_id)
             if member:
                 await self.config.member(member).clear()
-                # TODO: remove user messages from cache instead of clearing the whole cache
-                self.cached_messages = Cache(limit=100)
 
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, _):

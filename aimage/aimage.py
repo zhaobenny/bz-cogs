@@ -1,5 +1,4 @@
 import asyncio
-import io
 import logging
 from collections import defaultdict
 from copy import copy
@@ -13,8 +12,11 @@ from redbot.core import Config, app_commands, checks, commands
 from redbot.core.bot import Red
 
 from aimage.abc import CompositeMetaClass
-from aimage.common.constants import (DEFAULT_BADWORDS_BLACKLIST,
-                                     DEFAULT_NEGATIVE_PROMPT, API_Type)
+from aimage.common.constants import (
+    DEFAULT_BADWORDS_BLACKLIST,
+    DEFAULT_NEGATIVE_PROMPT,
+    API_Type,
+)
 from aimage.common.params import ImageGenParams
 from aimage.image_handler import ImageHandler
 from aimage.settings import Settings
@@ -22,11 +24,8 @@ from aimage.settings import Settings
 logger = logging.getLogger("red.bz_cogs.aimage")
 
 
-class AImage(Settings,
-             ImageHandler,
-             commands.Cog,
-             metaclass=CompositeMetaClass):
-    """ Generate AI images using a A1111 endpoint """
+class AImage(Settings, ImageHandler, commands.Cog, metaclass=CompositeMetaClass):
+    """Generate AI images using a A1111 endpoint"""
 
     def __init__(self, bot):
         super().__init__()
@@ -66,8 +65,9 @@ class AImage(Settings,
     async def cog_unload(self):
         await self.session.close()
 
-    async def object_autocomplete(self, interaction: discord.Interaction, current: str, choices: list) -> List[app_commands.Choice[str]]:
-
+    async def object_autocomplete(
+        self, interaction: discord.Interaction, current: str, choices: list
+    ) -> List[app_commands.Choice[str]]:
         if not choices:
             await self._update_autocomplete_cache(interaction)
             return []
@@ -75,15 +75,18 @@ class AImage(Settings,
         choices = self.filter_list(choices, current)
 
         return [
-            app_commands.Choice(name=choice, value=choice)
-            for choice in choices[:25]
+            app_commands.Choice(name=choice, value=choice) for choice in choices[:25]
         ]
 
-    async def samplers_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+    async def samplers_autocomplete(
+        self, interaction: discord.Interaction, current: str
+    ) -> List[app_commands.Choice[str]]:
         choices = self.autocomplete_cache[interaction.guild_id].get("samplers") or []
         return await self.object_autocomplete(interaction, current, choices)
 
-    async def loras_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+    async def loras_autocomplete(
+        self, interaction: discord.Interaction, current: str
+    ) -> List[app_commands.Choice[str]]:
         choices = self.autocomplete_cache[interaction.guild_id].get("loras") or []
 
         if not choices:
@@ -93,19 +96,29 @@ class AImage(Settings,
         weight = "1"
         previous = ""
         if current:
-            if m := re.search(r"^((?:<[^>]+>\s*)+)([^<>]+)$", current): # multiple loras
+            if m := re.search(
+                r"^((?:<[^>]+>\s*)+)([^<>]+)$", current
+            ):  # multiple loras
                 current = m.group(2)
                 previous = m.group(1) + " "
-            if m := re.search(r"^([^:]+):([+-]?\d*\.?\d+)$", current): # lora weight
+            if m := re.search(r"^([^:]+):([+-]?\d*\.?\d+)$", current):  # lora weight
                 current = m.group(1)
                 weight = m.group(2)
 
         choices = self.filter_list(choices, current, True)
-        choices = [f"{previous}<lora:{choice}:{weight}>" if len(f"{previous}<lora:{choice}:{weight}>") <= 100 else f"<lora:{choice}:{weight}>"
-                   for choice in choices]
-        return [app_commands.Choice(name=choice, value=choice) for choice in choices][:25]
+        choices = [
+            f"{previous}<lora:{choice}:{weight}>"
+            if len(f"{previous}<lora:{choice}:{weight}>") <= 100
+            else f"<lora:{choice}:{weight}>"
+            for choice in choices
+        ]
+        return [app_commands.Choice(name=choice, value=choice) for choice in choices][
+            :25
+        ]
 
-    async def style_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+    async def style_autocomplete(
+        self, interaction: discord.Interaction, current: str
+    ) -> List[app_commands.Choice[str]]:
         choices = self.autocomplete_cache[interaction.guild_id].get("styles") or []
 
         if current:
@@ -121,19 +134,26 @@ class AImage(Settings,
 
         return await self.object_autocomplete(interaction, current, choices)
 
-    async def checkpoint_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+    async def checkpoint_autocomplete(
+        self, interaction: discord.Interaction, current: str
+    ) -> List[app_commands.Choice[str]]:
         choices = self.autocomplete_cache[interaction.guild_id].get("checkpoints") or []
         return await self.object_autocomplete(interaction, current, choices)
 
-    async def vae_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+    async def vae_autocomplete(
+        self, interaction: discord.Interaction, current: str
+    ) -> List[app_commands.Choice[str]]:
         choices = self.autocomplete_cache[interaction.guild_id].get("vaes") or []
         return await self.object_autocomplete(interaction, current, choices)
 
-    @ staticmethod
+    @staticmethod
     def filter_list(options: list, current: str, strict: bool = False):
         results = []
 
-        ratios = [(item, fuzz.partial_ratio(current.lower(), item.lower())) for item in options]
+        ratios = [
+            (item, fuzz.partial_ratio(current.lower(), item.lower()))
+            for item in options
+        ]
 
         sorted_options = sorted(ratios, key=lambda x: x[1], reverse=True)
 
@@ -166,10 +186,10 @@ class AImage(Settings,
         "style": style_autocomplete,
     }
 
-    @ commands.command()
-    @ commands.cooldown(1, 10, commands.BucketType.default)
-    @ checks.bot_has_permissions(attach_files=True)
-    @ checks.bot_in_a_guild()
+    @commands.command()
+    @commands.cooldown(1, 10, commands.BucketType.default)
+    @checks.bot_has_permissions(attach_files=True)
+    @checks.bot_in_a_guild()
     async def imagine(self, ctx: commands.Context, *, prompt: str):
         """
         Generate an image
@@ -183,14 +203,16 @@ class AImage(Settings,
         params = ImageGenParams(prompt=prompt)
         await self.generate_image(ctx, params=params)
 
-    @ app_commands.command(name="imagine")
-    @ app_commands.describe(width="Default image width is 512, or 1024 for SDXL.",
-                            height="Default image height is 512, or 1024 for SDXL.",
-                            **_parameter_descriptions)
-    @ app_commands.autocomplete(**_parameter_autocompletes)
-    @ app_commands.checks.cooldown(1, 10, key=None)
-    @ app_commands.checks.bot_has_permissions(attach_files=True)
-    @ app_commands.guild_only()
+    @app_commands.command(name="imagine")
+    @app_commands.describe(
+        width="Default image width is 512, or 1024 for SDXL.",
+        height="Default image height is 512, or 1024 for SDXL.",
+        **_parameter_descriptions,
+    )
+    @app_commands.autocomplete(**_parameter_autocompletes)
+    @app_commands.checks.cooldown(1, 10, key=None)
+    @app_commands.checks.bot_has_permissions(attach_files=True)
+    @app_commands.guild_only()
     async def imagine_app(
         self,
         interaction: discord.Interaction,
@@ -216,7 +238,9 @@ class AImage(Settings,
 
         ctx: commands.Context = await self.bot.get_context(interaction)  # noqa
         if not await self._can_run_command(ctx, "imagine"):
-            return await interaction.followup.send("You do not have permission to do this.", ephemeral=True)
+            return await interaction.followup.send(
+                "You do not have permission to do this.", ephemeral=True
+            )
 
         params = ImageGenParams(
             prompt=prompt,
@@ -232,38 +256,40 @@ class AImage(Settings,
             variation_seed=variation_seed,
             checkpoint=checkpoint,
             vae=vae,
-            lora=lora
+            lora=lora,
         )
 
         await self.generate_image(interaction, params=params)
 
-    @ app_commands.command(name="reimagine")
-    @ app_commands.describe(image="The image to reimagine with AI.",
-                            denoising="How much the image should change. Try around 0.6",
-                            scale="Resizes the image up or down, 0.5 to 2.0.",
-                            **_parameter_descriptions)
-    @ app_commands.autocomplete(**_parameter_autocompletes)
-    @ app_commands.checks.cooldown(1, 10, key=None)
-    @ app_commands.checks.bot_has_permissions(attach_files=True)
-    @ app_commands.guild_only()
+    @app_commands.command(name="reimagine")
+    @app_commands.describe(
+        image="The image to reimagine with AI.",
+        denoising="How much the image should change. Try around 0.6",
+        scale="Resizes the image up or down, 0.5 to 2.0.",
+        **_parameter_descriptions,
+    )
+    @app_commands.autocomplete(**_parameter_autocompletes)
+    @app_commands.checks.cooldown(1, 10, key=None)
+    @app_commands.checks.bot_has_permissions(attach_files=True)
+    @app_commands.guild_only()
     async def reimagine_app(
-            self,
-            interaction: discord.Interaction,
-            image: discord.Attachment,
-            denoising: app_commands.Range[float, 0, 1],
-            prompt: str,
-            negative_prompt: str = None,
-            style: str = None,
-            scale: app_commands.Range[float, 0.5, 2.0] = 1,
-            cfg: app_commands.Range[float, 1, 30] = None,
-            sampler: str = None,
-            steps: app_commands.Range[int, 1, 150] = None,
-            seed: app_commands.Range[int, -1, None] = -1,
-            variation: app_commands.Range[float, 0, 1] = 0,
-            variation_seed: app_commands.Range[int, -1, None] = -1,
-            checkpoint: str = None,
-            vae: str = None,
-            lora: str = "",
+        self,
+        interaction: discord.Interaction,
+        image: discord.Attachment,
+        denoising: app_commands.Range[float, 0, 1],
+        prompt: str,
+        negative_prompt: str = None,
+        style: str = None,
+        scale: app_commands.Range[float, 0.5, 2.0] = 1,
+        cfg: app_commands.Range[float, 1, 30] = None,
+        sampler: str = None,
+        steps: app_commands.Range[int, 1, 150] = None,
+        seed: app_commands.Range[int, -1, None] = -1,
+        variation: app_commands.Range[float, 0, 1] = 0,
+        variation_seed: app_commands.Range[int, -1, None] = -1,
+        checkpoint: str = None,
+        vae: str = None,
+        lora: str = "",
     ):
         """
         Convert an image using AI.
@@ -272,18 +298,23 @@ class AImage(Settings,
 
         ctx: commands.Context = await self.bot.get_context(interaction)  # noqa
         if not await self._can_run_command(ctx, "imagine"):
-            return await interaction.followup.send("You do not have permission to do this.", ephemeral=True)
+            return await interaction.followup.send(
+                "You do not have permission to do this.", ephemeral=True
+            )
 
         if not image.content_type.startswith("image/"):
-            return await interaction.followup.send("The file you uploaded is not a valid image.", ephemeral=True)
+            return await interaction.followup.send(
+                "The file you uploaded is not a valid image.", ephemeral=True
+            )
 
-        size = image.width*image.height*scale*scale
-        maxsize = (await self.config.guild(ctx.guild).max_img2img())**2
+        size = image.width * image.height * scale * scale
+        maxsize = (await self.config.guild(ctx.guild).max_img2img()) ** 2
         if size > maxsize:
             return await interaction.followup.send(
                 f"Max img2img size is {int(maxsize**0.5)}² pixels. "
                 f"Your image {'after resizing would be' if scale != 0 else 'is'} {int(size**0.5)}² pixels, which is too big.",
-                ephemeral=True)
+                ephemeral=True,
+            )
 
         params = ImageGenParams(
             prompt=prompt,
@@ -299,8 +330,8 @@ class AImage(Settings,
             vae=vae,
             lora=lora,
             # img2img
-            height=image.height*scale,
-            width=image.width*scale,
+            height=image.height * scale,
+            width=image.width * scale,
             init_image=await image.read(),
             denoising=denoising,
         )
@@ -315,7 +346,9 @@ class AImage(Settings,
         command = ctx.bot.get_command(command_name)
         fake_context: commands.Context = await ctx.bot.get_context(fake_message)  # noqa
         try:
-            can = await command.can_run(fake_context, check_all_parents=True, change_permission_state=False)
+            can = await command.can_run(
+                fake_context, check_all_parents=True, change_permission_state=False
+            )
         except commands.CommandError:
             can = False
         return can
@@ -324,18 +357,26 @@ class AImage(Settings,
         api_type = await self.config.guild(ctx.guild).api_type()
         if api_type == API_Type.AUTOMATIC1111.value:
             from aimage.apis.a1111 import A1111
+
             instance = A1111(self, ctx)
         elif api_type == API_Type.AIHorde.value:
             from aimage.apis.aihorde import AIHorde
+
             instance = AIHorde(self, ctx)
         await instance._init()
         return instance
 
-    async def _update_autocomplete_cache(self, ctx: Union[commands.Context, discord.Interaction]):
+    async def _update_autocomplete_cache(
+        self, ctx: Union[commands.Context, discord.Interaction]
+    ):
         api = await self.get_api_instance(ctx)
         try:
-            logger.debug(f"Ran a update to get possible autocomplete terms in server {ctx.guild.id}")
+            logger.debug(
+                f"Ran a update to get possible autocomplete terms in server {ctx.guild.id}"
+            )
             await api.update_autocomplete_cache(self.autocomplete_cache)
         except NotImplementedError:
-            logger.debug(f"Autocomplete terms is not supported by the api in server {ctx.guild.id}")
+            logger.debug(
+                f"Autocomplete terms is not supported by the api in server {ctx.guild.id}"
+            )
             pass
