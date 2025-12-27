@@ -92,6 +92,18 @@ DEFAULT_GUILD = {
     "webhook_user_whitelist": [],
 }
 
-DEFAULT_CHANNEL = {"custom_text_prompt": None, "reply_percent": None}
-DEFAULT_ROLE = {"custom_text_prompt": None, "reply_percent": None}
-DEFAULT_MEMBER = {"custom_text_prompt": None, "reply_percent": None}
+DEFAULT_CHANNEL = {
+    "custom_text_prompt": None,
+    "reply_percent": None,
+    "function_calling_image_preprompt": None,
+}
+DEFAULT_ROLE = {
+    "custom_text_prompt": None,
+    "reply_percent": None,
+    "function_calling_image_preprompt": None,
+}
+DEFAULT_MEMBER = {
+    "custom_text_prompt": None,
+    "reply_percent": None,
+    "function_calling_image_preprompt": None,
+}
