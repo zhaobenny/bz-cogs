@@ -73,6 +73,38 @@ class ThreadSetup:
             or DEFAULT_PROMPT
         )
 
+    async def _pick_image_preprompt(self) -> Optional[str]:
+        """Select the appropriate image preprompt based on configuration hierarchy"""
+        author = self.ctx.message.author
+        role_preprompt: Optional[str] = None
+
+        # Webhook messages have User objects instead of Member objects
+        if isinstance(author, discord.Member):
+            for role in author.roles:
+                if role.id in (await self.config.all_roles()):
+                    role_preprompt = (
+                        await self.config.role(role).function_calling_image_preprompt()
+                    )
+                    break
+
+            member_preprompt = (
+                await self.config.member(author).function_calling_image_preprompt()
+            )
+        else:
+            member_preprompt = None
+
+        return (
+            member_preprompt
+            or role_preprompt
+            or await self.config.channel(
+                self.ctx.channel
+            ).function_calling_image_preprompt()
+            or await self.config.guild(
+                self.guild
+            ).function_calling_image_preprompt()
+            or None
+        )
+
     async def _should_use_image_model(self) -> bool:
         """Check if we should switch to image scanning model"""
         if (
@@ -135,3 +167,11 @@ async def create_messages_thread(
 ) -> MessagesThread:
     setup = ThreadSetup(cog, ctx)
     return await setup.create_thread(prompt, history)
+
+
+async def pick_image_preprompt(
+    cog: MixinMeta, ctx: commands.Context
+) -> Optional[str]:
+    """Helper function to pick image preprompt based on hierarchy"""
+    setup = ThreadSetup(cog, ctx)
+    return await setup._pick_image_preprompt()

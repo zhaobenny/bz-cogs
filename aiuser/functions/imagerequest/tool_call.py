@@ -3,6 +3,7 @@ import logging
 
 import discord
 
+from aiuser.context.setup import pick_image_preprompt
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 from aiuser.response.llm_pipeline import LLMPipeline
@@ -33,12 +34,7 @@ class ImageRequestToolCall(ToolCall):
 
     async def _handle(self, request: LLMPipeline, arguments):
         description = arguments["description"][:2000]
-        preprompt = (
-            await request.config.guild(
-                request.ctx.guild
-            ).function_calling_image_preprompt()
-            or ""
-        )
+        preprompt = await pick_image_preprompt(request.cog, request.ctx) or ""
         if preprompt:
             preprompt = await format_variables(request.ctx, preprompt)
             description = f"{preprompt} {description}"
