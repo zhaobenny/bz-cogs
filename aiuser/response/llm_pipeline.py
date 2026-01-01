@@ -36,6 +36,7 @@ class ChatStepResult:
 
 class LLMPipeline:
     def __init__(self, cog: MixinMeta, ctx: commands.Context, messages: MessagesThread):
+        self.cog = cog
         self.ctx: commands.Context = ctx
         self.config: Config = cog.config
         self.bot = cog.bot

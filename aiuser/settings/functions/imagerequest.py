@@ -1,7 +1,11 @@
+from typing import Optional
+
 import discord
 from redbot.core import commands
 
 from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
+from aiuser.settings.utilities import get_config_attribute, get_mention_type, truncate_prompt
+from aiuser.types.types import COMPATIBLE_MENTIONS
 
 
 class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
@@ -56,20 +60,42 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
 
     @imagerequest.command(name="preprompt")
     async def imagerequest_preprompt(
-        self, ctx: commands.Context, *, preprompt: str = None
+        self,
+        ctx: commands.Context,
+        mention: Optional[COMPATIBLE_MENTIONS],
+        *,
+        preprompt: Optional[str] = None,
     ):
-        """Set or clear a preprompt that is prepended to image generation prompts."""
+        """Set or clear a preprompt that is prepended to image generation prompts.
+
+        If multiple preprompts can be used, the most specific preprompt will be used, eg. it will go for: member > role > channel > server
+
+        **Arguments**
+            - `mention` *(Optional)* A specific user, role, or channel. If not provided, sets for the server.
+            - `preprompt` *(Optional)* The preprompt to set. If blank, will remove current preprompt.
+        """
         PREPROMPT_LIMIT = 3200
         if preprompt and len(preprompt) > PREPROMPT_LIMIT:
             return await ctx.send(
                 f"Preprompt too long ({len(preprompt)}/{PREPROMPT_LIMIT}). Please shorten it to under {PREPROMPT_LIMIT} characters."
             )
-        await self.config.guild(ctx.guild).function_calling_image_preprompt.set(
-            preprompt or None
-        )
+
+        mention_type = get_mention_type(mention)
+        config_attr = get_config_attribute(self.config, mention_type, ctx, mention)
+
+        if not config_attr:
+            return await ctx.send(":warning: Invalid mention type provided.")
+
+        if not preprompt:
+            await config_attr.function_calling_image_preprompt.set(None)
+            return await ctx.send(
+                f"The preprompt for this {mention_type.name.lower()} will no longer use a custom preprompt."
+            )
+
+        await config_attr.function_calling_image_preprompt.set(preprompt)
         e = discord.Embed(
-            title="Image request preprompt set to:",
-            description=f"{(preprompt or 'Cleared')}",
+            title=f"Image request preprompt set for {mention_type.name.lower()}:",
+            description=truncate_prompt(preprompt),
             color=await ctx.embed_color(),
         )
         await ctx.send(embed=e)
