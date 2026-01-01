@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    types: [opened]
   workflow_dispatch:
 
 # Use concurrency to ensure that we don't run multiple jobs using the same token in parallel.
