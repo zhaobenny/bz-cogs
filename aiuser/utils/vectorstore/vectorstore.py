@@ -108,7 +108,7 @@ class VectorStore:
 
         async with aiosqlite.connect(self.db_path) as conn:
             cursor = await conn.execute(
-                "SELECT rowid, memory_text FROM memories WHERE guild_id = ?",
+                "SELECT rowid, memory_name, memory_text FROM memories WHERE guild_id = ?",
                 (guild_id,),
             )
             text_rows = await cursor.fetchall()
@@ -116,16 +116,20 @@ class VectorStore:
             if not text_rows:
                 return []
 
-            tokenized_corpus = [re.findall(r"\w+", row[1].lower()) for row in text_rows]
+            # memory name included in tokenization for better matching
+            tokenized_corpus = [
+                re.findall(r"\w+", f"{row[1]} {row[2]}".lower()) for row in text_rows
+            ]
             bm25 = BM25Okapi(tokenized_corpus)
             tokenized_query = re.findall(r"\w+", query.lower())
             bm25_scores = bm25.get_scores(tokenized_query)
 
-            top_indices = np.argsort(bm25_scores)[-50:][::-1]
-            candidate_rowids = [text_rows[i][0] for i in top_indices]
-
-            if not candidate_rowids:
-                return []
+            if np.max(bm25_scores) > 0:
+                top_indices = np.argsort(bm25_scores)[-50:][::-1]
+                candidate_rowids = [text_rows[i][0] for i in top_indices]
+            else:
+                # Fallback to recent 50
+                candidate_rowids = [row[0] for row in text_rows[-50:]]
 
             placeholders = ",".join("?" * len(candidate_rowids))
             cursor = await conn.execute(

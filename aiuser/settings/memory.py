@@ -142,7 +142,7 @@ class MemorySettings(MixinMeta):
 
     @memory.command(name="add")
     async def add_memory(self, ctx: commands.Context, *, memory: str):
-        """Adds a memory where the format is `<MEMORY_NAME>: <MEMORY_CONTENT>`, where MEMORY_NAME is currently only used for easier identification."""
+        """Adds a memory where the format is `<MEMORY_NAME>: <MEMORY_CONTENT>`"""
 
         if ":" not in memory:
             embed = discord.Embed(
