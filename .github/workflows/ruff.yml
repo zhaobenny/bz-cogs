@@ -7,34 +7,19 @@ on:
 
 jobs:
   ruff:
-    name: Apply Ruff
+    name: Ruff Check
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
-        if: ${{ github.event_name == 'pull_request' }}
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
 
-      - uses: actions/checkout@v4
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-
-      - name: Run Ruff check with --fix
+      - name: Run Ruff check
         uses: astral-sh/ruff-action@v3
         with:
-          args: "check --fix ."
+          args: "check ."
 
-      - name: Run Ruff format
+      - name: Run Ruff format check
         uses: astral-sh/ruff-action@v3
         with:
-          args: "format ."
-
-      - name: Commit and push changes
-        uses: EndBug/add-and-commit@v9
-        with:
-          committer_name: GitHub Actions
-          committer_email: 41898282+github-actions[bot]@users.noreply.github.com
-          message: "style: auto-fix linting and formatting with Ruff"
-          add: "."
+          args: "format --check ."

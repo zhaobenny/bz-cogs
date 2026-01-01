@@ -22,8 +22,7 @@ repos:
 
       - id: update-models
         name: Update models from OpenRouter API
-        entry: bash -c 'if [ "$(whoami)" = "zhao" ]; then uv run .githooks/update_models.py; fi'
+        entry: bash -c 'if [ "$(whoami)" = "zhao" ] && git diff --name-only HEAD^ HEAD | grep -q "^aiuser/"; then uv run .githooks/update_models.py; fi'
         language: system
         stages: [post-commit]
-        files: ^aiuser/
-        pass_filenames: false
+        always_run: true

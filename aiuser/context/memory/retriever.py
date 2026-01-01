@@ -17,7 +17,7 @@ class MemoryRetriever:
         self.db = db
 
     async def fetch_relevant(
-        self, query: str, threshold: float = 0.85
+        self, query: str, threshold: float = 0.75
     ) -> Optional[str]:
         """
         Fetch the most relevant memory based on a similarity threshold.
@@ -38,7 +38,12 @@ class MemoryRetriever:
             logger.exception("Database error while searching memories")
             return None
 
-        if memory_results and memory_results[0][2] >= threshold:
+        score = memory_results[0][2] if memory_results else 0
+
+        logger.debug(
+            f"Memory search score: {score:.3f} (threshold: {threshold}) for query: {query[:50]}..."
+        )
+        if score >= threshold:
             return f"Looking into your memory, the following relevant memory was found that could be used in the response: `{memory_results[0][1]}`"
 
         return None
