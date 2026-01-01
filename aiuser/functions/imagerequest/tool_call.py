@@ -1,9 +1,9 @@
 import io
 import logging
+from typing import Optional
 
 import discord
 
-from aiuser.context.setup import pick_image_preprompt
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 from aiuser.response.llm_pipeline import LLMPipeline
@@ -34,7 +34,7 @@ class ImageRequestToolCall(ToolCall):
 
     async def _handle(self, request: LLMPipeline, arguments):
         description = arguments["description"][:2000]
-        preprompt = await pick_image_preprompt(request.cog, request.ctx) or ""
+        preprompt = await self._pick_image_preprompt(request) or ""
         if preprompt:
             preprompt = await format_variables(request.ctx, preprompt)
             description = f"{preprompt} {description}"
@@ -57,3 +57,34 @@ class ImageRequestToolCall(ToolCall):
             )
             return "Couldn't generate an image..."
         return "The requested image was generated and was sent."
+
+    async def _pick_image_preprompt(self, request: LLMPipeline) -> Optional[str]:
+        """Select the appropriate image preprompt based on configuration hierarchy"""
+        config = request.config
+        ctx = request.ctx
+        author = ctx.message.author
+
+        role_preprompt: Optional[str] = None
+
+        # Webhook messages have User objects instead of Member objects
+        if isinstance(author, discord.Member):
+            for role in author.roles:
+                if role.id in (await config.all_roles()):
+                    role_preprompt = await config.role(
+                        role
+                    ).function_calling_image_preprompt()
+                    break
+
+            member_preprompt = await config.member(
+                author
+            ).function_calling_image_preprompt()
+        else:
+            member_preprompt = None
+
+        return (
+            member_preprompt
+            or role_preprompt
+            or await config.channel(ctx.channel).function_calling_image_preprompt()
+            or await config.guild(ctx.guild).function_calling_image_preprompt()
+            or None
+        )
