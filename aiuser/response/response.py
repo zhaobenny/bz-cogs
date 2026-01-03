@@ -3,7 +3,7 @@ import logging
 import random
 import re
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 
 import discord
 from redbot.core import Config, commands
@@ -108,15 +108,6 @@ async def send_response(
     return sent_message
 
 
-def get_tool_call_entries(messages_list: MessagesThread) -> List:
-    """Extract tool call related entries (assistant with tool_calls, tool results) from message list"""
-    entries = []
-    for entry in messages_list.messages:
-        if entry.tool_calls or entry.role == "tool":
-            entries.append(entry)
-    return entries
-
-
 async def create_response(
     cog: MixinMeta, ctx: commands.Context, messages_list: MessagesThread = None
 ) -> bool:
@@ -142,10 +133,8 @@ async def create_response(
         )
 
         # Cache tool call entries for future context rebuilding
-        if sent_message:
-            tool_entries = get_tool_call_entries(messages_list)
-            if tool_entries:
-                cache_key = (ctx.channel.id, sent_message.id)
-                cog.cached_tool_calls[cache_key] = tool_entries
+        if sent_message and pipeline.tool_call_entries:
+            cache_key = (ctx.channel.id, sent_message.id)
+            cog.cached_tool_calls[cache_key] = pipeline.tool_call_entries
 
         return sent_message is not None

@@ -40,9 +40,12 @@ class ToolManager:
     async def handle_tool_calls(
         self, tool_calls: List[ChatCompletionMessageToolCall]
     ) -> None:
-        await self.pipeline.msg_list.add_assistant(
+        entry = await self.pipeline.msg_list.add_assistant(
             index=self.pipeline._next_index(), tool_calls=tool_calls
         )
+        if entry:
+            self.pipeline.tool_call_entries.append(entry)
+
         for tool_call in tool_calls:
             fn = tool_call.function
             try:
@@ -60,9 +63,11 @@ class ToolManager:
                 )
                 result = await tool.run(self.pipeline, dict(arguments))
                 if result is not None:
-                    await self.pipeline.msg_list.add_tool_result(
+                    entry = await self.pipeline.msg_list.add_tool_result(
                         result, tool_call.id, index=self.pipeline._next_index()
                     )
+                    if entry:
+                        self.pipeline.tool_call_entries.append(entry)
             else:
                 logger.warning(
                     f'Could not find tool "{fn.name}" in {self.pipeline.ctx.guild.name}'

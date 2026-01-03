@@ -48,6 +48,7 @@ class LLMPipeline:
         self.tool_manager = ToolManager(self)
         self.completion: Optional[str] = None
         self.files_to_send: List[discord.File] = []
+        self.tool_call_entries: List = []
 
     async def run(self) -> Optional[str]:
         base_kwargs = await self._build_base_parameters()
