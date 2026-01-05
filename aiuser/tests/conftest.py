@@ -221,3 +221,21 @@ def pytest_sessionfinish(session, exitstatus):
             os.remove(filePath)
         except Exception:
             print("Error while deleting file:", filePath)
+
+
+def find_message_index(result, content_substring):
+    """Find the index of a message containing the given substring."""
+    for i, m in enumerate(result):
+        if content_substring in str(m.get("content", "")):
+            return i
+    return -1
+
+
+def find_system_prompt_index(result):
+    """Find the index of the system prompt (contains persona/bot instructions)."""
+    for i, m in enumerate(result):
+        if m["role"] == "system" and "You are" in str(
+            m.get("content", "")
+        ):  # hack for checking system prompt
+            return i
+    return -1

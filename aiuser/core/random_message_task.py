@@ -55,7 +55,7 @@ class RandomMessageTask(MixinMeta):
                 ctx, topics[random.randint(0, len(topics) - 1)]
             )
             logger.debug(f"Sending random message to #{channel.name} at {guild.name}")
-            await messages_list.add_system(
+            await messages_list.add_system_message(
                 f"Using the persona above, follow these instructions: {topic}",
                 index=len(messages_list) + 1,
             )

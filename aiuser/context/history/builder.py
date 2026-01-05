@@ -23,7 +23,7 @@ class HistoryBuilder:
         self.start_time = messages_list.start_time
         self.cached_tool_calls = messages_list.cached_tool_calls
 
-    async def add_history(self):
+    async def build_history(self):
         """Add historical messages to the conversation context."""
         limit = await self.config.guild(self.guild).messages_backread()
         max_seconds_gap = await self.config.guild(
@@ -87,9 +87,9 @@ class HistoryBuilder:
             if await self._is_valid_time_gap(
                 past_messages[i], past_messages[i + 1], max_seconds_gap
             ):
-                await self.messages_list.add_msg(past_messages[i])
+                await self.messages_list.add_discord_message(past_messages[i])
             else:
-                await self.messages_list.add_msg(past_messages[i])
+                await self.messages_list.add_discord_message(past_messages[i])
                 break
 
             if past_messages[i].author.id == self.bot.user.id:
@@ -105,9 +105,14 @@ class HistoryBuilder:
         # Insert cached entries at start (stack-based build)
         # We process in reverse order so the first entry ends up at index 0
         for entry in reversed(cached_entries):
-            if self.messages_list.tokens > self.messages_list.token_limit:
-                return
-            self.messages_list.messages.insert(0, entry)
+            if entry.role == "assistant":
+                await self.messages_list.add_assistant_message(
+                    content=entry.content, index=0, tool_calls=entry.tool_calls
+                )
+            elif entry.role == "tool":
+                await self.messages_list.add_tool_result_message(
+                    content=entry.content, tool_call_id=entry.tool_call_id, index=0
+                )
 
     @staticmethod
     async def _is_valid_time_gap(

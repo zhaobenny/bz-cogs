@@ -40,7 +40,7 @@ class ToolManager:
     async def handle_tool_calls(
         self, tool_calls: List[ChatCompletionMessageToolCall]
     ) -> None:
-        entry = await self.pipeline.msg_list.add_assistant(
+        entry = await self.pipeline.msg_list.add_assistant_message(
             index=self.pipeline._next_index(), tool_calls=tool_calls
         )
         if entry:
@@ -63,7 +63,7 @@ class ToolManager:
                 )
                 result = await tool.run(self.pipeline, dict(arguments))
                 if result is not None:
-                    entry = await self.pipeline.msg_list.add_tool_result(
+                    entry = await self.pipeline.msg_list.add_tool_result_message(
                         result, tool_call.id, index=self.pipeline._next_index()
                     )
                     if entry:

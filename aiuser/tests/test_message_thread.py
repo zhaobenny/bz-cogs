@@ -3,23 +3,7 @@
 import pytest
 from discord.ext.test import backend
 
-
-def find_message_index(result, content_substring):
-    """Find the index of a message containing the given substring."""
-    for i, m in enumerate(result):
-        if content_substring in str(m.get("content", "")):
-            return i
-    return -1
-
-
-def find_system_prompt_index(result):
-    """Find the index of the system prompt (contains persona/bot instructions)."""
-    for i, m in enumerate(result):
-        if m["role"] == "system" and "You are" in str(
-            m.get("content", "")
-        ):  # hack for checking system prompt
-            return i
-    return -1
+from aiuser.tests.conftest import find_message_index, find_system_prompt_index
 
 
 @pytest.mark.asyncio
@@ -162,3 +146,118 @@ async def test_optout_user_excluded(
     # Check by index - optout user's message should not be found
     optout_idx = find_message_index(result, "No one is listening")
     assert optout_idx == -1, "Optout user's message should not be in result"
+
+
+@pytest.mark.asyncio
+async def test_prune_messages_on_over_limit(
+    bot,
+    mock_cog,
+    mock_messages_thread,
+    mock_create_response,
+    test_channel,
+    test_member,
+):
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from openai.types.chat import (
+        ChatCompletion,
+        ChatCompletionMessage,
+        ChatCompletionMessageToolCall,
+    )
+    from openai.types.chat.chat_completion import Choice
+    from openai.types.chat.chat_completion_message_tool_call import Function
+
+    from aiuser.utils.utilities import encode_text_to_tokens
+
+    _ = backend.make_message("yo", test_member, test_channel)
+    _ = backend.make_message("What's the meaning to life?", test_member, test_channel)
+    _ = backend.make_message("42", bot.user, test_channel)
+    trigger = backend.make_message(
+        "Okay smart guy, what's the weather in NYC?", test_member, test_channel
+    )
+
+    thread = await mock_messages_thread(init_message=trigger)
+
+    thread_json = thread.get_json()
+    prunable_tokens_1 = await encode_text_to_tokens(
+        str(thread_json[0].get("content", ""))
+    )
+    prunable_tokens_2 = await encode_text_to_tokens(
+        str(thread_json[1].get("content", ""))
+    )
+    thread.token_limit = thread.tokens - prunable_tokens_1 - prunable_tokens_2
+
+    mock_cog.openai_client = MagicMock()
+
+    tool_call = ChatCompletionMessageToolCall(
+        id="call_prune_test",
+        type="function",
+        function=Function(name="get_weather", arguments='{"location":"NYC"}'),
+    )
+
+    tool_call_response = ChatCompletion(
+        id="chatcmpl-tool",
+        choices=[
+            Choice(
+                index=0,
+                message=ChatCompletionMessage(
+                    role="assistant", tool_calls=[tool_call], content=None
+                ),
+                finish_reason="tool_calls",
+            )
+        ],
+        created=1234567891,
+        model="gpt-4",
+        object="chat.completion",
+    )
+
+    final_response = ChatCompletion(
+        id="chatcmpl-final",
+        choices=[
+            Choice(
+                index=0,
+                message=ChatCompletionMessage(
+                    role="assistant",
+                    content="tool result response",
+                    tool_calls=None,
+                ),
+                finish_reason="stop",
+            )
+        ],
+        created=1234567892,
+        model="gpt-4",
+        object="chat.completion",
+    )
+
+    mock_cog.openai_client.chat.completions.create = AsyncMock(
+        side_effect=[tool_call_response, final_response]
+    )
+
+    await mock_cog.config.guild(test_member.guild).function_calling.set(True)
+    await mock_cog.config.guild(test_member.guild).function_calling_functions.set(
+        ["get_weather"]
+    )
+
+    ctx = await bot.get_context(trigger)
+    with patch(
+        "aiuser.functions.weather.query.get_weather",
+        return_value="Sunny, 25°C",
+    ):
+        await mock_create_response(mock_cog, ctx, messages_list=thread)
+
+    result = thread.get_json()
+
+    pruned_1_idx = find_message_index(result, "What's the meaning to life?")
+    pruned_2_idx = find_message_index(result, "42")
+    assert pruned_1_idx == -1, "First history message should be pruned"
+    assert pruned_2_idx == -1, "Second history message should be pruned"
+
+    system_idx = find_system_prompt_index(result)
+    trigger_idx = find_message_index(
+        result, "Okay smart guy, what's the weather in NYC?"
+    )
+    tool_result_idx = find_message_index(result, "Sunny, 25°C")
+
+    assert system_idx != -1, "System prompt should be preserved"
+    assert trigger_idx != -1, "Trigger message should be preserved"
+    assert tool_result_idx != -1, "Tool result message should be present"

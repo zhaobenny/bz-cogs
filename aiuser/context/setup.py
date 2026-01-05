@@ -32,11 +32,11 @@ class ThreadSetup:
         ).custom_model_tokens_limit() or self._get_token_limit(thread.model)
 
         if not prompt:  # jank
-            await thread.add_msg(thread.init_message)
+            await thread.add_discord_message(thread.init_message)
 
         bot_prompt = prompt or await self._pick_prompt()
         formatted_prompt = await format_variables(self.ctx, bot_prompt)
-        await thread.add_system(formatted_prompt)
+        await thread.add_system_message(formatted_prompt)
 
         if await self._should_use_image_model():
             scan_model = await self.config.guild(self.guild).scan_images_model()
@@ -44,7 +44,7 @@ class ThreadSetup:
                 thread.model = scan_model
 
         if history:
-            await thread.add_history()
+            await thread.populate_history()
 
         return thread
 

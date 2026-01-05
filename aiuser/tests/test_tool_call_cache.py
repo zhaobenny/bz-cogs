@@ -4,6 +4,7 @@ import pytest
 from discord.ext.test import backend
 
 from aiuser.context.entry import MessageEntry
+from aiuser.tests.conftest import find_message_index, find_system_prompt_index
 
 
 @pytest.mark.asyncio
@@ -50,6 +51,39 @@ async def test_cached_tool_calls(
 
     assert len(tool_call_entries) >= 1
     assert len(tool_result_entries) >= 1
+
+    # Verify message ordering in the thread (similar to test_history_builder)
+    result = thread.get_json()
+
+    user_ask_idx = find_message_index(result, "What is the weather in Paris?")
+    bot_reply_idx = find_message_index(result, "It's rainy in Paris, 15°C.")
+    tool_result_idx = find_message_index(result, "Rainy, 15°C")
+    trigger_idx = find_message_index(result, "Thanks! What about Tokyo?")
+    system_idx = find_system_prompt_index(result)
+
+    # Find the tool call message with the correct Paris weather tool call ID
+    paris_tool_call_id = "call_paris_weather"
+    tool_call_idx = -1
+    for i, m in enumerate(result):
+        if m.get("role") == "assistant" and m.get("tool_calls"):
+            if any(tc.id == paris_tool_call_id for tc in m.get("tool_calls", [])):
+                tool_call_idx = i
+                break
+
+    assert (
+        tool_call_idx != -1
+    ), f"Tool call message with id '{paris_tool_call_id}' not found in thread"
+
+    # Verify chronological order:
+    # user ask -> tool call -> tool result -> bot reply -> system -> trigger
+    assert (
+        user_ask_idx
+        < tool_call_idx
+        < tool_result_idx
+        < bot_reply_idx
+        < system_idx
+        < trigger_idx
+    ), f"Messages not in correct order: user_ask@{user_ask_idx}, tool_call@{tool_call_idx}, tool_result@{tool_result_idx}, bot_reply@{bot_reply_idx}, system@{system_idx}, trigger@{trigger_idx}"
 
     from unittest.mock import AsyncMock, MagicMock, patch
 

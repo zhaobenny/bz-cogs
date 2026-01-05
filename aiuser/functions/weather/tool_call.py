@@ -1,6 +1,6 @@
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
-from aiuser.functions.weather.query import get_weather, is_daytime
+from aiuser.functions.weather import query
 
 location_weather_schema = ToolCallSchema(
     function=Function(
@@ -30,7 +30,7 @@ class LocationWeatherToolCall(ToolCall):
 
     async def _handle(self, _, arguments):
         days = arguments.get("days", 1)
-        return await get_weather(arguments["location"], days=days)
+        return await query.get_weather(arguments["location"], days=days)
 
 
 class IsDaytimeToolCall(ToolCall):
@@ -52,4 +52,4 @@ class IsDaytimeToolCall(ToolCall):
     function_name = schema.function.name
 
     async def _handle(self, _, arguments):
-        return await is_daytime(arguments["location"])
+        return await query.is_daytime(arguments["location"])

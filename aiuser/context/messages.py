@@ -10,6 +10,7 @@ from aiuser.context.consent.manager import ConsentManager
 from aiuser.context.converter.converter import MessageConverter
 from aiuser.context.entry import MessageEntry
 from aiuser.context.history.builder import HistoryBuilder
+from aiuser.context.memory.retriever import MemoryRetriever
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import encode_text_to_tokens
 
@@ -38,11 +39,7 @@ class MessagesThread:
         self.can_reply = True
         self.converter = MessageConverter(cog, ctx)
         self.consent_manager = ConsentManager(self.config, self.bot, self.guild)
-        self.memory_retriever = None
-        if cog.db:
-            from aiuser.context.memory.retriever import MemoryRetriever
-
-            self.memory_retriever = MemoryRetriever(ctx, db=cog.db)
+        self.memory_retriever = MemoryRetriever(ctx, db=cog.db)
         self.cached_tool_calls = cog.cached_tool_calls
         self.history_manager = HistoryBuilder(self)
 
@@ -73,7 +70,9 @@ class MessagesThread:
 
         return True
 
-    async def add_msg(self, message: Message, index: int = None, force: bool = False):
+    async def add_discord_message(
+        self, message: Message, index: int = None, force: bool = False
+    ):
         if not await self.check_if_add(message, force):
             return
 
@@ -106,52 +105,44 @@ class MessagesThread:
             and isinstance(message.reference.resolved, discord.Message)
             and message.author.id != self.bot.user.id
         ):
-            await self.add_msg(message.reference.resolved, index=0)
+            await self.add_discord_message(message.reference.resolved, index=0)
 
-    async def add_system(self, content: str, index: int = None):
-        if self.tokens > self.token_limit:
-            return
+    async def add_system_message(self, content: str, index: int = None):
+        await self._prune_if_over_limit()
         entry = MessageEntry("system", content)
         self.messages.insert(index or 0, entry)
         await self._add_tokens(content)
 
-    async def add_assistant(
+    async def add_assistant_message(
         self, content: str = "", index: int = None, tool_calls: list = []
     ) -> MessageEntry:
-        if self.tokens > self.token_limit:
-            return None
+        await self._prune_if_over_limit()
         entry = MessageEntry("assistant", content, tool_calls=tool_calls)
         self.messages.insert(index or 0, entry)
         await self._add_tokens(content)
         return entry
 
-    async def add_tool_result(
+    async def add_tool_result_message(
         self, content: str, tool_call_id: int, index: int = None
     ) -> MessageEntry:
-        if self.tokens > self.token_limit:
-            return None
+        await self._prune_if_over_limit()
         entry = MessageEntry("tool", content, tool_call_id=tool_call_id)
         self.messages.insert(index or 0, entry)
         await self._add_tokens(content)
         return entry
 
-    async def add_history(self):
-        if (
-            await self.config.guild(self.guild).query_memories()
-            and self.memory_retriever
-        ):
-            await self.insert_relevant_memory()
-        await self.history_manager.add_history()
+    async def populate_history(self):
+        should_query_memory = await self.config.guild(self.guild).query_memories()
+        if should_query_memory:
+            relevant_memory = await self.memory_retriever.fetch_relevant(
+                self.init_message.content
+            )
+            if relevant_memory:
+                await self.add_system_message(
+                    relevant_memory, index=len(self.messages_ids)
+                )
 
-    async def insert_relevant_memory(self):
-        relevant_memory = await self.memory_retriever.fetch_relevant(
-            self.init_message.content
-        )
-        return (
-            (await self.add_system(relevant_memory, index=len(self.messages_ids)))
-            if relevant_memory
-            else None
-        )
+        await self.history_manager.build_history()
 
     def get_json(self):
         return [
@@ -172,3 +163,19 @@ class MessagesThread:
         content = str(content)
         tokens = await encode_text_to_tokens(content)
         self.tokens += tokens
+
+    async def _prune_if_over_limit(self):
+        while self.tokens > self.token_limit and len(self.messages) > 2:
+            removed = self.messages.pop(0)
+            content = removed.content
+            if isinstance(content, list):
+                for item in content:
+                    if isinstance(item, dict):
+                        if item.get("type") == "text":
+                            tokens = await encode_text_to_tokens(item.get("text", ""))
+                            self.tokens -= tokens
+                        elif item.get("type") == "image_url":
+                            self.tokens -= 255
+            else:
+                tokens = await encode_text_to_tokens(str(content))
+                self.tokens -= tokens
