@@ -1,51 +1,110 @@
 # ./.venv/bin/python -m pytest aiuser/tests/test_image_request.py -q -s
 
-from unittest.mock import MagicMock, patch
 
-import discord.ext.test as dpytest
+from unittest.mock import patch
+
 import pytest
-from discord.ext.test import backend
+from discord.ext.test import backend, get_message
 
 
 @pytest.mark.asyncio
-async def test_image_request(bot, mock_cog, mock_messages_thread):
-    from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
-    from aiuser.response.llm_pipeline import LLMPipeline
+async def test_image_request(
+    bot,
+    mock_cog,
+    mock_messages_thread,
+    test_guild,
+    test_channel,
+    test_member,
+    mock_create_response,
+):
+    from unittest.mock import AsyncMock, MagicMock
 
-    cfg = dpytest.get_config()
-    guild = cfg.guilds[0]
-    channel = cfg.channels[0]
-    member = cfg.members[0]
+    from openai.types.chat import (
+        ChatCompletion,
+        ChatCompletionMessage,
+        ChatCompletionMessageToolCall,
+    )
+    from openai.types.chat.chat_completion import Choice
+    from openai.types.chat.chat_completion_message_tool_call import Function
 
     # Set preprompt with variables
     preprompt_template = "Create a safe-for-work image requested by {authorname} watermarked with {botname} "
-    await mock_cog.config.guild(guild).function_calling_image_preprompt.set(
+    await mock_cog.config.guild(test_guild).function_calling_image_preprompt.set(
         preprompt_template
     )
-    await mock_cog.config.guild(guild).optin_by_default.set(True)
 
-    # Create message and context
-    message = backend.make_message("Generate a cat image", member, channel)
-    ctx = await bot.get_context(message)
+    # Enable function calling and specific tool
+    await mock_cog.config.guild(test_guild).function_calling.set(True)
+    await mock_cog.config.guild(test_guild).function_calling_functions.set(
+        ["image_request"]
+    )
 
-    # Create real MessagesThread and LLMPipeline
-    thread = await mock_messages_thread(init_message=message)
+    user_message = backend.make_message(
+        "yo bot, make me a pic of a cat wearing sunglasses 😎",
+        test_member,
+        test_channel,
+    )
+    ctx = await bot.get_context(user_message)
+    thread = await mock_messages_thread(init_message=user_message)
 
-    # Only mock the openai_client on the cog
     mock_cog.openai_client = MagicMock()
 
-    # Create real LLMPipeline
-    request = LLMPipeline(mock_cog, ctx, thread)
+    image_description = "a high-quality image of a fluffy orange cat wearing cool sunglasses, cinematic lighting"
+    tool_call = ChatCompletionMessageToolCall(
+        id="call_image_123",
+        type="function",
+        function=Function(
+            name="image_request",
+            arguments=f'{{"description": "{image_description}"}}',
+        ),
+    )
 
-    # Mock the image provider to capture the description it receives
+    mock_response = ChatCompletion(
+        id="chatcmpl-123",
+        choices=[
+            Choice(
+                index=0,
+                message=ChatCompletionMessage(
+                    role="assistant", tool_calls=[tool_call], content=None
+                ),
+                finish_reason="tool_calls",
+            )
+        ],
+        created=1234567890,
+        model="gpt-4",
+        object="chat.completion",
+    )
+
+    final_response = ChatCompletion(
+        id="chatcmpl-124",
+        choices=[
+            Choice(
+                index=0,
+                message=ChatCompletionMessage(
+                    role="assistant",
+                    content="Here's your cool cat! 🔥",
+                    tool_calls=None,
+                ),
+                finish_reason="stop",
+            )
+        ],
+        created=1234567891,
+        model="gpt-4",
+        object="chat.completion",
+    )
+
+    mock_cog.openai_client.chat.completions.create = AsyncMock(
+        side_effect=[mock_response, final_response]
+    )
+
     captured_descriptions = []
 
+    # Mock the image provider to capture the description it receives
     async def mock_provider(description, request, endpoint):
         captured_descriptions.append(description)
         # Return minimal valid PNG bytes
         return b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
 
-    # Patch the provider factory to use our mock
     with (
         patch(
             "aiuser.functions.imagerequest.tool_call.PROVIDERS", {"mock": mock_provider}
@@ -55,23 +114,19 @@ async def test_image_request(bot, mock_cog, mock_messages_thread):
             return_value="mock",
         ),
     ):
-        tool = ImageRequestToolCall(config=mock_cog.config, ctx=ctx)
-        result = await tool._handle(request, {"description": "a fluffy cat"})
+        await mock_create_response(mock_cog, ctx, messages_list=thread)
 
-    # Verify the tool succeeded
-    assert result is not None
-    assert len(request.files_to_send) == 1
+    sent_message = get_message()
+    assert sent_message.attachments
+    assert sent_message.attachments[0].filename == "image.png"
 
-    # Verify preprompt variables were substituted in the description
     assert len(captured_descriptions) == 1
     final_description = captured_descriptions[0]
 
-    # Check that template variables were replaced with actual values
     assert "{authorname}" not in final_description
     assert "{botname}" not in final_description
 
-    # Check for the text components
     assert "Create a safe-for-work image" in final_description
-    assert f"requested by {member.display_name}" in final_description
+    assert f"requested by {test_member.display_name}" in final_description
     assert "watermarked with" in final_description
-    assert "a fluffy cat" in final_description
+    assert image_description in final_description

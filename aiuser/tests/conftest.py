@@ -2,7 +2,6 @@
 Pytest fixtures for aiuser tests using dpytest.
 """
 
-import glob
 import json
 import os
 
@@ -102,7 +101,6 @@ async def bot():
 @pytest_asyncio.fixture
 async def redbot_config():
     """Create a real Redbot Config with aiuser defaults registered."""
-    # Use unique identifier to avoid conflicts
     config = Config.get_conf(None, identifier=754070999, cog_name="AIUserTest")
     config.register_member(**DEFAULT_MEMBER)
     config.register_role(**DEFAULT_ROLE)
@@ -116,8 +114,26 @@ async def redbot_config():
     await config.clear_all()
 
 
+@pytest.fixture
+def test_guild(bot):
+    """Return the first guild from dpytest config."""
+    return dpytest.get_config().guilds[0]
+
+
+@pytest.fixture
+def test_channel(bot):
+    """Return the first channel from dpytest config."""
+    return dpytest.get_config().channels[0]
+
+
+@pytest.fixture
+def test_member(bot):
+    """Return the first member from dpytest config."""
+    return dpytest.get_config().members[0]
+
+
 @pytest_asyncio.fixture
-async def mock_cog(bot, redbot_config):
+async def mock_cog(bot, redbot_config, test_guild):
     """
     Create a mock cog with all attributes needed by ThreadSetup and MessagesThread.
     """
@@ -133,11 +149,14 @@ async def mock_cog(bot, redbot_config):
     cog.db = None  # Skip memory retriever
     cog.cached_tool_calls = Cache(limit=100)
 
+    # Opt-in by default for the test guild
+    await cog.config.guild(test_guild).optin_by_default.set(True)
+
     return cog
 
 
 @pytest_asyncio.fixture
-async def mock_messages_thread(bot, mock_cog):
+async def mock_messages_thread(bot, mock_cog, test_channel, test_member):
     """
     Factory fixture to create a MessagesThread using ThreadSetup.create_thread()
     with real dpytest Discord objects and a mock cog.
@@ -145,8 +164,8 @@ async def mock_messages_thread(bot, mock_cog):
     from aiuser.context.setup import ThreadSetup
 
     async def _create(
-        prompt: str = None,
         init_message: discord.Message = None,
+        prompt: str = None,
     ) -> MessagesThread:
         """
         Prompt should only be provided when init_message is None.
@@ -156,10 +175,7 @@ async def mock_messages_thread(bot, mock_cog):
             ctx = await bot.get_context(init_message)
         else:
             # Create a new message
-            cfg = dpytest.get_config()
-            channel = cfg.channels[0]
-            member = cfg.members[0]
-            message = backend.make_message("test content", member, channel)
+            message = backend.make_message("test content", test_member, test_channel)
             ctx = await bot.get_context(message)
 
         # Use ThreadSetup to create the thread properly
@@ -171,8 +187,34 @@ async def mock_messages_thread(bot, mock_cog):
     return _create
 
 
+@pytest.fixture
+def mock_create_response(monkeypatch):
+    from contextlib import asynccontextmanager
+
+    import aiuser.response.response as response_module
+
+    original_create_response = response_module.create_response
+
+    # Create a no-op async context manager specifically for this patch
+    @asynccontextmanager
+    async def noop_typing():
+        yield
+
+    async def patched_create_response(cog, ctx, messages_list=None):
+        from unittest.mock import patch
+
+        with patch("discord.TextChannel.typing") as mock_typing:
+            mock_typing.return_value = noop_typing()
+            return await original_create_response(cog, ctx, messages_list)
+
+    monkeypatch.setattr(response_module, "create_response", patched_create_response)
+    return patched_create_response
+
+
 def pytest_sessionfinish(session, exitstatus):
     """Clean up dpytest temp files after all tests."""
+    import glob
+
     fileList = glob.glob("./dpytest_*.dat")
     for filePath in fileList:
         try:

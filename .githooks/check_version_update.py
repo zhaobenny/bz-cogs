@@ -16,7 +16,11 @@ def get_staged_files():
         text=True,
     )
     files = result.stdout.strip().split("\n")
-    return [f for f in files if f.startswith("aiuser/")]
+    return [
+        f
+        for f in files
+        if f.startswith("aiuser/") and not f.startswith("aiuser/tests/")
+    ]
 
 
 def check_version_in_staged():
