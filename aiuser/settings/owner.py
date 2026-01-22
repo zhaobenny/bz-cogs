@@ -198,7 +198,7 @@ class OwnerSettings(MixinMeta):
             return await ctx.send(":warning: Please enter a positive integer.")
 
         await self.config.openai_endpoint_request_timeout.set(seconds)
-        await self.initialize_openai_client()
+        self.openai_client = await setup_openai_client(self.bot, self.config)
 
         embed = discord.Embed(
             title="The request timeout is now:",
