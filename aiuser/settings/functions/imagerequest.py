@@ -4,7 +4,11 @@ import discord
 from redbot.core import commands
 
 from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
-from aiuser.settings.utilities import get_config_attribute, get_mention_type, truncate_prompt
+from aiuser.settings.utilities import (
+    get_config_attribute,
+    get_mention_type,
+    truncate_prompt,
+)
 from aiuser.types.types import COMPATIBLE_MENTIONS
 
 
