@@ -15,6 +15,7 @@ OPENROUTER_API_URL = "https://openrouter.ai/api/v1/models"
 REPO_ROOT = Path(__file__).parent.parent
 OUTPUT_FILE = REPO_ROOT / "aiuser" / "config" / "models.py"
 OVERRIDES_FILE = REPO_ROOT / "aiuser" / "config" / "models_overrides.py"
+EXCLUDED_MODEL_ALIASES = {"auto", "free"}
 
 
 def load_overrides():
@@ -31,15 +32,23 @@ def fetch_models() -> list[dict]:
     return data.get("data", [])
 
 
+def get_base_model_name(model_id: str) -> str:
+    base_name = model_id.split("/")[-1] if "/" in model_id else model_id
+    return base_name.split(":")[0]
+
+
+def should_include_model(base_name: str) -> bool:
+    return base_name.lower() not in EXCLUDED_MODEL_ALIASES
+
+
 def extract_vision_models(models: list[dict]) -> list[str]:
     vision_models = set()
     for model in models:
         input_modalities = model.get("architecture", {}).get("input_modalities", [])
         if "image" in input_modalities:
-            model_id = model["id"]
-            base_name = model_id.split("/")[-1] if "/" in model_id else model_id
-            base_name = base_name.split(":")[0]
-            vision_models.add(base_name)
+            base_name = get_base_model_name(model["id"])
+            if should_include_model(base_name):
+                vision_models.add(base_name)
     return sorted(vision_models)
 
 
@@ -48,21 +57,20 @@ def extract_tools_models(models: list[dict]) -> list[str]:
     for model in models:
         supported_params = model.get("supported_parameters", [])
         if "tools" in supported_params:
-            model_id = model["id"]
-            base_name = model_id.split("/")[-1] if "/" in model_id else model_id
-            base_name = base_name.split(":")[0]
-            tools_models.add(base_name)
+            base_name = get_base_model_name(model["id"])
+            if should_include_model(base_name):
+                tools_models.add(base_name)
     return sorted(tools_models)
 
 
 def extract_context_limits(models: list[dict]) -> dict[str, int]:
     limits = {}
     for model in models:
-        model_id = model["id"]
         context_length = model.get("context_length")
         if context_length:
-            base_name = model_id.split("/")[-1] if "/" in model_id else model_id
-            base_name = base_name.split(":")[0]
+            base_name = get_base_model_name(model["id"])
+            if not should_include_model(base_name):
+                continue
             safe_limit = int(context_length * 0.9)
             if base_name not in limits or safe_limit > limits[base_name]:
                 limits[base_name] = safe_limit
