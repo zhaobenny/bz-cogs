@@ -3,7 +3,6 @@
 import asyncio
 import logging
 import random
-from datetime import datetime
 
 import discord
 from redbot.core import commands
@@ -35,14 +34,6 @@ async def handle_slash_command(cog: MixinMeta, inter: discord.Interaction, text:
     elif not (await cog.config.guild(ctx.guild).reply_to_mentions_replies()):
         return await ctx.send("This command is not enabled.", ephemeral=True)
 
-    rate_limit_reset = datetime.strptime(
-        await cog.config.ratelimit_reset(), "%Y-%m-%d %H:%M:%S"
-    )
-    if rate_limit_reset > datetime.now():
-        return await ctx.send(
-            "The command is currently being ratelimited!", ephemeral=True
-        )
-
     try:
         await create_response(cog, ctx)
     except Exception:
@@ -59,20 +50,6 @@ async def handle_message(cog: MixinMeta, message: discord.Message):
     if await check_triggers(cog, ctx, message):
         pass
     elif random.random() > await get_percentage(cog, ctx):
-        return
-
-    rate_limit_reset = datetime.strptime(
-        await cog.config.ratelimit_reset(), "%Y-%m-%d %H:%M:%S"
-    )
-    if rate_limit_reset > datetime.now():
-        logger.debug(
-            f"Want to respond but ratelimited until {rate_limit_reset.strftime('%Y-%m-%d %H:%M:%S')}"
-        )
-        if (
-            await check_triggers(cog, ctx, message)
-            or await get_percentage(cog, ctx) == 1.0
-        ):
-            await ctx.react_quietly("💤", message="`aiuser` is ratedlimited")
         return
 
     if URL_PATTERN.search(ctx.message.content):

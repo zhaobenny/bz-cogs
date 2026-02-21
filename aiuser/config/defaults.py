@@ -1,5 +1,4 @@
 import json
-from datetime import datetime
 
 DEFAULT_PROMPT = "You are {botname}. You are in a Discord text channel. \
 Respond to anything, including URLs, unhelpfully and cynically in a short message. \
@@ -42,7 +41,6 @@ DEFAULT_GLOBAL = {
     "openai_endpoint_request_timeout": 60,
     "optout": [],
     "optin": [],
-    "ratelimit_reset": datetime(1990, 1, 1, 0, 1).strftime("%Y-%m-%d %H:%M:%S"),
     "max_random_prompt_length": 200,
     "max_prompt_length": 200,
     "custom_text_prompt": None,

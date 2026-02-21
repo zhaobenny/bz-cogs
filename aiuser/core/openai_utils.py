@@ -1,8 +1,6 @@
 import json
 import logging
-import random
-from datetime import datetime, timedelta
-from typing import Callable, Optional
+from typing import Optional
 
 import httpx
 from discord.ext import commands
@@ -62,7 +60,6 @@ async def setup_openai_client(
     client = httpx.AsyncClient(
         event_hooks={
             "request": [log_request_prompt],
-            "response": [create_ratelimit_hook(config)],
         }
     )
 
@@ -106,86 +103,3 @@ async def log_request_prompt(request: httpx.Request) -> None:
         logger.debug(f"Sending request with prompt: \n{json.dumps(messages, indent=4)}")
     except Exception as e:
         logger.debug(f"Error logging request prompt: {e}")
-
-
-def create_ratelimit_hook(config: Config) -> Callable[[httpx.Response], None]:
-    """Create a hook function for handling rate limit responses.
-
-    Args:
-        config: The cog's Config instance
-
-    Returns:
-        A hook function that updates rate limit information
-    """
-
-    async def update_ratelimit_hook(response: httpx.Response) -> None:
-        if not str(response.url).startswith("https://api.openai.com/"):
-            return
-
-        headers = response.headers
-        remaining_requests = float(headers.get("x-ratelimit-remaining-requests", 1))
-        remaining_tokens = float(headers.get("x-ratelimit-remaining-tokens", 1))
-
-        timestamp = datetime.now()
-
-        if remaining_requests == 0:
-            request_reset_time = extract_time_delta(
-                headers.get("x-ratelimit-reset-requests")
-            )
-            timestamp = max(timestamp, datetime.now() + request_reset_time)
-        elif remaining_tokens == 0:
-            tokens_reset_time = extract_time_delta(
-                headers.get("x-ratelimit-reset-tokens")
-            )
-            timestamp = max(timestamp, datetime.now() + tokens_reset_time)
-
-        if remaining_requests == 0 or remaining_tokens == 0:
-            logger.warning(
-                f"OpenAI ratelimit reached! Next ratelimit reset at {timestamp}. "
-                "(Try a non-trial key)"
-            )
-            await config.ratelimit_reset.set(timestamp.strftime("%Y-%m-%d %H:%M:%S"))
-
-    return update_ratelimit_hook
-
-
-def extract_time_delta(time_str: Optional[str]) -> timedelta:
-    """Extract timedelta from OpenAI's ratelimit time format.
-
-    Args:
-        time_str: Time string in OpenAI format (e.g., "1d", "2h", "30m", "45s")
-
-    Returns:
-        timedelta object representing the time
-    """
-    if not time_str:
-        return timedelta(seconds=5)
-
-    days, hours, minutes, seconds = 0, 0, 0, 0
-
-    if time_str.endswith("ms"):
-        time_str = time_str[:-2]
-        seconds += 1
-
-    components = time_str.split("d")
-    if len(components) > 1:
-        days = float(components[0])
-        time_str = components[1]
-
-    components = time_str.split("h")
-    if len(components) > 1:
-        hours = float(components[0])
-        time_str = components[1]
-
-    components = time_str.split("m")
-    if len(components) > 1:
-        minutes = float(components[0])
-        time_str = components[1]
-
-    components = time_str.split("s")
-    if len(components) > 1:
-        seconds = float(components[0])
-
-    seconds += random.randint(2, 3)
-
-    return timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds)
