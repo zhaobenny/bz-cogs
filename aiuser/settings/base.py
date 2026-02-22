@@ -236,7 +236,7 @@ class Settings(
         config_attr = get_config_attribute(self.config, mention_type, ctx, mention)
         if percent is None and mention_type == MentionType.SERVER:
             return await ctx.send(":warning: No percent provided")
-        if percent or mention_type == MentionType.SERVER:
+        if percent is not None or mention_type == MentionType.SERVER:
             await config_attr.reply_percent.set(percent / 100)
             desc = f"{percent:.2f}%"
         else:

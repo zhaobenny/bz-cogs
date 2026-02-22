@@ -19,10 +19,11 @@ repos:
         language: system
         files: ^aiuser/
         pass_filenames: false
+        stages: [pre-push]
 
       - id: update-models
         name: Update models from OpenRouter API
-        entry: bash -c 'if [ "$(whoami)" = "zhao" ] && git diff --name-only HEAD^ HEAD | grep -q "^aiuser/"; then uv run .githooks/update_models.py; fi'
+        entry: bash -c 'if [ "$(whoami)" = "zhao" ]; then if git rev-parse --verify @{upstream} >/dev/null 2>&1; then range="@{upstream}..HEAD"; else range="HEAD^..HEAD"; fi; if git diff --name-only "$range" | grep -q "^aiuser/"; then uv run .githooks/update_models.py; fi; fi'
         language: system
-        stages: [post-commit]
+        stages: [pre-push]
         always_run: true
