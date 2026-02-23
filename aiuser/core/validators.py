@@ -6,6 +6,10 @@ import discord
 from redbot.core import commands
 
 from aiuser.config.constants import SINGULAR_MENTION_PATTERN
+from aiuser.core.hierarchy import (
+    get_ctx_hierarchical_config_value,
+    get_message_hierarchical_config_value,
+)
 from aiuser.core.openai_utils import setup_openai_client
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import RolesSet
@@ -109,7 +113,9 @@ async def check_user_status(cog: MixinMeta, ctx: commands.Context) -> Tuple[bool
 
     if is_webhook or is_app_bot:
         # Check if webhook/app replies are enabled
-        reply_to_webhooks = await cog.config.guild(ctx.guild).reply_to_webhooks()
+        reply_to_webhooks = await get_ctx_hierarchical_config_value(
+            cog, ctx, "reply_to_webhooks"
+        )
         if not reply_to_webhooks:
             return False, "Webhook/app replies disabled"
 
@@ -171,7 +177,9 @@ async def check_message_content(
             if not await is_bot_mentioned_or_replied(cog, ctx.message):
                 return False, "Single mention without bot reference"
 
-        min_length = await cog.config.guild(ctx.guild).messages_min_length()
+        min_length = await get_ctx_hierarchical_config_value(
+            cog, ctx, "messages_min_length"
+        )
         if 1 <= len(ctx.message.content) < min_length:
             return False, f"Message too short (min: {min_length})"
 
@@ -185,6 +193,8 @@ async def check_message_content(
 
 async def is_bot_mentioned_or_replied(cog: MixinMeta, message: discord.Message) -> bool:
     """Check if message mentions or replies to bot"""
-    if not await cog.config.guild(message.guild).reply_to_mentions_replies():
+    if not await get_message_hierarchical_config_value(
+        cog, message, "reply_to_mentions_replies"
+    ):
         return False
     return cog.bot.user in message.mentions

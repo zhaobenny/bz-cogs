@@ -9,6 +9,7 @@ from redbot.core import commands
 
 from aiuser.config.constants import URL_PATTERN
 from aiuser.config.defaults import DEFAULT_REPLY_PERCENT
+from aiuser.core.hierarchy import get_ctx_hierarchical_config_value
 from aiuser.core.triggers import check_triggers
 from aiuser.core.validators import is_valid_message
 from aiuser.response.response import create_response
@@ -60,26 +61,7 @@ async def handle_message(cog: MixinMeta, message: discord.Message):
 
 async def get_percentage(cog: MixinMeta, ctx: commands.Context) -> float:
     """Get reply percentage based on member/role/channel/guild settings"""
-    role_percent = None
-    author = ctx.author
-
-    # Webhook messages have User objects instead of Member objects
-    if isinstance(author, discord.Member):
-        for role in author.roles:
-            if role.id in (await cog.config.all_roles()):
-                role_percent = await cog.config.role(role).reply_percent()
-                break
-
-        percentage = await cog.config.member(author).reply_percent()
-        if percentage is None:
-            percentage = role_percent
-    else:
-        percentage = None
-
-    if percentage is None:
-        percentage = await cog.config.channel(ctx.channel).reply_percent()
-    if percentage is None:
-        percentage = await cog.config.guild(ctx.guild).reply_percent()
+    percentage = await get_ctx_hierarchical_config_value(cog, ctx, "reply_percent")
     if percentage is None:
         percentage = DEFAULT_REPLY_PERCENT
     return percentage

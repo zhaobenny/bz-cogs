@@ -93,15 +93,33 @@ DEFAULT_GUILD = {
 DEFAULT_CHANNEL = {
     "custom_text_prompt": None,
     "reply_percent": None,
+    "messages_min_length": None,
+    "reply_to_mentions_replies": None,
+    "conversation_reply_percent": None,
+    "conversation_reply_time": None,
+    "always_reply_on_words": None,
+    "reply_to_webhooks": None,
     "function_calling_image_preprompt": None,
 }
 DEFAULT_ROLE = {
     "custom_text_prompt": None,
     "reply_percent": None,
+    "messages_min_length": None,
+    "reply_to_mentions_replies": None,
+    "conversation_reply_percent": None,
+    "conversation_reply_time": None,
+    "always_reply_on_words": None,
+    "reply_to_webhooks": None,
     "function_calling_image_preprompt": None,
 }
 DEFAULT_MEMBER = {
     "custom_text_prompt": None,
     "reply_percent": None,
+    "messages_min_length": None,
+    "reply_to_mentions_replies": None,
+    "conversation_reply_percent": None,
+    "conversation_reply_time": None,
+    "always_reply_on_words": None,
+    "reply_to_webhooks": None,
     "function_calling_image_preprompt": None,
 }

@@ -7,6 +7,7 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.models import TOOLS_SUPPORTED_MODELS
+from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.functions.base import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
 from aiuser.settings.image_scan import ImageScanSettings
@@ -18,8 +19,6 @@ from aiuser.settings.response import ResponseSettings
 from aiuser.settings.triggers import TriggerSettings
 from aiuser.settings.utilities import (
     get_available_models,
-    get_config_attribute,
-    get_mention_type,
 )
 from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import MentionType
@@ -232,8 +231,7 @@ class Settings(
             - `percent` (Optional) A number between 0 and 100, if omitted, will reset to using other percentages
         (Setting is per server)
         """
-        mention_type = get_mention_type(mention)
-        config_attr = get_config_attribute(self.config, mention_type, ctx, mention)
+        mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         if percent is None and mention_type == MentionType.SERVER:
             return await ctx.send(":warning: No percent provided")
         if percent is not None or mention_type == MentionType.SERVER:

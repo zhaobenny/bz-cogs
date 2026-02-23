@@ -9,9 +9,8 @@ from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.config.defaults import DEFAULT_PROMPT
+from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.utilities import (
-    get_config_attribute,
-    get_mention_type,
     get_tokens,
     truncate_prompt,
 )
@@ -78,8 +77,7 @@ class PromptSettings(MixinMeta):
             - `mention` *(Optional)* User or channel
         """
         if mention:
-            mention_type = get_mention_type(mention)
-            config_attr = get_config_attribute(self.config, mention_type, ctx, mention)
+            mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
             prompt = await config_attr.custom_text_prompt()
             title = await self._get_embed_title(mention_type, mention)
         else:
@@ -136,7 +134,7 @@ class PromptSettings(MixinMeta):
     async def _get_custom_prompt(self, ctx, entity, mention_type: MentionType):
         custom_prompt = None
         if mention_type != MentionType.SERVER:
-            config_attr = get_config_attribute(self.config, mention_type, ctx, entity)
+            _, config_attr = get_settings_target_scope(self, ctx, entity)
             custom_prompt = await config_attr.custom_text_prompt()
 
         if not custom_prompt:
@@ -317,8 +315,7 @@ class PromptSettings(MixinMeta):
         if prompt and prompt in presets:
             prompt = presets[prompt]
 
-        mention_type = get_mention_type(mention)
-        config_attr = get_config_attribute(self.config, mention_type, ctx, mention)
+        mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
 
         if not config_attr:
             return await ctx.send(":warning: Invalid mention type provided.")

@@ -8,14 +8,14 @@ from aiuser.config.constants import (
     GROK_PRIMARY_TRIGGERS,
     GROK_SECONDARY_TRIGGERS,
 )
+from aiuser.core.hierarchy import get_ctx_hierarchical_config_value
 from aiuser.core.validators import is_bot_mentioned_or_replied
 from aiuser.types.abc import MixinMeta
 
 
 async def is_in_conversation(cog: MixinMeta, ctx: commands.Context) -> bool:
     """Check if bot should continue conversation based on recent messages"""
-    reply_percent = await cog.config.guild(ctx.guild).conversation_reply_percent()
-    reply_time_seconds = await cog.config.guild(ctx.guild).conversation_reply_time()
+    reply_percent, reply_time_seconds = await get_conversation_reply_settings(cog, ctx)
 
     if reply_percent == 0 or reply_time_seconds == 0:
         return False
@@ -31,6 +31,19 @@ async def is_in_conversation(cog: MixinMeta, ctx: commands.Context) -> bool:
             return random.random() < reply_percent
 
     return False
+
+
+async def get_conversation_reply_settings(
+    cog: MixinMeta, ctx: commands.Context
+) -> tuple[float, int]:
+    """Get conversation reply settings based on member/role/channel/guild settings"""
+    reply_percent = await get_ctx_hierarchical_config_value(
+        cog, ctx, "conversation_reply_percent"
+    )
+    reply_time_seconds = await get_ctx_hierarchical_config_value(
+        cog, ctx, "conversation_reply_time"
+    )
+    return reply_percent, reply_time_seconds
 
 
 async def is_grok_triggered(cog: MixinMeta, ctx: commands.Context) -> bool:
@@ -51,7 +64,9 @@ async def is_always_reply_on_words_triggered(
     cog: MixinMeta, ctx: commands.Context
 ) -> bool:
     """Check if any always_reply_on_words appears in the message"""
-    trigger_words = await cog.config.guild(ctx.guild).always_reply_on_words()
+    trigger_words = await get_ctx_hierarchical_config_value(
+        cog, ctx, "always_reply_on_words"
+    )
     if not trigger_words:
         return False
 

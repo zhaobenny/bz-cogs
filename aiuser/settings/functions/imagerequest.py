@@ -3,12 +3,9 @@ from typing import Optional
 import discord
 from redbot.core import commands
 
+from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
-from aiuser.settings.utilities import (
-    get_config_attribute,
-    get_mention_type,
-    truncate_prompt,
-)
+from aiuser.settings.utilities import truncate_prompt
 from aiuser.types.types import COMPATIBLE_MENTIONS
 
 
@@ -84,8 +81,7 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
                 f"Preprompt too long ({len(preprompt)}/{PREPROMPT_LIMIT}). Please shorten it to under {PREPROMPT_LIMIT} characters."
             )
 
-        mention_type = get_mention_type(mention)
-        config_attr = get_config_attribute(self.config, mention_type, ctx, mention)
+        mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
 
         if not config_attr:
             return await ctx.send(":warning: Invalid mention type provided.")
