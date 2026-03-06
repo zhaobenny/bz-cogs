@@ -93,6 +93,7 @@ class SearXNGQuery:
             return "No relevant information was found using a SearXNG search."
 
         import json
+
         return json.dumps(results_json[: self.results])
 
     def remove_emojis(self, text):
