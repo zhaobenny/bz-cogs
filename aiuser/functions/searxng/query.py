@@ -89,7 +89,11 @@ class SearXNGQuery:
             except Exception:
                 continue
 
-        return results_json[: self.results]
+        if not results_json:
+            return "No relevant information was found using a SearXNG search."
+
+        import json
+        return json.dumps(results_json[: self.results])
 
     def remove_emojis(self, text):
         return "".join(c for c in text if not unicodedata.category(c).startswith("So"))
