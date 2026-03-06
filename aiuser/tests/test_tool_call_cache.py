@@ -70,9 +70,9 @@ async def test_cached_tool_calls(
                 tool_call_idx = i
                 break
 
-    assert (
-        tool_call_idx != -1
-    ), f"Tool call message with id '{paris_tool_call_id}' not found in thread"
+    assert tool_call_idx != -1, (
+        f"Tool call message with id '{paris_tool_call_id}' not found in thread"
+    )
 
     # Verify chronological order:
     # user ask -> tool call -> tool result -> bot reply -> system -> trigger
@@ -83,7 +83,9 @@ async def test_cached_tool_calls(
         < bot_reply_idx
         < system_idx
         < trigger_idx
-    ), f"Messages not in correct order: user_ask@{user_ask_idx}, tool_call@{tool_call_idx}, tool_result@{tool_result_idx}, bot_reply@{bot_reply_idx}, system@{system_idx}, trigger@{trigger_idx}"
+    ), (
+        f"Messages not in correct order: user_ask@{user_ask_idx}, tool_call@{tool_call_idx}, tool_result@{tool_result_idx}, bot_reply@{bot_reply_idx}, system@{system_idx}, trigger@{trigger_idx}"
+    )
 
     from unittest.mock import AsyncMock, MagicMock, patch
 

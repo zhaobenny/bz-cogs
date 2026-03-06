@@ -10,6 +10,7 @@ from aiuser.functions.types import ToolCallSchema
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
+
 class AutolearnToolCall(ToolCall):
     function_name = "save_memory"
     schema = ToolCallSchema(
@@ -42,14 +43,14 @@ class AutolearnToolCall(ToolCall):
             current_timestamp = int(time.time())
             guild_id = self.ctx.guild.id
             db = self.ctx.cog.db
-            
+
             memory_id = await db.upsert(
                 guild_id,
                 memory_name,
                 memory_text,
                 current_timestamp,
             )
-            
+
             logger.info(f"Autolearned memory '{memory_name}' for guild {guild_id}")
             return f"Success: Saved memory with ID {memory_id}"
         except Exception:
