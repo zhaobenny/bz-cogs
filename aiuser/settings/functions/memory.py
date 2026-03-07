@@ -1,8 +1,8 @@
 from redbot.core import commands
-from aiuser.settings.functions.utilities import FunctionsGroupMixin, functions
+from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
 
 
-class MemoryFunctionSettings(FunctionsGroupMixin):
+class MemoryFunctionSettings(FunctionToggleHelperMixin):
     @functions.command(name="memory")
     async def toggle_memory_function(self, ctx: commands.Context):
         """Enable/disable the LLM's ability to save important facts about user/context to memory."""

@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from aiuser.response.llm_pipeline import LLMPipeline
 
 from aiuser.functions.tool_call import ToolCall
-from aiuser.functions.types import ToolCallSchema
+from aiuser.functions.types import Function, Parameters, ToolCallSchema
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -14,22 +14,23 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 class SaveMemoryToolCall(ToolCall):
     function_name = "save_memory"
     schema = ToolCallSchema(
-        name=function_name,
-        description="Extract and reliably save an important fact about the user or context for long-term memory. Overwrite previous facts if they have changed or are outdated. Use this sparingly and store it as a concise but descriptive fact.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "memory_name": {
-                    "type": "string",
-                    "description": "A short, unique, and descriptive name/topic for this memory fact (less than 30 characters).",
+        function=Function(
+            name=function_name,
+            description="Extract and reliably save an important fact about the user or context for long-term memory. Overwrite previous facts if they have changed or are outdated. Use this sparingly and store it as a concise but descriptive fact.",
+            parameters=Parameters(
+                properties={
+                    "memory_name": {
+                        "type": "string",
+                        "description": "A short, unique, and descriptive name/topic for this memory fact (less than 30 characters).",
+                    },
+                    "memory_text": {
+                        "type": "string",
+                        "description": "The detailed fact to remember, written clearly.",
+                    },
                 },
-                "memory_text": {
-                    "type": "string",
-                    "description": "The detailed fact to remember, written clearly.",
-                },
-            },
-            "required": ["memory_name", "memory_text"],
-        },
+                required=["memory_name", "memory_text"],
+            ),
+        )
     )
 
     async def _handle(self, request: "LLMPipeline", arguments: Dict[str, Any]):
@@ -42,7 +43,7 @@ class SaveMemoryToolCall(ToolCall):
         try:
             current_timestamp = int(time.time())
             guild_id = self.ctx.guild.id
-            db = self.ctx.cog.db
+            db = request.cog.db
 
             memory_id = await db.upsert(
                 guild_id,
