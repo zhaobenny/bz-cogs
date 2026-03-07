@@ -4,7 +4,7 @@ from redbot.core import commands
 from aiuser.config.models import TOOLS_SUPPORTED_MODELS
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
 from aiuser.settings.functions.searxng import SearXNGFunctionSettings
-from aiuser.settings.functions.autolearn import AutolearnFunctionSettings
+from aiuser.settings.functions.memory import MemoryFunctionSettings
 from aiuser.settings.functions.utilities import (
     FunctionsGroupMixin,
     functions,
@@ -17,7 +17,7 @@ class FunctionCallingSettings(
     WeatherFunctionSettings,
     ImageRequestFunctionSettings,
     SearXNGFunctionSettings,
-    AutolearnFunctionSettings,
+    MemoryFunctionSettings,
 ):
     @functions.command(name="toggle")
     async def toggle_function_calling(self, ctx: commands.Context):
@@ -65,7 +65,7 @@ class FunctionCallingSettings(
         from aiuser.functions.wolframalpha.tool_call import (
             WolframAlphaFunctionCall,
         )
-        from aiuser.functions.autolearn.tool_call import AutolearnToolCall
+        from aiuser.functions.memory.tool_call import SaveMemoryToolCall
 
         groups = {
             "Weather": [
@@ -79,7 +79,7 @@ class FunctionCallingSettings(
             "No Response": [NoResponseToolCall.function_name],
             "Wolfram Alpha": [WolframAlphaFunctionCall.function_name],
             "Code Runner": [CodeRunnerToolCall.function_name],
-            "Autolearn": [AutolearnToolCall.function_name],
+            "Memory": [SaveMemoryToolCall.function_name],
         }
 
         # Helper for status icon

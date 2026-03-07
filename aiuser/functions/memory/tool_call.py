@@ -11,11 +11,11 @@ from aiuser.functions.types import ToolCallSchema
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class AutolearnToolCall(ToolCall):
+class SaveMemoryToolCall(ToolCall):
     function_name = "save_memory"
     schema = ToolCallSchema(
         name=function_name,
-        description="Extract and reliably save an important fact about the user or the context for long-term memory. Overwrite previous facts if they have changed or are outdated. Use this sparingly but actively to 'autolearn'. Please store it as a concise but descriptive fact.",
+        description="Extract and reliably save an important fact about the user or context for long-term memory. Overwrite previous facts if they have changed or are outdated. Use this sparingly and store it as a concise but descriptive fact.",
         parameters={
             "type": "object",
             "properties": {
@@ -51,8 +51,8 @@ class AutolearnToolCall(ToolCall):
                 current_timestamp,
             )
 
-            logger.info(f"Autolearned memory '{memory_name}' for guild {guild_id}")
+            logger.info(f"Saved memory '{memory_name}' for guild {guild_id}")
             return f"Success: Saved memory with ID {memory_id}"
         except Exception:
-            logger.exception("Failed to autolearn memory")
+            logger.exception("Failed to save memory")
             return "Failed: Internal error while saving memory"
