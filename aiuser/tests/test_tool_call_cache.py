@@ -33,7 +33,11 @@ async def test_cached_tool_calls(
         function=Function(name="get_weather", arguments='{"location":"Paris"}'),
     )
     cached_entries = [
-        MessageEntry(role="assistant", content="", tool_calls=[tool_call]),
+        MessageEntry(
+            role="assistant",
+            content="Checking the Paris forecast now.",
+            tool_calls=[tool_call],
+        ),
         MessageEntry(role="tool", content="Rainy, 15°C", tool_call_id=tool_call.id),
     ]
 
@@ -56,6 +60,9 @@ async def test_cached_tool_calls(
     result = thread.get_json()
 
     user_ask_idx = find_message_index(result, "What is the weather in Paris?")
+    cached_assistant_idx = find_message_index(
+        result, "Checking the Paris forecast now."
+    )
     bot_reply_idx = find_message_index(result, "It's rainy in Paris, 15°C.")
     tool_result_idx = find_message_index(result, "Rainy, 15°C")
     trigger_idx = find_message_index(result, "Thanks! What about Tokyo?")
@@ -70,12 +77,16 @@ async def test_cached_tool_calls(
                 tool_call_idx = i
                 break
 
-    assert tool_call_idx != -1, (
-        f"Tool call message with id '{paris_tool_call_id}' not found in thread"
-    )
+    assert (
+        tool_call_idx != -1
+    ), f"Tool call message with id '{paris_tool_call_id}' not found in thread"
+    assert cached_assistant_idx != -1, "Cached assistant content should be preserved"
+    assert (
+        cached_assistant_idx == tool_call_idx
+    ), "Cached assistant content and tool call should share the same assistant entry"
 
     # Verify chronological order:
-    # user ask -> tool call -> tool result -> bot reply -> system -> trigger
+    # user ask -> cached assistant/tool call -> tool result -> bot reply -> system -> trigger
     assert (
         user_ask_idx
         < tool_call_idx
@@ -83,9 +94,7 @@ async def test_cached_tool_calls(
         < bot_reply_idx
         < system_idx
         < trigger_idx
-    ), (
-        f"Messages not in correct order: user_ask@{user_ask_idx}, tool_call@{tool_call_idx}, tool_result@{tool_result_idx}, bot_reply@{bot_reply_idx}, system@{system_idx}, trigger@{trigger_idx}"
-    )
+    ), f"Messages not in correct order: user_ask@{user_ask_idx}, cached_assistant/tool_call@{tool_call_idx}, tool_result@{tool_result_idx}, bot_reply@{bot_reply_idx}, system@{system_idx}, trigger@{trigger_idx}"
 
     from unittest.mock import AsyncMock, MagicMock, patch
 

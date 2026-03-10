@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import discord
 import pytest
 from discord.ext.test import backend
 
@@ -243,6 +244,61 @@ async def test_conversation_reply_uses_highest_role_override(
         )
         is False
     )
+
+
+@pytest.mark.asyncio
+async def test_conversation_reply_requires_recent_plain_bot_message(
+    bot,
+    mock_cog,
+    test_guild,
+    test_channel,
+    test_member,
+):
+    """Conversation continuation should ignore bot embeds but allow plain replies."""
+    await mock_cog.config.guild(test_guild).conversation_reply_percent.set(0.9)
+    await mock_cog.config.guild(test_guild).conversation_reply_time.set(300)
+
+    embed = discord.Embed(title="Status")
+    _ = backend.make_message(
+        "embedded status message",
+        bot.user,
+        test_channel,
+        embeds=[embed],
+    )
+    trigger = backend.make_message("does embed count?", test_member, test_channel)
+    ctx = await bot.get_context(trigger)
+    with patch("aiuser.core.triggers.random.random", return_value=0.5):
+        assert await is_in_conversation(mock_cog, ctx) is False
+
+    _ = backend.make_message("plain follow-up", bot.user, test_channel)
+    trigger = backend.make_message("how about now?", test_member, test_channel)
+    ctx = await bot.get_context(trigger)
+    with patch("aiuser.core.triggers.random.random", return_value=0.5):
+        assert await is_in_conversation(mock_cog, ctx) is True
+
+
+@pytest.mark.asyncio
+async def test_conversation_reply_without_recent_bot_message_is_false(
+    bot,
+    mock_cog,
+    test_guild,
+    test_channel,
+    test_member,
+):
+    """Conversation continuation should not trigger from user-only history."""
+    other_member = backend.make_member(
+        backend.make_user("ConversationPeer", "4444"), test_guild
+    )
+
+    await mock_cog.config.guild(test_guild).conversation_reply_percent.set(0.9)
+    await mock_cog.config.guild(test_guild).conversation_reply_time.set(300)
+
+    _ = backend.make_message("just another user message", other_member, test_channel)
+    trigger = backend.make_message("should not continue", test_member, test_channel)
+    ctx = await bot.get_context(trigger)
+
+    with patch("aiuser.core.triggers.random.random", return_value=0.5):
+        assert await is_in_conversation(mock_cog, ctx) is False
 
 
 @pytest.mark.asyncio
