@@ -57,3 +57,49 @@ class SaveMemoryToolCall(ToolCall):
         except Exception:
             logger.exception("Failed to save memory")
             return "Failed: Internal error while saving memory"
+
+
+class ReadMemoryToolCall(ToolCall):
+    function_name = "read_memory"
+    schema = ToolCallSchema(
+        function=Function(
+            name=function_name,
+            description="Search the long-term memory database for a specific fact or context. Use a concise search query.",
+            parameters=Parameters(
+                properties={
+                    "search_query": {
+                        "type": "string",
+                        "description": "Keywords or a short phrase to search for in the memory database (e.g., 'user preference', 'past project').",
+                    },
+                },
+                required=["search_query"],
+            ),
+        )
+    )
+
+    async def _handle(self, request: "LLMPipeline", arguments: Dict[str, Any]):
+        search_query = arguments.get("search_query")
+
+        if not search_query:
+            return "Failed: Missing search_query"
+
+        try:
+            guild_id = self.ctx.guild.id
+            db = request.cog.db
+
+            memory_results = await db.search_similar(search_query, guild_id, k=3)
+
+            if not memory_results:
+                return "No relevant memories found for the given query."
+
+            result_texts = []
+            for name, text, _similarity in memory_results:
+                result_texts.append(f"- [{name}]: {text}")
+
+            formatted_results = "\n".join(result_texts)
+            logger.info(f"Read memories for query '{search_query}' in guild {guild_id}")
+            return f"Found relevant memories:\n{formatted_results}"
+
+        except Exception:
+            logger.exception("Failed to read memory")
+            return "Failed: Internal error while reading memory"

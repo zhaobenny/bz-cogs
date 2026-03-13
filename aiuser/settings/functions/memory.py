@@ -7,7 +7,10 @@ class MemoryFunctionSettings(FunctionToggleHelperMixin):
     @functions.command(name="memory")
     async def toggle_memory_function(self, ctx: commands.Context):
         """Enable/disable the LLM's ability to save important facts about user/context to memory."""
-        from aiuser.functions.memory.tool_call import SaveMemoryToolCall
+        from aiuser.functions.memory.tool_call import (
+            ReadMemoryToolCall,
+            SaveMemoryToolCall,
+        )
 
         guild_conf = self.config.guild(ctx.guild)
         enabled_tools: list = await guild_conf.function_calling_functions()
@@ -15,7 +18,7 @@ class MemoryFunctionSettings(FunctionToggleHelperMixin):
         querying_disabled = enabling and not await guild_conf.query_memories()
 
         await self.toggle_function_group(
-            ctx, [SaveMemoryToolCall.function_name], "Memory"
+            ctx, [SaveMemoryToolCall.function_name, ReadMemoryToolCall.function_name], "Memory"
         )
 
         if querying_disabled:
