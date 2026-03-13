@@ -18,7 +18,9 @@ class MemoryFunctionSettings(FunctionToggleHelperMixin):
         querying_disabled = enabling and not await guild_conf.query_memories()
 
         await self.toggle_function_group(
-            ctx, [SaveMemoryToolCall.function_name, ReadMemoryToolCall.function_name], "Memory"
+            ctx,
+            [SaveMemoryToolCall.function_name, ReadMemoryToolCall.function_name],
+            "Memory",
         )
 
         if querying_disabled:
