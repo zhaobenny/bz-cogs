@@ -65,7 +65,10 @@ class FunctionCallingSettings(
         from aiuser.functions.wolframalpha.tool_call import (
             WolframAlphaFunctionCall,
         )
-        from aiuser.functions.memory.tool_call import SaveMemoryToolCall
+        from aiuser.functions.memory.tool_call import (
+            ReadMemoryToolCall,
+            SaveMemoryToolCall,
+        )
 
         groups = {
             "Weather": [
@@ -79,7 +82,10 @@ class FunctionCallingSettings(
             "No Response": [NoResponseToolCall.function_name],
             "Wolfram Alpha": [WolframAlphaFunctionCall.function_name],
             "Code Runner": [CodeRunnerToolCall.function_name],
-            "Memory": [SaveMemoryToolCall.function_name],
+            "Memory": [
+                ReadMemoryToolCall.function_name,
+                SaveMemoryToolCall.function_name,
+            ],
         }
 
         # Helper for status icon
