@@ -27,6 +27,14 @@ class SaveMemoryToolCall(ToolCall):
                         "type": "string",
                         "description": "The detailed fact to remember, written clearly.",
                     },
+                    "user": {
+                        "type": "string",
+                        "description": "Optional: If this memory is specifically about a user, provide their Username or UserID.",
+                    },
+                    "channel": {
+                        "type": "string",
+                        "description": "Optional: If this memory is specifically about an ongoing event/context in a certain channel, provide the channel name or ID.",
+                    },
                 },
                 required=["memory_name", "memory_text"],
             ),
@@ -36,6 +44,8 @@ class SaveMemoryToolCall(ToolCall):
     async def _handle(self, request: "LLMPipeline", arguments: Dict[str, Any]):
         memory_name = arguments.get("memory_name")
         memory_text = arguments.get("memory_text")
+        user = arguments.get("user")
+        channel = arguments.get("channel")
 
         if not memory_name or not memory_text:
             return "Failed: Missing memory_name or memory_text"
@@ -50,6 +60,8 @@ class SaveMemoryToolCall(ToolCall):
                 memory_name,
                 memory_text,
                 current_timestamp,
+                user=user,
+                channel=channel,
             )
 
             logger.info(f"Saved memory '{memory_name}' for guild {guild_id}")
@@ -71,6 +83,14 @@ class ReadMemoryToolCall(ToolCall):
                         "type": "string",
                         "description": "Keywords or a short phrase to search for in the memory database (e.g., 'user preference', 'past project').",
                     },
+                    "user": {
+                        "type": "string",
+                        "description": "Optional: Only search memories related to this specific user (Username or UserID).",
+                    },
+                    "channel": {
+                        "type": "string",
+                        "description": "Optional: Only search memories related to this specific channel name or ID.",
+                    },
                 },
                 required=["search_query"],
             ),
@@ -79,6 +99,8 @@ class ReadMemoryToolCall(ToolCall):
 
     async def _handle(self, request: "LLMPipeline", arguments: Dict[str, Any]):
         search_query = arguments.get("search_query")
+        user = arguments.get("user")
+        channel = arguments.get("channel")
 
         if not search_query:
             return "Failed: Missing search_query"
@@ -87,7 +109,9 @@ class ReadMemoryToolCall(ToolCall):
             guild_id = self.ctx.guild.id
             db = request.cog.db
 
-            memory_results = await db.search_similar(search_query, guild_id, k=3)
+            memory_results = await db.search_similar(
+                search_query, guild_id, k=3, user=user, channel=channel
+            )
 
             if not memory_results:
                 return "No relevant memories found for the given query."
