@@ -46,6 +46,24 @@ class HistoryBuilder:
 
         await self._process_past_messages(past_messages, max_seconds_gap)
 
+        if hasattr(self.bot.get_cog("AIUser"), "compaction_store"):
+            summary = await self.bot.get_cog("AIUser").compaction_store.get_summary(
+                self.guild.id, self.init_message.channel.id
+            )
+            if summary:
+                # Add it as a system message right before the history
+                await self.messages_list.add_system_message(
+                    f"Summary of conversation before this point:\n{summary}",
+                    index=len(self.messages_list.messages_ids),
+                )
+
+        if hasattr(self.bot.get_cog("AIUser"), "compaction_manager"):
+            await self.bot.get_cog(
+                "AIUser"
+            ).compaction_manager.check_and_run_compaction(
+                self.messages_list.ctx, past_messages
+            )
+
         if await self.consent_manager.should_send_consent_embed(users):
             await self.consent_manager.send_consent_embed(
                 self.init_message.channel, users

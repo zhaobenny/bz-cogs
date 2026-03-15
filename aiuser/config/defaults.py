@@ -88,6 +88,7 @@ DEFAULT_GUILD = {
     "reply_to_webhooks": False,
     "webhook_whitelist_enabled": False,
     "webhook_user_whitelist": [],
+    "compaction_trigger": 0,
 }
 
 DEFAULT_CHANNEL = {
