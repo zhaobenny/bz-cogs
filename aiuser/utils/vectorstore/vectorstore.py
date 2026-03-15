@@ -17,7 +17,13 @@ class VectorStore:
         self.db_path = self.cog_data_path / EMBEDDING_DB_NAME
 
     async def upsert(
-        self, guild_id: int, memory_name: str, memory_text: str, last_updated: int
+        self,
+        guild_id: int,
+        memory_name: str,
+        memory_text: str,
+        last_updated: int,
+        user: Optional[str] = None,
+        channel: Optional[str] = None,
     ) -> int:
         """Insert a new memory row. Returns number of rows in table after insert."""
         await ensure_sqlite_db(str(self.db_path))
@@ -28,10 +34,18 @@ class VectorStore:
         async with aiosqlite.connect(self.db_path) as conn:
             await conn.execute(
                 """
-                INSERT INTO memories (guild_id, memory_name, memory_text, last_updated, embedding)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO memories (guild_id, memory_name, memory_text, last_updated, embedding, user, channel)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
-                (guild_id, memory_name, memory_text, last_updated, embedding_bytes),
+                (
+                    guild_id,
+                    memory_name,
+                    memory_text,
+                    last_updated,
+                    embedding_bytes,
+                    user,
+                    channel,
+                ),
             )
             await conn.commit()
 
@@ -101,15 +115,30 @@ class VectorStore:
             return True
 
     async def search_similar(
-        self, query: str, guild_id: int, k: int = 1
+        self,
+        query: str,
+        guild_id: int,
+        k: int = 1,
+        user: Optional[str] = None,
+        channel: Optional[str] = None,
     ) -> List[Tuple[str, str, float]]:
         """Search for similar memories using BM25 pre-filtering + embedding similarity."""
         await ensure_sqlite_db(str(self.db_path))
 
+        where_clause = "guild_id = ?"
+        params = [guild_id]
+
+        if user:
+            where_clause += " AND (user = ? OR user IS NULL)"
+            params.append(user)
+        if channel:
+            where_clause += " AND (channel = ? OR channel IS NULL)"
+            params.append(channel)
+
         async with aiosqlite.connect(self.db_path) as conn:
             cursor = await conn.execute(
-                "SELECT rowid, memory_name, memory_text FROM memories WHERE guild_id = ?",
-                (guild_id,),
+                f"SELECT rowid, memory_name, memory_text FROM memories WHERE {where_clause}",
+                tuple(params),
             )
             text_rows = await cursor.fetchall()
 
