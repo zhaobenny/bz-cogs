@@ -59,9 +59,7 @@ async def test_upsert_and_search_with_user_and_channel(vectorstore: VectorStore)
     # Upsert generic memory
     await vectorstore.upsert(123, "global_rule", "Global rule is X.", 1)
     # Upsert user specific memory
-    await vectorstore.upsert(
-        123, "user_rule", "User rule is Y.", 1, user="Alice"
-    )
+    await vectorstore.upsert(123, "user_rule", "User rule is Y.", 1, user="Alice")
     # Upsert channel specific memory
     await vectorstore.upsert(
         123, "channel_rule", "Channel rule is Z.", 1, channel="general"
@@ -93,7 +91,9 @@ async def test_upsert_and_search_with_user_and_channel(vectorstore: VectorStore)
     assert "both_rule" in names_general
 
     # 4. Search specific to Bob in general channel
-    res_bob_gen = await vectorstore.search_similar("rule", 123, k=4, user="Bob", channel="general")
+    res_bob_gen = await vectorstore.search_similar(
+        "rule", 123, k=4, user="Bob", channel="general"
+    )
     names_bob_gen = {r[0] for r in res_bob_gen}
     assert "global_rule" in names_bob_gen
     assert "both_rule" in names_bob_gen
