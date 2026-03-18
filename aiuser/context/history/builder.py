@@ -44,23 +44,38 @@ class HistoryBuilder:
 
         users = await self.consent_manager.get_unknown_consent_users(past_messages[:10])
 
+        # Filter out already-compacted messages and inject summary if available
+        cog = self.bot.get_cog("AIUser")
+        if cog and hasattr(cog, "compaction_store"):
+            compaction_enabled = await self.config.guild(
+                self.guild
+            ).compaction_enabled()
+            if compaction_enabled:
+                last_compacted_id = (
+                    await cog.compaction_store.get_last_compacted_message_id(
+                        self.guild.id, self.init_message.channel.id
+                    )
+                )
+                if last_compacted_id:
+                    # Drop messages that were already compacted
+                    past_messages = [
+                        m for m in past_messages if m.id > last_compacted_id
+                    ]
+
+                summary = await cog.compaction_store.get_summary(
+                    self.guild.id, self.init_message.channel.id
+                )
+                if summary:
+                    await self.messages_list.add_system_message(
+                        f"Summary of conversation before this point:\n{summary}",
+                        index=len(self.messages_list.messages_ids),
+                    )
+
         await self._process_past_messages(past_messages, max_seconds_gap)
 
-        if hasattr(self.bot.get_cog("AIUser"), "compaction_store"):
-            summary = await self.bot.get_cog("AIUser").compaction_store.get_summary(
-                self.guild.id, self.init_message.channel.id
-            )
-            if summary:
-                # Add it as a system message right before the history
-                await self.messages_list.add_system_message(
-                    f"Summary of conversation before this point:\n{summary}",
-                    index=len(self.messages_list.messages_ids),
-                )
-
-        if hasattr(self.bot.get_cog("AIUser"), "compaction_manager"):
-            await self.bot.get_cog(
-                "AIUser"
-            ).compaction_manager.check_and_run_compaction(
+        # Trigger compaction check with the full unfiltered messages
+        if cog and hasattr(cog, "compaction_manager"):
+            await cog.compaction_manager.check_and_run_compaction(
                 self.messages_list.ctx, past_messages
             )
 

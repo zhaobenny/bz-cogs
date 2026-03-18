@@ -111,13 +111,11 @@ class Settings(
             value=f"`{config['messages_backread_seconds']}` seconds",
         )
 
-        compaction_trigger = config.get("compaction_trigger", 0)
+        compaction_enabled = config.get("compaction_enabled", False)
         main_embed.add_field(
             name="Context Compaction",
             inline=True,
-            value=f"`Every {compaction_trigger} messages`"
-            if compaction_trigger > 0
-            else "`Disabled`",
+            value="`Enabled`" if compaction_enabled else "`Disabled`",
         )
 
         main_embed.add_field(

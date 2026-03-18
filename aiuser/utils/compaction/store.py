@@ -24,18 +24,40 @@ class CompactionStore:
             row = await cursor.fetchone()
             return row[0] if row else None
 
-    async def upsert_summary(self, guild_id: int, channel_id: int, summary: str):
+    async def get_last_compacted_message_id(
+        self, guild_id: int, channel_id: int
+    ) -> Optional[int]:
+        """Fetch the last compacted message ID for a channel."""
+        await ensure_compaction_db(str(self.db_path))
+
+        async with aiosqlite.connect(self.db_path) as conn:
+            cursor = await conn.execute(
+                "SELECT last_compacted_message_id FROM compacted_messages WHERE guild_id = ? AND channel_id = ?",
+                (guild_id, channel_id),
+            )
+            row = await cursor.fetchone()
+            return row[0] if row else None
+
+    async def upsert_summary(
+        self,
+        guild_id: int,
+        channel_id: int,
+        summary: str,
+        last_compacted_message_id: Optional[int] = None,
+    ):
         """Update or insert the compacted summary for a channel."""
         await ensure_compaction_db(str(self.db_path))
 
         async with aiosqlite.connect(self.db_path) as conn:
             await conn.execute(
                 """
-                INSERT INTO compacted_messages (guild_id, channel_id, summary)
-                VALUES (?, ?, ?)
-                ON CONFLICT(guild_id, channel_id) DO UPDATE SET summary = excluded.summary
+                INSERT INTO compacted_messages (guild_id, channel_id, summary, last_compacted_message_id)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(guild_id, channel_id) DO UPDATE SET
+                    summary = excluded.summary,
+                    last_compacted_message_id = excluded.last_compacted_message_id
                 """,
-                (guild_id, channel_id, summary),
+                (guild_id, channel_id, summary, last_compacted_message_id),
             )
             await conn.commit()
 

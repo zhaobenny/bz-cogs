@@ -1,12 +1,12 @@
-import logging
 import asyncio
+import logging
 from typing import List
 
 import discord
 from redbot.core import commands
 
-from aiuser.types.abc import MixinMeta
 from aiuser.context.converter.converter import MessageConverter
+from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -33,23 +33,41 @@ class CompactionManager:
     async def check_and_run_compaction(
         self, ctx: commands.Context, messages: List[discord.Message]
     ):
-        """Called periodically to check if the channel has exceeded the message trigger and run compaction in background."""
+        """Check if compaction should run based on messages_backread threshold.
+
+        Compaction triggers when the number of unsummarized messages reaches
+        the messages_backread limit. It summarizes the oldest 50% of those messages.
+        """
         if not self.compaction_store or not messages:
             return
 
-        trigger_count = await self.config.guild(ctx.guild).compaction_trigger()
-        if trigger_count <= 0:
+        compaction_enabled = await self.config.guild(ctx.guild).compaction_enabled()
+        if not compaction_enabled:
             return
 
         channel_id = ctx.channel.id
         if channel_id in self._compaction_locks:
             return
 
-        # Simple threshold check: if the list of uncompacted messages exceeds trigger
-        # and we are not already compiling one
-        if len(messages) >= trigger_count:
+        messages_backread = await self.config.guild(ctx.guild).messages_backread()
+
+        # Filter out messages that have already been compacted
+        last_compacted_id = await self.compaction_store.get_last_compacted_message_id(
+            ctx.guild.id, channel_id
+        )
+        if last_compacted_id:
+            unsummarized = [m for m in messages if m.id > last_compacted_id]
+        else:
+            unsummarized = messages
+
+        # Trigger when unsummarized messages reach the backread limit
+        if len(unsummarized) >= messages_backread:
+            # Compact the oldest 50%
+            compact_count = len(unsummarized) // 2
+            # messages are newest-first from Discord API, so oldest are at the end
+            to_compact = unsummarized[len(unsummarized) - compact_count :]
             self._compaction_locks.add(channel_id)
-            asyncio.create_task(self._run_compaction(ctx, messages[:trigger_count]))
+            asyncio.create_task(self._run_compaction(ctx, to_compact))
 
     async def _run_compaction(
         self, ctx: commands.Context, past_messages: List[discord.Message]
@@ -76,10 +94,8 @@ class CompactionManager:
                 converted = await converter.convert(msg)
                 if not converted:
                     continue
-                # For simplicity, extract the text representation of each entry
                 for entry in converted:
                     content = entry.content
-                    # content can be string or list of dicts (vision)
                     if isinstance(content, list):
                         content = " ".join(
                             [
@@ -99,7 +115,13 @@ class CompactionManager:
                 return
 
             new_messages_block = "\n".join(new_msgs_text)
-            prompt = COMPACTION_PROMPT.format(
+
+            # Use custom prompt if configured, otherwise use default
+            custom_prompt = await self.config.guild(
+                ctx.guild
+            ).custom_compaction_prompt()
+            prompt_template = custom_prompt if custom_prompt else COMPACTION_PROMPT
+            prompt = prompt_template.format(
                 existing_summary=formatted_existing, new_messages=new_messages_block
             )
 
@@ -113,11 +135,15 @@ class CompactionManager:
 
             new_summary = response.choices[0].message.content
             if new_summary:
+                # Record the newest message ID that was compacted
+                # past_messages are newest-first, so [0] is the most recent
+                newest_compacted_id = max(m.id for m in past_messages)
                 await self.compaction_store.upsert_summary(
-                    guild_id, channel_id, new_summary
+                    guild_id, channel_id, new_summary, newest_compacted_id
                 )
                 logger.debug(
-                    f"Compacted {len(past_messages)} messages in channel {channel_id}."
+                    f"Compacted {len(past_messages)} messages in channel {channel_id} "
+                    f"(up to message {newest_compacted_id})."
                 )
 
         except Exception:

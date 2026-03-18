@@ -65,25 +65,45 @@ class HistorySettings(MixinMeta):
         )
         return await ctx.send(embed=embed)
 
-    @history.command(name="compaction", aliases=["compact"])
-    async def history_compaction(self, ctx: commands.Context, trigger_count: int):
-        """Set the amount of messages before context compaction is triggered.
+    @history.group(name="compaction", aliases=["compact"])
+    async def history_compaction(self, ctx: commands.Context):
+        """Settings for dynamically squashing older messages to save tokens"""
+        pass
 
-        Set to 0 to disable context compaction (default).
+    @history_compaction.command(name="toggle")
+    async def history_compaction_toggle(self, ctx: commands.Context):
+        """Toggle context compaction on or off.
+
+        When enabled, the bot will automatically summarize the oldest half of messages
+        when unsummarized history hits the `[p]aiuser history backread` limit.
         """
-        if trigger_count < 0:
-            return await ctx.send("Please provide a positive number or 0 to disable.")
-
-        await self.config.guild(ctx.guild).compaction_trigger.set(trigger_count)
-
-        if trigger_count == 0:
-            desc = "Disabled"
-        else:
-            desc = f"Every {trigger_count} messages"
+        current = await self.config.guild(ctx.guild).compaction_enabled()
+        await self.config.guild(ctx.guild).compaction_enabled.set(not current)
 
         embed = discord.Embed(
-            title="Context compaction threshold for this server is now:",
-            description=desc,
+            title="Context compaction is now:",
+            description="Enabled" if not current else "Disabled",
+            color=await ctx.embed_color(),
+        )
+        return await ctx.send(embed=embed)
+
+    @history_compaction.command(name="prompt")
+    async def history_compaction_prompt(
+        self, ctx: commands.Context, *, prompt: str = None
+    ):
+        """Set a custom prompt for the LLM to use when summarizing messages.
+
+        Leave blank to reset to default.
+        You can use `{existing_summary}` and `{new_messages}` placeholders.
+        """
+        if not prompt:
+            await self.config.guild(ctx.guild).custom_compaction_prompt.set(None)
+            return await ctx.send("Compaction prompt reset to default.")
+
+        await self.config.guild(ctx.guild).custom_compaction_prompt.set(prompt)
+        embed = discord.Embed(
+            title="Custom compaction prompt set",
+            description=prompt[:2000],
             color=await ctx.embed_color(),
         )
         return await ctx.send(embed=embed)
