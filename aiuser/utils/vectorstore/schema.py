@@ -1,6 +1,6 @@
 import aiosqlite
 
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
 
 
 async def ensure_sqlite_db(db_path: str):
@@ -29,6 +29,27 @@ async def ensure_sqlite_db(db_path: str):
                 await conn.execute("ALTER TABLE memories ADD COLUMN channel TEXT")
             except aiosqlite.OperationalError:
                 pass
+
+        if current_version < 3:
+            try:
+                # deduplicate existing memories
+                await conn.execute(
+                    """
+                    DELETE FROM memories
+                    WHERE rowid NOT IN (
+                        SELECT MAX(rowid)
+                        FROM memories
+                        GROUP BY guild_id, memory_name, IFNULL(user, ''), IFNULL(channel, '')
+                    )
+                    """
+                )
+                await conn.execute(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS idx_memories_unique ON memories (guild_id, memory_name, IFNULL(user, ''), IFNULL(channel, ''))"
+                )
+            except aiosqlite.OperationalError:
+                pass
+
+        if current_version < CURRENT_SCHEMA_VERSION:
             await conn.execute(f"PRAGMA user_version = {CURRENT_SCHEMA_VERSION}")
 
         await conn.commit()

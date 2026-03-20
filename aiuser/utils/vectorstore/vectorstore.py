@@ -34,7 +34,7 @@ class VectorStore:
         async with aiosqlite.connect(self.db_path) as conn:
             await conn.execute(
                 """
-                INSERT INTO memories (guild_id, memory_name, memory_text, last_updated, embedding, user, channel)
+                INSERT OR REPLACE INTO memories (guild_id, memory_name, memory_text, last_updated, embedding, user, channel)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
@@ -110,8 +110,11 @@ class VectorStore:
 
             target_rowid = rows[idx][0]
 
-            await conn.execute("DELETE FROM memories WHERE rowid = ?", (target_rowid,))
-            await conn.commit()
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute(
+                    "DELETE FROM memories WHERE rowid = ?", (target_rowid,)
+                )
+                await conn.commit()
             return True
 
     async def search_similar(
