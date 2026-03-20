@@ -21,6 +21,13 @@ async def test_upsert_and_list(vectorstore: VectorStore):
     names = await vectorstore.list(123)
     assert names == [(1, "red_fox"), (2, "blue_sun")]
 
+    # test replace
+    await vectorstore.upsert(123, "red_fox", "I saw a red fox, it was cute.", 3)
+    names_after = await vectorstore.list(123)
+    assert names_after == [(1, "blue_sun"), (2, "red_fox")]
+    _, text = await vectorstore.fetch_by_rowid(2, 123)
+    assert text == "I saw a red fox, it was cute."
+
 
 @pytest.mark.asyncio
 async def test_fetch_by_rowid(vectorstore: VectorStore):
