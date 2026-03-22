@@ -111,7 +111,7 @@ Remove list regex patterns only support `{authorname}` (will use authors of last
 
 ### OpenRouter
 
-[OpenRouter](https://openrouter.ai) is compatible as a custom OpenAI endpoint. (provides Gemini, Claude, open source LLMs, etc)
+[OpenRouter](https://openrouter.ai) is supported directly and provides Gemini, Claude, open source LLMs, etc.
 
 See full details [here](https://openrouter.ai/docs#models).
 
@@ -140,7 +140,7 @@ Bot owners may also want to set [custom parameters](https://openrouter.ai/docs#l
 
 ⚠️ For advanced users! ⚠️
 
-Other OpenAI-Compatible API endpoints can be used instead of the default OpenAI API. (eg. `ollama`)
+Other OpenAI-Compatible API endpoints can be used directly instead of the default OpenAI API. (eg. `ollama`)
 
 Compatibility may vary and is not guaranteed.
 
