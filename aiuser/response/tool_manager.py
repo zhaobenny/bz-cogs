@@ -59,7 +59,7 @@ class ToolManager:
             tool = self.enabled_tools_map.get(fn.name)
             if tool:
                 logger.info(
-                    f'Handling tool call in {self.pipeline.ctx.guild.name}: "{fn.name}" with args keys: {list(arguments.keys())}'
+                    f'Handling tool call "{fn.name}" with args keys: {list(arguments.keys())}'
                 )
                 result = await tool.run(self.pipeline, dict(arguments))
                 if result is not None:
@@ -69,6 +69,4 @@ class ToolManager:
                     if entry:
                         self.pipeline.tool_call_entries.append(entry)
             else:
-                logger.warning(
-                    f'Could not find tool "{fn.name}" in {self.pipeline.ctx.guild.name}'
-                )
+                logger.warning(f'Could not find tool "{fn.name}"')

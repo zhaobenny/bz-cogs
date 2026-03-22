@@ -14,11 +14,13 @@ from aiuser.core.triggers import check_triggers
 from aiuser.core.validators import is_valid_message
 from aiuser.response.response import create_response
 from aiuser.types.abc import MixinMeta
+from aiuser.utils.logging_context import with_discord_log_context
 from aiuser.utils.utilities import is_embed_valid
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
+@with_discord_log_context("slash-command")
 async def handle_slash_command(cog: MixinMeta, inter: discord.Interaction, text: str):
     """Handle /chat slash command interactions"""
     await inter.response.defer()
@@ -41,6 +43,7 @@ async def handle_slash_command(cog: MixinMeta, inter: discord.Interaction, text:
         await ctx.send(":warning: Error in generating response!", ephemeral=True)
 
 
+@with_discord_log_context("message")
 async def handle_message(cog: MixinMeta, message: discord.Message):
     """Handle regular message events"""
     ctx: commands.Context = await cog.bot.get_context(message)

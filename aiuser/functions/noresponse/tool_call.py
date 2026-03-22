@@ -32,7 +32,5 @@ class NoResponseToolCall(ToolCall):
         if arguments["respond"]:
             return None
         request.completion = ""
-        logger.debug(
-            f'Decided to not respond in guild {self.ctx.guild.id} because: "{arguments["reason"]}"'
-        )
+        logger.debug(f'Decided to not respond because: "{arguments["reason"]}"')
         return None

@@ -68,7 +68,6 @@ class LLMPipeline:
                 log_chat_request(context)
                 step = await self.provider.create_chat_step(self.model, context, kwargs)
                 log_chat_step_result(
-                    self.ctx.guild.name,
                     step.content,
                     step.tool_calls,
                 )
@@ -97,7 +96,7 @@ class LLMPipeline:
                 await self.tool_manager.handle_tool_calls(step.tool_calls)
             else:
                 logger.warning(
-                    f"No content or tool calls received in {self.ctx.guild.name} during round {round_idx} for {self.ctx.message.id}"
+                    f"No content or tool calls received during round {round_idx} for message {self.ctx.message.id}"
                 )
                 break
 

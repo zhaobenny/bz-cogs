@@ -34,5 +34,5 @@ class SearXNGToolCall(ToolCall):
         results = await request.config.guild(
             self.ctx.guild
         ).function_calling_searxng_max_results()
-        logger.debug(f"Attempting SearXNG url {endpoint} in {self.ctx.guild}")
+        logger.debug(f"Attempting SearXNG url {endpoint}")
         return await search_searxng(arguments["query"], endpoint, results, self.ctx)

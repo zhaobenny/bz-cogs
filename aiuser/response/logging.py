@@ -97,7 +97,6 @@ def log_chat_request(messages: List[Dict[str, Any]]) -> None:
 
 
 def log_chat_step_result(
-    guild_name: str,
     content: Optional[str],
     tool_calls: List[ChatCompletionMessageToolCall],
 ) -> None:
@@ -106,14 +105,12 @@ def log_chat_step_result(
 
     if content:
         logger.debug(
-            'Generated response in %s: "%s"',
-            guild_name,
+            'Generated response: "%s"',
             _format_response_preview(content),
         )
 
     if tool_calls:
         logger.debug(
-            "Received tool calls in %s: %s",
-            guild_name,
+            "Received tool calls: %s",
             _get_tool_call_names(tool_calls),
         )
