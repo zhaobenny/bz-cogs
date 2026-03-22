@@ -7,6 +7,11 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.models import TOOLS_SUPPORTED_MODELS
+from aiuser.llm.registry import list_llm_models
+from aiuser.llm.openai_compatible.endpoints import (
+    CompatEndpointKind,
+    get_openai_compat_kind,
+)
 from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.functions.base import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
@@ -17,15 +22,9 @@ from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.random_message import RandomMessageSettings
 from aiuser.settings.response import ResponseSettings
 from aiuser.settings.triggers import TriggerSettings
-from aiuser.settings.utilities import (
-    get_available_models,
-)
 from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import MentionType
 from aiuser.types.types import COMPATIBLE_CHANNELS, COMPATIBLE_MENTIONS
-from aiuser.utils.utilities import (
-    is_using_openrouter_endpoint,
-)
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -118,12 +117,14 @@ class Settings(
         )
 
         endpoint_url = str(glob_config["custom_openai_endpoint"] or "")
-        if endpoint_url.startswith("https://openrouter.ai/api/"):
+        if endpoint_url == "codex":
+            endpoint_text = "Using [OpenAI](https://openai.com/) via Codex"
+        elif get_openai_compat_kind(endpoint_url) is CompatEndpointKind.OPENROUTER:
             endpoint_text = "Using [OpenRouter](https://openrouter.ai) endpoint"
         elif endpoint_url:
             endpoint_text = "Using an custom endpoint"
         else:
-            endpoint_text = "Using the official [OpenAI](https://openai.com/) endpoint"
+            endpoint_text = "Using [OpenAI](https://openai.com/)"
         main_embed.add_field(name="LLM Endpoint", inline=True, value=endpoint_text)
 
         main_embed.add_field(
@@ -313,7 +314,7 @@ class Settings(
             - `model` The model to use eg. `gpt-4`
         """
         await ctx.message.add_reaction("🔄")
-        models = await get_available_models(self.openai_client)
+        models = await list_llm_models(self)
         await ctx.message.remove_reaction("🔄", ctx.me)
 
         if model == "list":
@@ -340,6 +341,9 @@ class Settings(
         return await ctx.send(embed=embed)
 
     async def _paginate_models(self, ctx, models):
+        if not models:
+            return await ctx.send(":warning: No models are currently available.")
+
         pagified_models = [models[i : i + 10] for i in range(0, len(models), 10)]
         menu_pages = []
 
@@ -351,7 +355,10 @@ class Settings(
             embed.description = "\n".join([f"`{model}`" for model in models_page])
             menu_pages.append(embed)
 
-        if is_using_openrouter_endpoint(self.openai_client):
+        endpoint_kind = get_openai_compat_kind(
+            await self.config.custom_openai_endpoint()
+        )
+        if endpoint_kind is CompatEndpointKind.OPENROUTER:
             menu_pages[0].add_field(
                 name="For pricing and more details go to:",
                 value="https://openrouter.ai/models",

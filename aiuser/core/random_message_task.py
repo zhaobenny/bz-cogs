@@ -9,6 +9,7 @@ from discord.ext import tasks
 from aiuser.config.constants import RANDOM_MESSAGE_TASK_RETRY_SECONDS
 from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.context.setup import create_messages_thread
+from aiuser.llm.registry import get_llm_provider
 from aiuser.response.response import create_response
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import RolesSet, format_variables
@@ -19,7 +20,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 class RandomMessageTask(MixinMeta):
     @tasks.loop(seconds=RANDOM_MESSAGE_TASK_RETRY_SECONDS)
     async def random_message_trigger(self):
-        if not self.openai_client:
+        if await get_llm_provider(self) is None:
             return
         if not self.bot.is_ready():
             return

@@ -139,7 +139,8 @@ class MessagesThread:
             )
             if relevant_memory:
                 await self.add_system_message(
-                    relevant_memory, index=len(self.messages_ids)
+                    relevant_memory,
+                    index=len(self.messages_ids),
                 )
 
         await self.history_manager.build_history()

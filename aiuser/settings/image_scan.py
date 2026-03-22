@@ -4,6 +4,7 @@ import discord
 from redbot.core import checks, commands
 
 from aiuser.config.models import VISION_SUPPORTED_MODELS
+from aiuser.llm.registry import list_llm_models
 from aiuser.types.abc import MixinMeta, aiuser
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -67,8 +68,11 @@ class ImageScanSettings(MixinMeta):
             return await ctx.send(embed=embed)
 
         await ctx.message.add_reaction("🔄")
-        models = [model.id for model in (await self.openai_client.models.list()).data]
+        models = await list_llm_models(self)
         await ctx.message.remove_reaction("🔄", ctx.me)
+
+        if not models:
+            return await ctx.send(":warning: No models are currently available.")
 
         if model_name not in models:
             return await ctx.send("⚠️ Not a valid model!")

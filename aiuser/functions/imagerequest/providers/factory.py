@@ -7,7 +7,10 @@ from aiuser.functions.imagerequest.providers import (
     openai,
     openrouter,
 )
-from aiuser.llm.openai_compatible.endpoints import is_openrouter_endpoint
+from aiuser.llm.openai_compatible.endpoints import (
+    CompatEndpointKind,
+    get_openai_compat_kind,
+)
 
 OPENAI = "openai"
 OPENROUTER = "openrouter"
@@ -32,8 +35,9 @@ def detect_image_provider(endpoint):
     parsed = urlparse(raw_endpoint)
     hostname = (parsed.hostname or "").lower()
     path_parts = tuple(part for part in parsed.path.split("/") if part)
+    endpoint_kind = get_openai_compat_kind(raw_endpoint)
 
-    if is_openrouter_endpoint(raw_endpoint):
+    if endpoint_kind is CompatEndpointKind.OPENROUTER:
         return OPENROUTER
 
     if hostname == "generativelanguage.googleapis.com":
