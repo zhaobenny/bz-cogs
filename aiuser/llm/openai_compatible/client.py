@@ -10,6 +10,7 @@ from redbot.core.bot import Red
 from aiuser.llm.codex.oauth import is_codex_endpoint_mode
 from aiuser.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
+    get_openai_compat_api_token_name,
     get_openai_compat_kind,
 )
 
@@ -25,12 +26,11 @@ async def setup_openai_client(
 
     base_url = await config.custom_openai_endpoint()
     endpoint_kind = get_openai_compat_kind(base_url)
-    api_type = "openai"
+    api_type = get_openai_compat_api_token_name(base_url)
     api_key = None
     headers = None
 
     if endpoint_kind is CompatEndpointKind.OPENROUTER:
-        api_type = "openrouter"
         api_key = (await bot.get_shared_api_tokens(api_type)).get("api_key")
         headers = {
             "HTTP-Referer": "https://aiuser.zhao.gg",

@@ -27,6 +27,12 @@ def get_openai_compat_kind(endpoint: Optional[str]) -> CompatEndpointKind:
     return CompatEndpointKind.CUSTOM
 
 
+def get_openai_compat_api_token_name(endpoint: Optional[str]) -> str:
+    if get_openai_compat_kind(endpoint) is CompatEndpointKind.OPENROUTER:
+        return "openrouter"
+    return "openai"
+
+
 def is_openai_endpoint(endpoint: Optional[str]) -> bool:
     return get_openai_compat_kind(endpoint) is CompatEndpointKind.OPENAI
 

@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING, Optional
 
 from redbot.core import commands
 
+from aiuser.config.defaults import DEFAULT_MEMORY_RETRIEVAL_PREFIX
+
 if TYPE_CHECKING:
     from aiuser.utils.vectorstore import VectorStore
 
@@ -44,6 +46,6 @@ class MemoryRetriever:
             f"Memory search score: {score:.3f} (threshold: {threshold}) for query: {query[:50]}..."
         )
         if score >= threshold:
-            return f"Looking into your memory, the following relevant memory was found that could be used in the response: `{memory_results[0][1]}`"
+            return f"{DEFAULT_MEMORY_RETRIEVAL_PREFIX} `{memory_results[0][1]}`"
 
         return None

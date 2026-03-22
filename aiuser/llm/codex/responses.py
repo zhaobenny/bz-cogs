@@ -5,6 +5,7 @@ import httpx
 from openai.types.chat import ChatCompletionMessageToolCall
 from redbot.core import Config
 
+from aiuser.config.defaults import DEFAULT_MEMORY_RETRIEVAL_PREFIX
 from aiuser.llm.codex.oauth import CODEX_RESPONSES_URL, ensure_valid_codex_oauth
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -84,17 +85,18 @@ def _stringify_content(content: Any) -> str:
 
 
 def _first_system_message_index(messages: List[Dict[str, Any]]) -> Optional[int]:
+    fallback_index: Optional[int] = None
     for index, message in enumerate(messages):
-        if message.get("role") == "system":
-            return index
-    return None
-
-
-def _format_codex_context_message(content: Any) -> Optional[str]:
-    text = _stringify_content(content)
-    if not text:
-        return None
-    return f"{CODEX_CONTEXT_PREFIX}{text}"
+        if message.get("role") != "system":
+            continue
+        if fallback_index is None:
+            fallback_index = index
+        if _stringify_content(message.get("content")).startswith(
+            DEFAULT_MEMORY_RETRIEVAL_PREFIX
+        ):
+            continue
+        return index
+    return fallback_index
 
 
 def _tool_call_id(tool_call: Any, fallback: int) -> str:
@@ -154,11 +156,18 @@ def build_codex_input(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if role == "system":
             if index == first_system_index:
                 continue
-            context_message = _format_codex_context_message(content)
-            if context_message:
+            text = _stringify_content(content)
+            if text:
                 items.append(
-                    {"type": "message", "role": "user", "content": context_message}
+                    {
+                        "type": "message",
+                        "role": "user",
+                        "content": f"{CODEX_CONTEXT_PREFIX}{text}",
+                    }
                 )
+            continue
+
+        if role == "developer":
             continue
 
         message_content = _convert_message_content(content)

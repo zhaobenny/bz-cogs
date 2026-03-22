@@ -15,6 +15,10 @@ DEFAULT_RANDOM_PROMPTS = [
     "Talk about how you are currently ordering takeout. State the specific cuisine ordered, and any other details you'd like to the Discord channel.",
     "Make up a topic in the news. State that you just read about it in the news. Talk about that topic.",
 ]
+DEFAULT_MEMORY_RETRIEVAL_PREFIX = (
+    "Looking into your memory, the following relevant memory was found that could be "
+    "used in the response:"
+)
 DEFAULT_REMOVE_PATTERNS = [
     r"<think>[\s\S]*?<\/think>",  # for thinking LLMs
     r"^As an AI language model,?",

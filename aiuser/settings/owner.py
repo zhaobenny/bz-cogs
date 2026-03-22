@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -26,6 +25,7 @@ from aiuser.llm.codex.oauth import (
 from aiuser.llm.openai_compatible.client import setup_openai_client
 from aiuser.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
+    get_openai_compat_api_token_name,
     get_openai_compat_kind,
 )
 from aiuser.settings.utilities import get_tokens, truncate_prompt
@@ -84,284 +84,7 @@ class OwnerSettings(MixinMeta):
         OR
         - `<url>`: A bare custom base URL for any other OpenAI-compatible provider.
         """
-        if url == "codex":
-            return await self._activate_codex_endpoint(ctx)
-
-        if url == "openrouter":
-            url = "https://openrouter.ai/api/v1/"
-        elif url == "ollama":
-            url = "http://localhost:11434/v1/"
-        elif url in ["clear", "reset", "openai"]:
-            url = None
-
-        previous_url = await self.config.custom_openai_endpoint()
-        await self._save_current_endpoint_models(previous_url)
-        await self.config.custom_openai_endpoint.set(url)
-
-        await ctx.message.add_reaction("🔄")
-
-        self.openai_client = await setup_openai_client(self.bot, self.config)
-
-        # test the endpoint works if not rollback
-        try:
-            models = await self.openai_client.models.list()
-        except AuthenticationError:
-            logger.exception("Authentication failed for endpoint.")
-            await self.config.custom_openai_endpoint.set(previous_url)
-            self.openai_client = await setup_openai_client(self.bot, self.config)
-            return await ctx.send(
-                f":warning: Authentication failed for endpoint. "
-                f"\nIf this endpoint requires an API key, please set it with "
-                f"`{ctx.clean_prefix}set api openai api_key,INSERT_API_KEY`"
-            )
-        except Exception:
-            logger.exception("Invalid endpoint.")
-            await self.config.custom_openai_endpoint.set(previous_url)
-            self.openai_client = await setup_openai_client(self.bot, self.config)
-            return await ctx.send(
-                ":warning: Invalid endpoint. Please check logs for more information."
-            )
-        finally:
-            await ctx.message.remove_reaction("🔄", ctx.me)
-
-        endpoint_kind = get_openai_compat_kind(url)
-
-        if endpoint_kind is CompatEndpointKind.OPENROUTER:
-            chat_model = f"openai/{DEFAULT_LLM_MODEL}"
-            image_model = f"openai/{DEFAULT_LLM_MODEL}"
-        elif endpoint_kind is CompatEndpointKind.OPENAI:
-            chat_model = DEFAULT_LLM_MODEL
-            image_model = DEFAULT_LLM_MODEL
-        else:
-            chat_model = models.data[0].id
-            image_model = models.data[0].id
-
-        embed = discord.Embed(
-            title="Bot Custom OpenAI endpoint", color=await ctx.embed_color()
-        )
-        restored_count, guilds_with_parameters = await self._restore_endpoint_models(
-            endpoint_url=url,
-            chat_model=chat_model,
-            image_model=image_model,
-        )
-
-        if restored_count > 0:
-            total_guilds = len(await self.config.all_guilds())
-            value = f"Restored previously set models on this endpoint for {restored_count} servers."
-            if restored_count < total_guilds:
-                value += f"\nA further {total_guilds - restored_count} servers were set to `{chat_model}` for chat, and `{image_model}` for scanning images."
-            embed.add_field(
-                name="🔄 Restored",
-                value=value,
-                inline=False,
-            )
-        else:
-            embed.add_field(
-                name="🔄 Reset",
-                value=f"All per-server models have been set to use `{chat_model}` for chat and `{image_model}` for scanning images.",
-                inline=False,
-            )
-
-        if guilds_with_parameters:
-            embed.add_field(
-                name=":warning: Caution",
-                value=f"Custom parameters have been set in the following servers: `{', '.join(guilds_with_parameters)}`\nThey may not work with the new endpoint!",
-                inline=False,
-            )
-
-        if url:
-            embed.description = f"Endpoint set to {url}."
-            embed.set_footer(
-                text="❗ Third party models may have undesirable results with this cog."
-            )
-        else:
-            embed.description = "Endpoint reset back to offical OpenAI endpoint."
-
-        await ctx.send(embed=embed)
-
-    async def _activate_codex_endpoint(self, ctx: commands.Context):
-        if await is_codex_endpoint_mode(self.config):
-            try:
-                oauth = await ensure_valid_codex_oauth(self.config)
-            except Exception:
-                logger.info("Existing Codex OAuth is not healthy", exc_info=True)
-            else:
-                if not await self._confirm_codex_reauth(ctx, oauth):
-                    return
-
-        await ctx.message.add_reaction("🔄")
-        try:
-            device_data = await start_device_authorization()
-        except Exception:
-            logger.exception("Failed to start Codex OAuth")
-            await ctx.message.remove_reaction("🔄", ctx.me)
-            return await ctx.send(
-                ":warning: Failed to start Codex authentication. Please check logs."
-            )
-
-        embed = discord.Embed(
-            title="Authenticate Codex endpoint",
-            description=(
-                f"Open {device_data['verification_url']} and enter this code:\n"
-                f"`{device_data['user_code']}`"
-            ),
-            color=await ctx.embed_color(),
-        )
-        embed.add_field(
-            name="Polling",
-            value="This message will update when authentication completes.",
-            inline=False,
-        )
-        status_message = await ctx.send(embed=embed)
-
-        try:
-            tokens = await exchange_device_authorization(
-                device_data["device_auth_id"],
-                device_data["user_code"],
-                device_data["interval"],
-            )
-        except TimeoutError:
-            await ctx.message.remove_reaction("🔄", ctx.me)
-            return await status_message.edit(
-                embed=discord.Embed(
-                    title="Codex authentication timed out",
-                    description="Run the command again to start a fresh login.",
-                    color=await ctx.embed_color(),
-                )
-            )
-        except Exception:
-            logger.exception("Codex OAuth failed")
-            await ctx.message.remove_reaction("🔄", ctx.me)
-            return await status_message.edit(
-                embed=discord.Embed(
-                    title="Codex authentication failed",
-                    description="Please check logs for more information.",
-                    color=await ctx.embed_color(),
-                )
-            )
-
-        previous_url = await self.config.custom_openai_endpoint()
-        await self._save_current_endpoint_models(previous_url)
-        await set_codex_oauth(self.config, normalize_codex_tokens(tokens))
-        oauth = await ensure_valid_codex_oauth(self.config)
-        await set_codex_oauth(self.config, oauth)
-        await self.config.custom_openai_endpoint.set(CODEX_ENDPOINT_MODE)
-        self.openai_client = await setup_openai_client(self.bot, self.config)
-        restored_count, guilds_with_parameters = await self._restore_endpoint_models(
-            endpoint_url=CODEX_ENDPOINT_MODE,
-            chat_model=CODEX_DEFAULT_MODEL,
-            image_model=CODEX_DEFAULT_MODEL,
-        )
-        await ctx.message.remove_reaction("🔄", ctx.me)
-
-        complete = discord.Embed(
-            title="Codex endpoint active",
-            description="AIUser will now use the Codex subscription transport.",
-            color=await ctx.embed_color(),
-        )
-        if restored_count > 0:
-            complete.add_field(
-                name="🔄 Restored",
-                value=f"Restored previously saved Codex models for {restored_count} servers.",
-                inline=False,
-            )
-        else:
-            complete.add_field(
-                name="🔄 Reset",
-                value=f"All per-server models have been set to `{CODEX_DEFAULT_MODEL}` for chat and image scanning.",
-                inline=False,
-            )
-
-        if guilds_with_parameters:
-            complete.add_field(
-                name=":warning: Caution",
-                value=f"Custom parameters have been set in the following servers: `{', '.join(guilds_with_parameters)}`\nThey may not work with Codex mode.",
-                inline=False,
-            )
-        await status_message.edit(embed=complete)
-
-    def _endpoint_history_key(self, endpoint_url: Optional[str]) -> str:
-        if endpoint_url == CODEX_ENDPOINT_MODE:
-            return CODEX_ENDPOINT_MODE
-        if not endpoint_url:
-            return "default"
-        return endpoint_url or "default"
-
-    async def _save_current_endpoint_models(self, endpoint_url: Optional[str]):
-        history = await self.config.endpoint_model_history()
-        key = self._endpoint_history_key(endpoint_url)
-        history[key] = {}
-        for guild_id in await self.config.all_guilds():
-            guild_config = self.config.guild_from_id(guild_id)
-            history[key][str(guild_id)] = {
-                "chat_model": await guild_config.model(),
-                "image_model": await guild_config.scan_images_model(),
-            }
-        await self.config.endpoint_model_history.set(history)
-
-    async def _restore_endpoint_models(
-        self,
-        endpoint_url: Optional[str],
-        chat_model: str,
-        image_model: str,
-    ) -> tuple[int, list[str]]:
-        history = await self.config.endpoint_model_history()
-        saved_models = history.get(self._endpoint_history_key(endpoint_url), {})
-
-        restored_count = 0
-        guilds_with_parameters = []
-        for guild_id in await self.config.all_guilds():
-            guild_config = self.config.guild_from_id(guild_id)
-            if str(guild_id) in saved_models:
-                await guild_config.model.set(saved_models[str(guild_id)]["chat_model"])
-                await guild_config.scan_images_model.set(
-                    saved_models[str(guild_id)]["image_model"]
-                )
-                restored_count += 1
-            else:
-                await guild_config.model.set(chat_model)
-                await guild_config.scan_images_model.set(image_model)
-
-            if await guild_config.parameters():
-                guild = self.bot.get_guild(guild_id)
-                if guild:
-                    guilds_with_parameters.append(str(guild.name))
-
-        return restored_count, guilds_with_parameters
-
-    async def _confirm_codex_reauth(self, ctx: commands.Context, oauth: dict) -> bool:
-        expires = int(oauth.get("expires") or 0)
-        expiry_text = "unknown"
-        if expires:
-            expiry_text = datetime.fromtimestamp(
-                expires / 1000, tz=timezone.utc
-            ).strftime("%Y-%m-%d %H:%M UTC")
-
-        embed = discord.Embed(
-            title="Codex is already active",
-            description="Re-authenticate the active Codex endpoint?",
-            color=await ctx.embed_color(),
-        )
-        embed.add_field(name="Token", value="healthy", inline=True)
-        embed.add_field(name="Expires", value=expiry_text, inline=True)
-        embed.add_field(name="Model", value=CODEX_DEFAULT_MODEL, inline=True)
-
-        confirm = await ctx.send(embed=embed)
-        start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
-        pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
-        try:
-            await ctx.bot.wait_for("reaction_add", timeout=30.0, check=pred)
-        except asyncio.TimeoutError:
-            await confirm.edit(
-                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
-            )
-            return False
-        if pred.result is False:
-            await confirm.edit(
-                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
-            )
-            return False
-        return True
+        return await self._set_custom_endpoint(ctx, url)
 
     @aiuserowner.command()
     async def timeout(self, ctx: commands.Context, seconds: int):
@@ -483,3 +206,285 @@ class OwnerSettings(MixinMeta):
         )
         embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
         return await ctx.send(embed=embed)
+
+    async def _set_custom_endpoint(self, ctx: commands.Context, url: Optional[str]):
+        if url == "codex":
+            return await self._activate_codex_endpoint(ctx)
+
+        if url == "openrouter":
+            url = "https://openrouter.ai/api/v1/"
+        elif url == "ollama":
+            url = "http://localhost:11434/v1/"
+        elif url in ["clear", "reset", "openai"]:
+            url = None
+
+        previous_url = await self.config.custom_openai_endpoint()
+        await self._save_current_endpoint_models(previous_url)
+        await self.config.custom_openai_endpoint.set(url)
+
+        await ctx.message.add_reaction("🔄")
+        self.openai_client = await setup_openai_client(self.bot, self.config)
+
+        try:
+            models = await self.openai_client.models.list()
+        except AuthenticationError:
+            logger.exception("Authentication failed for endpoint.")
+            await self.config.custom_openai_endpoint.set(previous_url)
+            self.openai_client = await setup_openai_client(self.bot, self.config)
+            api_type = get_openai_compat_api_token_name(url)
+            return await ctx.send(
+                f":warning: Authentication failed for endpoint. "
+                f"\nIf this endpoint requires an API key, please set it with "
+                f"`{ctx.clean_prefix}set api {api_type} api_key,INSERT_API_KEY`"
+            )
+        except Exception:
+            logger.exception("Invalid endpoint.")
+            await self.config.custom_openai_endpoint.set(previous_url)
+            self.openai_client = await setup_openai_client(self.bot, self.config)
+            return await ctx.send(
+                ":warning: Invalid endpoint. Please check logs for more information."
+            )
+        finally:
+            await ctx.message.remove_reaction("🔄", ctx.me)
+
+        endpoint_kind = get_openai_compat_kind(url)
+        if endpoint_kind is CompatEndpointKind.OPENROUTER:
+            chat_model = f"openai/{DEFAULT_LLM_MODEL}"
+            image_model = f"openai/{DEFAULT_LLM_MODEL}"
+        elif endpoint_kind is CompatEndpointKind.OPENAI:
+            chat_model = DEFAULT_LLM_MODEL
+            image_model = DEFAULT_LLM_MODEL
+        else:
+            chat_model = models.data[0].id
+            image_model = models.data[0].id
+
+        restored_count, guilds_with_parameters = await self._restore_endpoint_models(
+            endpoint_url=url,
+            chat_model=chat_model,
+            image_model=image_model,
+        )
+        embed = await self._build_endpoint_update_embed(
+            ctx=ctx,
+            endpoint_url=url,
+            chat_model=chat_model,
+            image_model=image_model,
+            restored_count=restored_count,
+            guilds_with_parameters=guilds_with_parameters,
+            include_third_party_footer=bool(url),
+        )
+        await ctx.send(embed=embed)
+
+    async def _activate_codex_endpoint(self, ctx: commands.Context):
+        if await is_codex_endpoint_mode(self.config):
+            try:
+                await ensure_valid_codex_oauth(self.config)
+            except Exception:
+                logger.warning("Existing Codex OAuth is not healthy", exc_info=True)
+            else:
+                if not await self._confirm_codex_reauth(ctx):
+                    return
+
+        await ctx.message.add_reaction("🔄")
+        try:
+            device_data = await start_device_authorization()
+        except Exception:
+            logger.exception("Failed to start Codex OAuth")
+            await ctx.message.remove_reaction("🔄", ctx.me)
+            return await ctx.send(
+                ":warning: Failed to start Codex authentication. Please check logs."
+            )
+
+        embed = discord.Embed(
+            title="Authenticate Codex endpoint",
+            description=(
+                f"Open {device_data['verification_url']} and enter this code:\n"
+                f"`{device_data['user_code']}`"
+            ),
+            color=await ctx.embed_color(),
+        )
+        embed.add_field(
+            name="",
+            value="A follow-up message will be sent when authentication succeeds.",
+            inline=False,
+        )
+        status_message = await ctx.send(embed=embed)
+
+        try:
+            tokens = await exchange_device_authorization(
+                device_data["device_auth_id"],
+                device_data["user_code"],
+                device_data["interval"],
+            )
+        except TimeoutError:
+            await ctx.message.remove_reaction("🔄", ctx.me)
+            return await status_message.edit(
+                embed=discord.Embed(
+                    title=":warning: Codex authentication timed out",
+                    color=await ctx.embed_color(),
+                )
+            )
+        except Exception:
+            logger.exception("Codex OAuth failed")
+            await ctx.message.remove_reaction("🔄", ctx.me)
+            return await ctx.send(
+                embed=discord.Embed(
+                    title=":warning: Codex authentication failed",
+                    description="Please check logs for more information.",
+                    color=await ctx.embed_color(),
+                )
+            )
+
+        previous_url = await self.config.custom_openai_endpoint()
+        await self._save_current_endpoint_models(previous_url)
+        await set_codex_oauth(self.config, normalize_codex_tokens(tokens))
+        oauth = await ensure_valid_codex_oauth(self.config)
+        await set_codex_oauth(self.config, oauth)
+        await self.config.custom_openai_endpoint.set(CODEX_ENDPOINT_MODE)
+        self.openai_client = await setup_openai_client(self.bot, self.config)
+        restored_count, guilds_with_parameters = await self._restore_endpoint_models(
+            endpoint_url=CODEX_ENDPOINT_MODE,
+            chat_model=CODEX_DEFAULT_MODEL,
+            image_model=CODEX_DEFAULT_MODEL,
+        )
+        await ctx.message.remove_reaction("🔄", ctx.me)
+
+        complete = await self._build_endpoint_update_embed(
+            ctx=ctx,
+            endpoint_url=CODEX_ENDPOINT_MODE,
+            chat_model=CODEX_DEFAULT_MODEL,
+            image_model=CODEX_DEFAULT_MODEL,
+            restored_count=restored_count,
+            guilds_with_parameters=guilds_with_parameters,
+        )
+        await ctx.send(embed=complete)
+
+    async def _build_endpoint_update_embed(
+        self,
+        ctx: commands.Context,
+        endpoint_url: Optional[str],
+        chat_model: str,
+        image_model: str,
+        restored_count: int,
+        guilds_with_parameters: list[str],
+        *,
+        include_third_party_footer: bool = False,
+    ) -> discord.Embed:
+        embed = discord.Embed(
+            title="Bot Custom OpenAI endpoint",
+            color=await ctx.embed_color(),
+        )
+        if restored_count > 0:
+            total_guilds = len(await self.config.all_guilds())
+            value = (
+                "Restored previously set models on this endpoint for "
+                f"{restored_count} servers."
+            )
+            if restored_count < total_guilds:
+                value += (
+                    f"\nA further {total_guilds - restored_count} servers were set to "
+                    f"`{chat_model}` for chat, and `{image_model}` for scanning images."
+                )
+            embed.add_field(
+                name="🔄 Restored",
+                value=value,
+                inline=False,
+            )
+        else:
+            embed.add_field(
+                name="🔄 Reset",
+                value=f"All per-server models have been set to use `{chat_model}` for chat and `{image_model}` for scanning images.",
+                inline=False,
+            )
+
+        if guilds_with_parameters:
+            embed.add_field(
+                name=":warning: Caution",
+                value=f"Custom parameters have been set in the following servers: `{', '.join(guilds_with_parameters)}`\nThey may not work with the new endpoint!",
+                inline=False,
+            )
+
+        if endpoint_url:
+            if endpoint_url == CODEX_ENDPOINT_MODE:
+                embed.description = "Endpoint set to official OpenAI Codex endpoint."
+            else:
+                embed.description = f"Endpoint set to {endpoint_url}."
+            if include_third_party_footer:
+                embed.set_footer(
+                    text="❗ Third party models may have undesirable results with this cog."
+                )
+        else:
+            embed.description = "Endpoint reset back to official OpenAI endpoint."
+        return embed
+
+    def _endpoint_history_key(self, endpoint_url: Optional[str]) -> str:
+        if endpoint_url == CODEX_ENDPOINT_MODE:
+            return CODEX_ENDPOINT_MODE
+        if not endpoint_url:
+            return "default"
+        return endpoint_url or "default"
+
+    async def _save_current_endpoint_models(self, endpoint_url: Optional[str]):
+        history = await self.config.endpoint_model_history()
+        key = self._endpoint_history_key(endpoint_url)
+        history[key] = {}
+        for guild_id in await self.config.all_guilds():
+            guild_config = self.config.guild_from_id(guild_id)
+            history[key][str(guild_id)] = {
+                "chat_model": await guild_config.model(),
+                "image_model": await guild_config.scan_images_model(),
+            }
+        await self.config.endpoint_model_history.set(history)
+
+    async def _restore_endpoint_models(
+        self,
+        endpoint_url: Optional[str],
+        chat_model: str,
+        image_model: str,
+    ) -> tuple[int, list[str]]:
+        history = await self.config.endpoint_model_history()
+        saved_models = history.get(self._endpoint_history_key(endpoint_url), {})
+
+        restored_count = 0
+        guilds_with_parameters = []
+        for guild_id in await self.config.all_guilds():
+            guild_config = self.config.guild_from_id(guild_id)
+            if str(guild_id) in saved_models:
+                await guild_config.model.set(saved_models[str(guild_id)]["chat_model"])
+                await guild_config.scan_images_model.set(
+                    saved_models[str(guild_id)]["image_model"]
+                )
+                restored_count += 1
+            else:
+                await guild_config.model.set(chat_model)
+                await guild_config.scan_images_model.set(image_model)
+
+            if await guild_config.parameters():
+                guild = self.bot.get_guild(guild_id)
+                if guild:
+                    guilds_with_parameters.append(str(guild.name))
+
+        return restored_count, guilds_with_parameters
+
+    async def _confirm_codex_reauth(self, ctx: commands.Context) -> bool:
+        embed = discord.Embed(
+            title="Codex is already active",
+            description="Re-authenticate the active Codex endpoint?",
+            color=await ctx.embed_color(),
+        )
+
+        confirm = await ctx.send(embed=embed)
+        start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
+        pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
+        try:
+            await ctx.bot.wait_for("reaction_add", timeout=30.0, check=pred)
+        except TimeoutError:
+            await confirm.edit(
+                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
+            )
+            return False
+        if pred.result is False:
+            await confirm.edit(
+                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
+            )
+            return False
+        return True
