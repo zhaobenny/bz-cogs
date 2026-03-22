@@ -10,7 +10,6 @@ from aiuser.core.hierarchy import (
     get_ctx_hierarchical_config_value,
     get_message_hierarchical_config_value,
 )
-from aiuser.core.openai_utils import setup_openai_client
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import RolesSet
 
@@ -23,7 +22,6 @@ async def is_valid_message(cog: MixinMeta, ctx: commands.Context) -> bool:
     Returns (is_valid, reason) tuple.
     """
     validation_chain = [
-        (check_openai_client, "OpenAI Client"),
         (check_guild_permissions, "Guild Permissions"),
         (check_channel_settings, "Channel Settings"),
         (check_user_status, "User Status"),
@@ -34,25 +32,13 @@ async def is_valid_message(cog: MixinMeta, ctx: commands.Context) -> bool:
         try:
             is_valid, reason = await validator(cog, ctx)
             if not is_valid:
-                if validation_type in ["OpenAI Client"]:
-                    logger.warning(
-                        f"Critical validation failed in '{ctx.guild.id}': {validation_type} - {reason}"
-                    )
+                logger.debug(f"Validation failed at {validation_type}: {reason}")
                 return False
         except Exception:
             logger.error(f"Error in {validation_type} validation", exc_info=True)
             return False
 
     return True
-
-
-async def check_openai_client(cog: MixinMeta, _: commands.Context) -> Tuple[bool, str]:
-    """Validate and setup OpenAI client"""
-    if not cog.openai_client:
-        cog.openai_client = await setup_openai_client(cog.bot, cog.config)
-        if not cog.openai_client:
-            return False, "Failed to setup OpenAI client"
-    return True, ""
 
 
 async def check_guild_permissions(
