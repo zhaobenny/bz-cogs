@@ -14,7 +14,7 @@ from aiuser.context.memory.retriever import MemoryRetriever
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import encode_text_to_tokens
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 
 class MessagesThread:

@@ -3,7 +3,7 @@ from itertools import islice
 
 import aiohttp
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 METEO_GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 METEO_WEATHER_URL = "https://api.open-meteo.com/v1/forecast"

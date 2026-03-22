@@ -3,7 +3,7 @@ import logging
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 
 class NoResponseToolCall(ToolCall):

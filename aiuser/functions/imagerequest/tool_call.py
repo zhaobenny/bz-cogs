@@ -11,7 +11,7 @@ from aiuser.utils.utilities import format_variables
 
 from .providers.factory import PROVIDERS, detect_image_provider
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 
 class ImageRequestToolCall(ToolCall):

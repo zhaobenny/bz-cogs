@@ -5,7 +5,7 @@ from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 from aiuser.response.llm_pipeline import LLMPipeline
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 
 class SearXNGToolCall(ToolCall):

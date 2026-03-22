@@ -12,7 +12,7 @@ from aiuser.functions.scrape.tool_call import ScrapeToolCall
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import contains_youtube_link
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 YOUTUBE_API_URL = (
     "https://www.googleapis.com/youtube/v3/videos?part=snippet&id={}&key={}"

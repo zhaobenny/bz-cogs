@@ -17,7 +17,7 @@ from aiuser.context.entry import MessageEntry
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import contains_youtube_link, is_embed_valid
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 
 class MessageConverter:

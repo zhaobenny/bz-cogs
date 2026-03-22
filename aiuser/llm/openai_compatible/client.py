@@ -14,7 +14,7 @@ from aiuser.llm.openai_compatible.endpoints import (
     get_openai_compat_kind,
 )
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.llm")
 
 
 async def setup_openai_client(

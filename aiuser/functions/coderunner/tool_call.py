@@ -10,7 +10,7 @@ from aiuser.functions.types import Function, Parameters, ToolCallSchema
 if TYPE_CHECKING:
     from aiuser.response.llm_pipeline import LLMPipeline
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 
 class CodeRunnerToolCall(ToolCall):

@@ -2,7 +2,7 @@ import logging
 
 from discord import Message, MessageType
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 
 def format_text_content(message: Message):

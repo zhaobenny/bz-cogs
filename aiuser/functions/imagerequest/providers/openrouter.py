@@ -9,7 +9,7 @@ from aiuser.functions.imagerequest.providers.util import fetch_image_bytes
 if TYPE_CHECKING:
     from aiuser.response.llm_pipeline import LLMPipeline
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 
 async def generate(description: str, request: "LLMPipeline", _) -> bytes:

@@ -9,7 +9,7 @@ from aiuser.context.consent.manager import CONSENT_EMBED_TITLE
 if TYPE_CHECKING:
     from aiuser.context.messages import MessagesThread
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 
 class HistoryBuilder:

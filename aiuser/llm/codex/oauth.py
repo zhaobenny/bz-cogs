@@ -9,7 +9,7 @@ import httpx
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from redbot.core import Config
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.llm")
 
 CODEX_ENDPOINT_MODE = "codex"
 CODEX_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"

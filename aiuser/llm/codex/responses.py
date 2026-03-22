@@ -8,7 +8,7 @@ from redbot.core import Config
 from aiuser.config.defaults import DEFAULT_MEMORY_RETRIEVAL_PREFIX
 from aiuser.llm.codex.oauth import CODEX_RESPONSES_URL, ensure_valid_codex_oauth
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.llm")
 
 CODEX_CONTEXT_PREFIX = "Additional system context:\n"
 

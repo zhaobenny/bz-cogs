@@ -8,7 +8,7 @@ from redbot.core.utils.menus import SimpleMenu
 from aiuser.types.abc import MixinMeta, aiuser
 from aiuser.utils.utilities import encode_text_to_tokens
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.memory")
 
 
 class MemorySettings(MixinMeta):

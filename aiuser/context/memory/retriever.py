@@ -8,7 +8,7 @@ from aiuser.config.defaults import DEFAULT_MEMORY_RETRIEVAL_PREFIX
 if TYPE_CHECKING:
     from aiuser.utils.vectorstore import VectorStore
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.memory")
 
 
 class MemoryRetriever:
