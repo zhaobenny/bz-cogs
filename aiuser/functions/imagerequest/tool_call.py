@@ -9,7 +9,7 @@ from aiuser.functions.types import Function, Parameters, ToolCallSchema
 from aiuser.response.llm_pipeline import LLMPipeline
 from aiuser.utils.utilities import format_variables
 
-from .providers.factory import PROVIDERS, detect_provider
+from .providers.factory import PROVIDERS, detect_image_provider
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -44,7 +44,7 @@ class ImageRequestToolCall(ToolCall):
             ).function_calling_image_custom_endpoint()
             or None
         )
-        provider = detect_provider(endpoint, request.openai_client)
+        provider = detect_image_provider(endpoint)
         try:
             gen_fn = PROVIDERS[provider]
             data = await gen_fn(description, request, endpoint)

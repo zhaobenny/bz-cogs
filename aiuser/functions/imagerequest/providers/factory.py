@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from aiuser.functions.imagerequest.providers import (
     automatic1111,
     custom_http,
@@ -5,9 +7,7 @@ from aiuser.functions.imagerequest.providers import (
     openai,
     openrouter,
 )
-from aiuser.utils.utilities import (
-    is_using_openrouter_endpoint,
-)
+from aiuser.llm.openai_compatible.endpoints import is_openrouter_endpoint
 
 OPENAI = "openai"
 OPENROUTER = "openrouter"
@@ -24,21 +24,22 @@ PROVIDERS = {
 }
 
 
-def detect_provider(endpoint, client):
-    endpoint = str(endpoint or "").lower()
-    if endpoint:
-        if "openrouter.ai" in endpoint:
-            return OPENROUTER
-        if "generativelanguage.googleapis.com" in endpoint:
-            return GEMINI
-        if (
-            "/sdapi/v1" in endpoint
-            or ":7860" in endpoint
-            or "localhost:7860" in endpoint
-            or "127.0.0.1:7860" in endpoint
-        ):
-            return AUTOMATIC1111
-        return CUSTOM_HTTP
-    if client and is_using_openrouter_endpoint(client):
+def detect_image_provider(endpoint):
+    raw_endpoint = str(endpoint or "").strip()
+    if not raw_endpoint:
+        return OPENAI
+
+    parsed = urlparse(raw_endpoint)
+    hostname = (parsed.hostname or "").lower()
+    path_parts = tuple(part for part in parsed.path.split("/") if part)
+
+    if is_openrouter_endpoint(raw_endpoint):
         return OPENROUTER
-    return OPENAI
+
+    if hostname == "generativelanguage.googleapis.com":
+        return GEMINI
+
+    if parsed.port == 7860 or path_parts[:2] == ("sdapi", "v1"):
+        return AUTOMATIC1111
+
+    return CUSTOM_HTTP
