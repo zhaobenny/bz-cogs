@@ -18,13 +18,17 @@ logger = logging.getLogger("red.bz_cogs.aiuser.llm")
 
 
 async def setup_openai_client(
-    bot: Red, config: Config, ctx: Optional[commands.Context] = None
+    bot: Red,
+    config: Config,
+    ctx: Optional[commands.Context] = None,
+    base_url: Optional[str] = None,
 ) -> Optional[AsyncOpenAI]:
-    """Initialize the OpenAI client with appropriate configuration."""
-    if await is_codex_endpoint_mode(config):
+    if base_url is None and await is_codex_endpoint_mode(config):
         return None
 
-    base_url = await config.custom_openai_endpoint()
+    if base_url is None:
+        base_url = await config.custom_openai_endpoint()
+
     endpoint_kind = get_openai_compat_kind(base_url)
     api_type = get_openai_compat_api_token_name(base_url)
     api_key = None

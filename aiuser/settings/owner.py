@@ -11,6 +11,7 @@ from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
+from aiuser.config.constants import OPENROUTER_API_V1_URL
 from aiuser.config.defaults import DEFAULT_LLM_MODEL
 from aiuser.llm.codex.oauth import (
     CODEX_DEFAULT_MODEL,
@@ -212,7 +213,7 @@ class OwnerSettings(MixinMeta):
             return await self._activate_codex_endpoint(ctx)
 
         if url == "openrouter":
-            url = "https://openrouter.ai/api/v1/"
+            url = OPENROUTER_API_V1_URL
         elif url == "ollama":
             url = "http://localhost:11434/v1/"
         elif url in ["clear", "reset", "openai"]:

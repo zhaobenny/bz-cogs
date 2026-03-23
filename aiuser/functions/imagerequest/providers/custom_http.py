@@ -4,7 +4,6 @@ import base64
 from typing import TYPE_CHECKING
 
 import httpx
-
 from aiuser.functions.imagerequest.providers.util import fetch_image_bytes
 
 if TYPE_CHECKING:
