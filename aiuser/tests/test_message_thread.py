@@ -33,9 +33,9 @@ async def test_basic_history_order(
     system_idx = find_system_prompt_index(result)
 
     # Verify chronological order
-    assert (
-        first_idx < second_idx < system_idx < third_idx
-    ), f"Messages not in chronological order: First@{first_idx}, Second@{second_idx}, System@{system_idx}, Third@{third_idx}"
+    assert first_idx < second_idx < system_idx < third_idx, (
+        f"Messages not in chronological order: First@{first_idx}, Second@{second_idx}, System@{system_idx}, Third@{third_idx}"
+    )
 
 
 @pytest.mark.asyncio
@@ -118,9 +118,9 @@ async def test_consecutive_user_messages_order(
     system_idx = find_system_prompt_index(result)
 
     # Verify order
-    assert (
-        msg1 < msg2 < msg3 < bot_resp < system_idx < trigger_idx
-    ), "Consecutive user messages not in chronological order"
+    assert msg1 < msg2 < msg3 < bot_resp < system_idx < trigger_idx, (
+        "Consecutive user messages not in chronological order"
+    )
 
 
 @pytest.mark.asyncio
