@@ -8,7 +8,7 @@ from trafilatura import extract
 
 from aiuser.utils.utilities import contains_youtube_link
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 WORDS_LIMIT = 5000
 

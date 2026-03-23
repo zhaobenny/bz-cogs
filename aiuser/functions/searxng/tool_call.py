@@ -5,7 +5,7 @@ from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 from aiuser.response.llm_pipeline import LLMPipeline
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 
 class SearXNGToolCall(ToolCall):
@@ -34,5 +34,5 @@ class SearXNGToolCall(ToolCall):
         results = await request.config.guild(
             self.ctx.guild
         ).function_calling_searxng_max_results()
-        logger.debug(f"Attempting SearXNG url {endpoint} in {self.ctx.guild}")
+        logger.debug(f"Attempting SearXNG url {endpoint}")
         return await search_searxng(arguments["query"], endpoint, results, self.ctx)

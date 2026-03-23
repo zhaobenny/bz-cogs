@@ -10,12 +10,10 @@ from typing import Callable, Coroutine
 import discord
 import tiktoken
 from discord import Message
-from openai import AsyncOpenAI
 from redbot.core import Config, commands
 
 from aiuser.config.constants import (
     FALLBACK_TOKENIZER,
-    OPENROUTER_URL,
     YOUTUBE_URL_PATTERN,
 )
 from aiuser.functions.tool_call import ToolCall
@@ -125,14 +123,6 @@ def is_embed_valid(message: Message):
 def contains_youtube_link(content):
     match = YOUTUBE_URL_PATTERN.search(content)
     return bool(match)
-
-
-def is_using_openai_endpoint(client: AsyncOpenAI):
-    return str(client.base_url).startswith("https://api.openai.com/")
-
-
-def is_using_openrouter_endpoint(client: AsyncOpenAI):
-    return str(client.base_url).startswith(OPENROUTER_URL)
 
 
 async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolCall]:

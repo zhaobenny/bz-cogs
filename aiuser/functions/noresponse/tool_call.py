@@ -3,7 +3,7 @@ import logging
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 
 class NoResponseToolCall(ToolCall):
@@ -32,7 +32,5 @@ class NoResponseToolCall(ToolCall):
         if arguments["respond"]:
             return None
         request.completion = ""
-        logger.debug(
-            f'Decided to not respond in guild {self.ctx.guild.id} because: "{arguments["reason"]}"'
-        )
+        logger.debug(f'Decided to not respond because: "{arguments["reason"]}"')
         return None

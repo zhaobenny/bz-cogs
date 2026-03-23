@@ -19,12 +19,11 @@ from aiuser.config.defaults import (
 from aiuser.core.handlers import handle_message, handle_slash_command
 from aiuser.core.random_message_task import RandomMessageTask
 from aiuser.dashboard.base import DashboardIntegration
+from aiuser.llm.openai_compatible.client import setup_openai_client
 from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
 from aiuser.utils.cache import Cache
 from aiuser.utils.vectorstore import VectorStore
-
-from .openai_utils import setup_openai_client
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -41,7 +40,7 @@ class AIUser(
     Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
 
-    __version__ = "1.5.0"
+    __version__ = "1.6.0"
 
     def __init__(self, bot):
         super().__init__()

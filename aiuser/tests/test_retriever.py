@@ -47,3 +47,25 @@ async def test_fetch_relevant_empty_query(repo):
     retriever = MemoryRetriever(ctx, repo)
     out = await retriever.fetch_relevant("   ", threshold=1.0)
     assert out is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_relevant_success_with_default_threshold(repo):
+    expected_text = "The fox naps near the red mailbox."
+    await repo.upsert(123, "red_mailbox", expected_text, 1)
+
+    ctx = SimpleNamespace(guild=SimpleNamespace(id=123))
+    retriever = MemoryRetriever(ctx, repo)
+
+    out = await retriever.fetch_relevant("The fox naps near the red mailbox.")
+    assert out is not None
+    assert expected_text in out
+
+
+@pytest.mark.asyncio
+async def test_fetch_relevant_empty_repository(repo):
+    ctx = SimpleNamespace(guild=SimpleNamespace(id=123))
+    retriever = MemoryRetriever(ctx, repo)
+
+    out = await retriever.fetch_relevant("anything useful")
+    assert out is None

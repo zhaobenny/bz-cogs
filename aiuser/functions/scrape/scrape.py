@@ -3,7 +3,7 @@ import logging
 import aiohttp
 from trafilatura import extract
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 
 async def scrape_page(link: str):

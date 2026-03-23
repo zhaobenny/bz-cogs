@@ -110,7 +110,7 @@ async def test_image_request(
             "aiuser.functions.imagerequest.tool_call.PROVIDERS", {"mock": mock_provider}
         ),
         patch(
-            "aiuser.functions.imagerequest.tool_call.detect_provider",
+            "aiuser.functions.imagerequest.tool_call.detect_image_provider",
             return_value="mock",
         ),
     ):

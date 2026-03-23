@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.memory")
 
 
 class SaveMemoryToolCall(ToolCall):
@@ -64,7 +64,7 @@ class SaveMemoryToolCall(ToolCall):
                 channel=channel,
             )
 
-            logger.info(f"Saved memory '{memory_name}' for guild {guild_id}")
+            logger.info("Saved memory '%s'", memory_name)
             return f"Success: Saved memory with ID {memory_id}"
         except Exception:
             logger.exception("Failed to save memory")
@@ -121,7 +121,9 @@ class ReadMemoryToolCall(ToolCall):
                 result_texts.append(f"- [{name}]: {text}")
 
             formatted_results = "\n".join(result_texts)
-            logger.info(f"Read memories for query '{search_query}' in guild {guild_id}")
+            logger.info(
+                f"Read memories for query '{search_query}' (guild_id={guild_id})"
+            )
             return f"Found relevant memories:\n{formatted_results}"
 
         except Exception:

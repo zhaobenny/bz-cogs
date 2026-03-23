@@ -8,7 +8,7 @@ from PIL import Image
 from aiuser.context.converter.formatters import format_text_content
 from aiuser.types.abc import MixinMeta
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 
 async def format_image(cog: MixinMeta, message: Message):

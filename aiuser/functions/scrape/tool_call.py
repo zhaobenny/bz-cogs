@@ -4,7 +4,7 @@ from aiuser.functions.scrape.scrape import scrape_page
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 
 class ScrapeToolCall(ToolCall):
@@ -26,7 +26,7 @@ class ScrapeToolCall(ToolCall):
     function_name = schema.function.name
 
     async def _handle(self, _, arguments):
-        logger.info(f"Attempting scrape of {arguments['url']} in {self.ctx.guild}")
+        logger.info(f"Attempting scrape of {arguments['url']}")
         try:
             return await scrape_page(arguments["url"])
         except Exception:

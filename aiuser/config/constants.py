@@ -21,6 +21,7 @@ REGEX_RUN_TIMEOUT = 5
 
 
 OPENROUTER_URL = "https://openrouter.ai/api/"
+OPENROUTER_API_V1_URL = f"{OPENROUTER_URL}v1/"
 
 EMBEDDING_MODEL = "Snowflake/snowflake-arctic-embed-s"
 EMBEDDING_DB_NAME = "embeddings.sqlite"

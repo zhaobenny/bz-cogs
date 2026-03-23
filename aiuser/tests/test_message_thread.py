@@ -1,5 +1,7 @@
 # ./.venv/bin/python -m pytest aiuser/tests/test_history_builder.py -q -s
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from discord.ext.test import backend
 
@@ -261,3 +263,55 @@ async def test_prune_messages_on_over_limit(
     assert system_idx != -1, "System prompt should be preserved"
     assert trigger_idx != -1, "Trigger message should be preserved"
     assert tool_result_idx != -1, "Tool result message should be present"
+
+
+@pytest.mark.asyncio
+async def test_messages_backread_limit_respected(
+    bot,
+    mock_cog,
+    mock_messages_thread,
+    test_channel,
+    test_member,
+):
+    """Only the configured number of most recent messages should be backread."""
+    await mock_cog.config.guild(test_member.guild).messages_backread.set(2)
+    await mock_cog.config.guild(test_member.guild).messages_backread_seconds.set(300)
+
+    _ = backend.make_message("oldest should be dropped", test_member, test_channel)
+    _ = backend.make_message("middle should remain", bot.user, test_channel)
+    _ = backend.make_message("newest history should remain", test_member, test_channel)
+    trigger = backend.make_message("current trigger", test_member, test_channel)
+
+    thread = await mock_messages_thread(init_message=trigger)
+    result = thread.get_json()
+
+    assert find_message_index(result, "oldest should be dropped") == -1
+    assert find_message_index(result, "middle should remain") != -1
+    assert find_message_index(result, "newest history should remain") != -1
+
+
+@pytest.mark.asyncio
+async def test_override_prompt_start_time_filters_older_history(
+    mock_cog,
+    mock_messages_thread,
+    test_channel,
+    test_member,
+):
+    """History backread should honor override_prompt_start_time for the guild."""
+    await mock_cog.config.guild(test_member.guild).messages_backread.set(5)
+    await mock_cog.config.guild(test_member.guild).messages_backread_seconds.set(300)
+
+    _ = backend.make_message("recent history one", test_member, test_channel)
+    _ = backend.make_message("recent history two", test_member, test_channel)
+    mock_cog.override_prompt_start_time[test_member.guild.id] = datetime.now(
+        tz=timezone.utc
+    ) + timedelta(seconds=60)
+    trigger = backend.make_message("trigger after cutoff", test_member, test_channel)
+
+    thread = await mock_messages_thread(init_message=trigger)
+    result = thread.get_json()
+
+    assert find_message_index(result, "recent history one") == -1
+    assert find_message_index(result, "recent history two") == -1
+    assert find_message_index(result, "trigger after cutoff") != -1
+    assert find_system_prompt_index(result) != -1

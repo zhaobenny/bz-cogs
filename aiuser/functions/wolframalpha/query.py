@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 import aiohttp
 from redbot.core import commands
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 
 async def ask_wolfram_alpha(query: str, app_id: str, ctx: commands.Context):

@@ -1,7 +1,7 @@
 import discord
 
 from aiuser.dashboard.decorator import dashboard_page
-from aiuser.settings.utilities import get_available_models
+from aiuser.llm.registry import list_llm_models
 from aiuser.types.abc import MixinMeta
 
 
@@ -72,7 +72,7 @@ async def bot_owner_server_config(self: MixinMeta, guild: discord.Guild, **kwarg
     form.whitelist.default = [
         str(id) for id in await self.config.guild(guild).channels_whitelist()
     ]
-    models = await get_available_models(self.openai_client)
+    models = await list_llm_models(self)
     form.model.default = await self.config.guild(guild).model()
     form.model.choices = [(model, model) for model in models]
 

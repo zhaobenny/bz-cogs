@@ -14,7 +14,7 @@ from aiuser.context.memory.retriever import MemoryRetriever
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import encode_text_to_tokens
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 
 class MessagesThread:
@@ -54,9 +54,7 @@ class MessagesThread:
             return False
 
         if message.id in self.messages_ids and not allow_dupes:
-            logger.debug(
-                f"Skipping duplicate message in {message.guild.name} when creating context"
-            )
+            logger.debug("Skipping duplicate message when creating context")
             return False
 
         if self.ignore_regex and self.ignore_regex.search(message.content):
@@ -139,7 +137,8 @@ class MessagesThread:
             )
             if relevant_memory:
                 await self.add_system_message(
-                    relevant_memory, index=len(self.messages_ids)
+                    relevant_memory,
+                    index=len(self.messages_ids),
                 )
 
         await self.history_manager.build_history()

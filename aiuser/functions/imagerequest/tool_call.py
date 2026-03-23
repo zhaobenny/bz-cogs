@@ -9,9 +9,9 @@ from aiuser.functions.types import Function, Parameters, ToolCallSchema
 from aiuser.response.llm_pipeline import LLMPipeline
 from aiuser.utils.utilities import format_variables
 
-from .providers.factory import PROVIDERS, detect_provider
+from .providers.factory import PROVIDERS, detect_image_provider
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 
 class ImageRequestToolCall(ToolCall):
@@ -38,16 +38,17 @@ class ImageRequestToolCall(ToolCall):
         if preprompt:
             preprompt = await format_variables(request.ctx, preprompt)
             description = f"{preprompt} {description}"
-        endpoint = (
-            await request.config.guild(
-                request.ctx.guild
-            ).function_calling_image_custom_endpoint()
-            or None
-        )
-        provider = detect_provider(endpoint, request.openai_client)
+        image_endpoint_override = await request.config.guild(
+            request.ctx.guild
+        ).function_calling_image_custom_endpoint()
+        if image_endpoint_override:
+            provider_endpoint = image_endpoint_override
+        else:
+            provider_endpoint = await request.config.custom_openai_endpoint()
+        provider = detect_image_provider(provider_endpoint)
         try:
             gen_fn = PROVIDERS[provider]
-            data = await gen_fn(description, request, endpoint)
+            data = await gen_fn(description, request, image_endpoint_override)
             bio = io.BytesIO(data)
             bio.seek(0)
             request.files_to_send.append(discord.File(bio, filename="image.png"))
