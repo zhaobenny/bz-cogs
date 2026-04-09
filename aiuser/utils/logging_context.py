@@ -64,8 +64,12 @@ class _AIUserContextFilter(logging.Filter):
         if not prefix:
             return True
 
+        if getattr(record, "_aiuser_context_applied", False):
+            return True
+
         record.msg = f"{prefix}{record.getMessage()}"
         record.args = ()
+        record._aiuser_context_applied = True
         return True
 
 

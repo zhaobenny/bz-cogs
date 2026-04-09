@@ -93,6 +93,9 @@ async def check_channel_settings(
 
 async def check_user_status(cog: MixinMeta, ctx: commands.Context) -> Tuple[bool, str]:
     """Validate user permissions and opt-in status"""
+    if ctx.author.id == cog.bot.user.id:
+        return False, "Ignoring self-authored bot message"
+
     # Check if message is from webhook or application bot
     is_webhook = ctx.message.webhook_id is not None
     is_app_bot = ctx.author.bot and ctx.author.id != cog.bot.user.id
@@ -120,10 +123,12 @@ async def check_user_status(cog: MixinMeta, ctx: commands.Context) -> Tuple[bool
         return True, ""
 
     if ctx.author.bot:
-        return False, "Author is bot"
+        author_label = ctx.author.name
+        return False, f"User {author_label} is bot"
 
     if not await cog.bot.allowed_by_whitelist_blacklist(ctx.author):
-        return False, "User not allowed by whitelist/blacklist"
+        author_label = ctx.author.name
+        return False, f"User {author_label} not allowed by whitelist/blacklist"
 
     if ctx.author.id in await cog.config.optout():
         return False, "User opted out"
@@ -149,7 +154,8 @@ async def check_user_status(cog: MixinMeta, ctx: commands.Context) -> Tuple[bool
             (ctx.author.id in whitelisted_members)
             or (user_roles & set(whitelisted_roles))
         ):
-            return False, "User not in role/member whitelist"
+            author_label = ctx.author.name
+            return False, f"User {author_label} not in role/member whitelist"
 
     return True, ""
 

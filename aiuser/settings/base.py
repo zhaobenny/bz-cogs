@@ -7,12 +7,11 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.models import TOOLS_SUPPORTED_MODELS
-from aiuser.llm.registry import list_llm_models
 from aiuser.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
     get_openai_compat_kind,
 )
-from aiuser.settings.scope import get_settings_target_scope
+from aiuser.llm.registry import list_llm_models
 from aiuser.settings.functions.base import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
 from aiuser.settings.image_scan import ImageScanSettings
@@ -21,6 +20,7 @@ from aiuser.settings.owner import OwnerSettings
 from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.random_message import RandomMessageSettings
 from aiuser.settings.response import ResponseSettings
+from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.triggers import TriggerSettings
 from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import MentionType
@@ -143,6 +143,15 @@ class Settings(
             name="Function Calling",
             inline=True,
             value=f"`{config['function_calling']}`",
+        )
+        main_embed.add_field(
+            name="Random Message",
+            inline=True,
+            value=(
+                f"`{config['random_messages_percent'] * 100:.2f}`% every `33` min"
+                if config["random_messages_enabled"]
+                else "`False`"
+            ),
         )
 
         main_embed.add_field(
