@@ -10,6 +10,11 @@ Bot owners can change the percentage of eligible messages to reply to:
 [p]aiuser percent <PERCENT>
 ```
 
+Bot owners can change the LLM provider used for generating responses (eg. switching to OpenRouter, Codex sub or a custom URL endpoint - *Compatibility may vary*) using:
+```
+[p]aiuserowner endpoint <ENDPOINT>
+```
+
 Users will also have to opt-in (bot-wide) into having their messages used:
 ```
 [p]aiuser optin
@@ -19,7 +24,6 @@ Admins can modify prompt settings in:
 ```
 [p]aiuser prompt
 ```
-
 
 Bot owners can also manage/enable function calling (eg. generating images or performing Google searches) using:
 ```
@@ -35,6 +39,26 @@ See other settings using:
 
 ### Have fun. 🎉
 ![repetition](https://user-images.githubusercontent.com/46238123/227853613-1a524915-ed46-45f7-a154-94e90daf0cd7.jpg)
+
+---
+
+## Custom LLM Providers
+Bot owners can globally change the AI backend provider using:
+`[p]aiuserowner endpoint <endpoint>`
+
+* OpenRouter is supported via API key authentication, set up with:
+  - `[p]aiuserowner endpoint openrouter`
+  - `[p]set api openrouter api_key,INSERT_API_KEY`
+  - More details: [OpenRouter Docs](https://openrouter.ai/docs#models)
+* Codex subscription is supported via device code authentication for setup, start the process with:
+  - `[p]aiuserowner endpoint codex`
+* Other OpenAI-completions compatible endpoint support may vary and can be setup directly with:
+  -`[p]aiuserowner endpoint <ENDPOINT_URL>`
+
+### Disclaimers when using using custom providers:
+* Models may need changing per server to have a valid model or match the provider's available models.
+* Custom Parameters set via `[p]aiuser response parameters` per server may need changing to support different providers/models
+* Performance varies by models; some third-party models may yield undesirable results.
 
 ---
 
@@ -109,53 +133,3 @@ Remove list regex patterns only support `{authorname}` (will use authors of last
 
 ---
 
-### OpenRouter
-
-[OpenRouter](https://openrouter.ai) is supported directly and provides Gemini, Claude, open source LLMs, etc.
-
-See full details [here](https://openrouter.ai/docs#models).
-
-Bot owners can set this globally using the following shortcut:
-```
-[p]aiuserowner endpoint openrouter
-```
-
-You **must** get an API key from OpenRouter and set it here:
-```
-[p]set api openrouter api_key,INSERT_API_KEY
-```
-
-Models may need **changing** per server.
-
-Some third party models may have undesirable results.
-
-Bot owners may also want to set [custom parameters](https://openrouter.ai/docs#llm-parameters) (per server). See:
-```
-[p]aiuser response parameters
-```
-
----
-
-### Custom OpenAI endpoint
-
-⚠️ For advanced users! ⚠️
-
-Other OpenAI-Compatible API endpoints can be used directly instead of the default OpenAI API. (eg. `ollama`)
-
-Compatibility may vary and is not guaranteed.
-
-Bot owners can set this globally using:
-```
-[p]aiuserowner endpoint <ENDPOINT>
-```
-
-Like OpenRouter, similar disclaimers apply:
-
-Models will also need **changing** per server.
-
-Some third party models may have undesirable results.
-
-Bot owners may also want to set custom parameters (per server). See:
-```
-[p]aiuser response parameters
-```
