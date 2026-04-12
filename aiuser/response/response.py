@@ -31,7 +31,7 @@ async def remove_patterns_from_response(
     # Get patterns from config and replace "{botname}".
     patterns = await config.guild(ctx.guild).removelist_regexes()
     botname = ctx.message.guild.me.nick or ctx.bot.user.display_name
-    patterns = [p.replace(r"{botname}", botname) for p in patterns]
+    patterns = [p.replace(r"{botname}", re.escape(botname)) for p in patterns]
 
     # Expand patterns that have "{authorname}" based on recent authors.
     authors = {
@@ -43,7 +43,9 @@ async def remove_patterns_from_response(
     for pattern in patterns:
         if "{authorname}" in pattern:
             for author in authors:
-                expanded_patterns.append(pattern.replace(r"{authorname}", author))
+                expanded_patterns.append(
+                    pattern.replace(r"{authorname}", re.escape(author))
+                )
         else:
             expanded_patterns.append(pattern)
 
