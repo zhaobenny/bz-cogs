@@ -3,8 +3,8 @@ import logging
 
 import aiohttp
 from redbot.core import commands
-from trafilatura import extract
 
+from aiuser.functions.scrape.scrape import scrape_page
 from aiuser.utils.utilities import contains_youtube_link
 
 logger = logging.getLogger("red.bz_cogs.aiuser.tools")
@@ -55,34 +55,15 @@ class SerperQuery:
         link = first_result.get("link")
 
         try:
-            text_content = await self.scrape_page(link)
+            text_content = await scrape_page(
+                link,
+            )
             return f"Use the following relevant information to generate your response: {text_content}"
 
         except Exception:
             logger.debug(f"Failed scraping URL {link}", exc_info=True)
             knowledge_graph = data.get("knowledgeGraph", {})
             return f"Use the following relevant information to generate your response: {self.format_knowledge_graph(knowledge_graph) if knowledge_graph else first_result.get('snippet')}"
-
-    async def scrape_page(self, link: str):
-        headers = {
-            "Cache-Control": "no-cache",
-            "Referer": "https://www.google.com/",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-        }
-
-        logger.info(
-            f'Requesting {link} from Google query "{self.query}" in {self.guild}'
-        )
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(link) as response:
-                response.raise_for_status()
-                html_content = await response.text()
-                text_content = extract(html_content)
-
-                if len(text_content) > 5000:
-                    text_content = text_content[:5000] + "..."
-
-                return text_content
 
     def format_knowledge_graph(self, knowledge_graph: dict) -> str:
         title = knowledge_graph.get("title", "")

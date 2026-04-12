@@ -10,7 +10,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 async def ask_wolfram_alpha(query: str, app_id: str, ctx: commands.Context):
     # Credit to: https://github.com/hollowstrawberry/crab-cogs/blob/b113287f89c9045d387a75edf9de21b9a2dab08a/gptmemory/function_calling.py
 
-    url = "http://api.wolframalpha.com/v2/query?"
+    url = "https://api.wolframalpha.com/v2/query?"
     payload = {"input": query, "appid": app_id}
     headers = {"user-agent": "Red-cog/2.0.0"}
 

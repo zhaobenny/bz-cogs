@@ -2,10 +2,10 @@ import logging
 
 import aiohttp
 import ssl
-from redbot.core import commands
 import unicodedata
-from trafilatura import extract
+from redbot.core import commands
 
+from aiuser.functions.scrape.scrape import scrape_page
 from aiuser.utils.utilities import contains_youtube_link
 
 logger = logging.getLogger("red.bz_cogs.aiuser.tools")
@@ -73,7 +73,9 @@ class SearXNGQuery:
             snippet = result.get("content", "")
 
             try:
-                response_site = await self.scrape_page(url_site)
+                response_site = await scrape_page(
+                    url_site,
+                )
                 truncated_content = self.truncate_to_n_words(response_site, WORDS_LIMIT)
 
                 results_json.append(
@@ -103,24 +105,3 @@ class SearXNGQuery:
         tokens = text.split()
         truncated_tokens = tokens[:token_limit]
         return " ".join(truncated_tokens)
-
-    async def scrape_page(self, link: str):
-        headers = {
-            "Cache-Control": "no-cache",
-            "Referer": "https://www.google.com/",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-        }
-
-        logger.info(
-            f'Requesting {link} from search query "{self.query}" in {self.guild}'
-        )
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(link) as response:
-                response.raise_for_status()
-                html_content = await response.text()
-                text_content = extract(html_content)
-
-                if len(text_content) > 5000:
-                    text_content = text_content[:5000] + "..."
-
-                return text_content
