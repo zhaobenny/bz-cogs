@@ -117,6 +117,24 @@ class VectorStore:
                 await conn.commit()
             return True
 
+    async def delete_user_memories(
+        self, user_id: int, guild_id: Optional[int] = None
+    ) -> int:
+        """Delete memories scoped to a specific Discord user ID."""
+        await ensure_sqlite_db(str(self.db_path))
+
+        query = "DELETE FROM memories WHERE user IN (?, ?)"
+        params = [str(user_id), user_id]
+
+        if guild_id is not None:
+            query += " AND guild_id = ?"
+            params.append(guild_id)
+
+        async with aiosqlite.connect(self.db_path) as conn:
+            cursor = await conn.execute(query, tuple(params))
+            await conn.commit()
+            return cursor.rowcount or 0
+
     async def search_similar(
         self,
         query: str,

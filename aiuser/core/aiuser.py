@@ -101,9 +101,16 @@ class AIUser(
 
     async def red_delete_data_for_user(self, *, requester, user_id: int):
         for guild in self.bot.guilds:
-            member = guild.get_member(user_id)
-            if member:
-                await self.config.member(member).clear()
+            await self.config.member_from_ids(guild.id, user_id).clear()
+
+        optin = await self.config.optin()
+        if user_id in optin:
+            await self.config.optin.set(
+                [optin_user_id for optin_user_id in optin if optin_user_id != user_id]
+            )
+
+        if self.db is not None:
+            await self.db.delete_user_memories(user_id)
 
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, _):
