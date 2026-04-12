@@ -23,6 +23,8 @@ from aiuser.llm.openai_compatible.client import setup_openai_client
 from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
 from aiuser.utils.cache import Cache
+from aiuser.utils.compaction.store import CompactionStore
+from aiuser.context.compaction import CompactionManager
 from aiuser.utils.vectorstore import VectorStore
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -87,6 +89,10 @@ class AIUser(
             self.override_prompt_start_time[test_guild] = datetime.now()
 
         self.db: VectorStore = VectorStore(cog_data_path(self))
+
+        self.compaction_store = CompactionStore(cog_data_path(self))
+
+        self.compaction_manager = CompactionManager(self)
 
         self.random_message_trigger.start()
 
