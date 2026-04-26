@@ -123,6 +123,12 @@ class LLMPipeline:
             )
             kwargs.pop("logit_bias", None)
 
+        extra_body = kwargs.setdefault("extra_body", {})
+        extra_body.setdefault(
+            "session_id",
+            f"{self.ctx.message.id}",
+        )
+
         return kwargs
 
     def _next_index(self) -> int:

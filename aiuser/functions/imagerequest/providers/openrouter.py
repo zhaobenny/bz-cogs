@@ -32,6 +32,7 @@ async def generate(description: str, request: "LLMPipeline", _: str) -> bytes:
             model=model,
             messages=[{"role": "user", "content": description}],
             modalities=["image", "text"],
+            extra_body={"session_id": f"{request.ctx.message.id}"},
         )
     finally:
         await client.close()

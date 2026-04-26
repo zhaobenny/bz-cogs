@@ -51,7 +51,7 @@ def openai_client():
         pytest.skip("OpenRouter API key not available")
     headers = {
         "HTTP-Referer": "https://aiuser.zhao.gg",
-        "X-Title": "aiuser",
+        "X-OpenRouter-Title": "aiuser",
     }
     return AsyncOpenAI(api_key=API_KEY, base_url=API_BASE, default_headers=headers)
 

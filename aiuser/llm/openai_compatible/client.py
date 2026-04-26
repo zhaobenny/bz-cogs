@@ -38,7 +38,7 @@ async def setup_openai_client(
         api_key = (await bot.get_shared_api_tokens(api_type)).get("api_key")
         headers = {
             "HTTP-Referer": "https://aiuser.zhao.gg",
-            "X-Title": "aiuser",
+            "X-OpenRouter-Title": "aiuser",
         }
     else:
         api_key = (await bot.get_shared_api_tokens("openai")).get("api_key")
