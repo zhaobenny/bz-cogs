@@ -18,6 +18,7 @@ from aiuser.config.models import (
 )
 from aiuser.context.messages import MessagesThread
 from aiuser.llm.base import LLMProvider
+from aiuser.llm.openai_compatible.endpoints import is_openrouter_endpoint
 from aiuser.llm.registry import get_llm_provider
 from aiuser.response.logging import log_chat_request, log_chat_step_result
 from aiuser.response.tool_manager import ToolManager
@@ -123,11 +124,9 @@ class LLMPipeline:
             )
             kwargs.pop("logit_bias", None)
 
-        extra_body = kwargs.setdefault("extra_body", {})
-        extra_body.setdefault(
-            "session_id",
-            f"{self.ctx.message.id}",
-        )
+        if is_openrouter_endpoint(await self.config.custom_openai_endpoint()):
+            extra_body = kwargs.setdefault("extra_body", {})
+            extra_body.setdefault("session_id", f"{self.ctx.message.id}")
 
         return kwargs
 
