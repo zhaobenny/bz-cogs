@@ -16,8 +16,9 @@ from aiuser.config.models import (
     UNSUPPORTED_LOGIT_BIAS_MODELS,
     VISION_SUPPORTED_MODELS,
 )
+from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
 from aiuser.context.messages import MessagesThread
-from aiuser.llm.base import LLMProvider
+from aiuser.llm.base import ChatStepResult, LLMProvider
 from aiuser.llm.openai_compatible.endpoints import is_openrouter_endpoint
 from aiuser.llm.registry import get_llm_provider
 from aiuser.response.logging import log_chat_request, log_chat_step_result
@@ -25,8 +26,6 @@ from aiuser.response.tool_manager import ToolManager
 from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
-
-MAX_TOOL_CALL_ROUNDS = 8
 
 
 class LLMPipeline:
@@ -60,48 +59,67 @@ class LLMPipeline:
                 )
             return None
         await self.tool_manager.setup()
+        tool_call_rounds = (
+            await self.config.guild(self.ctx.guild).function_calling_tool_call_rounds()
+            or DEFAULT_TOOL_CALL_ROUNDS
+        )
+        tools_kwargs = self.tool_manager.get_tools_kwargs()
+        exhausted_tool_call_rounds = False
 
-        for round_idx in range(MAX_TOOL_CALL_ROUNDS):
-            kwargs = {**base_kwargs, **self.tool_manager.get_tools_kwargs()}
-
-            try:
-                context: List[ChatCompletionMessageParam] = self.msg_list.get_json()
-                log_chat_request(context)
-                step = await self.provider.create_chat_step(self.model, context, kwargs)
-                log_chat_step_result(
-                    step.content,
-                    step.tool_calls,
-                )
-            except httpx.ReadTimeout:
-                logger.error("Failed request to LLM endpoint. Timed out.")
-                await self.ctx.react_quietly("💤", message="`aiuser` request timed out")
-                return None
-            except openai.RateLimitError:
-                await self.ctx.react_quietly(
-                    "💤", message="`aiuser` request ratelimited"
-                )
-                return None
-            except httpx.HTTPStatusError:
-                logger.exception("Failed HTTP request(s) to LLM endpoint")
-                await self.ctx.react_quietly("⚠️", message="`aiuser` request failed")
-                return None
-            except Exception:
-                logger.exception("Failed request(s) to LLM endpoint")
-                await self.ctx.react_quietly("⚠️", message="`aiuser` request failed")
+        for round_idx in range(tool_call_rounds):
+            kwargs = {**base_kwargs, **tools_kwargs}
+            step = await self._create_chat_step(kwargs)
+            if step is None:
                 return None
 
             if step.content:
                 self.completion = step.content
                 break
-            elif step.tool_calls:
+            if step.tool_calls:
                 await self.tool_manager.handle_tool_calls(step.tool_calls)
-            else:
-                logger.warning(
-                    f"No content or tool calls received during round {round_idx} for message {self.ctx.message.id}"
-                )
-                break
+                continue
+
+            logger.warning(
+                f"No content or tool calls received during round {round_idx} for message {self.ctx.message.id}"
+            )
+            break
+        else:
+            exhausted_tool_call_rounds = True
+
+        if exhausted_tool_call_rounds and self.tool_call_entries:
+            logger.debug(
+                f"Tool call round limit reached for message {self.ctx.message.id}; requesting final response without tools"
+            )
+            step = await self._create_chat_step(base_kwargs)
+            if step and step.content:
+                self.completion = step.content
 
         return self.completion
+
+    async def _create_chat_step(
+        self, kwargs: Dict[str, Any]
+    ) -> Optional[ChatStepResult]:
+        try:
+            context: List[ChatCompletionMessageParam] = self.msg_list.get_json()
+            log_chat_request(context)
+            step = await self.provider.create_chat_step(self.model, context, kwargs)
+            log_chat_step_result(
+                step.content,
+                step.tool_calls,
+            )
+            return step
+        except httpx.ReadTimeout:
+            logger.error("Failed request to LLM endpoint. Timed out.")
+            await self.ctx.react_quietly("💤", message="`aiuser` request timed out")
+        except openai.RateLimitError:
+            await self.ctx.react_quietly("💤", message="`aiuser` request ratelimited")
+        except httpx.HTTPStatusError:
+            logger.exception("Failed HTTP request(s) to LLM endpoint")
+            await self.ctx.react_quietly("⚠️", message="`aiuser` request failed")
+        except Exception:
+            logger.exception("Failed request(s) to LLM endpoint")
+            await self.ctx.react_quietly("⚠️", message="`aiuser` request failed")
+        return None
 
     async def _build_base_parameters(self) -> Dict[str, Any]:
         """

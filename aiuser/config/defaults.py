@@ -39,6 +39,7 @@ DEFAULT_REPLY_PERCENT = 0.5
 DEFAULT_MIN_MESSAGE_LENGTH = 2
 DEFAULT_IMAGE_UPLOAD_LIMIT = 10 * (1024 * 1024)  # 10 MB
 DEFAULT_LLM_MODEL = "gpt-4.1-nano"
+DEFAULT_TOOL_CALL_ROUNDS = 10
 
 DEFAULT_GLOBAL = {
     "custom_openai_endpoint": None,
@@ -78,6 +79,7 @@ DEFAULT_GUILD = {
     "presets": json.dumps(DEFAULT_PRESETS),
     "function_calling": False,
     "function_calling_functions": [],
+    "function_calling_tool_call_rounds": DEFAULT_TOOL_CALL_ROUNDS,
     "function_calling_image_custom_endpoint": None,
     "function_calling_image_model": None,
     "function_calling_image_preprompt": None,

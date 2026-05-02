@@ -1,6 +1,7 @@
 import discord
 from redbot.core import commands
 
+from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
 from aiuser.config.models import TOOLS_SUPPORTED_MODELS
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
 from aiuser.settings.functions.searxng import SearXNGFunctionSettings
@@ -51,6 +52,10 @@ class FunctionCallingSettings(
         guild_conf = self.config.guild(ctx.guild)
         enabled = await guild_conf.function_calling()
         enabled_tools: list = await guild_conf.function_calling_functions() or []
+        tool_call_rounds = (
+            await guild_conf.function_calling_tool_call_rounds()
+            or DEFAULT_TOOL_CALL_ROUNDS
+        )
 
         from aiuser.functions.coderunner.tool_call import CodeRunnerToolCall
         from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
@@ -118,6 +123,11 @@ class FunctionCallingSettings(
             value=f"Enabled tools: **`{enabled_count}/{total_tools}`**",
             inline=False,
         )
+        main_embed.add_field(
+            name="Tool Call Rounds",
+            value=f"`{tool_call_rounds}`",
+            inline=False,
+        )
 
         embeds = [main_embed]
 
@@ -151,6 +161,21 @@ class FunctionCallingSettings(
         for em in embeds:
             await ctx.send(embed=em)
         return
+
+    @functions.command(name="maxrounds", aliases=["maxcalls"])
+    async def functions_max_rounds(self, ctx: commands.Context, rounds: int):
+        """Set the maximum number of tool call rounds per response."""
+        if rounds < 1:
+            return await ctx.react_quietly("❌")
+
+        await self.config.guild(ctx.guild).function_calling_tool_call_rounds.set(rounds)
+
+        embed = discord.Embed(
+            title="Function calling tool call rounds now set to:",
+            description=f"`{rounds}`",
+            color=await ctx.embed_color(),
+        )
+        await ctx.send(embed=embed)
 
     @functions.command(name="serper")
     async def toggle_serper_function(self, ctx: commands.Context):
