@@ -25,5 +25,6 @@ OPENROUTER_API_V1_URL = f"{OPENROUTER_URL}v1/"
 
 EMBEDDING_MODEL = "Snowflake/snowflake-arctic-embed-s"
 EMBEDDING_DB_NAME = "embeddings.sqlite"
+COMPACTION_DB_NAME = "compaction.sqlite"
 
 GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image-preview"
