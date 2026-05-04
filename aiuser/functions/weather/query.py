@@ -137,13 +137,30 @@ def handle_multiple_days(data):
 
 
 async def find_lat_lon(location: str):
-    params = {"name": location, "count": 1, "language": "en", "format": "json"}
+    search_name, _, qualifier = location.partition(",")
+    search_name = search_name.strip() or location
+    qualifier = qualifier.strip().lower()
 
+    params = {"name": search_name, "count": 10, "language": "en", "format": "json"}
     response = await get_endpoint_data(METEO_GEOCODE_URL, params)
 
     if not (response.get("results", False)):
         raise Exception("Location not found")
 
     location = response["results"][0]
+    if qualifier:
+        for result in response["results"]:
+            admin_names = [
+                result.get("admin1", ""),
+                result.get("admin2", ""),
+                result.get("admin3", ""),
+                result.get("admin4", ""),
+                result.get("country", ""),
+                result.get("country_code", ""),
+            ]
+
+            if qualifier in [name.lower() for name in admin_names]:
+                location = result
+                break
 
     return location["latitude"], location["longitude"]
