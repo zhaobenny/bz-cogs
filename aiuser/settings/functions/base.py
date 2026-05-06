@@ -58,7 +58,10 @@ class FunctionCallingSettings(
         )
 
         from aiuser.functions.coderunner.tool_call import CodeRunnerToolCall
-        from aiuser.functions.discord.tool_call import AddReactionToolCall
+        from aiuser.functions.discord.tool_call import (
+            AddReactionToolCall,
+            GetDiscordInfoToolCall,
+        )
         from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
         from aiuser.functions.memory.tool_call import (
             ReadMemoryToolCall,
@@ -92,7 +95,10 @@ class FunctionCallingSettings(
                 ReadMemoryToolCall.function_name,
                 SaveMemoryToolCall.function_name,
             ],
-            "Discord Actions": [AddReactionToolCall.function_name],
+            "Discord": [
+                AddReactionToolCall.function_name,
+                GetDiscordInfoToolCall.function_name,
+            ],
         }
 
         # Helper for status icon
@@ -195,6 +201,14 @@ class FunctionCallingSettings(
             color=await ctx.embed_color(),
         )
         await ctx.send(embed=embed)
+
+    @functions_discord.command(name="info")
+    async def toggle_discord_info_function(self, ctx: commands.Context):
+        """Enable/disable the functionality for reading some select Discord channel, server, author, and emoji info."""
+        from aiuser.functions.discord.tool_call import GetDiscordInfoToolCall
+
+        tool_names = [GetDiscordInfoToolCall.function_name]
+        await self.toggle_function_group(ctx, tool_names, "Discord info")
 
     @functions.command(name="maxrounds", aliases=["maxcalls"])
     async def functions_max_rounds(self, ctx: commands.Context, rounds: int):

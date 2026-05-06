@@ -1,26 +1,7 @@
-import logging
-from textwrap import shorten
-
-import discord
-from emoji import EMOJI_DATA
-
-from aiuser.context.converter.formatters import mention_to_text
+from aiuser.functions.discord.info import DISCORD_INFO_TYPES, get_discord_info
+from aiuser.functions.discord.reaction import add_reaction
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
-
-logger = logging.getLogger("red.bz_cogs.aiuser.tools")
-
-
-def _message_preview(content: str) -> str:
-    preview = " ".join(content.split())
-    return shorten(preview, width=48, placeholder="...") or "[no text content]"
-
-
-def _parse_custom_emoji(bot, value: str):
-    parsed = discord.PartialEmoji.from_str(value)
-    if not parsed.id:
-        return None
-    return discord.utils.get(bot.emojis, name=parsed.name, id=parsed.id)
 
 
 class AddReactionToolCall(ToolCall):
@@ -47,37 +28,32 @@ class AddReactionToolCall(ToolCall):
     function_name = schema.function.name
 
     async def _handle(self, request, arguments):
-        emoji = str(arguments.get("emoji", "")).strip()
+        return await add_reaction(request, arguments.get("emoji", ""))
 
-        if request.ctx.interaction:
-            return "Cannot add reaction during slash command interactions."
 
-        if emoji in EMOJI_DATA:
-            reaction = emoji
-        else:
-            reaction = _parse_custom_emoji(request.bot, emoji)
-
-        if reaction is None:
-            return (
-                "Invalid emoji: provide exactly one Unicode emoji or raw custom "
-                "Discord emoji usable by this bot."
-            )
-
-        permissions = request.ctx.channel.permissions_for(request.ctx.me)
-        if not permissions.add_reactions:
-            return "Missing Add Reactions permission."
-
-        try:
-            await request.ctx.message.add_reaction(reaction)
-        except discord.Forbidden:
-            return "Missing Add Reactions permission."
-        except discord.NotFound:
-            return "Could not add reaction because the message or emoji was not found."
-        except discord.HTTPException:
-            logger.exception("Failed to add reaction %r", emoji)
-            return "Could not add that reaction."
-
-        return (
-            f'Added reaction {emoji} to the message: '
-            f'"{_message_preview(mention_to_text(request.ctx.message))}"'
+class GetDiscordInfoToolCall(ToolCall):
+    schema = ToolCallSchema(
+        function=Function(
+            name="get_discord_info",
+            description=(
+                "Surface information about certain Discord entities in the current context. "
+            ),
+            parameters=Parameters(
+                properties={
+                    "info": {
+                        "type": "string",
+                        "enum": list(DISCORD_INFO_TYPES),
+                        "description": (
+                            "The Discord info to fetch. One of: channel, server, "
+                            "author, server_emojis."
+                        ),
+                    },
+                },
+                required=["info"],
+            ),
         )
+    )
+    function_name = schema.function.name
+
+    async def _handle(self, request, arguments):
+        return await get_discord_info(request, arguments.get("info", ""))
