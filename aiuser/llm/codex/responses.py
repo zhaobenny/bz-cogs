@@ -298,6 +298,20 @@ def parse_codex_response(
         text_chunks.append(data["output_text"])
 
     content = "\n".join(chunk for chunk in text_chunks if chunk).strip() or None
+    if content is None and not tool_calls:
+        output_types = [
+            item.get("type")
+            for item in data.get("output", [])
+            if isinstance(item, dict)
+        ]
+        logger.warning(
+            "Codex response completed without content or function calls "
+            "(id=%s status=%s output_types=%s incomplete_details=%s)",
+            data.get("id"),
+            data.get("status"),
+            output_types,
+            data.get("incomplete_details"),
+        )
     return content, tool_calls
 
 
@@ -307,17 +321,32 @@ async def parse_codex_stream_response(
     event_name: Optional[str] = None
     data_lines: List[str] = []
     completed_payload: Optional[Dict[str, Any]] = None
+    output_items: Dict[int, Dict[str, Any]] = {}
+    output_text: Dict[int, str] = {}
 
     async for line in response.aiter_lines():
         if not line:
-            if event_name == "response.completed" and data_lines:
-                payload = "\n".join(data_lines).strip()
-                if payload and payload != "[DONE]":
+            if event_name and data_lines:
+                payload_text = "\n".join(data_lines).strip()
+                decoded = None
+                if payload_text and payload_text != "[DONE]":
                     try:
-                        decoded = httpx.Response(200, text=payload).json()
+                        decoded = httpx.Response(200, text=payload_text).json()
                     except ValueError:
-                        decoded = None
-                    if isinstance(decoded, dict):
+                        pass
+
+                if isinstance(decoded, dict):
+                    if event_name == "response.output_item.done":
+                        item = decoded.get("item")
+                        output_index = decoded.get("output_index")
+                        if isinstance(item, dict) and isinstance(output_index, int):
+                            output_items[output_index] = item
+                    elif event_name == "response.output_text.done":
+                        output_index = decoded.get("output_index")
+                        text = decoded.get("text")
+                        if isinstance(output_index, int) and isinstance(text, str):
+                            output_text[output_index] = text
+                    elif event_name == "response.completed":
                         completed_payload = decoded.get("response") or decoded
                         break
             event_name = None
@@ -333,6 +362,25 @@ async def parse_codex_stream_response(
 
     if completed_payload is None:
         raise ValueError("Codex stream ended without response.completed payload")
+
+    if not completed_payload.get("output"):
+        output = [
+            item
+            for _, item in sorted(output_items.items(), key=lambda pair: pair[0])
+            if isinstance(item, dict)
+        ]
+        for output_index, text in output_text.items():
+            if any(index == output_index for index in output_items):
+                continue
+            output.append(
+                {
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{"type": "output_text", "text": text}],
+                }
+            )
+        if output:
+            completed_payload = {**completed_payload, "output": output}
 
     return parse_codex_response(completed_payload)
 
