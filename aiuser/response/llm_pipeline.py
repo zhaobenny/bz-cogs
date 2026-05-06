@@ -41,6 +41,7 @@ class LLMPipeline:
         self.provider: Optional[LLMProvider] = None
         self.tool_manager = ToolManager(self)
         self.completion: Optional[str] = None
+        self.suppress_response: bool = False
         self.files_to_send: List[discord.File] = []
         self.tool_call_entries: List = []
 
@@ -77,6 +78,8 @@ class LLMPipeline:
                 break
             if step.tool_calls:
                 await self.tool_manager.handle_tool_calls(step.tool_calls)
+                if self.suppress_response:
+                    break
                 continue
 
             logger.warning(

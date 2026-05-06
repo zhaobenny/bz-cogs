@@ -78,7 +78,7 @@ DEFAULT_GUILD = {
     "random_messages_prompts": DEFAULT_RANDOM_PROMPTS,
     "presets": json.dumps(DEFAULT_PRESETS),
     "function_calling": False,
-    "function_calling_functions": [],
+    "function_calling_functions": ["do_not_respond", "add_reaction"],
     "function_calling_tool_call_rounds": DEFAULT_TOOL_CALL_ROUNDS,
     "function_calling_image_custom_endpoint": None,
     "function_calling_image_model": None,

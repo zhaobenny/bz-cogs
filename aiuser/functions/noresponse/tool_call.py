@@ -19,7 +19,7 @@ class NoResponseToolCall(ToolCall):
                     },
                     "respond": {
                         "type": "boolean",
-                        "description": "Whether or not to not respond",
+                        "description": "Whether or not to not respond to the message",
                     },
                 },
                 required=["reason", "respond"],
@@ -30,7 +30,7 @@ class NoResponseToolCall(ToolCall):
 
     async def _handle(self, request, arguments):
         if arguments["respond"]:
-            return None
-        request.completion = ""
+            return "Will respond to the message"
+        request.suppress_response = True
         logger.debug(f'Decided to not respond because: "{arguments["reason"]}"')
-        return None
+        return f"Decided to not respond because: {arguments['reason']}"
