@@ -392,9 +392,15 @@ async def create_codex_response(
     kwargs: Dict[str, Any],
 ) -> tuple[Optional[str], List[ChatCompletionMessageToolCall]]:
     timeout = await config.openai_endpoint_request_timeout()
+    payload = build_codex_payload(model, messages, kwargs)
+    if not payload["input"]:
+        logger.debug(
+            "Skipping Codex request because no input items were built from context"
+        )
+        return None, []
+
     async with httpx.AsyncClient(timeout=timeout) as client:
         oauth = await ensure_valid_codex_oauth(config, client=client)
-        payload = build_codex_payload(model, messages, kwargs)
 
         for attempt in range(2):
             headers = {"Authorization": f"Bearer {oauth['access']}"}
