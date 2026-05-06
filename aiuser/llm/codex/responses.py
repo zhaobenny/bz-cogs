@@ -13,12 +13,6 @@ logger = logging.getLogger("red.bz_cogs.aiuser.llm")
 CODEX_CONTEXT_PREFIX = "Additional system context:\n"
 
 
-def _parse_data_uri(url: str) -> Dict[str, str]:
-    header, data = url.split(",", 1)
-    media_type = header[5:].split(";", 1)[0]
-    return {"type": "base64", "media_type": media_type, "data": data}
-
-
 def _convert_content_parts(content: Any) -> List[Dict[str, Any]]:
     if isinstance(content, str):
         return [{"type": "input_text", "text": content}]
@@ -37,20 +31,7 @@ def _convert_content_parts(content: Any) -> List[Dict[str, Any]]:
         if not image_url:
             continue
 
-        if image_url.startswith("data:"):
-            parts.append(
-                {
-                    "type": "input_image",
-                    "source": _parse_data_uri(image_url),
-                }
-            )
-        else:
-            parts.append(
-                {
-                    "type": "input_image",
-                    "source": {"type": "url", "url": image_url},
-                }
-            )
+        parts.append({"type": "input_image", "image_url": image_url})
     return parts
 
 
