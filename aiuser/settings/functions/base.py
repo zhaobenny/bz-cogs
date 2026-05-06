@@ -4,8 +4,8 @@ from redbot.core import commands
 from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
 from aiuser.config.models import TOOLS_SUPPORTED_MODELS
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
-from aiuser.settings.functions.searxng import SearXNGFunctionSettings
 from aiuser.settings.functions.memory import MemoryFunctionSettings
+from aiuser.settings.functions.searxng import SearXNGFunctionSettings
 from aiuser.settings.functions.utilities import (
     FunctionsGroupMixin,
     functions,
@@ -58,7 +58,12 @@ class FunctionCallingSettings(
         )
 
         from aiuser.functions.coderunner.tool_call import CodeRunnerToolCall
+        from aiuser.functions.discord.tool_call import AddReactionToolCall
         from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
+        from aiuser.functions.memory.tool_call import (
+            ReadMemoryToolCall,
+            SaveMemoryToolCall,
+        )
         from aiuser.functions.noresponse.tool_call import NoResponseToolCall
         from aiuser.functions.scrape.tool_call import ScrapeToolCall
         from aiuser.functions.searxng.tool_call import SearXNGToolCall
@@ -69,10 +74,6 @@ class FunctionCallingSettings(
         )
         from aiuser.functions.wolframalpha.tool_call import (
             WolframAlphaFunctionCall,
-        )
-        from aiuser.functions.memory.tool_call import (
-            ReadMemoryToolCall,
-            SaveMemoryToolCall,
         )
 
         groups = {
@@ -91,6 +92,7 @@ class FunctionCallingSettings(
                 ReadMemoryToolCall.function_name,
                 SaveMemoryToolCall.function_name,
             ],
+            "Discord Actions": [AddReactionToolCall.function_name],
         }
 
         # Helper for status icon
@@ -161,6 +163,38 @@ class FunctionCallingSettings(
         for em in embeds:
             await ctx.send(embed=em)
         return
+
+    @functions.group(name="discord")
+    async def functions_discord(self, ctx: commands.Context):
+        """Configure native Discord action functions."""
+        pass
+
+    @functions_discord.command(name="react", aliases=["reaction"])
+    async def toggle_discord_reaction_function(self, ctx: commands.Context):
+        """Enable/disable the functionality for adding reactions to triggering Discord messages."""
+        from aiuser.functions.discord.tool_call import AddReactionToolCall
+
+        tool_names = [AddReactionToolCall.function_name]
+        enabled_tools: list = await self.config.guild(
+            ctx.guild
+        ).function_calling_functions()
+        new_state = AddReactionToolCall.function_name not in enabled_tools
+
+        if new_state:
+            enabled_tools.extend(tool_names)
+        else:
+            for tool in tool_names:
+                if tool in enabled_tools:
+                    enabled_tools.remove(tool)
+
+        await self.config.guild(ctx.guild).function_calling_functions.set(enabled_tools)
+
+        embed = discord.Embed(
+            title="Discord reaction function calling now set to:",
+            description=f"{new_state}",
+            color=await ctx.embed_color(),
+        )
+        await ctx.send(embed=embed)
 
     @functions.command(name="maxrounds", aliases=["maxcalls"])
     async def functions_max_rounds(self, ctx: commands.Context, rounds: int):

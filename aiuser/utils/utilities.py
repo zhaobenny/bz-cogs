@@ -136,6 +136,10 @@ async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolC
                 continue
 
     enabled_tools = await config.guild(ctx.guild).function_calling_functions()
+    if ctx.interaction:
+        enabled_tools = [
+            tool_name for tool_name in enabled_tools if tool_name != "add_reaction"
+        ]
     tool_classes = {cls.function_name: cls for cls in ToolCall.__subclasses__()}
 
     return [
