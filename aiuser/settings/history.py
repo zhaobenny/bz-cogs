@@ -94,7 +94,7 @@ class HistorySettings(MixinMeta):
         """Set a custom prompt for the LLM to use when summarizing messages.
 
         Leave blank to reset to default.
-        You can use `{existing_summary}` and `{new_messages}` placeholders.
+        Existing summary and new messages are added automatically.
         """
         if not prompt:
             await self.config.guild(ctx.guild).custom_compaction_prompt.set(None)

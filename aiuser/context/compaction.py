@@ -6,6 +6,7 @@ import discord
 from redbot.core import commands
 
 from aiuser.context.converter.converter import MessageConverter
+from aiuser.llm.registry import get_llm_provider
 from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -14,11 +15,6 @@ COMPACTION_PROMPT = """You are tasked with summarizing a segment of conversation
 You must combine the pre-existing summary of the conversation (if any) with the new messages provided below.
 Provide a concise chronological summary that captures the essence of what was discussed, any important decisions, and relevant context.
 Exclude noise, completely off-topic chitchat, and minor details. Keep the summary under 500 words.
-
-{existing_summary}
-
---- New Messages to Summarize ---
-{new_messages}
 """
 
 
@@ -80,12 +76,6 @@ class CompactionManager:
                 guild_id, channel_id
             )
 
-            formatted_existing = (
-                f"--- Existing Summary ---\n{existing_summary}\n"
-                if existing_summary
-                else "--- Existing Summary ---\n(None)\n"
-            )
-
             converter = MessageConverter(self.cog, ctx)
             new_msgs_text = []
 
@@ -120,20 +110,31 @@ class CompactionManager:
             custom_prompt = await self.config.guild(
                 ctx.guild
             ).custom_compaction_prompt()
-            prompt_template = custom_prompt if custom_prompt else COMPACTION_PROMPT
-            prompt = prompt_template.format(
-                existing_summary=formatted_existing, new_messages=new_messages_block
-            )
+            instructions = custom_prompt if custom_prompt else COMPACTION_PROMPT
+            existing_summary_block = existing_summary or "(None)"
+            prompt = f"""{instructions.strip()}
+
+--- Existing Summary ---
+{existing_summary_block}
+
+--- New Messages to Summarize ---
+{new_messages_block}
+"""
 
             model = await self.config.guild(ctx.guild).model()
 
-            response = await self.cog.openai_client.chat.completions.create(
+            provider = await get_llm_provider(self.cog)
+            if provider is None:
+                logger.error("No LLM backend available for context compaction")
+                return
+
+            response = await provider.create_chat_step(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=800,
+                kwargs={"max_tokens": 800},
             )
 
-            new_summary = response.choices[0].message.content
+            new_summary = response.content
             if new_summary:
                 # Record the newest message ID that was compacted
                 # past_messages are newest-first, so [0] is the most recent
