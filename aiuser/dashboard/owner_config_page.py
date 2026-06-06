@@ -1,13 +1,17 @@
+import pathlib
+
 import discord
 
 from aiuser.dashboard.decorator import dashboard_page
 from aiuser.llm.registry import list_llm_models
 from aiuser.types.abc import MixinMeta
 
+TEMPLATES_PATH = pathlib.Path(__file__).parent / "templates"
+
 
 @dashboard_page(
     name="bot_owner_per_server_settings",
-    description="Some bot owner-only settings per server",
+    description="Subset of server settings to configure via dashboard",
     methods=("GET", "POST"),
     is_owner=True,
 )
@@ -85,7 +89,7 @@ async def bot_owner_server_config(self: MixinMeta, guild: discord.Guild, **kwarg
     form.random_messages.default = form.random_messages.checked = random_messages_val
 
     if form.validate_on_submit():
-        pecentage = form.percent.data
+        percentage = form.percent.data
         model = form.model.data
         new_whitelist = [int(id) for id in form.whitelist.data]
         reply_mentions = form.reply_to_mentions.data
@@ -94,8 +98,9 @@ async def bot_owner_server_config(self: MixinMeta, guild: discord.Guild, **kwarg
         scan_images = form.scan_images.data
         function_calling = form.function_calling.data
         random_messages = form.random_messages.data
+
         try:
-            await self.config.guild(guild).reply_percent.set(pecentage / 100)
+            await self.config.guild(guild).reply_percent.set(percentage / 100)
             await self.config.guild(guild).model.set(model)
             await self.config.guild(guild).reply_to_mentions_replies.set(reply_mentions)
             await self.config.guild(guild).channels_whitelist.set(new_whitelist)
@@ -123,7 +128,8 @@ async def bot_owner_server_config(self: MixinMeta, guild: discord.Guild, **kwarg
             "redirect_url": kwargs["request_url"],
         }
 
-    source = """<p>Only a subset of available settings. See Discord cog commands for all available settings.</p>{{ form|safe }}"""
+    template_path = TEMPLATES_PATH / "owner_config_page.html"
+    source = template_path.read_text()
 
     return {
         "status": 0,
