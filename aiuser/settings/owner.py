@@ -29,7 +29,10 @@ from aiuser.llm.openai_compatible.endpoints import (
     get_openai_compat_api_token_name,
     get_openai_compat_kind,
 )
-from aiuser.settings.utilities import get_tokens, truncate_prompt
+from aiuser.settings.utilities import (
+    add_prompt_metrics_fields,
+    truncate_prompt,
+)
 from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -205,7 +208,7 @@ class OwnerSettings(MixinMeta):
             description=f"{truncate_prompt(prompt)}",
             color=await ctx.embed_color(),
         )
-        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
+        await add_prompt_metrics_fields(embed, self.config, ctx, prompt)
         return await ctx.send(embed=embed)
 
     async def _set_custom_endpoint(self, ctx: commands.Context, url: Optional[str]):

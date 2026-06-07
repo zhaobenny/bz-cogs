@@ -11,7 +11,7 @@ from redbot.core.utils.predicates import ReactionPredicate
 from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.utilities import (
-    get_tokens,
+    add_prompt_metrics_fields,
     truncate_prompt,
 )
 from aiuser.types.abc import MixinMeta, aiuser
@@ -19,6 +19,13 @@ from aiuser.types.enums import MentionType
 from aiuser.types.types import COMPATIBLE_MENTIONS
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
+
+
+def _set_page_footers(pages: list[discord.Embed]) -> None:
+    for index, page in enumerate(pages, start=1):
+        footer = page.footer.text or ""
+        suffix = f"Page {index} of {len(pages)}"
+        page.set_footer(text=f"{footer} | {suffix}" if footer else suffix)
 
 
 class PromptSettings(MixinMeta):
@@ -101,9 +108,7 @@ class PromptSettings(MixinMeta):
                 description=truncate_prompt(prompt),
                 color=await ctx.embed_color(),
             )
-            embed.add_field(
-                name="Tokens", value=await get_tokens(self.config, ctx, prompt)
-            )
+            await add_prompt_metrics_fields(embed, self.config, ctx, prompt)
         await ctx.send(embed=embed)
 
     @prompt_show.command(name="members", aliases=["users"])
@@ -145,9 +150,7 @@ class PromptSettings(MixinMeta):
             description=truncate_prompt(custom_prompt),
             color=await ctx.embed_color(),
         )
-        embed.add_field(
-            name="Tokens", value=await get_tokens(self.config, ctx, custom_prompt)
-        )
+        await add_prompt_metrics_fields(embed, self.config, ctx, custom_prompt)
         return embed
 
     async def _show_prompts(self, ctx, entities, mention_type: MentionType):
@@ -165,8 +168,7 @@ class PromptSettings(MixinMeta):
         if len(pages) == 1:
             return await ctx.send(embed=pages[0])
 
-        for i, page in enumerate(pages):
-            page.set_footer(text=f"Page {i + 1} of {len(pages)}")
+        _set_page_footers(pages)
 
         await SimpleMenu(pages).start(ctx)
 
@@ -183,7 +185,7 @@ class PromptSettings(MixinMeta):
             description=truncate_prompt(prompt),
             color=await ctx.embed_color(),
         )
-        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
+        await add_prompt_metrics_fields(embed, self.config, ctx, prompt)
         await ctx.send(embed=embed)
 
     @prompt.group(name="preset")
@@ -204,14 +206,11 @@ class PromptSettings(MixinMeta):
                 description=truncate_prompt(prompt),
                 color=await ctx.embed_color(),
             )
-            page.add_field(
-                name="Tokens", value=await get_tokens(self.config, ctx, prompt)
-            )
+            await add_prompt_metrics_fields(page, self.config, ctx, prompt)
             pages.append(page)
         if len(pages) == 1:
             return await ctx.send(embed=pages[0])
-        for i, page in enumerate(pages):
-            page.set_footer(text=f"Page {i + 1} of {len(pages)}")
+        _set_page_footers(pages)
         await SimpleMenu(pages).start(ctx)
 
     @prompt_preset.command(name="add", aliases=["a"])
@@ -250,7 +249,7 @@ class PromptSettings(MixinMeta):
             description=truncate_prompt(prompt),
             color=await ctx.embed_color(),
         )
-        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
+        await add_prompt_metrics_fields(embed, self.config, ctx, prompt)
         return await ctx.send(embed=embed)
 
     @prompt_preset.command(name="remove", aliases=["rm", "delete"])
@@ -334,5 +333,5 @@ class PromptSettings(MixinMeta):
             description=f"{truncate_prompt(prompt)}",
             color=await ctx.embed_color(),
         )
-        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
+        await add_prompt_metrics_fields(embed, self.config, ctx, prompt)
         return await ctx.send(embed=embed)

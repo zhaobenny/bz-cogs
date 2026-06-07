@@ -21,6 +21,17 @@ from aiuser.functions.tool_call import ToolCall
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
+def get_tokenizer_encoding(model: str):
+    try:
+        return tiktoken.encoding_for_model(model), model, False
+    except KeyError:
+        model_name = str(model or "")
+        base_name = model_name.rsplit("/", 1)[-1]
+        if base_name.startswith(("gpt-5.", "gpt-4.1.", "gpt-4o.")):
+            return tiktoken.get_encoding("o200k_base"), "o200k_base", True
+        return tiktoken.get_encoding(FALLBACK_TOKENIZER), FALLBACK_TOKENIZER, True
+
+
 class RolesSet:
     def __init__(self):
         self._set = set()
@@ -150,10 +161,7 @@ async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolC
 
 
 async def encode_text_to_tokens(text: str, model: str = FALLBACK_TOKENIZER) -> int:
-    try:
-        encoding = tiktoken.encoding_for_model(model)
-    except KeyError:
-        encoding = tiktoken.get_encoding(FALLBACK_TOKENIZER)
+    encoding, _, _ = get_tokenizer_encoding(model)
     return await asyncio.to_thread(
         lambda: len(encoding.encode(text, disallowed_special=()))
     )

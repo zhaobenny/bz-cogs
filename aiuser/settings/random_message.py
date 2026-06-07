@@ -6,7 +6,7 @@ from redbot.core.utils.chat_formatting import box, pagify
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.defaults import DEFAULT_RANDOM_PROMPTS
-from aiuser.settings.utilities import get_tokens
+from aiuser.settings.utilities import add_prompt_metrics_fields
 from aiuser.types.abc import MixinMeta, aiuser
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -104,7 +104,7 @@ class RandomMessageSettings(MixinMeta):
             description=f"{prompt}",
             color=await ctx.embed_color(),
         )
-        embed.add_field(name="Tokens", value=await get_tokens(self.config, ctx, prompt))
+        await add_prompt_metrics_fields(embed, self.config, ctx, prompt)
         return await ctx.send(embed=embed)
 
     @randommessage.command(name="remove", aliases=["rm", "delete"])

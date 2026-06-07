@@ -1,0 +1,282 @@
+<style>
+    #third-party-content .aiuser-prompts {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 1rem 0 2.25rem;
+        color: #344767;
+    }
+
+    #third-party-content .aiuser-prompts__grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.85rem;
+    }
+
+    #third-party-content .aiuser-prompts__section {
+        min-width: 0;
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    #third-party-content .aiuser-prompts__section-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        align-items: center;
+        padding: 0.8rem 0.95rem;
+        border-bottom: 1px solid #e9ecef;
+        background: #f8f9fa;
+    }
+
+    #third-party-content .aiuser-prompts__section-title {
+        margin: 0;
+        color: #172b4d;
+        font-size: 0.95rem;
+        line-height: 1.3;
+    }
+
+    #third-party-content .aiuser-prompts__count {
+        flex: 0 0 auto;
+        border: 1px solid #d2d6da;
+        border-radius: 999px;
+        padding: 0.12rem 0.55rem;
+        color: #67748e;
+        font-size: 0.75rem;
+        font-weight: 700;
+        line-height: 1.5;
+    }
+
+    #third-party-content .aiuser-prompts__body {
+        padding: 0.7rem 0.85rem 0.85rem;
+    }
+
+    #third-party-content .aiuser-prompts__list {
+        display: grid;
+        gap: 0.6rem;
+        margin: 0;
+    }
+
+    #third-party-content .aiuser-prompts__item {
+        min-width: 0;
+        border: 1px solid #e9ecef;
+        border-radius: 0.45rem;
+        background: #fff;
+    }
+
+    #third-party-content .aiuser-prompts__item-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        align-items: center;
+        padding: 0.5rem 0.65rem;
+        border-bottom: 1px solid #f0f2f5;
+        background: #fcfcfd;
+    }
+
+    #third-party-content .aiuser-prompts__item-title {
+        min-width: 0;
+        color: #172b4d;
+        font-size: 0.86rem;
+        font-weight: 700;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+    }
+
+    #third-party-content .aiuser-prompts__item-meta {
+        flex: 0 0 auto;
+        color: #67748e;
+        font-size: 0.74rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    #third-party-content .aiuser-prompts__text {
+        max-height: 11rem;
+        margin: 0;
+        padding: 0.65rem;
+        overflow: auto;
+        color: #344767;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 0.8rem;
+        line-height: 1.55;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+
+    #third-party-content .aiuser-prompts__empty {
+        margin: 0;
+        color: #67748e;
+        font-size: 0.86rem;
+        line-height: 1.5;
+    }
+
+    #third-party-content .aiuser-prompts__item-cost {
+        display: block;
+        margin-top: 0.08rem;
+        color: #8392ab;
+        font-weight: 600;
+    }
+
+    #third-party-content .aiuser-prompts__footer {
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e9ecef;
+        text-align: center;
+    }
+
+    #third-party-content .aiuser-prompts__footer-note {
+        margin: 0;
+        color: #67748e;
+        font-size: 0.78rem;
+        line-height: 1.45;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__footer {
+        border-color: #555;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__footer-note {
+        color: #c9d1d9;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts {
+        color: #e9ecef;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__section-title,
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__item-title {
+        color: #fff;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__count,
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__item-meta,
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__item-cost,
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__empty {
+        color: #c9d1d9;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__section,
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__item,
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__item-head,
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__count {
+        border-color: #555;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__section,
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__item {
+        background: #303030;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__section-header {
+        border-color: #555;
+        background: #3d3d3d;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__item-head {
+        background: #363636;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-prompts__text {
+        background: #303030;
+        color: #e9ecef;
+    }
+
+    @media (max-width: 640px) {
+        #third-party-content .aiuser-prompts__item-head {
+            display: block;
+        }
+
+        #third-party-content .aiuser-prompts__item-meta {
+            display: block;
+            margin-top: 0.2rem;
+            white-space: normal;
+        }
+    }
+</style>
+
+{% macro prompt_item(item) -%}
+<article class="aiuser-prompts__item">
+    <div class="aiuser-prompts__item-head">
+        <div class="aiuser-prompts__item-title">{{ item.scope }}: {{ item.name }}</div>
+        <div class="aiuser-prompts__item-meta">
+            {{ item.token_label }}{% if item.cost_per_1k_label %}<span class="aiuser-prompts__item-cost">{{
+                item.cost_per_1k_label }}</span>{% endif %}
+        </div>
+    </div>
+    <pre class="aiuser-prompts__text">{{ item.value }}</pre>
+</article>
+{%- endmacro %}
+
+{% macro prompt_list(items, empty_text) -%}
+{% if items %}
+<div class="aiuser-prompts__list">
+    {% for item in items %}
+    {{ prompt_item(item) }}
+    {% endfor %}
+</div>
+{% else %}
+<p class="aiuser-prompts__empty">{{ empty_text }}</p>
+{% endif %}
+{%- endmacro %}
+
+<section class="aiuser-prompts">
+
+    <div class="aiuser-prompts__grid">
+        <section class="aiuser-prompts__section">
+            <div class="aiuser-prompts__section-header">
+                <h3 class="aiuser-prompts__section-title">Server Prompt</h3>
+            </div>
+            <div class="aiuser-prompts__body">
+                {{ prompt_item(server_prompt) }}
+            </div>
+        </section>
+
+        <section class="aiuser-prompts__section">
+            <div class="aiuser-prompts__section-header">
+                <h3 class="aiuser-prompts__section-title">Scoped Custom Prompts</h3>
+                <span class="aiuser-prompts__count">{{ scoped_prompts|length }}</span>
+            </div>
+            <div class="aiuser-prompts__body">
+                {{ prompt_list(scoped_prompts, "No server, channel, role, or member custom prompts are configured.") }}
+            </div>
+        </section>
+
+        <section class="aiuser-prompts__section">
+            <div class="aiuser-prompts__section-header">
+                <h3 class="aiuser-prompts__section-title">Presets</h3>
+                <span class="aiuser-prompts__count">{{ presets|length }}</span>
+            </div>
+            <div class="aiuser-prompts__body">
+                {{ prompt_list(presets, "No presets are configured for this server.") }}
+            </div>
+        </section>
+
+        <section class="aiuser-prompts__section">
+            <div class="aiuser-prompts__section-header">
+                <h3 class="aiuser-prompts__section-title">Random Message Topics</h3>
+                <span class="aiuser-prompts__count">{{ random_prompts|length }}</span>
+            </div>
+            <div class="aiuser-prompts__body">
+                {{ prompt_list(random_prompts, "No random message topics are configured.") }}
+            </div>
+        </section>
+
+        <section class="aiuser-prompts__section">
+            <div class="aiuser-prompts__section-header">
+                <h3 class="aiuser-prompts__section-title">Image Pre-prompts</h3>
+                <span class="aiuser-prompts__count">{{ image_preprompts|length }}</span>
+            </div>
+            <div class="aiuser-prompts__body">
+                {{ prompt_list(image_preprompts, "No image request pre-prompts are configured.") }}
+            </div>
+        </section>
+    </div>
+
+    {% if metrics_footer %}
+    <footer class="aiuser-prompts__footer">
+        <p class="aiuser-prompts__footer-note">{{ metrics_footer }}</p>
+    </footer>
+    {% endif %}
+</section>

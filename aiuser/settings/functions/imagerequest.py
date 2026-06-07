@@ -5,7 +5,7 @@ from redbot.core import commands
 
 from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
-from aiuser.settings.utilities import truncate_prompt
+from aiuser.settings.utilities import add_prompt_metrics_fields, truncate_prompt
 from aiuser.types.types import COMPATIBLE_MENTIONS
 
 
@@ -98,4 +98,5 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
             description=truncate_prompt(preprompt),
             color=await ctx.embed_color(),
         )
+        await add_prompt_metrics_fields(e, self.config, ctx, preprompt)
         await ctx.send(embed=e)
