@@ -1,28 +1,293 @@
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-9 p-4">
-            <p class="lead mb-3">Hello <strong>{{ user_name }}</strong>,</p>
-            <p class="fw-medium">Your current status is: <span class="fw-bold border border-1 rounded px-2 py-1">{{
-                    whitelist_text }}</span></p>
-            <div class="consent-section p-3">
-                <p class="mb-3 fs-5">Do you consent to sending your Discord text and image messages from
-                    <strong>ALL</strong> servers where this bot and cog are active to OpenAI or a
-                    third-party AI
-                    endpoint?
-                </p>
-                <div class="d-flex justify-content-center gap-4 mb-3">
-                    {{ form|safe }}
-                </div>
-                <p class="mb-4 mt-2 small">This allows the bot to generate replies based on your messages.
-                    <br>
-                    Please note that some providers may use your messages for training
-                    purposes.
-                </p>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/css-toggle-switch/latest/toggle-switch.css">
+
+<style>
+    #third-party-content .aiuser-consent {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 1.25rem 0 1rem;
+    }
+
+    #third-party-content .aiuser-consent__question {
+        max-width: 780px;
+        margin: 0 auto;
+        color: #172b4d;
+        font-size: 1.2rem;
+        line-height: 1.5;
+        text-align: center;
+    }
+
+    #third-party-content .aiuser-consent__question strong {
+        color: #111;
+    }
+
+    #third-party-content .aiuser-consent__control {
+        display: flex;
+        justify-content: center;
+        margin: 1.3rem 0 1.5rem;
+    }
+
+    #third-party-content .aiuser-consent__form {
+        margin: 0;
+    }
+
+    #third-party-content .aiuser-consent__form.is-saving {
+        opacity: 0.72;
+        pointer-events: none;
+    }
+
+    #third-party-content .aiuser-consent__form.is-saving .aiuser-consent__switch {
+        cursor: wait;
+    }
+
+    #third-party-content .aiuser-consent__switch {
+        width: 24rem;
+        max-width: 100%;
+        font-size: 0.95rem;
+    }
+
+    #third-party-content .aiuser-consent__switch.switch-toggle {
+        border: 1px solid #d2d6da;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(45, 206, 137, 0.16) 0 50%, rgba(245, 54, 92, 0.14) 50% 100%);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    #third-party-content .aiuser-consent__switch.switch-toggle a {
+        border: 0;
+        border-radius: 999px;
+        background: #2dce89;
+        box-shadow: 0 2px 8px rgba(45, 206, 137, 0.24);
+    }
+
+    #third-party-content .aiuser-consent__switch.switch-toggle:has(#aiuser-consent-reject:checked) a {
+        background: #f5365c;
+        box-shadow: 0 2px 8px rgba(245, 54, 92, 0.22);
+    }
+
+    #third-party-content .aiuser-consent__switch.switch-toggle label {
+        color: #344767;
+        font-weight: 700;
+        text-shadow: none;
+        white-space: nowrap;
+    }
+
+    #third-party-content .aiuser-consent__switch.switch-toggle input:checked+label {
+        color: #fff;
+    }
+
+    #third-party-content .aiuser-consent__details {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 0.9rem 1.1rem;
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        background: #f8f9fa;
+        color: #344767;
+        font-size: 0.925rem;
+        line-height: 1.55;
+    }
+
+    #third-party-content .aiuser-consent__details p {
+        margin: 0;
+    }
+
+    #third-party-content .aiuser-consent__details p+p {
+        margin-top: 0.45rem;
+    }
+
+    #third-party-content .aiuser-consent__details strong {
+        color: #172b4d;
+    }
+
+    #third-party-content .aiuser-consent__note {
+        max-width: 760px;
+        margin: 1rem auto 0;
+        color: #67748e;
+        font-size: 0.8125rem;
+        line-height: 1.55;
+        text-align: center;
+    }
+
+    #third-party-content .aiuser-consent__note code {
+        color: #cb0c9f;
+        white-space: nowrap;
+    }
+
+    #third-party-content .aiuser-consent__save-state.is-error {
+        min-height: 1.25rem;
+        margin: 0.75rem 0 0;
+        color: #f5365c;
+        font-size: 0.8125rem;
+        line-height: 1.4;
+        text-align: center;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-consent__question {
+        color: #e9ecef;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-consent__question strong {
+        color: #fff;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-consent__switch.switch-toggle {
+        border-color: #5f6b7a;
+        background: linear-gradient(90deg, rgba(45, 206, 137, 0.24) 0 50%, rgba(245, 54, 92, 0.23) 50% 100%);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28);
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-consent__switch.switch-toggle label {
+        color: #d8dee9;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-consent__switch.switch-toggle input:checked+label {
+        color: #fff;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-consent__details {
+        border-color: #555;
+        background: #3d3d3d;
+        color: #e9ecef;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-consent__details strong {
+        color: #fff;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-consent__note {
+        color: #c9d1d9;
+    }
+
+    html:has(#background_theme[href*="background_theme_dark"]) #third-party-content .aiuser-consent__note code {
+        color: #ff7ac3;
+    }
+
+    @media (max-width: 767.98px) {
+        #third-party-content .aiuser-consent {
+            padding-top: 0.75rem;
+        }
+
+        #third-party-content .aiuser-consent__question {
+            font-size: 1.05rem;
+            line-height: 1.55;
+            text-align: left;
+        }
+
+        #third-party-content .aiuser-consent__control {
+            justify-content: flex-start;
+            margin: 1.25rem 0;
+        }
+
+        #third-party-content .aiuser-consent__form {
+            width: 100%;
+        }
+
+        #third-party-content .aiuser-consent__switch {
+            width: 100%;
+            font-size: 0.78rem;
+        }
+
+        #third-party-content .aiuser-consent__note {
+            text-align: left;
+        }
+
+        #third-party-content .aiuser-consent__save-state.is-error {
+            text-align: left;
+        }
+    }
+</style>
+
+<section class="aiuser-consent">
+    <p class="aiuser-consent__question">
+        Allow AIUser to send your Discord text and image messages from
+        <strong>all servers where this bot and cog are active if needed</strong>
+        to OpenAI or another configured LLM provider?
+    </p>
+
+    <div class="aiuser-consent__control">
+        <form class="aiuser-consent__form" method="post">
+            {{ csrf|safe }}
+            <input type="hidden" name="consent_accept" value="">
+            <input type="hidden" name="consent_reject" value="">
+            <div class="switch-toggle switch-candy aiuser-consent__switch">
+                <input id="aiuser-consent-accept" name="aiuser_consent_choice" type="radio" value="accept" {% if
+                    consent_choice=="accept" %}checked{% endif %}>
+                <label for="aiuser-consent-accept" onclick="">Consent</label>
+                <input id="aiuser-consent-reject" name="aiuser_consent_choice" type="radio" value="reject" {% if
+                    consent_choice=="reject" %}checked{% endif %}>
+                <label for="aiuser-consent-reject" onclick="">Do not consent</label>
+                <a></a>
             </div>
-            <p class="text-muted mt-4" style="font-size: 0.75rem;">
-                ℹ️ Change your preference at any time using this page or the <code>[p]aiuser optin</code>
-                /<code>[p]aiuser optout</code> Discord command.
-            </p>
-        </div>
+        </form>
     </div>
-</div>
+    <p class="aiuser-consent__save-state" role="status" aria-live="polite"></p>
+
+    <div class="aiuser-consent__details">
+        <p><strong>Your messages </strong> may be sent so the bot can generate context-aware responses.</p>
+        <p> Some LLM providers may <strong>retain or use submitted messages</strong> for training or other purposes.
+        </p>
+    </div>
+
+    <p class="aiuser-consent__note">
+        You can also use
+        <code>[p]aiuser optin</code> / <code>[p]aiuser optout</code> in a Discord channel to manage this setting.
+    </p>
+</section>
+
+<script>
+    (() => {
+        const form = document.querySelector("#third-party-content .aiuser-consent__form");
+        if (!form) {
+            return;
+        }
+        const saveState = document.querySelector("#third-party-content .aiuser-consent__save-state");
+        let savedValue = form.querySelector("input[name='aiuser_consent_choice']:checked")?.value || "";
+
+        const setError = (message) => {
+            if (!saveState) {
+                return;
+            }
+            saveState.textContent = message;
+            saveState.classList.toggle("is-error", Boolean(message));
+        };
+
+        const submitChoice = async (input) => {
+            form.elements.consent_accept.value = input.value === "accept" ? "1" : "";
+            form.elements.consent_reject.value = input.value === "reject" ? "1" : "";
+            form.classList.add("is-saving");
+            setError("");
+
+            try {
+                const response = await fetch(form.action || window.location.href, {
+                    method: "POST",
+                    body: new FormData(form),
+                    credentials: "same-origin",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Save failed with status ${response.status}`);
+                }
+                savedValue = input.value;
+            } catch (error) {
+                const previousInput = form.querySelector(`input[name='aiuser_consent_choice'][value='${savedValue}']`);
+                if (previousInput) {
+                    previousInput.checked = true;
+                }
+                setError("Could not save. Try again.");
+            } finally {
+                form.classList.remove("is-saving");
+                form.elements.consent_accept.value = "";
+                form.elements.consent_reject.value = "";
+            }
+        };
+
+        form.querySelectorAll("input[name='aiuser_consent_choice']").forEach((input) => {
+            input.addEventListener("change", () => {
+                submitChoice(input);
+            });
+        });
+    })();
+</script>

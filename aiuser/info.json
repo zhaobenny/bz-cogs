@@ -13,9 +13,8 @@
         "add_reactions"
     ],
     "requirements": [
-        "openai>=2",
+        "-rhttps://raw.githubusercontent.com/zhaobenny/bz-cogs/2428efde2b641e3f463985be919bdb0bd0cde893/aiuser/requirements.txt",
         "authlib>=1.6,<2",
-        "pydantic>=2.11,<2.12",
         "modal~=1.2.5",
         "tiktoken>=0.9.0",
         "trafilatura==2.0.0",
