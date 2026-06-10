@@ -110,6 +110,13 @@ class Settings(
             value=f"`{config['messages_backread_seconds']}` seconds",
         )
 
+        compaction_enabled = config.get("compaction_enabled", False)
+        main_embed.add_field(
+            name="Context Compaction",
+            inline=True,
+            value="`Enabled`" if compaction_enabled else "`Disabled`",
+        )
+
         main_embed.add_field(
             name="Whitelisted Channels",
             inline=True,

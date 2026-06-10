@@ -44,7 +44,45 @@ class HistoryBuilder:
 
         users = await self.consent_manager.get_unknown_consent_users(past_messages[:10])
 
+        # Filter out already-compacted messages and inject summary if available
+        cog = self.bot.get_cog("AIUser")
+        summary = None
+        compaction_candidates = []
+        compaction_enabled = False
+        if cog and hasattr(cog, "compaction_store"):
+            compaction_enabled = await self.config.guild(
+                self.guild
+            ).compaction_enabled()
+            if compaction_enabled:
+                compaction_candidates = await self._get_compaction_candidates(
+                    past_messages, max_seconds_gap
+                )
+                last_compacted_id = (
+                    await cog.compaction_store.get_last_compacted_message_id(
+                        self.guild.id, self.init_message.channel.id
+                    )
+                )
+                if last_compacted_id:
+                    # Drop messages that were already compacted
+                    past_messages = [
+                        m for m in past_messages if m.id > last_compacted_id
+                    ]
+
+                summary = await cog.compaction_store.get_summary(
+                    self.guild.id, self.init_message.channel.id
+                )
+
         await self._process_past_messages(past_messages, max_seconds_gap)
+        if summary:
+            await self.messages_list.add_system_message(
+                f"Summary of conversation before this point:\n{summary}",
+                index=0,
+            )
+
+        if compaction_enabled and cog and hasattr(cog, "compaction_manager"):
+            await cog.compaction_manager.check_and_run_compaction(
+                self.messages_list.ctx, compaction_candidates
+            )
 
         if await self.consent_manager.should_send_consent_embed(users):
             await self.consent_manager.send_consent_embed(
@@ -77,11 +115,7 @@ class HistoryBuilder:
                 )
 
             # Skip consent embeds
-            if (
-                past_messages[i].author.id == self.bot.user.id
-                and past_messages[i].embeds
-                and past_messages[i].embeds[0].title == CONSENT_EMBED_TITLE
-            ):
+            if self._is_consent_embed(past_messages[i]):
                 continue
 
             if await self._is_valid_time_gap(
@@ -94,6 +128,32 @@ class HistoryBuilder:
 
             if past_messages[i].author.id == self.bot.user.id:
                 await self._inject_cached_tool_calls(past_messages[i])
+
+    async def _get_compaction_candidates(
+        self, past_messages: List[discord.Message], max_seconds_gap: int
+    ) -> List[discord.Message]:
+        """Return messages normal history processing is allowed to include."""
+        candidates = []
+        for i in range(len(past_messages) - 1):
+            message = past_messages[i]
+
+            if not self._is_consent_embed(message):
+                if await self.messages_list.check_if_add(message):
+                    candidates.append(message)
+
+            if not await self._is_valid_time_gap(
+                message, past_messages[i + 1], max_seconds_gap
+            ):
+                break
+
+        return candidates
+
+    def _is_consent_embed(self, message: discord.Message) -> bool:
+        return (
+            message.author.id == self.bot.user.id
+            and message.embeds
+            and message.embeds[0].title == CONSENT_EMBED_TITLE
+        )
 
     async def _inject_cached_tool_calls(self, bot_message: discord.Message):
         """Inject possible cached tool call entries before a assistant response."""
