@@ -32,7 +32,8 @@ class CompactionManager:
         """Check if compaction should run based on messages_backread threshold.
 
         Compaction triggers when the number of unsummarized messages reaches
-        the messages_backread limit. It summarizes the oldest 50% of those messages.
+        80% of the messages_backread limit. It summarizes the oldest 80% of
+        those messages.
         """
         if not self.compaction_store or not messages:
             return
@@ -56,10 +57,11 @@ class CompactionManager:
         else:
             unsummarized = messages
 
-        # Trigger when unsummarized messages reach the backread limit
-        if len(unsummarized) >= messages_backread:
-            # Compact the oldest 50%
-            compact_count = len(unsummarized) // 2
+        # Trigger when unsummarized messages reach 80% of the backread limit.
+        compaction_threshold = max(1, (messages_backread * 4 + 4) // 5)
+        if len(unsummarized) >= compaction_threshold:
+            # Compact the oldest 80%
+            compact_count = max(1, (len(unsummarized) * 4) // 5)
             # messages are newest-first from Discord API, so oldest are at the end
             to_compact = unsummarized[len(unsummarized) - compact_count :]
             self._compaction_locks.add(channel_id)

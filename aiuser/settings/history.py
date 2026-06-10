@@ -74,8 +74,8 @@ class HistorySettings(MixinMeta):
     async def history_compaction_toggle(self, ctx: commands.Context):
         """Toggle context compaction on or off.
 
-        When enabled, the bot will automatically summarize the oldest half of messages
-        when unsummarized history hits the `[p]aiuser history backread` limit.
+        When enabled, the bot will automatically summarize the oldest 80% of messages
+        when unsummarized history reaches 80% of the `[p]aiuser history backread` limit.
         """
         current = await self.config.guild(ctx.guild).compaction_enabled()
         await self.config.guild(ctx.guild).compaction_enabled.set(not current)
