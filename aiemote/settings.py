@@ -1,6 +1,6 @@
 import asyncio
 import re
-from typing import Optional
+from typing import Optional, Union
 
 import discord
 import tiktoken
@@ -10,6 +10,7 @@ from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
 DEFAULT_LLM_MODEL = "gpt-4o-mini"
+CHANNEL_MENTION_OR_ID_PATTERN = re.compile(r"(?:<#(\d{15,25})>|(\d{15,25}))")
 
 
 class Settings:
@@ -34,10 +35,10 @@ class Settings:
         whitelist = self.whitelist.get(ctx.guild.id, [])
         if not whitelist:
             return await ctx.send("No channels in whitelist")
-        channels = [ctx.guild.get_channel(channel_id) for channel_id in whitelist]
         embed = discord.Embed(title="Whitelist", color=await ctx.embed_color())
         embed.add_field(
-            name="Channels", value="\n".join([channel.mention for channel in channels])
+            name="Channels",
+            value="\n".join([f"<#{channel_id}>" for channel_id in whitelist]),
         )
         await ctx.send(embed=embed)
 
@@ -60,17 +61,26 @@ class Settings:
     @aiemote.command(name="remove", aliases=["rm"])
     @checks.admin_or_permissions(manage_guild=True)
     async def whitelist_remove(
-        self, ctx: commands.Context, channel: discord.TextChannel
+        self, ctx: commands.Context, channel: Union[discord.TextChannel, str]
     ):
         """Remove a channel from the whitelist
 
         *Arguments*
-        - `<channel>` The mention of channel
+        - `<channel>` The mention or ID of channel
         """
+        if isinstance(channel, str):
+            match = CHANNEL_MENTION_OR_ID_PATTERN.fullmatch(channel.strip())
+            if not match:
+                return await ctx.send(
+                    "Invalid channel. Provide a channel mention or ID."
+                )
+            channel_id = int(match.group(1) or match.group(2))
+        else:
+            channel_id = channel.id
         whitelist = self.whitelist.get(ctx.guild.id, [])
-        if channel.id not in whitelist:
+        if channel_id not in whitelist:
             return await ctx.send("Channel not in whitelist")
-        whitelist.remove(channel.id)
+        whitelist.remove(channel_id)
         self.whitelist[ctx.guild.id] = whitelist
         await self.config.guild(ctx.guild).whitelist.set(whitelist)
         return await ctx.tick(message="✅ Channel removed from whitelist")

@@ -1,11 +1,12 @@
 import json
 import logging
-from typing import Optional
+from typing import Optional, Union
 
 import discord
 from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
+from aiuser.config.constants import CHANNEL_MENTION_OR_ID_PATTERN
 from aiuser.config.models import TOOLS_SUPPORTED_MODELS
 from aiuser.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
@@ -296,19 +297,26 @@ class Settings(
     async def remove(
         self,
         ctx: commands.Context,
-        channel: COMPATIBLE_CHANNELS,
+        channel: Union[COMPATIBLE_CHANNELS, str],
     ):
         """Remove a channel from the whitelist
 
         **Arguments**
-            - `channel` A mention of the channel
+            - `channel` A mention or ID of the channel
         """
-        if not channel:
-            return await ctx.send("Invalid channel")
+        if isinstance(channel, str):
+            match = CHANNEL_MENTION_OR_ID_PATTERN.fullmatch(channel.strip())
+            if not match:
+                return await ctx.send(
+                    "Invalid channel. Provide a channel mention or ID."
+                )
+            channel_id = int(match.group(1) or match.group(2))
+        else:
+            channel_id = channel.id
         new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
-        if channel.id not in new_whitelist:
+        if channel_id not in new_whitelist:
             return await ctx.send("Channel not in whitelist")
-        new_whitelist.remove(channel.id)
+        new_whitelist.remove(channel_id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         self.channels_whitelist[ctx.guild.id] = new_whitelist
         embed = discord.Embed(
