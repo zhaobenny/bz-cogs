@@ -283,7 +283,7 @@ class Settings(
         if channel.id in new_whitelist:
             return await ctx.send("Channel already in whitelist")
         new_whitelist.append(channel.id)
-        await self.services.guild_cache.set_channels_whitelist(ctx.guild, new_whitelist)
+        await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         embed = discord.Embed(
             title="The server whitelist is now:", color=await ctx.embed_color()
         )
@@ -316,7 +316,7 @@ class Settings(
         if channel_id not in new_whitelist:
             return await ctx.send("Channel not in whitelist")
         new_whitelist.remove(channel_id)
-        await self.services.guild_cache.set_channels_whitelist(ctx.guild, new_whitelist)
+        await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         embed = discord.Embed(
             title="The server whitelist is now:", color=await ctx.embed_color()
         )
@@ -430,7 +430,7 @@ class Settings(
                 "You cannot enable this setting for servers with more than 150 members."
             )
         value = not await self.config.guild(ctx.guild).optin_by_default()
-        await self.services.guild_cache.set_optin_by_default(ctx.guild, value)
+        await self.config.guild(ctx.guild).optin_by_default.set(value)
         embed = discord.Embed(
             title="Users are now opted in by default in this server:",
             description=f"{value}",

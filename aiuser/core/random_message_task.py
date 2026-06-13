@@ -46,12 +46,14 @@ class RandomMessageTask:
         if not self.bot.is_ready():
             return
 
-        whitelists = self.services.guild_cache.all_channels_whitelists()
-        for guild_id, channels in whitelists.items():
+        all_config = await self.config.all_guilds()
+        for guild_id, guild_config in all_config.items():
             # Each guild is processed independently; a failure or skip in one
             # guild must not starve the others.
             try:
-                await self._maybe_send_random_message(guild_id, channels)
+                await self._maybe_send_random_message(
+                    guild_id, guild_config["channels_whitelist"]
+                )
             except Exception:
                 logger.exception(
                     f"Failed random message processing for guild {guild_id}, continuing"

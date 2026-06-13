@@ -170,8 +170,8 @@ class OwnerSettings(MixinMeta):
         )
 
     async def _refresh_cached_guild_options(self):
-        """Reload the in-memory caches of per-guild options from config."""
-        await self.services.guild_cache.load_all()
+        """Reload in-memory state derived from config."""
+        await self.services.ignore_regex_cache.load_all()
         await self.services.consent.load()
 
     @aiuserowner.command(name="prompt")

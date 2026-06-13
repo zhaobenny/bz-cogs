@@ -152,7 +152,7 @@ class ConversationAssembler:
             logger.debug("Skipping duplicate message when creating context")
             return False
 
-        ignore_regex = self.services.guild_cache.ignore_regex(self.guild.id)
+        ignore_regex = self.services.ignore_regex_cache.ignore_regex(self.guild.id)
         if ignore_regex and ignore_regex.search(message.content):
             return False
         if not await self.bot.allowed_by_whitelist_blacklist(message.author):

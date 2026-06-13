@@ -139,20 +139,20 @@ async def mock_services(bot, redbot_config, test_guild):
 
     from aiuser.config.resolver import ScopedConfigResolver
     from aiuser.consent import ConsentService
-    from aiuser.core.services import AIUserServices, GuildSettingsCache
+    from aiuser.core.services import AIUserServices, GuildIgnoreRegexCache
     from aiuser.utils.cache import Cache
 
     consent = ConsentService(bot, redbot_config)
     await consent.load()
-    guild_cache = GuildSettingsCache(redbot_config)
-    await guild_cache.load_all()
+    ignore_regex_cache = GuildIgnoreRegexCache(redbot_config)
+    await ignore_regex_cache.load_all()
 
     services = AIUserServices(
         bot=bot,
         config=redbot_config,
         consent=consent,
         resolver=ScopedConfigResolver(redbot_config),
-        guild_cache=guild_cache,
+        ignore_regex_cache=ignore_regex_cache,
         memories=None,  # skip memory retriever
         compaction_store=None,
         compaction_manager=None,
@@ -161,7 +161,7 @@ async def mock_services(bot, redbot_config, test_guild):
     )
 
     # Opt-in by default for the test guild
-    await services.guild_cache.set_optin_by_default(test_guild, True)
+    await services.config.guild(test_guild).optin_by_default.set(True)
 
     return services
 

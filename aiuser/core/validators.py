@@ -68,7 +68,7 @@ async def check_channel_settings(
     services: "AIUserServices", ctx: commands.Context
 ) -> Tuple[bool, str]:
     """Validate channel whitelist and thread settings"""
-    whitelist = services.guild_cache.channels_whitelist(ctx.guild.id)
+    whitelist = await services.config.guild(ctx.guild).channels_whitelist()
     if not whitelist:
         return False, "No whitelisted channels"
 
@@ -130,9 +130,8 @@ async def check_user_status(
     if services.consent.is_opted_out(ctx.author.id):
         return False, "User opted out"
 
-    if not services.guild_cache.optin_by_default(
-        ctx.guild.id
-    ) and not services.consent.is_opted_in(ctx.author.id):
+    optin_by_default = await services.config.guild(ctx.guild).optin_by_default()
+    if not optin_by_default and not services.consent.is_opted_in(ctx.author.id):
         return False, "User not opted in"
 
     # Role/member whitelist checks
@@ -168,7 +167,7 @@ async def check_message_content(
         if 1 <= len(ctx.message.content) < min_length:
             return False, f"Message too short (min: {min_length})"
 
-    ignore_regex = services.guild_cache.ignore_regex(ctx.guild.id)
+    ignore_regex = services.ignore_regex_cache.ignore_regex(ctx.guild.id)
     if ignore_regex and ignore_regex.search(ctx.message.content):
         return False, "Message matches ignore regex"
 

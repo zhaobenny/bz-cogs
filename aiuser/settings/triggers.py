@@ -65,10 +65,12 @@ class TriggerSettings(MixinMeta):
     async def ignore(self, ctx: commands.Context, *, regex_pattern: Optional[str]):
         """Messages matching this regex won't be replied to or seen, by the bot"""
         if not regex_pattern:
-            await self.services.guild_cache.set_ignore_regex(ctx.guild, None)
+            await self.services.ignore_regex_cache.set_ignore_regex(ctx.guild, None)
             return await ctx.send("The ignore regex has been cleared.")
         try:
-            await self.services.guild_cache.set_ignore_regex(ctx.guild, regex_pattern)
+            await self.services.ignore_regex_cache.set_ignore_regex(
+                ctx.guild, regex_pattern
+            )
         except re.error:
             return await ctx.send("Sorry, but that regex pattern seems to be invalid.")
         embed = discord.Embed(
