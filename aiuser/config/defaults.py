@@ -36,6 +36,8 @@ DEFAULT_REMOVE_PATTERNS = [
 ]
 
 DEFAULT_REPLY_PERCENT = 0.5
+DEFAULT_MESSAGE_BURST_IDLE_SECONDS = 2
+DEFAULT_MESSAGE_BURST_MAX_SECONDS = 8
 DEFAULT_MIN_MESSAGE_LENGTH = 2
 DEFAULT_IMAGE_UPLOAD_LIMIT = 10 * (1024 * 1024)  # 10 MB
 DEFAULT_LLM_MODEL = "gpt-4.1-nano"
@@ -87,6 +89,8 @@ DEFAULT_GUILD = {
     "function_calling_searxng_max_results": 5,
     "conversation_reply_percent": 0,
     "conversation_reply_time": 20,
+    "message_burst_idle_seconds": DEFAULT_MESSAGE_BURST_IDLE_SECONDS,
+    "message_burst_max_seconds": DEFAULT_MESSAGE_BURST_MAX_SECONDS,
     "grok_trigger": False,
     "custom_model_tokens_limit": None,
     "always_reply_on_words": [],

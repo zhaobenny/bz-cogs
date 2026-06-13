@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from unittest.mock import patch
 
 import discord
 import pytest
@@ -7,8 +6,8 @@ from discord.ext.test import backend
 
 from aiuser.core.handlers import get_percentage
 from aiuser.core.triggers import (
+    get_conversation_reply_chance,
     is_always_reply_on_words_triggered,
-    is_in_conversation,
 )
 from aiuser.core.validators import (
     check_message_content,
@@ -17,15 +16,14 @@ from aiuser.core.validators import (
 )
 
 
-async def _is_conversation_reply_enabled(
+async def _get_conversation_reply_chance(
     bot, mock_services, test_channel, test_member, text
 ):
     """Create a recent bot message + user trigger, then evaluate conversation follow-up."""
     _ = backend.make_message("recent bot message", bot.user, test_channel)
     trigger = backend.make_message(text, test_member, test_channel)
     ctx = await bot.get_context(trigger)
-    with patch("aiuser.core.triggers.random.random", return_value=0.5):
-        return await is_in_conversation(mock_services, ctx)
+    return await get_conversation_reply_chance(mock_services, ctx)
 
 
 @pytest.mark.asyncio
@@ -44,7 +42,7 @@ async def test_conversation_reply_hierarchy_percent(
     await mock_services.config.role(role).conversation_reply_percent.set(None)
     await mock_services.config.role(role).conversation_reply_time.set(None)
 
-    # Baseline via guild: should pass (0.9 > patched random 0.5)
+    # Baseline via guild
     await mock_services.config.guild(test_guild).conversation_reply_percent.set(0.9)
     await mock_services.config.guild(test_guild).conversation_reply_time.set(300)
 
@@ -56,37 +54,37 @@ async def test_conversation_reply_hierarchy_percent(
     await mock_services.config.role(role).conversation_reply_percent.set(None)
 
     assert (
-        await _is_conversation_reply_enabled(
+        await _get_conversation_reply_chance(
             bot, mock_services, test_channel, test_member, "guild baseline"
         )
-        is True
+        == 0.9
     )
 
     # Channel overrides guild
     await mock_services.config.channel(test_channel).conversation_reply_percent.set(0.0)
     assert (
-        await _is_conversation_reply_enabled(
+        await _get_conversation_reply_chance(
             bot, mock_services, test_channel, test_member, "channel override"
         )
-        is False
+        is None
     )
 
     # Role overrides channel
     await mock_services.config.role(role).conversation_reply_percent.set(0.9)
     assert (
-        await _is_conversation_reply_enabled(
+        await _get_conversation_reply_chance(
             bot, mock_services, test_channel, test_member, "role override"
         )
-        is True
+        == 0.9
     )
 
     # Member overrides role
     await mock_services.config.member(test_member).conversation_reply_percent.set(0.0)
     assert (
-        await _is_conversation_reply_enabled(
+        await _get_conversation_reply_chance(
             bot, mock_services, test_channel, test_member, "member override"
         )
-        is False
+        is None
     )
 
 
@@ -116,37 +114,37 @@ async def test_conversation_reply_hierarchy_time(
     await mock_services.config.role(role).conversation_reply_time.set(None)
 
     assert (
-        await _is_conversation_reply_enabled(
+        await _get_conversation_reply_chance(
             bot, mock_services, test_channel, test_member, "guild time baseline"
         )
-        is True
+        == 0.9
     )
 
     # Channel overrides guild (0 disables conversation continuation)
     await mock_services.config.channel(test_channel).conversation_reply_time.set(0)
     assert (
-        await _is_conversation_reply_enabled(
+        await _get_conversation_reply_chance(
             bot, mock_services, test_channel, test_member, "channel time override"
         )
-        is False
+        is None
     )
 
     # Role overrides channel
     await mock_services.config.role(role).conversation_reply_time.set(300)
     assert (
-        await _is_conversation_reply_enabled(
+        await _get_conversation_reply_chance(
             bot, mock_services, test_channel, test_member, "role time override"
         )
-        is True
+        == 0.9
     )
 
     # Member overrides role
     await mock_services.config.member(test_member).conversation_reply_time.set(0)
     assert (
-        await _is_conversation_reply_enabled(
+        await _get_conversation_reply_chance(
             bot, mock_services, test_channel, test_member, "member time override"
         )
-        is False
+        is None
     )
 
 
@@ -249,14 +247,14 @@ async def test_conversation_reply_uses_highest_role_override(
     await mock_services.config.role(high_role).conversation_reply_time.set(None)
 
     assert (
-        await _is_conversation_reply_enabled(
+        await _get_conversation_reply_chance(
             bot,
             mock_services,
             test_channel,
             test_member,
             "highest role percent override",
         )
-        is False
+        is None
     )
 
 
@@ -281,14 +279,12 @@ async def test_conversation_reply_requires_recent_plain_bot_message(
     )
     trigger = backend.make_message("does embed count?", test_member, test_channel)
     ctx = await bot.get_context(trigger)
-    with patch("aiuser.core.triggers.random.random", return_value=0.5):
-        assert await is_in_conversation(mock_services, ctx) is False
+    assert await get_conversation_reply_chance(mock_services, ctx) is None
 
     _ = backend.make_message("plain follow-up", bot.user, test_channel)
     trigger = backend.make_message("how about now?", test_member, test_channel)
     ctx = await bot.get_context(trigger)
-    with patch("aiuser.core.triggers.random.random", return_value=0.5):
-        assert await is_in_conversation(mock_services, ctx) is True
+    assert await get_conversation_reply_chance(mock_services, ctx) == 0.9
 
 
 @pytest.mark.asyncio
@@ -311,8 +307,7 @@ async def test_conversation_reply_without_recent_bot_message_is_false(
     trigger = backend.make_message("should not continue", test_member, test_channel)
     ctx = await bot.get_context(trigger)
 
-    with patch("aiuser.core.triggers.random.random", return_value=0.5):
-        assert await is_in_conversation(mock_services, ctx) is False
+    assert await get_conversation_reply_chance(mock_services, ctx) is None
 
 
 @pytest.mark.asyncio

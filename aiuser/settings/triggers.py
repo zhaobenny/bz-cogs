@@ -158,6 +158,42 @@ class TriggerSettings(MixinMeta):
         )
         return await ctx.send(embed=embed)
 
+    @checks.is_owner()
+    @trigger.group(name="message_burst", aliases=["burst"])
+    async def message_burst(self, ctx: commands.Context):
+        """Configure message batching timing"""
+        pass
+
+    @checks.is_owner()
+    @message_burst.command(name="idle")
+    async def message_burst_idle(self, ctx: commands.Context, seconds: int):
+        """Set seconds of quiet before a message burst can close"""
+        if seconds <= 0:
+            return await ctx.send("Please enter a positive number")
+
+        await self.config.guild(ctx.guild).message_burst_idle_seconds.set(seconds)
+        embed = discord.Embed(
+            title="Message burst idle window is now:",
+            description=f"{seconds} seconds",
+            color=await ctx.embed_color(),
+        )
+        return await ctx.send(embed=embed)
+
+    @checks.is_owner()
+    @message_burst.command(name="max")
+    async def message_burst_max(self, ctx: commands.Context, seconds: int):
+        """Set maximum seconds a message burst can stay open"""
+        if seconds <= 0:
+            return await ctx.send("Please enter a positive number")
+
+        await self.config.guild(ctx.guild).message_burst_max_seconds.set(seconds)
+        embed = discord.Embed(
+            title="Message burst maximum window is now:",
+            description=f"{seconds} seconds",
+            color=await ctx.embed_color(),
+        )
+        return await ctx.send(embed=embed)
+
     @trigger.command(name="reply_to_mentions", aliases=["mentions_replies"])
     @checks.is_owner()
     async def force_reply_to_mentions(
