@@ -10,12 +10,10 @@ from redbot.core import commands
 
 from aiuser.config.defaults import DEFAULT_REPLY_PERCENT
 from aiuser.core.reply_queue import (
-    BURST_MODE_CONVERSATION,
-    BURST_MODE_RANDOM,
+    BurstMode,
+    ResponseKind,
     ResponseRequest,
-    add_or_update_message_burst,
-    cancel_pending_message_burst,
-    enqueue_response,
+    get_channel_reply_state,
 )
 from aiuser.core.triggers import check_direct_triggers, get_conversation_reply_chance
 from aiuser.core.validators import is_valid_message
@@ -63,10 +61,12 @@ async def handle_message(services: "AIUserServices", message: discord.Message):
         return
 
     if await check_direct_triggers(services, ctx, message):
-        await cancel_pending_message_burst(services, ctx.channel.id)
-        await enqueue_response(
+        state = get_channel_reply_state(services, ctx.channel.id)
+        await state.cancel_pending_burst()
+        await state.enqueue(
             services,
-            ResponseRequest.direct(
+            ResponseRequest(
+                kind=ResponseKind.DIRECT,
                 channel_id=ctx.channel.id,
                 message_id=message.id,
             ),
@@ -75,8 +75,9 @@ async def handle_message(services: "AIUserServices", message: discord.Message):
 
     conversation_reply_chance = await get_conversation_reply_chance(services, ctx)
     if conversation_reply_chance is not None:
-        await add_or_update_message_burst(
-            services, ctx, conversation_reply_chance, BURST_MODE_CONVERSATION
+        state = get_channel_reply_state(services, ctx.channel.id)
+        await state.arm_burst(
+            services, ctx, conversation_reply_chance, BurstMode.CONVERSATION
         )
         return
 
@@ -84,7 +85,8 @@ async def handle_message(services: "AIUserServices", message: discord.Message):
     if reply_chance <= 0:
         return
 
-    await add_or_update_message_burst(services, ctx, reply_chance, BURST_MODE_RANDOM)
+    state = get_channel_reply_state(services, ctx.channel.id)
+    await state.arm_burst(services, ctx, reply_chance, BurstMode.RANDOM)
 
 
 async def get_percentage(services: "AIUserServices", ctx: commands.Context) -> float:
