@@ -3,7 +3,7 @@ import logging
 import discord
 from redbot.core import checks, commands
 
-from aiuser.config.models import VISION_SUPPORTED_MODELS
+from aiuser.config.model_info import get_model_info
 from aiuser.llm.registry import list_llm_models
 from aiuser.types.abc import MixinMeta, aiuser
 
@@ -35,7 +35,7 @@ class ImageScanSettings(MixinMeta):
             )
             scan_model = await self.config.guild(ctx.guild).scan_images_model()
             model = scan_model or await self.config.guild(ctx.guild).model()
-            if not any(m in model for m in VISION_SUPPORTED_MODELS):
+            if not get_model_info(model).supports_vision:
                 embed.set_footer(text="⚠️ Ensure selected model supports vision")
         return await ctx.send(embed=embed)
 
@@ -61,7 +61,7 @@ class ImageScanSettings(MixinMeta):
                 color=await ctx.embed_color(),
             )
             chat_model = await self.config.guild(ctx.guild).model()
-            if not any(m in chat_model for m in VISION_SUPPORTED_MODELS):
+            if not get_model_info(chat_model).supports_vision:
                 embed.set_footer(
                     text="⚠️ Model has not been validated for image scanning."
                 )
@@ -84,6 +84,6 @@ class ImageScanSettings(MixinMeta):
             color=await ctx.embed_color(),
         )
 
-        if not any(m in model_name for m in VISION_SUPPORTED_MODELS):
+        if not get_model_info(model_name).supports_vision:
             embed.set_footer(text="⚠️ Model has not been validated for image scanning.")
         return await ctx.send(embed=embed)

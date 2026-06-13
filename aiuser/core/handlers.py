@@ -9,7 +9,7 @@ from redbot.core import commands
 
 from aiuser.config.constants import URL_PATTERN
 from aiuser.config.defaults import DEFAULT_REPLY_PERCENT
-from aiuser.core.hierarchy import get_ctx_hierarchical_config_value
+from aiuser.config.resolver import ScopedConfigResolver
 from aiuser.core.triggers import check_triggers
 from aiuser.core.validators import is_valid_message
 from aiuser.response.response import create_response
@@ -65,7 +65,8 @@ async def handle_message(cog: MixinMeta, message: discord.Message):
 
 async def get_percentage(cog: MixinMeta, ctx: commands.Context) -> float:
     """Get reply percentage based on member/role/channel/guild settings"""
-    percentage = await get_ctx_hierarchical_config_value(cog, ctx, "reply_percent")
+    resolver = ScopedConfigResolver(cog.config)
+    percentage = await resolver.resolve_for_ctx("reply_percent", ctx)
     if percentage is None:
         percentage = DEFAULT_REPLY_PERCENT
     return percentage

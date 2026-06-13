@@ -32,26 +32,6 @@ def get_tokenizer_encoding(model: str):
         return tiktoken.get_encoding(FALLBACK_TOKENIZER), FALLBACK_TOKENIZER, True
 
 
-class RolesSet:
-    def __init__(self):
-        self._set = set()
-
-    def has(self, role_id):
-        return role_id in self._set
-
-    def add(self, role_id):
-        self._set.add(role_id)
-
-    def __iter__(self):
-        return iter(self._set)
-
-    def __contains__(self, role_id):
-        return role_id in self._set
-
-    def __repr__(self):
-        return repr(self._set)
-
-
 def to_thread(timeout=300):
     def decorator(func: Callable) -> Coroutine:
         @functools.wraps(func)

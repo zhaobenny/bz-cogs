@@ -8,7 +8,7 @@ from tenacity import retry, stop_after_attempt, wait_random
 
 from aiuser.config.constants import URL_PATTERN, YOUTUBE_VIDEO_ID_PATTERN
 from aiuser.context.converter.formatters import format_text_content
-from aiuser.functions.scrape.tool_call import ScrapeToolCall
+from aiuser.functions.names import OPEN_URL
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import contains_youtube_link
 
@@ -25,7 +25,7 @@ async def format_embed_content(cog: MixinMeta, message: Message):
         return await format_youtube_embed(yt_api_key, message)
     elif (
         URL_PATTERN.search(message.content)
-        and ScrapeToolCall.function_name
+        and OPEN_URL
         in await cog.config.guild(message.guild).function_calling_functions()
     ):
         return None

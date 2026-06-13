@@ -1,17 +1,13 @@
 import logging
 from typing import Tuple
-from unittest.mock import MagicMock
 
 import discord
 from redbot.core import commands
 
 from aiuser.config.constants import SINGULAR_MENTION_PATTERN
-from aiuser.core.hierarchy import (
-    get_ctx_hierarchical_config_value,
-    get_message_hierarchical_config_value,
-)
+from aiuser.config.resolver import ScopedConfigResolver
 from aiuser.types.abc import MixinMeta
-from aiuser.utils.utilities import RolesSet
+from aiuser.utils.adapters import ensure_member_like
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -51,11 +47,8 @@ async def check_guild_permissions(
     if await cog.bot.cog_disabled_in_guild(cog, ctx.guild):
         return False, "Cog disabled in guild"
 
-    #  monkeypatch because cog.bot.ignored_channel_or_guild expects Member objects
-    if isinstance(ctx.author, discord.User):
-        ctx.author = MagicMock(wraps=ctx.author)
-        ctx.author._roles = RolesSet()
-        ctx.author.is_timed_out = lambda: False
+    # cog.bot.ignored_channel_or_guild expects Member objects
+    ctx.author = ensure_member_like(ctx.author)
 
     try:
         if not await cog.bot.ignored_channel_or_guild(ctx):
@@ -102,8 +95,8 @@ async def check_user_status(cog: MixinMeta, ctx: commands.Context) -> Tuple[bool
 
     if is_webhook or is_app_bot:
         # Check if webhook/app replies are enabled
-        reply_to_webhooks = await get_ctx_hierarchical_config_value(
-            cog, ctx, "reply_to_webhooks"
+        reply_to_webhooks = await ScopedConfigResolver(cog.config).resolve_for_ctx(
+            "reply_to_webhooks", ctx
         )
         if not reply_to_webhooks:
             return False, "Webhook/app replies disabled"
@@ -169,8 +162,8 @@ async def check_message_content(
             if not await is_bot_mentioned_or_replied(cog, ctx.message):
                 return False, "Single mention without bot reference"
 
-        min_length = await get_ctx_hierarchical_config_value(
-            cog, ctx, "messages_min_length"
+        min_length = await ScopedConfigResolver(cog.config).resolve_for_ctx(
+            "messages_min_length", ctx
         )
         if 1 <= len(ctx.message.content) < min_length:
             return False, f"Message too short (min: {min_length})"
@@ -185,8 +178,7 @@ async def check_message_content(
 
 async def is_bot_mentioned_or_replied(cog: MixinMeta, message: discord.Message) -> bool:
     """Check if message mentions or replies to bot"""
-    if not await get_message_hierarchical_config_value(
-        cog, message, "reply_to_mentions_replies"
-    ):
+    resolver = ScopedConfigResolver(cog.config)
+    if not await resolver.resolve_for_message("reply_to_mentions_replies", message):
         return False
     return cog.bot.user in message.mentions

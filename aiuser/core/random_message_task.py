@@ -1,18 +1,19 @@
 import datetime
 import logging
 import random
-from unittest.mock import MagicMock
 
 import discord
 from discord.ext import tasks
 
 from aiuser.config.constants import RANDOM_MESSAGE_TASK_RETRY_SECONDS
 from aiuser.config.defaults import DEFAULT_PROMPT
+from aiuser.config.resolver import ScopedConfigResolver
 from aiuser.context.setup import create_messages_thread
 from aiuser.llm.registry import get_llm_provider
 from aiuser.response.response import create_response
 from aiuser.types.abc import MixinMeta
-from aiuser.utils.utilities import RolesSet, format_variables
+from aiuser.utils.adapters import ensure_member_like
+from aiuser.utils.utilities import format_variables
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -46,11 +47,11 @@ class RandomMessageTask(MixinMeta):
                 )
                 continue
 
+            scoped_prompt = await ScopedConfigResolver(self.config).resolve(
+                "custom_text_prompt", guild=guild, channel=channel
+            )
             prompt = (
-                await self.config.channel(channel).custom_text_prompt()
-                or await self.config.guild(guild).custom_text_prompt()
-                or await self.config.custom_text_prompt()
-                or DEFAULT_PROMPT
+                scoped_prompt or await self.config.custom_text_prompt() or DEFAULT_PROMPT
             )
             messages_list = await create_messages_thread(
                 self, ctx, prompt=prompt, history=False
@@ -85,10 +86,7 @@ class RandomMessageTask(MixinMeta):
 
         last_message = await channel.fetch_message(channel.last_message_id)
         ctx = await self.bot.get_context(last_message)
-        if isinstance(ctx.author, discord.User):
-            ctx.author = MagicMock(wraps=ctx.author)
-            ctx.author._roles = RolesSet()
-            ctx.author.is_timed_out = lambda: False
+        ctx.author = ensure_member_like(ctx.author)
 
         return last_message, ctx
 

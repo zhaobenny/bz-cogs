@@ -1,10 +1,10 @@
 from typing import Optional
 
-import discord
 from redbot.core import commands
 
 from aiuser.config.defaults import DEFAULT_PROMPT
-from aiuser.config.models import OTHER_MODELS_LIMITS
+from aiuser.config.model_info import get_model_info
+from aiuser.config.resolver import ScopedConfigResolver
 from aiuser.context.messages import MessagesThread
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import format_variables
@@ -27,9 +27,10 @@ class ThreadSetup:
         thread = MessagesThread(self.cog, self.ctx)
 
         thread.model = await self.config.guild(self.guild).model()
-        thread.token_limit = await self.config.guild(
-            self.guild
-        ).custom_model_tokens_limit() or self._get_token_limit(thread.model)
+        thread.token_limit = (
+            await self.config.guild(self.guild).custom_model_tokens_limit()
+            or get_model_info(thread.model).token_limit
+        )
 
         if not prompt:  # jank
             await thread.add_discord_message(thread.init_message)
@@ -49,29 +50,14 @@ class ThreadSetup:
         return thread
 
     async def _pick_prompt(self) -> str:
-        """Select the appropriate prompt based on configuration hierarchy"""
-        author = self.ctx.message.author
-        role_prompt: Optional[str] = None
-
-        # Webhook messages have User objects instead of Member objects
-        if isinstance(author, discord.Member):
-            for role in author.roles:
-                if role.id in (await self.config.all_roles()):
-                    role_prompt = await self.config.role(role).custom_text_prompt()
-                    break
-
-            member_prompt = await self.config.member(author).custom_text_prompt()
-        else:
-            member_prompt = None
-
-        return (
-            member_prompt
-            or role_prompt
-            or await self.config.channel(self.ctx.channel).custom_text_prompt()
-            or await self.config.guild(self.guild).custom_text_prompt()
-            or await self.config.custom_text_prompt()
-            or DEFAULT_PROMPT
+        """Select the prompt via member > role > channel > guild > global"""
+        scoped_prompt = await ScopedConfigResolver(self.config).resolve(
+            "custom_text_prompt",
+            guild=self.guild,
+            channel=self.ctx.channel,
+            member=self.ctx.message.author,
         )
+        return scoped_prompt or await self.config.custom_text_prompt() or DEFAULT_PROMPT
 
     async def _should_use_image_model(self) -> bool:
         """Check if we should switch to image scanning model"""
@@ -100,32 +86,6 @@ class ThreadSetup:
             ].content_type.startswith("image/")
 
         return False
-
-    @staticmethod
-    def _get_token_limit(model) -> int:
-        limit = 7000
-
-        if "gemini-2" in model or "gemini-3" in model:
-            limit = 940000
-        if "gpt-4.1" in model:
-            limit = 942818
-        if "gpt-5" in model:
-            limit = 115200
-
-        if "100k" in model:
-            limit = 98000
-        if "16k" in model:
-            limit = 15000
-        if "32k" in model:
-            limit = 31000
-
-        matching_keys = [key for key in OTHER_MODELS_LIMITS if key in model]
-        if matching_keys:
-            best_match = max(matching_keys, key=len)
-            limit = OTHER_MODELS_LIMITS[best_match]
-
-        return limit
-
 
 async def create_messages_thread(
     cog: MixinMeta,

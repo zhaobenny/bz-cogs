@@ -2,7 +2,7 @@ import discord
 from redbot.core import commands
 
 from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
-from aiuser.config.models import TOOLS_SUPPORTED_MODELS
+from aiuser.config.model_info import get_model_info
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
 from aiuser.settings.functions.memory import MemoryFunctionSettings
 from aiuser.settings.functions.searxng import SearXNGFunctionSettings
@@ -40,9 +40,7 @@ class FunctionCallingSettings(
         )
 
         current_model = await self.config.guild(ctx.guild).model()
-        if current_value and not any(
-            m in current_model for m in TOOLS_SUPPORTED_MODELS
-        ):
+        if current_value and not get_model_info(current_model).supports_tools:
             embed.set_footer(text="⚠️ Ensure selected model supports function calling!")
         await ctx.send(embed=embed)
 

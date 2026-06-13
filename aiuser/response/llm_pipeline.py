@@ -12,11 +12,8 @@ from openai.types.chat import (
 )
 from redbot.core import Config, commands
 
-from aiuser.config.models import (
-    UNSUPPORTED_LOGIT_BIAS_MODELS,
-    VISION_SUPPORTED_MODELS,
-)
 from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
+from aiuser.config.model_info import get_model_info
 from aiuser.context.messages import MessagesThread
 from aiuser.llm.base import ChatStepResult, LLMProvider
 from aiuser.llm.openai_compatible.endpoints import is_openrouter_endpoint
@@ -137,9 +134,9 @@ class LLMPipeline:
             if weights_dict:
                 kwargs["logit_bias"] = weights_dict
 
-        unsupported_models = VISION_SUPPORTED_MODELS + UNSUPPORTED_LOGIT_BIAS_MODELS
-        is_unsupported_logit_bias = any(m in self.model for m in unsupported_models)
-        if kwargs.get("logit_bias", False) and is_unsupported_logit_bias:
+        if kwargs.get("logit_bias", False) and not get_model_info(
+            self.model
+        ).supports_logit_bias:
             logger.warning(
                 f"logit_bias is not supported for model {self.model}, removing..."
             )

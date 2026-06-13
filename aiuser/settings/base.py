@@ -7,7 +7,7 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.constants import CHANNEL_MENTION_OR_ID_PATTERN
-from aiuser.config.models import TOOLS_SUPPORTED_MODELS
+from aiuser.config.model_info import get_model_info
 from aiuser.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
     get_openai_compat_kind,
@@ -355,8 +355,9 @@ class Settings(
             color=await ctx.embed_color(),
         )
 
-        if await self.config.guild(ctx.guild).function_calling() and not any(
-            m in model for m in TOOLS_SUPPORTED_MODELS
+        if (
+            await self.config.guild(ctx.guild).function_calling()
+            and not get_model_info(model).supports_tools
         ):
             embed.set_footer(
                 text="⚠️ Function calling is enabled - ensure selected model supports it"

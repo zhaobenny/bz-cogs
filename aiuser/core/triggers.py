@@ -8,7 +8,7 @@ from aiuser.config.constants import (
     GROK_PRIMARY_TRIGGERS,
     GROK_SECONDARY_TRIGGERS,
 )
-from aiuser.core.hierarchy import get_ctx_hierarchical_config_value
+from aiuser.config.resolver import ScopedConfigResolver
 from aiuser.core.validators import is_bot_mentioned_or_replied
 from aiuser.types.abc import MixinMeta
 
@@ -37,12 +37,9 @@ async def get_conversation_reply_settings(
     cog: MixinMeta, ctx: commands.Context
 ) -> tuple[float, int]:
     """Get conversation reply settings based on member/role/channel/guild settings"""
-    reply_percent = await get_ctx_hierarchical_config_value(
-        cog, ctx, "conversation_reply_percent"
-    )
-    reply_time_seconds = await get_ctx_hierarchical_config_value(
-        cog, ctx, "conversation_reply_time"
-    )
+    resolver = ScopedConfigResolver(cog.config)
+    reply_percent = await resolver.resolve_for_ctx("conversation_reply_percent", ctx)
+    reply_time_seconds = await resolver.resolve_for_ctx("conversation_reply_time", ctx)
     return reply_percent, reply_time_seconds
 
 
@@ -64,8 +61,8 @@ async def is_always_reply_on_words_triggered(
     cog: MixinMeta, ctx: commands.Context
 ) -> bool:
     """Check if any always_reply_on_words appears in the message"""
-    trigger_words = await get_ctx_hierarchical_config_value(
-        cog, ctx, "always_reply_on_words"
+    trigger_words = await ScopedConfigResolver(cog.config).resolve_for_ctx(
+        "always_reply_on_words", ctx
     )
     if not trigger_words:
         return False
