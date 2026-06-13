@@ -10,8 +10,8 @@ from PIL import Image
 @pytest.mark.asyncio
 async def test_image_scan_message(
     bot,
-    mock_cog,
-    mock_messages_thread,
+    mock_services,
+    build_conversation,
     test_guild,
     test_channel,
     test_member,
@@ -31,8 +31,8 @@ async def test_image_scan_message(
     img = Image.new("RGB", (100, 100), color="red")
     img.save(tmp_path, format="PNG")
 
-    await mock_cog.config.guild(test_guild).scan_images.set(True)
-    await mock_cog.config.guild(test_guild).max_image_size.set(1024 * 1024 * 10)
+    await mock_services.config.guild(test_guild).scan_images.set(True)
+    await mock_services.config.guild(test_guild).max_image_size.set(1024 * 1024 * 10)
 
     attachment = backend.make_attachment(tmp_path, name="test_image.png")
     # dpytest doesn't set content_type, monkeypatch it
@@ -45,15 +45,15 @@ async def test_image_scan_message(
         attachments=[attachment],
     )
 
-    thread = await mock_messages_thread(init_message=user_message)
+    thread = await build_conversation(init_message=user_message)
 
-    json_output = thread.get_json()
+    json_output = thread.to_chat_payload()
     serialized = json.dumps(json_output)
 
     assert len(json_output) > 0
     assert isinstance(serialized, str)
 
-    mock_cog.openai_client = MagicMock()
+    mock_services.openai_client = MagicMock()
 
     test_message_content = "holy, that's a massive W"
     mock_response = ChatCompletion(
@@ -74,13 +74,13 @@ async def test_image_scan_message(
         object="chat.completion",
     )
 
-    mock_cog.openai_client.chat.completions.create = AsyncMock(
+    mock_services.openai_client.chat.completions.create = AsyncMock(
         return_value=mock_response
     )
 
     ctx = await bot.get_context(user_message)
 
-    await mock_create_response(mock_cog, ctx, messages_list=thread)
+    await mock_create_response(mock_services, ctx, conversation=thread)
 
     sent_message = get_message()
     assert sent_message.content == test_message_content

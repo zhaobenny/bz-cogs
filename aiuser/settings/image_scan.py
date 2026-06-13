@@ -5,7 +5,8 @@ from redbot.core import checks, commands
 
 from aiuser.config.model_info import get_model_info
 from aiuser.llm.registry import list_llm_models
-from aiuser.types.abc import MixinMeta, aiuser
+from aiuser.settings._groups import aiuser
+from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -68,7 +69,7 @@ class ImageScanSettings(MixinMeta):
             return await ctx.send(embed=embed)
 
         await ctx.message.add_reaction("🔄")
-        models = await list_llm_models(self)
+        models = await list_llm_models(self.services)
         await ctx.message.remove_reaction("🔄", ctx.me)
 
         if not models:

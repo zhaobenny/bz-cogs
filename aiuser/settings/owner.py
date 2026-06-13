@@ -98,7 +98,7 @@ class OwnerSettings(MixinMeta):
             return await ctx.send(":warning: Please enter a positive integer.")
 
         await self.config.openai_endpoint_request_timeout.set(seconds)
-        self.openai_client = await setup_openai_client(self.bot, self.config)
+        self.services.openai_client = await setup_openai_client(self.bot, self.config)
 
         embed = discord.Embed(
             title="The request timeout is now:",
@@ -183,20 +183,8 @@ class OwnerSettings(MixinMeta):
 
     async def _refresh_cached_guild_options(self):
         """Reload the in-memory caches of per-guild options from config."""
-        import re
-
-        all_config = await self.config.all_guilds()
-        for guild_id, guild_config in all_config.items():
-            self.optindefault[guild_id] = guild_config["optin_by_default"]
-            self.channels_whitelist[guild_id] = guild_config["channels_whitelist"]
-            pattern = guild_config["ignore_regex"]
-            try:
-                self.ignore_regex[guild_id] = re.compile(pattern) if pattern else None
-            except re.error:
-                logger.warning(
-                    f"Invalid ignore regex for guild {guild_id} after config import"
-                )
-                self.ignore_regex[guild_id] = None
+        await self.services.guild_cache.load_all()
+        await self.services.consent.load()
 
     @aiuserowner.command(name="prompt")
     async def global_prompt(self, ctx: commands.Context, *, prompt: Optional[str]):
@@ -246,14 +234,14 @@ class OwnerSettings(MixinMeta):
         await self.config.custom_openai_endpoint.set(url)
 
         await ctx.message.add_reaction("🔄")
-        self.openai_client = await setup_openai_client(self.bot, self.config)
+        self.services.openai_client = await setup_openai_client(self.bot, self.config)
 
         try:
-            models = await self.openai_client.models.list()
+            models = await self.services.openai_client.models.list()
         except AuthenticationError:
             logger.exception("Authentication failed for endpoint.")
             await self.config.custom_openai_endpoint.set(previous_url)
-            self.openai_client = await setup_openai_client(self.bot, self.config)
+            self.services.openai_client = await setup_openai_client(self.bot, self.config)
             api_type = get_openai_compat_api_token_name(url)
             return await ctx.send(
                 f":warning: Authentication failed for endpoint. "
@@ -263,7 +251,7 @@ class OwnerSettings(MixinMeta):
         except Exception:
             logger.exception("Invalid endpoint.")
             await self.config.custom_openai_endpoint.set(previous_url)
-            self.openai_client = await setup_openai_client(self.bot, self.config)
+            self.services.openai_client = await setup_openai_client(self.bot, self.config)
             return await ctx.send(
                 ":warning: Invalid endpoint. Please check logs for more information."
             )
@@ -363,7 +351,7 @@ class OwnerSettings(MixinMeta):
         oauth = await ensure_valid_codex_oauth(self.config)
         await set_codex_oauth(self.config, oauth)
         await self.config.custom_openai_endpoint.set(CODEX_ENDPOINT_MODE)
-        self.openai_client = await setup_openai_client(self.bot, self.config)
+        self.services.openai_client = await setup_openai_client(self.bot, self.config)
         restored_count, guilds_with_parameters = await self._restore_endpoint_models(
             endpoint_url=CODEX_ENDPOINT_MODE,
             chat_model=CODEX_DEFAULT_MODEL,

@@ -9,7 +9,6 @@ from tenacity import retry, stop_after_attempt, wait_random
 from aiuser.config.constants import URL_PATTERN, YOUTUBE_VIDEO_ID_PATTERN
 from aiuser.context.converter.formatters import format_text_content
 from aiuser.functions.names import OPEN_URL
-from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import contains_youtube_link
 
 logger = logging.getLogger("red.bz_cogs.aiuser.context")
@@ -19,14 +18,14 @@ YOUTUBE_API_URL = (
 )
 
 
-async def format_embed_content(cog: MixinMeta, message: Message):
-    yt_api_key = (await cog.bot.get_shared_api_tokens("youtube")).get("api_key")
+async def format_embed_content(config, bot, message: Message):
+    yt_api_key = (await bot.get_shared_api_tokens("youtube")).get("api_key")
     if yt_api_key and contains_youtube_link(message.content):
         return await format_youtube_embed(yt_api_key, message)
     elif (
         URL_PATTERN.search(message.content)
         and OPEN_URL
-        in await cog.config.guild(message.guild).function_calling_functions()
+        in await config.guild(message.guild).function_calling_functions()
     ):
         return None
     try:

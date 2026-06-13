@@ -5,7 +5,6 @@ import httpx
 from openai.types.chat import ChatCompletionMessageToolCall
 from redbot.core import Config
 
-from aiuser.config.defaults import DEFAULT_MEMORY_RETRIEVAL_PREFIX
 from aiuser.llm.codex.oauth import CODEX_RESPONSES_URL, ensure_valid_codex_oauth
 
 logger = logging.getLogger("red.bz_cogs.aiuser.llm")
@@ -65,16 +64,23 @@ def _stringify_content(content: Any) -> str:
     return "\n".join(chunks).strip()
 
 
+CONTEXT_SYSTEM_NAMES = ("memory", "summary")
+
+
 def _first_system_message_index(messages: List[Dict[str, Any]]) -> Optional[int]:
+    """Index of the persona system prompt.
+
+    Tagged system messages ("memory" retrievals, conversation "summary") are
+    additional context, not instructions, so they are skipped unless nothing
+    else exists.
+    """
     fallback_index: Optional[int] = None
     for index, message in enumerate(messages):
         if message.get("role") != "system":
             continue
         if fallback_index is None:
             fallback_index = index
-        if _stringify_content(message.get("content")).startswith(
-            DEFAULT_MEMORY_RETRIEVAL_PREFIX
-        ):
+        if message.get("name") in CONTEXT_SYSTEM_NAMES:
             continue
         return index
     return fallback_index

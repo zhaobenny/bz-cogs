@@ -1,85 +1,106 @@
+"""Background task that occasionally sends unprompted messages."""
+
+from __future__ import annotations
+
 import datetime
 import logging
 import random
+from typing import TYPE_CHECKING
 
 import discord
 from discord.ext import tasks
 
 from aiuser.config.constants import RANDOM_MESSAGE_TASK_RETRY_SECONDS
 from aiuser.config.defaults import DEFAULT_PROMPT
-from aiuser.config.resolver import ScopedConfigResolver
-from aiuser.context.setup import create_messages_thread
+from aiuser.context.assembler import ConversationAssembler
 from aiuser.llm.registry import get_llm_provider
 from aiuser.response.response import create_response
-from aiuser.types.abc import MixinMeta
 from aiuser.utils.adapters import ensure_member_like
 from aiuser.utils.utilities import format_variables
+
+if TYPE_CHECKING:
+    from aiuser.core.services import AIUserServices
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-class RandomMessageTask(MixinMeta):
+class RandomMessageTask:
+    """Owned by the cog (constructed in cog_load, cancelled in cog_unload)."""
+
+    def __init__(self, services: "AIUserServices"):
+        self.services = services
+        self.config = services.config
+        self.bot = services.bot
+
+    def start(self):
+        self._random_message_loop.start()
+
+    def cancel(self):
+        self._random_message_loop.cancel()
+
     @tasks.loop(seconds=RANDOM_MESSAGE_TASK_RETRY_SECONDS)
-    async def random_message_trigger(self):
-        if await get_llm_provider(self) is None:
+    async def _random_message_loop(self):
+        if await get_llm_provider(self.services) is None:
             return
         if not self.bot.is_ready():
             return
 
-        for guild_id, channels in self.channels_whitelist.items():
+        whitelists = self.services.guild_cache.all_channels_whitelists()
+        for guild_id, channels in whitelists.items():
             # Each guild is processed independently; a failure or skip in one
             # guild must not starve the others.
             try:
-                last, ctx = await self.get_discord_context(guild_id, channels)
-            except Exception:
-                continue
-
-            guild = last.guild
-            channel = last.channel
-
-            if not await self.check_if_valid_for_random_message(guild, last):
-                continue
-
-            topics = await self.config.guild(guild).random_messages_prompts() or None
-            if not topics:
-                logger.warning(
-                    f"No random message topics were found in {guild.name}, skipping"
-                )
-                continue
-
-            scoped_prompt = await ScopedConfigResolver(self.config).resolve(
-                "custom_text_prompt", guild=guild, channel=channel
-            )
-            prompt = (
-                scoped_prompt or await self.config.custom_text_prompt() or DEFAULT_PROMPT
-            )
-            messages_list = await create_messages_thread(
-                self, ctx, prompt=prompt, history=False
-            )
-            topic = await format_variables(
-                ctx, topics[random.randint(0, len(topics) - 1)]
-            )
-            logger.debug(f"Sending random message to #{channel.name} at {guild.name}")
-            await messages_list.add_system_message(
-                f"Using the persona above, follow these instructions: {topic}",
-                index=len(messages_list) + 1,
-            )
-            messages_list.can_reply = False
-
-            try:
-                await create_response(self, ctx, messages_list)
+                await self._maybe_send_random_message(guild_id, channels)
             except Exception:
                 logger.exception(
-                    f"Failed to send random message in {guild.name}, continuing"
+                    f"Failed random message processing for guild {guild_id}, continuing"
                 )
 
-    async def get_discord_context(self, guild_id: int, channels: list):
+    async def _maybe_send_random_message(self, guild_id: int, channels: list):
+        try:
+            last, ctx = await self._get_discord_context(guild_id, channels)
+        except Exception:
+            return
+
+        guild = last.guild
+        channel = last.channel
+
+        if not await self._check_if_valid_for_random_message(guild, last):
+            return
+
+        topics = await self.config.guild(guild).random_messages_prompts() or None
+        if not topics:
+            logger.warning(
+                f"No random message topics were found in {guild.name}, skipping"
+            )
+            return
+
+        scoped_prompt = await self.services.resolver.resolve(
+            "custom_text_prompt", guild=guild, channel=channel
+        )
+        prompt = (
+            scoped_prompt or await self.config.custom_text_prompt() or DEFAULT_PROMPT
+        )
+
+        conversation = await ConversationAssembler(self.services, ctx).build(
+            prompt_override=prompt, include_history=False, include_trigger=False
+        )
+        topic = await format_variables(ctx, random.choice(topics))
+        await conversation.append_system(
+            f"Using the persona above, follow these instructions: {topic}"
+        )
+        conversation.can_reply = False
+
+        logger.debug(f"Sending random message to #{channel.name} at {guild.name}")
+        await create_response(self.services, ctx, conversation)
+
+    async def _get_discord_context(self, guild_id: int, channels: list):
         guild = self.bot.get_guild(guild_id)
 
         if not channels:
             raise ValueError(f"Channels are empty in guild {guild.name}")
 
-        channel = guild.get_channel(channels[random.randint(0, len(channels) - 1)])
+        channel = guild.get_channel(random.choice(channels))
 
         if not channel:
             raise ValueError(f"Channel not found in guild {guild.name}")
@@ -90,10 +111,10 @@ class RandomMessageTask(MixinMeta):
 
         return last_message, ctx
 
-    async def check_if_valid_for_random_message(
+    async def _check_if_valid_for_random_message(
         self, guild: discord.Guild, last: discord.Message
-    ):
-        if await self.bot.cog_disabled_in_guild(self, guild):
+    ) -> bool:
+        if await self.bot.cog_disabled_in_guild(self.services.cog, guild):
             return False
 
         try:
@@ -113,13 +134,10 @@ class RandomMessageTask(MixinMeta):
 
         last_created = last.created_at.replace(tzinfo=datetime.timezone.utc)
 
-        if (
-            abs(
-                (
-                    datetime.datetime.now(datetime.timezone.utc) - last_created
-                ).total_seconds()
-            )
-        ) < 3600:
+        seconds_since_last = abs(
+            (datetime.datetime.now(datetime.timezone.utc) - last_created).total_seconds()
+        )
+        if seconds_since_last < 3600:
             # only sent to channels with 1 hour since last message
             return False
 

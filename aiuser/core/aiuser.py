@@ -1,10 +1,9 @@
 import logging
 import os
-import re
 from datetime import datetime
+from typing import Optional
 
 import discord
-from openai import AsyncOpenAI
 from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 from redbot.core.data_manager import cog_data_path
@@ -16,17 +15,13 @@ from aiuser.config.defaults import (
     DEFAULT_MEMBER,
     DEFAULT_ROLE,
 )
-from aiuser.consent import ConsentService
-from aiuser.context.compaction import CompactionManager
 from aiuser.core.handlers import handle_message, handle_slash_command
 from aiuser.core.random_message_task import RandomMessageTask
+from aiuser.core.services import AIUserServices
 from aiuser.dashboard.base import DashboardIntegration
 from aiuser.llm.openai_compatible.client import setup_openai_client
 from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
-from aiuser.utils.cache import Cache
-from aiuser.utils.compaction.store import CompactionStore
-from aiuser.utils.vectorstore import VectorStore
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -35,7 +30,6 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 class AIUser(
     DashboardIntegration,
     Settings,
-    RandomMessageTask,
     commands.Cog,
     metaclass=CompositeMetaClass,
 ):
@@ -49,14 +43,8 @@ class AIUser(
         super().__init__()
         self.bot: Red = bot
         self.config = Config.get_conf(self, identifier=754070)
-        self.openai_client: AsyncOpenAI = None
-        self.db = None
-        # cached options
-        self.optindefault: dict[int, bool] = {}
-        self.channels_whitelist: dict[int, list[int]] = {}
-        self.ignore_regex: dict[int, re.Pattern] = {}
-        self.override_prompt_start_time: dict[int, datetime] = {}
-        self.cached_tool_calls: Cache[tuple, list] = Cache(limit=100)
+        self.services: Optional[AIUserServices] = None
+        self.random_task: Optional[RandomMessageTask] = None
 
         self.config.register_member(**DEFAULT_MEMBER)
         self.config.register_role(**DEFAULT_ROLE)
@@ -73,55 +61,46 @@ class AIUser(
         logging.getLogger("aiosqlite").setLevel(logging.WARNING)
         logging.getLogger("hpack").setLevel(logging.WARNING)
 
-        self.openai_client = await setup_openai_client(self.bot, self.config)
-
-        self.consent = ConsentService(self.bot, self.config)
-        await self.consent.load()
-
-        all_config = await self.config.all_guilds()
-
-        for guild_id, config in all_config.items():
-            self.optindefault[guild_id] = config["optin_by_default"]
-            self.channels_whitelist[guild_id] = config["channels_whitelist"]
-            pattern = config["ignore_regex"]
-
-            self.ignore_regex[guild_id] = re.compile(pattern) if pattern else None
+        self.services = await AIUserServices.create(
+            self.bot, self.config, cog_data_path(self), cog=self
+        )
+        self.services.openai_client = await setup_openai_client(self.bot, self.config)
 
         debug_guild_id = os.environ.get("AIUSER_DEBUG_GUILD")
         if debug_guild_id and debug_guild_id.isdigit():
             # for development: reset prompt start time for a test guild
-            self.override_prompt_start_time[int(debug_guild_id)] = datetime.now()
+            self.services.override_prompt_start_time[int(debug_guild_id)] = (
+                datetime.now()
+            )
 
-        self.db: VectorStore = VectorStore(cog_data_path(self))
+        self.random_task = RandomMessageTask(self.services)
+        self.random_task.start()
 
-        self.compaction_store = CompactionStore(cog_data_path(self))
-
-        self.compaction_manager = CompactionManager(self)
-
-        self.random_message_trigger.start()
+    async def cog_unload(self):
+        if self.services and self.services.openai_client:
+            await self.services.openai_client.close()
+        if self.random_task:
+            self.random_task.cancel()
 
     def format_help_for_context(self, ctx):
         pre_processed = super().format_help_for_context(ctx)
         return f"{pre_processed}\nCog Version: {self.__version__}"
 
-    async def cog_unload(self):
-        if self.openai_client:
-            await self.openai_client.close()
-        self.random_message_trigger.cancel()
-
     async def red_delete_data_for_user(self, *, requester, user_id: int):
         for guild in self.bot.guilds:
             await self.config.member_from_ids(guild.id, user_id).clear()
 
-        await self.consent.remove_user_data(user_id)
+        await self.services.consent.remove_user_data(user_id)
 
-        if self.db is not None:
-            await self.db.delete_user_memories(user_id)
+        if self.services.memories is not None:
+            await self.services.memories.delete_user_memories(user_id)
 
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, _):
         if service_name in ["openai", "openrouter"]:
-            self.openai_client = await setup_openai_client(self.bot, self.config)
+            self.services.openai_client = await setup_openai_client(
+                self.bot, self.config
+            )
 
     @app_commands.command(name="chat")
     @app_commands.describe(text="The prompt you want to send to the AI.")
@@ -134,8 +113,10 @@ class AIUser(
         text: app_commands.Range[str, 1, 2000],
     ):
         """Talk directly to this bot's AI. Ask it anything you want!"""
-        await handle_slash_command(self, inter, text)
+        await handle_slash_command(self.services, inter, text)
 
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
-        await handle_message(self, message)
+        if self.services is None:
+            return
+        await handle_message(self.services, message)

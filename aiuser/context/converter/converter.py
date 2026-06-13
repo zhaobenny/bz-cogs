@@ -14,17 +14,16 @@ from aiuser.context.converter.formatters import (
 )
 from aiuser.context.converter.images import format_image
 from aiuser.context.entry import MessageEntry
-from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import contains_youtube_link, is_embed_valid
 
 logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 
 class MessageConverter:
-    def __init__(self, cog: MixinMeta, ctx: commands.Context):
-        self.cog = cog
-        self.config = cog.config
-        self.bot_id = cog.bot.user.id
+    def __init__(self, config, bot, ctx: commands.Context):
+        self.config = config
+        self.bot = bot
+        self.bot_id = bot.user.id
         self.init_msg = ctx.message
         self.ctx = ctx
 
@@ -69,7 +68,7 @@ class MessageConverter:
             and not self.ctx.interaction
             and await self.config.guild(message.guild).scan_images()
         ):
-            content = await format_image(self.cog, message)
+            content = await format_image(self.config, message)
             await self.add_entry(content, res, role)
             if isinstance(content, list):
                 return
@@ -81,7 +80,7 @@ class MessageConverter:
         await self.add_entry(content, res, role)
 
     async def handle_embed(self, message: Message, res, role):
-        content = await format_embed_content(self.cog, message)
+        content = await format_embed_content(self.config, self.bot, message)
         if not content:
             content = format_text_content(message)
             await self.add_entry(content, res, role)

@@ -14,7 +14,8 @@ from aiuser.settings.utilities import (
     add_prompt_metrics_fields,
     truncate_prompt,
 )
-from aiuser.types.abc import MixinMeta, aiuser
+from aiuser.settings._groups import aiuser
+from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import MentionType
 from aiuser.types.types import COMPATIBLE_MENTIONS
 
@@ -60,7 +61,7 @@ class PromptSettings(MixinMeta):
                 embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
             )
         else:
-            self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
+            self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
             await self.config.guild(ctx.guild).custom_text_prompt.set(None)
             for member in ctx.guild.members:
                 await self.config.member(member).custom_text_prompt.set(None)
@@ -326,7 +327,7 @@ class PromptSettings(MixinMeta):
             )
 
         await config_attr.custom_text_prompt.set(prompt)
-        self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
+        self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
 
         embed = discord.Embed(
             title=f"The {mention_type.name.lower()} will use the custom prompt:",

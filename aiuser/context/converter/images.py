@@ -6,18 +6,17 @@ from discord import Message
 from PIL import Image
 
 from aiuser.context.converter.formatters import format_text_content
-from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 
-async def format_image(cog: MixinMeta, message: Message):
+async def format_image(config, message: Message):
     attachment = message.attachments[0]
 
     buffer = BytesIO()
     await attachment.save(buffer)
     image = Image.open(buffer)
-    max_size = await cog.config.guild(message.guild).max_image_size()
+    max_size = await config.guild(message.guild).max_image_size()
     image = scale_image(image, max_size)
 
     content = []

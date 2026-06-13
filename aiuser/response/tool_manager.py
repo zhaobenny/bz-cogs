@@ -11,7 +11,7 @@ from aiuser.functions.registry import get_enabled_tools
 from aiuser.functions.tool_call import ToolCall
 
 if TYPE_CHECKING:
-    from aiuser.response.llm_pipeline import LLMPipeline
+    from aiuser.response.pipeline import LLMPipeline
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -40,11 +40,9 @@ class ToolManager:
     async def handle_tool_calls(
         self, tool_calls: List[ChatCompletionMessageToolCall]
     ) -> None:
-        entry = await self.pipeline.msg_list.add_assistant_message(
-            index=self.pipeline._next_index(), tool_calls=tool_calls
-        )
-        if entry:
-            self.pipeline.tool_call_entries.append(entry)
+        conversation = self.pipeline.conversation
+        entry = await conversation.append_assistant(tool_calls=tool_calls)
+        self.pipeline.tool_call_entries.append(entry)
 
         for tool_call in tool_calls:
             fn = tool_call.function
@@ -63,10 +61,9 @@ class ToolManager:
                 )
                 result = await tool.run(self.pipeline.tool_context, dict(arguments))
                 if result is not None:
-                    entry = await self.pipeline.msg_list.add_tool_result_message(
-                        result, tool_call.id, index=self.pipeline._next_index()
+                    entry = await conversation.append_tool_result(
+                        result, tool_call.id
                     )
-                    if entry:
-                        self.pipeline.tool_call_entries.append(entry)
+                    self.pipeline.tool_call_entries.append(entry)
             else:
                 logger.warning(f'Could not find tool "{fn.name}"')

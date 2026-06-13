@@ -21,6 +21,7 @@ from aiuser.settings.owner import OwnerSettings
 from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.random_message import RandomMessageSettings
 from aiuser.settings.response import ResponseSettings
+from aiuser.settings._groups import aiuser as _aiuser_stub  # noqa: F401  (stub kept for clarity)
 from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.triggers import TriggerSettings
 from aiuser.types.abc import MixinMeta
@@ -62,7 +63,9 @@ class Settings(
         ):
             return await ctx.react_quietly("❌")
 
-        self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
+        self.services.override_prompt_start_time[ctx.guild.id] = (
+            ctx.message.created_at
+        )
         await ctx.react_quietly("✅")
 
     @aiuser.command(aliases=["settings", "showsettings"])
@@ -283,8 +286,7 @@ class Settings(
         if channel.id in new_whitelist:
             return await ctx.send("Channel already in whitelist")
         new_whitelist.append(channel.id)
-        await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
-        self.channels_whitelist[ctx.guild.id] = new_whitelist
+        await self.services.guild_cache.set_channels_whitelist(ctx.guild, new_whitelist)
         embed = discord.Embed(
             title="The server whitelist is now:", color=await ctx.embed_color()
         )
@@ -317,8 +319,7 @@ class Settings(
         if channel_id not in new_whitelist:
             return await ctx.send("Channel not in whitelist")
         new_whitelist.remove(channel_id)
-        await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
-        self.channels_whitelist[ctx.guild.id] = new_whitelist
+        await self.services.guild_cache.set_channels_whitelist(ctx.guild, new_whitelist)
         embed = discord.Embed(
             title="The server whitelist is now:", color=await ctx.embed_color()
         )
@@ -338,7 +339,7 @@ class Settings(
             - `model` The model to use eg. `gpt-4`
         """
         await ctx.message.add_reaction("🔄")
-        models = await list_llm_models(self)
+        models = await list_llm_models(self.services)
         await ctx.message.remove_reaction("🔄", ctx.me)
 
         if model == "list":
@@ -432,8 +433,7 @@ class Settings(
                 "You cannot enable this setting for servers with more than 150 members."
             )
         value = not await self.config.guild(ctx.guild).optin_by_default()
-        self.optindefault[ctx.guild.id] = value
-        await self.config.guild(ctx.guild).optin_by_default.set(value)
+        await self.services.guild_cache.set_optin_by_default(ctx.guild, value)
         embed = discord.Embed(
             title="Users are now opted in by default in this server:",
             description=f"{value}",
