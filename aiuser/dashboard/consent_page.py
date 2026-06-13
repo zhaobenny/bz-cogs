@@ -33,16 +33,14 @@ async def opt_consent(self, user: discord.User, **kwargs):
         )
 
     form = Form()
-    whitelist = await self.config.optin()
-    blacklist = await self.config.optout()
 
-    if user.id in whitelist:
+    if self.consent.is_opted_in(user.id):
         whitelist_text = "opted in"
         consent_choice = "accept"
         form.accept.render_kw["disabled"] = True
         form.accept.render_kw["class"] = "btn btn-outline-secondary px-4 py-2"
         form.reject.render_kw["disabled"] = False
-    elif user.id in blacklist:
+    elif self.consent.is_opted_out(user.id):
         whitelist_text = "opted out"
         consent_choice = "reject"
         form.accept.render_kw["disabled"] = False
@@ -57,19 +55,9 @@ async def opt_consent(self, user: discord.User, **kwargs):
     if form.validate_on_submit():
         try:
             if form.accept.data:
-                new_whitelist = (
-                    [*whitelist, user.id] if user.id not in whitelist else whitelist
-                )
-                new_blacklist = [user_id for user_id in blacklist if user_id != user.id]
-                await self.config.optin.set(new_whitelist)
-                await self.config.optout.set(new_blacklist)
+                await self.consent.opt_in(user.id)
             elif form.reject.data:
-                new_blacklist = (
-                    [*blacklist, user.id] if user.id not in blacklist else blacklist
-                )
-                new_whitelist = [user_id for user_id in whitelist if user_id != user.id]
-                await self.config.optout.set(new_blacklist)
-                await self.config.optin.set(new_whitelist)
+                await self.consent.opt_out(user.id)
         except Exception:
             return {
                 "status": 1,

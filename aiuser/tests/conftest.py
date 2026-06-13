@@ -139,6 +139,7 @@ async def mock_cog(bot, redbot_config, test_guild):
     """
     from unittest.mock import MagicMock
 
+    from aiuser.consent import ConsentService
     from aiuser.utils.cache import Cache
 
     cog = MagicMock()
@@ -148,6 +149,8 @@ async def mock_cog(bot, redbot_config, test_guild):
     cog.override_prompt_start_time = {}  # Dict keyed by guild.id
     cog.db = None  # Skip memory retriever
     cog.cached_tool_calls = Cache(limit=100)
+    cog.consent = ConsentService(bot, redbot_config)
+    await cog.consent.load()
 
     # Opt-in by default for the test guild
     await cog.config.guild(test_guild).optin_by_default.set(True)

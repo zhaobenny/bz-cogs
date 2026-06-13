@@ -6,7 +6,6 @@ import discord
 from discord import Message
 from redbot.core import commands
 
-from aiuser.context.consent.manager import ConsentManager
 from aiuser.context.converter.converter import MessageConverter
 from aiuser.context.entry import MessageEntry
 from aiuser.context.history.builder import HistoryBuilder
@@ -38,7 +37,7 @@ class MessagesThread:
         self._encoding = None
         self.can_reply = True
         self.converter = MessageConverter(cog, ctx)
-        self.consent_manager = ConsentManager(self.config, self.bot, self.guild)
+        self.consent = cog.consent
         self.memory_retriever = MemoryRetriever(ctx, db=cog.db)
         self.cached_tool_calls = cog.cached_tool_calls
         self.history_manager = HistoryBuilder(self)
@@ -61,9 +60,10 @@ class MessagesThread:
             return False
         if not await self.bot.allowed_by_whitelist_blacklist(message.author):
             return False
-        if message.author.id in await self.config.optout():
-            return False
-        if not await self.consent_manager.is_user_allowed(message.author):
+        if message.author.id != self.bot.user.id and not self.consent.allows(
+            message.author.id,
+            optin_by_default=await self.config.guild(self.guild).optin_by_default(),
+        ):
             return False
 
         return True

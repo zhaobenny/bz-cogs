@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, List
 
 import discord
 
-from aiuser.context.consent.manager import CONSENT_EMBED_TITLE
+from aiuser.consent import CONSENT_EMBED_TITLE
 
 if TYPE_CHECKING:
     from aiuser.context.messages import MessagesThread
@@ -17,7 +17,7 @@ class HistoryBuilder:
         self.messages_list = messages_list
         self.config = messages_list.config
         self.guild = messages_list.guild
-        self.consent_manager = messages_list.consent_manager
+        self.consent = messages_list.consent
         self.bot = messages_list.bot
         self.init_message = messages_list.init_message
         self.start_time = messages_list.start_time
@@ -42,7 +42,7 @@ class HistoryBuilder:
         ):
             return
 
-        users = await self.consent_manager.get_unknown_consent_users(past_messages[:10])
+        users = await self.consent.get_undecided_users(self.guild, past_messages[:10])
 
         # Filter out already-compacted messages and inject summary if available
         cog = self.bot.get_cog("AIUser")
@@ -84,10 +84,7 @@ class HistoryBuilder:
                 self.messages_list.ctx, compaction_candidates
             )
 
-        if await self.consent_manager.should_send_consent_embed(users):
-            await self.consent_manager.send_consent_embed(
-                self.init_message.channel, users
-            )
+        await self.consent.maybe_send_consent_embed(self.init_message.channel, users)
 
     async def _get_past_messages(
         self, limit: int, start_time: datetime

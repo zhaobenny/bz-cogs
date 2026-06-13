@@ -13,6 +13,7 @@ from aiuser.context.entry import MessageEntry
 from aiuser.utils.cache import Cache
 
 if TYPE_CHECKING:
+    from aiuser.consent import ConsentService
     from aiuser.utils.vectorstore import VectorStore
 
 
@@ -40,4 +41,5 @@ class MixinMeta(ABC):
         self.openai_client: AsyncOpenAI
         self.optindefault: dict[int, bool]
         self.db: "VectorStore | None"
+        self.consent: "ConsentService"
         self.__version__: str

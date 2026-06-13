@@ -16,6 +16,7 @@ from aiuser.config.defaults import (
     DEFAULT_MEMBER,
     DEFAULT_ROLE,
 )
+from aiuser.consent import ConsentService
 from aiuser.context.compaction import CompactionManager
 from aiuser.core.handlers import handle_message, handle_slash_command
 from aiuser.core.random_message_task import RandomMessageTask
@@ -74,6 +75,9 @@ class AIUser(
 
         self.openai_client = await setup_openai_client(self.bot, self.config)
 
+        self.consent = ConsentService(self.bot, self.config)
+        await self.consent.load()
+
         all_config = await self.config.all_guilds()
 
         for guild_id, config in all_config.items():
@@ -109,11 +113,7 @@ class AIUser(
         for guild in self.bot.guilds:
             await self.config.member_from_ids(guild.id, user_id).clear()
 
-        optin = await self.config.optin()
-        if user_id in optin:
-            await self.config.optin.set(
-                [optin_user_id for optin_user_id in optin if optin_user_id != user_id]
-            )
+        await self.consent.remove_user_data(user_id)
 
         if self.db is not None:
             await self.db.delete_user_memories(user_id)

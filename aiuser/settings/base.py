@@ -402,15 +402,8 @@ class Settings(
 
         This will allow the bot to reply to your messages or use your messages.
         """
-        optin = await self.config.optin()
-        if ctx.author.id in await self.config.optin():
+        if not await self.consent.opt_in(ctx.author.id):
             return await ctx.send("You are already opted in.")
-        optout = await self.config.optout()
-        if ctx.author.id in optout:
-            optout.remove(ctx.author.id)
-            await self.config.optout.set(optout)
-        optin.append(ctx.author.id)
-        await self.config.optin.set(optin)
         await ctx.send("You are now opted in bot-wide")
 
     @aiuser.command()
@@ -419,15 +412,8 @@ class Settings(
 
         This will prevent the bot from replying to your messages or using your messages.
         """
-        optout = await self.config.optout()
-        if ctx.author.id in optout:
+        if not await self.consent.opt_out(ctx.author.id):
             return await ctx.send("You are already opted out.")
-        optin = await self.config.optin()
-        if ctx.author.id in optin:
-            optin.remove(ctx.author.id)
-            await self.config.optin.set(optin)
-        optout.append(ctx.author.id)
-        await self.config.optout.set(optout)
         await ctx.send("You are now opted out bot-wide")
 
     @aiuser.command(name="optinbydefault", alias=["optindefault"])

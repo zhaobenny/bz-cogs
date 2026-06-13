@@ -136,7 +136,7 @@ async def test_optout_user_excluded(
         backend.make_user("optout_user", "5678"), test_member.guild
     )
 
-    await mock_cog.config.optout.set([optout_member.id])
+    await mock_cog.consent.opt_out(optout_member.id)
 
     _ = backend.make_message("No one is listening", optout_member, test_channel)
     _ = backend.make_message("What are you yapping about?", test_member, test_channel)
