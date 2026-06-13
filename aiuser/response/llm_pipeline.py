@@ -15,6 +15,7 @@ from redbot.core import Config, commands
 from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
 from aiuser.config.model_info import get_model_info
 from aiuser.context.messages import MessagesThread
+from aiuser.functions.context import ToolContext
 from aiuser.llm.base import ChatStepResult, LLMProvider
 from aiuser.llm.openai_compatible.endpoints import is_openrouter_endpoint
 from aiuser.llm.registry import get_llm_provider
@@ -36,11 +37,20 @@ class LLMPipeline:
         self.model: str = messages.model
 
         self.provider: Optional[LLMProvider] = None
+        self.tool_context = ToolContext(
+            ctx=ctx, config=cog.config, bot=cog.bot, memories=cog.db
+        )
         self.tool_manager = ToolManager(self)
         self.completion: Optional[str] = None
-        self.suppress_response: bool = False
-        self.files_to_send: List[discord.File] = []
         self.tool_call_entries: List = []
+
+    @property
+    def files_to_send(self) -> List[discord.File]:
+        return self.tool_context.files_to_send
+
+    @property
+    def suppress_response(self) -> bool:
+        return self.tool_context.suppress_response
 
     async def run(self) -> Optional[str]:
         base_kwargs = await self._build_base_parameters()

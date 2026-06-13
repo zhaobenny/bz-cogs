@@ -2,6 +2,7 @@ import discord
 from redbot.core import commands
 
 from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
+from aiuser.functions import names
 from aiuser.config.model_info import get_model_info
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
 from aiuser.settings.functions.memory import MemoryFunctionSettings
@@ -55,48 +56,17 @@ class FunctionCallingSettings(
             or DEFAULT_TOOL_CALL_ROUNDS
         )
 
-        from aiuser.functions.coderunner.tool_call import CodeRunnerToolCall
-        from aiuser.functions.discord.tool_call import (
-            AddReactionToolCall,
-            GetDiscordInfoToolCall,
-        )
-        from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
-        from aiuser.functions.memory.tool_call import (
-            ReadMemoryToolCall,
-            SaveMemoryToolCall,
-        )
-        from aiuser.functions.noresponse.tool_call import NoResponseToolCall
-        from aiuser.functions.scrape.tool_call import ScrapeToolCall
-        from aiuser.functions.searxng.tool_call import SearXNGToolCall
-        from aiuser.functions.serper.tool_call import SerperToolCall
-        from aiuser.functions.weather.tool_call import (
-            IsDaytimeToolCall,
-            LocationWeatherToolCall,
-        )
-        from aiuser.functions.wolframalpha.tool_call import (
-            WolframAlphaFunctionCall,
-        )
-
         groups = {
-            "Weather": [
-                IsDaytimeToolCall.function_name,
-                LocationWeatherToolCall.function_name,
-            ],
-            "Image Request": [ImageRequestToolCall.function_name],
-            "Serper": [SerperToolCall.function_name],
-            "SearXNG": [SearXNGToolCall.function_name],
-            "Scrape": [ScrapeToolCall.function_name],
-            "No Response": [NoResponseToolCall.function_name],
-            "Wolfram Alpha": [WolframAlphaFunctionCall.function_name],
-            "Code Runner": [CodeRunnerToolCall.function_name],
-            "Memory": [
-                ReadMemoryToolCall.function_name,
-                SaveMemoryToolCall.function_name,
-            ],
-            "Discord": [
-                AddReactionToolCall.function_name,
-                GetDiscordInfoToolCall.function_name,
-            ],
+            "Weather": [names.IS_DAYTIME, names.GET_WEATHER],
+            "Image Request": [names.IMAGE_REQUEST],
+            "Serper": [names.SEARCH_GOOGLE],
+            "SearXNG": [names.SEARXNG],
+            "Scrape": [names.OPEN_URL],
+            "No Response": [names.DO_NOT_RESPOND],
+            "Wolfram Alpha": [names.ASK_WOLFRAM_ALPHA],
+            "Code Runner": [names.RUN_PYTHON_CODE],
+            "Memory": [names.READ_MEMORY, names.SAVE_MEMORY],
+            "Discord": [names.ADD_REACTION, names.GET_DISCORD_INFO],
         }
 
         # Helper for status icon
@@ -176,13 +146,11 @@ class FunctionCallingSettings(
     @functions_discord.command(name="react", aliases=["reaction"])
     async def toggle_discord_reaction_function(self, ctx: commands.Context):
         """Enable/disable the functionality for adding reactions to triggering Discord messages."""
-        from aiuser.functions.discord.tool_call import AddReactionToolCall
-
-        tool_names = [AddReactionToolCall.function_name]
+        tool_names = [names.ADD_REACTION]
         enabled_tools: list = await self.config.guild(
             ctx.guild
         ).function_calling_functions()
-        new_state = AddReactionToolCall.function_name not in enabled_tools
+        new_state = names.ADD_REACTION not in enabled_tools
 
         if new_state:
             enabled_tools.extend(tool_names)
@@ -203,9 +171,7 @@ class FunctionCallingSettings(
     @functions_discord.command(name="info")
     async def toggle_discord_info_function(self, ctx: commands.Context):
         """Enable/disable the functionality for reading some select Discord channel, server, author, and emoji info."""
-        from aiuser.functions.discord.tool_call import GetDiscordInfoToolCall
-
-        tool_names = [GetDiscordInfoToolCall.function_name]
+        tool_names = [names.GET_DISCORD_INFO]
         await self.toggle_function_group(ctx, tool_names, "Discord info")
 
     @functions.command(name="maxrounds", aliases=["maxcalls"])
@@ -231,9 +197,7 @@ class FunctionCallingSettings(
                 f"Serper.dev key not set! Set it using `{ctx.clean_prefix}set api serper api_key,APIKEY`."
             )
 
-        from aiuser.functions.serper.tool_call import SerperToolCall
-
-        tool_names = [SerperToolCall.function_name]
+        tool_names = [names.SEARCH_GOOGLE]
         await self.toggle_function_group(ctx, tool_names, "Search")
 
     @functions.command(name="scrape")
@@ -243,9 +207,7 @@ class FunctionCallingSettings(
 
         (May not be called if the link generated an Discord embed)
         """
-        from aiuser.functions.scrape.tool_call import ScrapeToolCall
-
-        tool_names = [ScrapeToolCall.function_name]
+        tool_names = [names.OPEN_URL]
         await self.toggle_function_group(ctx, tool_names, "Scrape")
 
     @functions.command(name="noresponse")
@@ -255,29 +217,23 @@ class FunctionCallingSettings(
 
         Temperamental, may require additional prompting to work better.
         """
-        from aiuser.functions.noresponse.tool_call import NoResponseToolCall
-
-        tool_names = [NoResponseToolCall.function_name]
+        tool_names = [names.DO_NOT_RESPOND]
         await self.toggle_function_group(ctx, tool_names, "No response")
 
     @functions.command(name="wolframalpha")
     async def toggle_wolfram_alpha_function(self, ctx: commands.Context):
         """Enable/disable the functionality for the LLM to ask Wolfram Alpha about math, exchange rates, or the weather."""
-        from aiuser.functions.wolframalpha.tool_call import WolframAlphaFunctionCall
-
         if not (await self.bot.get_shared_api_tokens("wolfram_alpha")).get("app_id"):
             return await ctx.send(
                 f"Wolfram Alpha app id not set! Set it using `{ctx.clean_prefix}set api wolfram_alpha app_id,APPID`."
             )
 
-        tool_names = [WolframAlphaFunctionCall.function_name]
+        tool_names = [names.ASK_WOLFRAM_ALPHA]
         await self.toggle_function_group(ctx, tool_names, "Wolfram Alpha")
 
     @functions.command(name="modalcoderunner")
     async def toggle_modal_function(self, ctx: commands.Context):
         """Enable/disable the functionality for the LLM to run Python code in a ephemeral environment backed by Modal."""
-        from aiuser.functions.coderunner.tool_call import CodeRunnerToolCall
-
         tokens = await self.bot.get_shared_api_tokens("modal")
         if not tokens.get("token_id") and not tokens.get("token_secret"):
             return await ctx.send(
@@ -285,5 +241,5 @@ class FunctionCallingSettings(
                 suppress_embeds=True,
             )
 
-        tool_names = [CodeRunnerToolCall.function_name]
+        tool_names = [names.RUN_PYTHON_CODE]
         await self.toggle_function_group(ctx, tool_names, "Modal Code Runner")

@@ -1,22 +1,19 @@
 import asyncio
 import functools
-import importlib
 import logging
 import random
 from datetime import datetime
-from pathlib import Path
 from typing import Callable, Coroutine
 
 import discord
 import tiktoken
 from discord import Message
-from redbot.core import Config, commands
+from redbot.core import commands
 
 from aiuser.config.constants import (
     FALLBACK_TOKENIZER,
     YOUTUBE_URL_PATTERN,
 )
-from aiuser.functions.tool_call import ToolCall
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -114,35 +111,6 @@ def is_embed_valid(message: Message):
 def contains_youtube_link(content):
     match = YOUTUBE_URL_PATTERN.search(content)
     return bool(match)
-
-
-async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolCall]:
-    functions_dir = Path(__file__).parent.parent / "functions"
-
-    for item in functions_dir.iterdir():
-        if item.is_dir() and not item.name.startswith("__"):
-            try:
-                importlib.import_module(f"aiuser.functions.{item.name}.tool_call")
-            except ImportError:
-                logger.warning(
-                    f"Failed to import tool module aiuser.functions.{item.name}; "
-                    "its tools will be unavailable",
-                    exc_info=True,
-                )
-                continue
-
-    enabled_tools = await config.guild(ctx.guild).function_calling_functions()
-    if ctx.interaction:
-        enabled_tools = [
-            tool_name for tool_name in enabled_tools if tool_name != "add_reaction"
-        ]
-    tool_classes = {cls.function_name: cls for cls in ToolCall.__subclasses__()}
-
-    return [
-        tool_classes[name](config=config, ctx=ctx)
-        for name in enabled_tools
-        if name in tool_classes
-    ]
 
 
 async def encode_text_to_tokens(text: str, model: str = FALLBACK_TOKENIZER) -> int:

@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, Any, Dict, List
 
 from openai.types.chat import ChatCompletionMessageToolCall
 
+from aiuser.functions.registry import get_enabled_tools
 from aiuser.functions.tool_call import ToolCall
 
 if TYPE_CHECKING:
     from aiuser.response.llm_pipeline import LLMPipeline
-from aiuser.utils.utilities import get_enabled_tools
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -61,7 +61,7 @@ class ToolManager:
                 logger.info(
                     f'Handling tool call "{fn.name}" with args keys: {list(arguments.keys())}'
                 )
-                result = await tool.run(self.pipeline, dict(arguments))
+                result = await tool.run(self.pipeline.tool_context, dict(arguments))
                 if result is not None:
                     entry = await self.pipeline.msg_list.add_tool_result_message(
                         result, tool_call.id, index=self.pipeline._next_index()

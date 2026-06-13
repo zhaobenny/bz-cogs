@@ -1,14 +1,11 @@
 import logging
 import uuid
-from typing import TYPE_CHECKING
 
 import modal
 
+from aiuser.functions import names
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
-
-if TYPE_CHECKING:
-    from aiuser.response.llm_pipeline import LLMPipeline
 
 logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
@@ -16,7 +13,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 class CodeRunnerToolCall(ToolCall):
     schema = ToolCallSchema(
         function=Function(
-            name="run_python_code",
+            name=names.RUN_PYTHON_CODE,
             description="""
             Use this to run Python 3.12 scripts in an ephemeral session. 
             If you need output, it should be in a print statement.
@@ -36,7 +33,7 @@ class CodeRunnerToolCall(ToolCall):
     )
     function_name = schema.function.name
 
-    async def _handle(self, request: "LLMPipeline", arguments):
+    async def _handle(self, tool_context, arguments):
         tokens = await self.bot.get_shared_api_tokens("modal")
         token_id = tokens.get("token_id")
         token_secret = tokens.get("token_secret")

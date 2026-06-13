@@ -1,6 +1,7 @@
 import discord
 from redbot.core import commands
 
+from aiuser.functions import names
 from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
 
 
@@ -16,11 +17,7 @@ class SearXNGFunctionSettings(FunctionToggleHelperMixin):
     @searxng.command(name="toggle")
     async def searxng_toggle(self, ctx: commands.Context):
         """Toggle the SearXNG request function on or off"""
-        from aiuser.functions.searxng.tool_call import SearXNGToolCall
-
-        await self.toggle_function_group(
-            ctx, [SearXNGToolCall.function_name], "SearXNG"
-        )
+        await self.toggle_function_group(ctx, [names.SEARXNG], "SearXNG")
 
     @searxng.command(name="endpoint")
     async def searxng_endpoint(self, ctx: commands.Context, url: str):

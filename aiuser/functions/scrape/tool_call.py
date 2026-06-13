@@ -1,5 +1,6 @@
 import logging
 
+from aiuser.functions import names
 from aiuser.functions.scrape.scrape import scrape_page
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
@@ -10,7 +11,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 class ScrapeToolCall(ToolCall):
     schema = ToolCallSchema(
         function=Function(
-            name="open_url",
+            name=names.OPEN_URL,
             description="Opens a URL or link and returns the content of it (Does not support non-text content types!)",
             parameters=Parameters(
                 properties={
@@ -25,7 +26,7 @@ class ScrapeToolCall(ToolCall):
     )
     function_name = schema.function.name
 
-    async def _handle(self, _, arguments):
+    async def _handle(self, tool_context, arguments):
         logger.info(f"Attempting scrape of {arguments['url']}")
         try:
             return await scrape_page(arguments["url"])

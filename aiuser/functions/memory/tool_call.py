@@ -1,10 +1,9 @@
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Dict
+from typing import Any, Dict
 
-if TYPE_CHECKING:
-    from aiuser.response.llm_pipeline import LLMPipeline
-
+from aiuser.functions import names
+from aiuser.functions.context import ToolContext
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 
@@ -12,7 +11,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser.memory")
 
 
 class SaveMemoryToolCall(ToolCall):
-    function_name = "save_memory"
+    function_name = names.SAVE_MEMORY
     schema = ToolCallSchema(
         function=Function(
             name=function_name,
@@ -41,7 +40,7 @@ class SaveMemoryToolCall(ToolCall):
         )
     )
 
-    async def _handle(self, request: "LLMPipeline", arguments: Dict[str, Any]):
+    async def _handle(self, tool_context: ToolContext, arguments: Dict[str, Any]):
         memory_name = arguments.get("memory_name")
         memory_text = arguments.get("memory_text")
         user = arguments.get("user")
@@ -53,7 +52,7 @@ class SaveMemoryToolCall(ToolCall):
         try:
             current_timestamp = int(time.time())
             guild_id = self.ctx.guild.id
-            db = request.cog.db
+            db = tool_context.memories
 
             memory_id = await db.upsert(
                 guild_id,
@@ -72,7 +71,7 @@ class SaveMemoryToolCall(ToolCall):
 
 
 class ReadMemoryToolCall(ToolCall):
-    function_name = "read_memory"
+    function_name = names.READ_MEMORY
     schema = ToolCallSchema(
         function=Function(
             name=function_name,
@@ -97,7 +96,7 @@ class ReadMemoryToolCall(ToolCall):
         )
     )
 
-    async def _handle(self, request: "LLMPipeline", arguments: Dict[str, Any]):
+    async def _handle(self, tool_context: ToolContext, arguments: Dict[str, Any]):
         search_query = arguments.get("search_query")
         user = arguments.get("user")
         channel = arguments.get("channel")
@@ -107,7 +106,7 @@ class ReadMemoryToolCall(ToolCall):
 
         try:
             guild_id = self.ctx.guild.id
-            db = request.cog.db
+            db = tool_context.memories
 
             memory_results = await db.search_similar(
                 search_query, guild_id, k=3, user=user, channel=channel
