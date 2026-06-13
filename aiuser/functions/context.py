@@ -13,13 +13,6 @@ if TYPE_CHECKING:
 
 @dataclass
 class ToolContext:
-    """Everything a tool is allowed to see and do.
-
-    Tools receive this instead of internal pipeline objects, so the full tool
-    API surface is the fields and methods below. Side effects flow back to the
-    response pipeline through ``files_to_send`` and ``suppress_response``.
-    """
-
     ctx: commands.Context
     config: Config
     bot: Red

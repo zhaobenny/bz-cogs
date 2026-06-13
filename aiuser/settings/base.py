@@ -21,7 +21,6 @@ from aiuser.settings.owner import OwnerSettings
 from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.random_message import RandomMessageSettings
 from aiuser.settings.response import ResponseSettings
-from aiuser.settings._groups import aiuser as _aiuser_stub  # noqa: F401  (stub kept for clarity)
 from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.triggers import TriggerSettings
 from aiuser.types.abc import MixinMeta

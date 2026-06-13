@@ -4,11 +4,10 @@ from typing import Literal, Optional, Union
 
 @dataclass(frozen=True)
 class MessageEntry:
-    """One chat-completion message.
+    """Single chat-completion message.
 
     ``name`` optionally tags special system messages (eg. ``"memory"``,
-    ``"summary"``) so providers can distinguish them from the persona prompt
-    without sniffing content strings.
+    ``"summary"``) so can be distinguished
     """
 
     role: Literal["user", "assistant", "system", "tool"]

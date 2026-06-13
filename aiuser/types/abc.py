@@ -15,12 +15,6 @@ class CompositeMetaClass(type(commands.Cog), type(ABC)):
 
 
 class MixinMeta(ABC):
-    """The attributes settings/dashboard mixins may rely on.
-
-    Everything else lives on :class:`aiuser.core.services.AIUserServices`
-    (reached via ``self.services``) so the dependency surface stays explicit.
-    """
-
     bot: Red
     config: Config
     services: Optional["AIUserServices"]

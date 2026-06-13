@@ -72,9 +72,7 @@ class Conversation:
             MessageEntry("assistant", content, tool_calls=tool_calls or [])
         )
 
-    async def append_tool_result(
-        self, content: str, tool_call_id: str
-    ) -> MessageEntry:
+    async def append_tool_result(self, content: str, tool_call_id: str) -> MessageEntry:
         await self.prune_oldest_if_over_limit()
         return await self.append(
             MessageEntry("tool", content, tool_call_id=tool_call_id)
@@ -118,6 +116,6 @@ class Conversation:
                 if item.get("type") == "text":
                     cost += await encode_text_to_tokens(item.get("text", ""))
                 elif item.get("type") == "image_url":
-                    cost += IMAGE_TOKEN_COST
+                    cost += IMAGE_TOKEN_COST  # TODO: calculate actual image token cost based on model and image size
             return cost
         return await encode_text_to_tokens(str(content))

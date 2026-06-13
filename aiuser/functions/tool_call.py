@@ -11,8 +11,7 @@ class ToolCall:
     """Base class for tools the LLM can call.
 
     Subclasses define a ``schema`` / ``function_name`` and implement
-    ``_handle``. Tools only ever see a :class:`ToolContext`; they must not
-    import or touch the response pipeline.
+    ``_handle``. 
     """
 
     schema: ToolCallSchema = None

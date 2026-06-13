@@ -37,7 +37,7 @@ class AIUser(
     Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
 
-    __version__ = "1.9.1"
+    __version__ = "1.10.1"
 
     def __init__(self, bot):
         super().__init__()
@@ -113,6 +113,11 @@ class AIUser(
         text: app_commands.Range[str, 1, 2000],
     ):
         """Talk directly to this bot's AI. Ask it anything you want!"""
+        if self.services is None:
+            return await inter.response.send_message(
+                ":warning: aiuser is still loading, try again shortly.",
+                ephemeral=True,
+            )
         await handle_slash_command(self.services, inter, text)
 
     @commands.Cog.listener()

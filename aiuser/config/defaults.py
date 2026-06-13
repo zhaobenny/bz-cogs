@@ -98,9 +98,6 @@ DEFAULT_GUILD = {
     "custom_compaction_prompt": None,
 }
 
-# Settings overridable per member/role/channel; `None` means "fall back to a
-# broader scope" (member > role > channel > guild). The three scopes must stay
-# identical for hierarchical resolution to work, hence the single source dict.
 DEFAULT_SCOPED = {
     "custom_text_prompt": None,
     "reply_percent": None,

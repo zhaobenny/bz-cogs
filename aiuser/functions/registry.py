@@ -1,8 +1,6 @@
 """The explicit registry of every available tool.
 
-Adding a tool = write the ToolCall subclass, then list it here. No directory
-scanning, no ``__subclasses__()`` magic: if it's not in ``ALL_TOOLS``, it does
-not exist.
+Adding a tool = write the ToolCall subclass, then list it here, add tool call name constants in aiuser.functions.names
 """
 
 from typing import List
@@ -22,7 +20,10 @@ from aiuser.functions.scrape.tool_call import ScrapeToolCall
 from aiuser.functions.searxng.tool_call import SearXNGToolCall
 from aiuser.functions.serper.tool_call import SerperToolCall
 from aiuser.functions.tool_call import ToolCall
-from aiuser.functions.weather.tool_call import IsDaytimeToolCall, LocationWeatherToolCall
+from aiuser.functions.weather.tool_call import (
+    IsDaytimeToolCall,
+    LocationWeatherToolCall,
+)
 from aiuser.functions.wolframalpha.tool_call import WolframAlphaFunctionCall
 
 ALL_TOOLS = [

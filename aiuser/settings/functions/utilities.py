@@ -17,8 +17,7 @@ class FunctionsGroupMixin(MixinMeta):
 
 
 # Module-level alias of the group stub so sibling settings modules can write
-# `@functions.command(...)` at class-body time. See aiuser/settings/_groups.py
-# for how discord.py re-parents these onto the final cog class.
+# `@functions.command(...)` at class-body time.
 functions = FunctionsGroupMixin.functions
 
 

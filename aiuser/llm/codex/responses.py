@@ -70,9 +70,7 @@ CONTEXT_SYSTEM_NAMES = ("memory", "summary")
 def _first_system_message_index(messages: List[Dict[str, Any]]) -> Optional[int]:
     """Index of the persona system prompt.
 
-    Tagged system messages ("memory" retrievals, conversation "summary") are
-    additional context, not instructions, so they are skipped unless nothing
-    else exists.
+    Skipped tagged system messages
     """
     fallback_index: Optional[int] = None
     for index, message in enumerate(messages):

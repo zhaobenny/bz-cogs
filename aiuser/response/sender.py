@@ -1,9 +1,3 @@
-"""Turning a completed LLM response into a Discord message.
-
-Covers removelist-regex cleanup, the reply-vs-send heuristics, and chunked
-sending.
-"""
-
 import asyncio
 import logging
 import random
@@ -20,7 +14,6 @@ from aiuser.utils.utilities import to_thread
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-# Use to_thread to compile & apply a regex pattern
 @to_thread(timeout=REGEX_RUN_TIMEOUT)
 def compile_and_apply(pattern_str: str, text: str) -> str:
     pattern = re.compile(pattern_str)
@@ -30,12 +23,10 @@ def compile_and_apply(pattern_str: str, text: str) -> str:
 async def remove_patterns_from_response(
     ctx: commands.Context, config: Config, response: str
 ) -> str:
-    # Get patterns from config and replace "{botname}".
     patterns = await config.guild(ctx.guild).removelist_regexes()
     botname = ctx.message.guild.me.nick or ctx.bot.user.display_name
     patterns = [p.replace(r"{botname}", re.escape(botname)) for p in patterns]
 
-    # Expand patterns that have "{authorname}" based on recent authors.
     authors = {
         msg.author.display_name
         async for msg in ctx.channel.history(limit=10)
@@ -51,7 +42,6 @@ async def remove_patterns_from_response(
         else:
             expanded_patterns.append(pattern)
 
-    # Apply each pattern sequentially.
     cleaned = response.strip(" \n")
     for pattern in expanded_patterns:
         try:
