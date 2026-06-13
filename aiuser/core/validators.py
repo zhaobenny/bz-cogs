@@ -164,9 +164,7 @@ async def check_message_content(
             if not await is_bot_mentioned_or_replied(services, ctx.message):
                 return False, "Single mention without bot reference"
 
-        min_length = await services.resolver.resolve_for_ctx(
-            "messages_min_length", ctx
-        )
+        min_length = await services.resolver.resolve_for_ctx("messages_min_length", ctx)
         if 1 <= len(ctx.message.content) < min_length:
             return False, f"Message too short (min: {min_length})"
 

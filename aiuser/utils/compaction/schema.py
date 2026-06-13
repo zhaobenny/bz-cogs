@@ -32,9 +32,7 @@ async def ensure_compaction_db(db_path: str):
                 )
             except Exception:
                 # Column may already exist
-                logger.debug(
-                    "Skipping compaction schema migration step", exc_info=True
-                )
+                logger.debug("Skipping compaction schema migration step", exc_info=True)
 
         await conn.execute(f"PRAGMA user_version = {CURRENT_SCHEMA_VERSION}")
         await conn.commit()

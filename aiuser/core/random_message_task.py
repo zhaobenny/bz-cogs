@@ -57,9 +57,7 @@ class RandomMessageTask:
                     f"Failed random message processing for guild {guild_id}, continuing"
                 )
 
-    async def _maybe_send_random_message(
-        self, guild_id: int, channels: List[int]
-    ):
+    async def _maybe_send_random_message(self, guild_id: int, channels: List[int]):
         try:
             last, ctx = await self._get_discord_context(guild_id, channels)
         except Exception:
@@ -140,7 +138,9 @@ class RandomMessageTask:
         last_created = last.created_at.replace(tzinfo=datetime.timezone.utc)
 
         seconds_since_last = abs(
-            (datetime.datetime.now(datetime.timezone.utc) - last_created).total_seconds()
+            (
+                datetime.datetime.now(datetime.timezone.utc) - last_created
+            ).total_seconds()
         )
         if seconds_since_last < 3600:
             # only sent to channels with 1 hour since last message

@@ -31,8 +31,7 @@ async def format_embed_content(
         return await format_youtube_embed(yt_api_key, message)
     elif (
         URL_PATTERN.search(message.content)
-        and OPEN_URL
-        in await config.guild(message.guild).function_calling_functions()
+        and OPEN_URL in await config.guild(message.guild).function_calling_functions()
     ):
         return None
     try:

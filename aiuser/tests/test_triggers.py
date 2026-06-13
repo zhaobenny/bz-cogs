@@ -49,7 +49,9 @@ async def test_conversation_reply_hierarchy_percent(
     await mock_services.config.guild(test_guild).conversation_reply_time.set(300)
 
     # Clear narrower custom values
-    await mock_services.config.channel(test_channel).conversation_reply_percent.set(None)
+    await mock_services.config.channel(test_channel).conversation_reply_percent.set(
+        None
+    )
     await mock_services.config.member(test_member).conversation_reply_percent.set(None)
     await mock_services.config.role(role).conversation_reply_percent.set(None)
 
@@ -163,7 +165,9 @@ async def test_trigger_words_hierarchy(
     await mock_services.config.channel(test_channel).always_reply_on_words.set(None)
     await mock_services.config.member(test_member).always_reply_on_words.set(None)
 
-    await mock_services.config.guild(test_guild).always_reply_on_words.set(["guildword"])
+    await mock_services.config.guild(test_guild).always_reply_on_words.set(
+        ["guildword"]
+    )
 
     msg = backend.make_message("hello guildword", test_member, test_channel)
     ctx = await bot.get_context(msg)
@@ -187,7 +191,9 @@ async def test_trigger_words_hierarchy(
     ctx = await bot.get_context(msg)
     assert await is_always_reply_on_words_triggered(mock_services, ctx) is True
 
-    await mock_services.config.member(test_member).always_reply_on_words.set(["memberword"])
+    await mock_services.config.member(test_member).always_reply_on_words.set(
+        ["memberword"]
+    )
     msg = backend.make_message("hello roleword", test_member, test_channel)
     ctx = await bot.get_context(msg)
     assert await is_always_reply_on_words_triggered(mock_services, ctx) is False
@@ -205,7 +211,9 @@ async def test_trigger_words_empty_list_blocks_inherited_words(
     test_member,
 ):
     """Explicit empty list override should block inherited trigger words."""
-    await mock_services.config.guild(test_guild).always_reply_on_words.set(["guildword"])
+    await mock_services.config.guild(test_guild).always_reply_on_words.set(
+        ["guildword"]
+    )
     await mock_services.config.channel(test_channel).always_reply_on_words.set([])
 
     msg = backend.make_message("hello guildword", test_member, test_channel)
@@ -230,7 +238,9 @@ async def test_conversation_reply_uses_highest_role_override(
 
     await mock_services.config.guild(test_guild).conversation_reply_percent.set(0.9)
     await mock_services.config.guild(test_guild).conversation_reply_time.set(300)
-    await mock_services.config.channel(test_channel).conversation_reply_percent.set(None)
+    await mock_services.config.channel(test_channel).conversation_reply_percent.set(
+        None
+    )
     await mock_services.config.member(test_member).conversation_reply_percent.set(None)
 
     await mock_services.config.role(low_role).conversation_reply_percent.set(0.9)
@@ -240,7 +250,11 @@ async def test_conversation_reply_uses_highest_role_override(
 
     assert (
         await _is_conversation_reply_enabled(
-            bot, mock_services, test_channel, test_member, "highest role percent override"
+            bot,
+            mock_services,
+            test_channel,
+            test_member,
+            "highest role percent override",
         )
         is False
     )
@@ -356,7 +370,9 @@ async def test_reply_to_mentions_hierarchy(
     msg = backend.make_message(f"<@{bot.user.id}> hi", test_member, test_channel)
     assert await is_bot_mentioned_or_replied(mock_services, msg) is True
 
-    await mock_services.config.channel(test_channel).reply_to_mentions_replies.set(False)
+    await mock_services.config.channel(test_channel).reply_to_mentions_replies.set(
+        False
+    )
     msg = backend.make_message(f"<@{bot.user.id}> hi", test_member, test_channel)
     assert await is_bot_mentioned_or_replied(mock_services, msg) is False
 

@@ -51,9 +51,7 @@ async def handle_slash_command(
 
 
 @with_discord_log_context("message")
-async def handle_message(
-    services: "AIUserServices", message: discord.Message
-):
+async def handle_message(services: "AIUserServices", message: discord.Message):
     """Handle regular message events"""
     ctx: commands.Context = await services.bot.get_context(message)
 

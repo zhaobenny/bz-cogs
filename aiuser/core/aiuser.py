@@ -86,9 +86,7 @@ class AIUser(
         pre_processed = super().format_help_for_context(ctx)
         return f"{pre_processed}\nCog Version: {self.__version__}"
 
-    async def red_delete_data_for_user(
-        self, *, requester: Any, user_id: int
-    ):
+    async def red_delete_data_for_user(self, *, requester: Any, user_id: int):
         for guild in self.bot.guilds:
             await self.config.member_from_ids(guild.id, user_id).clear()
 

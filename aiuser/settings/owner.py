@@ -229,7 +229,9 @@ class OwnerSettings(MixinMeta):
         except AuthenticationError:
             logger.exception("Authentication failed for endpoint.")
             await self.config.custom_openai_endpoint.set(previous_url)
-            self.services.openai_client = await setup_openai_client(self.bot, self.config)
+            self.services.openai_client = await setup_openai_client(
+                self.bot, self.config
+            )
             api_type = get_openai_compat_api_token_name(url)
             return await ctx.send(
                 f":warning: Authentication failed for endpoint. "
@@ -239,7 +241,9 @@ class OwnerSettings(MixinMeta):
         except Exception:
             logger.exception("Invalid endpoint.")
             await self.config.custom_openai_endpoint.set(previous_url)
-            self.services.openai_client = await setup_openai_client(self.bot, self.config)
+            self.services.openai_client = await setup_openai_client(
+                self.bot, self.config
+            )
             return await ctx.send(
                 ":warning: Invalid endpoint. Please check logs for more information."
             )

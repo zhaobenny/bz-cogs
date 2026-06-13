@@ -37,9 +37,7 @@ class ToolManager:
             return {"tools": [asdict(t.schema) for t in self.enabled_tools]}
         return {}
 
-    async def handle_tool_calls(
-        self, tool_calls: List[ChatCompletionMessageToolCall]
-    ):
+    async def handle_tool_calls(self, tool_calls: List[ChatCompletionMessageToolCall]):
         conversation = self.pipeline.conversation
         entry = await conversation.append_assistant(tool_calls=tool_calls)
         self.pipeline.tool_call_entries.append(entry)
@@ -61,9 +59,7 @@ class ToolManager:
                 )
                 result = await tool.run(self.pipeline.tool_context, dict(arguments))
                 if result is not None:
-                    entry = await conversation.append_tool_result(
-                        result, tool_call.id
-                    )
+                    entry = await conversation.append_tool_result(result, tool_call.id)
                     self.pipeline.tool_call_entries.append(entry)
             else:
                 logger.warning(f'Could not find tool "{fn.name}"')

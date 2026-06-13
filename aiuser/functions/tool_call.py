@@ -11,7 +11,7 @@ class ToolCall:
     """Base class for tools the LLM can call.
 
     Subclasses define a ``schema`` / ``function_name`` and implement
-    ``_handle``. 
+    ``_handle``.
     """
 
     schema: ToolCallSchema = None

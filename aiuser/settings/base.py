@@ -62,9 +62,7 @@ class Settings(
         ):
             return await ctx.react_quietly("❌")
 
-        self.services.override_prompt_start_time[ctx.guild.id] = (
-            ctx.message.created_at
-        )
+        self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
         await ctx.react_quietly("✅")
 
     @aiuser.command(aliases=["settings", "showsettings"])

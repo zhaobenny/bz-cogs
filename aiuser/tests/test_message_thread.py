@@ -275,7 +275,9 @@ async def test_messages_backread_limit_respected(
 ):
     """Only the configured number of most recent messages should be backread."""
     await mock_services.config.guild(test_member.guild).messages_backread.set(2)
-    await mock_services.config.guild(test_member.guild).messages_backread_seconds.set(300)
+    await mock_services.config.guild(test_member.guild).messages_backread_seconds.set(
+        300
+    )
 
     _ = backend.make_message("oldest should be dropped", test_member, test_channel)
     _ = backend.make_message("middle should remain", bot.user, test_channel)
@@ -299,7 +301,9 @@ async def test_override_prompt_start_time_filters_older_history(
 ):
     """History backread should honor override_prompt_start_time for the guild."""
     await mock_services.config.guild(test_member.guild).messages_backread.set(5)
-    await mock_services.config.guild(test_member.guild).messages_backread_seconds.set(300)
+    await mock_services.config.guild(test_member.guild).messages_backread_seconds.set(
+        300
+    )
 
     _ = backend.make_message("recent history one", test_member, test_channel)
     _ = backend.make_message("recent history two", test_member, test_channel)

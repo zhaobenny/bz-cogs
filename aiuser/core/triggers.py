@@ -20,9 +20,7 @@ if TYPE_CHECKING:
     from aiuser.core.services import AIUserServices
 
 
-async def is_in_conversation(
-    services: "AIUserServices", ctx: commands.Context
-) -> bool:
+async def is_in_conversation(services: "AIUserServices", ctx: commands.Context) -> bool:
     """Check if bot should continue conversation based on recent messages"""
     reply_percent = await services.resolver.resolve_for_ctx(
         "conversation_reply_percent", ctx

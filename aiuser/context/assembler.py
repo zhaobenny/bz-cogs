@@ -104,7 +104,10 @@ class ConversationAssembler:
 
     async def _should_use_image_model(self) -> bool:
         """Check if we should switch to the image scanning model"""
-        if self.ctx.interaction or not await self.config.guild(self.guild).scan_images():
+        if (
+            self.ctx.interaction
+            or not await self.config.guild(self.guild).scan_images()
+        ):
             return False
 
         message = self.init_message
@@ -325,7 +328,5 @@ class ConversationAssembler:
     def _within_gap(
         message: discord.Message, next_message: discord.Message, max_seconds_gap: int
     ) -> bool:
-        seconds_diff = abs(
-            message.created_at - next_message.created_at
-        ).total_seconds()
+        seconds_diff = abs(message.created_at - next_message.created_at).total_seconds()
         return seconds_diff <= max_seconds_gap

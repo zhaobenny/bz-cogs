@@ -86,9 +86,7 @@ class MessageConverter:
         content = format_text_content(message)
         await self.add_entry(content, res, role)
 
-    async def handle_embed(
-        self, message: Message, res: List[MessageEntry], role: str
-    ):
+    async def handle_embed(self, message: Message, res: List[MessageEntry], role: str):
         content = await format_embed_content(self.config, self.bot, message)
         if not content:
             content = format_text_content(message)

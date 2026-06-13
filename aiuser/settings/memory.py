@@ -101,7 +101,9 @@ class MemorySettings(MixinMeta):
         """Shows a memory by ID."""
 
         try:
-            memory = await self.services.memories.fetch_by_rowid(memory_id, ctx.guild.id)
+            memory = await self.services.memories.fetch_by_rowid(
+                memory_id, ctx.guild.id
+            )
         except Exception:
             logger.exception("Memory fetch did not succeed")
             return await ctx.message.add_reaction("⚠️")

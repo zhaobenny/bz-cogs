@@ -81,7 +81,9 @@ class ScopedConfigResolver:
             member=getattr(ctx, "author", None),
         )
 
-    async def resolve_for_message(self, attr_name: str, message: discord.Message) -> Any:
+    async def resolve_for_message(
+        self, attr_name: str, message: discord.Message
+    ) -> Any:
         return await self.resolve(
             attr_name,
             guild=message.guild,

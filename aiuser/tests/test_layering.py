@@ -50,9 +50,7 @@ def _runtime_aiuser_imports(tree: ast.Module):
                 test = child.test
                 is_type_checking = (
                     isinstance(test, ast.Name) and test.id == "TYPE_CHECKING"
-                ) or (
-                    isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING"
-                )
+                ) or (isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING")
                 if is_type_checking:
                     # only walk the else-branch
                     for else_node in child.orelse:
