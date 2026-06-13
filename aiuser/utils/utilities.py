@@ -144,6 +144,11 @@ async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolC
             try:
                 importlib.import_module(f"aiuser.functions.{item.name}.tool_call")
             except ImportError:
+                logger.warning(
+                    f"Failed to import tool module aiuser.functions.{item.name}; "
+                    "its tools will be unavailable",
+                    exc_info=True,
+                )
                 continue
 
     enabled_tools = await config.guild(ctx.guild).function_calling_functions()

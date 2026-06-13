@@ -73,7 +73,7 @@ async def test_cached_tool_calls(
     tool_call_idx = -1
     for i, m in enumerate(result):
         if m.get("role") == "assistant" and m.get("tool_calls"):
-            if any(tc.id == paris_tool_call_id for tc in m.get("tool_calls", [])):
+            if any(tc["id"] == paris_tool_call_id for tc in m.get("tool_calls", [])):
                 tool_call_idx = i
                 break
 

@@ -112,8 +112,9 @@ class MessagesThread:
         await self._add_tokens(content)
 
     async def add_assistant_message(
-        self, content: str = "", index: int = None, tool_calls: list = []
+        self, content: str = "", index: int = None, tool_calls: list = None
     ) -> MessageEntry:
+        tool_calls = tool_calls or []
         await self._prune_if_over_limit()
         entry = MessageEntry("assistant", content, tool_calls=tool_calls)
         self.messages.insert(index or 0, entry)
@@ -144,14 +145,24 @@ class MessagesThread:
         await self.history_manager.build_history()
 
     def get_json(self):
+        def serialize_tool_calls(tool_calls):
+            return [
+                tc.model_dump(mode="json") if hasattr(tc, "model_dump") else tc
+                for tc in tool_calls
+            ]
+
         return [
             {
                 "role": message.role,
                 "content": message.content,
-                **({"tool_calls": message.tool_calls} if message.tool_calls else {}),
+                **(
+                    {"tool_calls": serialize_tool_calls(message.tool_calls)}
+                    if message.tool_calls
+                    else {}
+                ),
                 **(
                     {"tool_call_id": message.tool_call_id}
-                    if hasattr(message, "tool_call_id") and message.tool_call_id
+                    if message.tool_call_id
                     else {}
                 ),
             }

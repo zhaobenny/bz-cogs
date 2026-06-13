@@ -342,7 +342,7 @@ class ResponseSettings(MixinMeta):
                     f':warning: Invalid JSON! Please remove "{invalid_keys_str}" key from your JSON.'
                 )
 
-            if data.get("logit_bias") and await self.config(ctx.guild).weights():
+            if data.get("logit_bias") and await self.config.guild(ctx.guild).weights():
                 embed = discord.Embed(
                     title="Existing logit bias found!",
                     description="Wipe existing logit bias (from [p]aiuser response weights)?",

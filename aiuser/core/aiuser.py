@@ -83,10 +83,10 @@ class AIUser(
 
             self.ignore_regex[guild_id] = re.compile(pattern) if pattern else None
 
-        if logger.isEnabledFor(logging.DEBUG):
-            # for development
-            test_guild = 744802856074346556
-            self.override_prompt_start_time[test_guild] = datetime.now()
+        debug_guild_id = os.environ.get("AIUSER_DEBUG_GUILD")
+        if debug_guild_id and debug_guild_id.isdigit():
+            # for development: reset prompt start time for a test guild
+            self.override_prompt_start_time[int(debug_guild_id)] = datetime.now()
 
         self.db: VectorStore = VectorStore(cog_data_path(self))
 

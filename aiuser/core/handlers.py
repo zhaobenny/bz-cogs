@@ -40,6 +40,7 @@ async def handle_slash_command(cog: MixinMeta, inter: discord.Interaction, text:
     try:
         await create_response(cog, ctx)
     except Exception:
+        logger.exception("Failed to generate response for slash command")
         await ctx.send(":warning: Error in generating response!", ephemeral=True)
 
 

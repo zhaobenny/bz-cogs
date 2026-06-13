@@ -171,6 +171,8 @@ class OwnerSettings(MixinMeta):
         with path.open("w") as f:
             json.dump(new_config, f, indent=4)
 
+        await self._refresh_cached_guild_options()
+
         return await confirm.edit(
             embed=discord.Embed(
                 title="Overwritten!",
@@ -178,6 +180,23 @@ class OwnerSettings(MixinMeta):
                 color=await ctx.embed_color(),
             )
         )
+
+    async def _refresh_cached_guild_options(self):
+        """Reload the in-memory caches of per-guild options from config."""
+        import re
+
+        all_config = await self.config.all_guilds()
+        for guild_id, guild_config in all_config.items():
+            self.optindefault[guild_id] = guild_config["optin_by_default"]
+            self.channels_whitelist[guild_id] = guild_config["channels_whitelist"]
+            pattern = guild_config["ignore_regex"]
+            try:
+                self.ignore_regex[guild_id] = re.compile(pattern) if pattern else None
+            except re.error:
+                logger.warning(
+                    f"Invalid ignore regex for guild {guild_id} after config import"
+                )
+                self.ignore_regex[guild_id] = None
 
     @aiuserowner.command(name="prompt")
     async def global_prompt(self, ctx: commands.Context, *, prompt: Optional[str]):

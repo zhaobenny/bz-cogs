@@ -26,6 +26,8 @@ class RandomMessageTask(MixinMeta):
             return
 
         for guild_id, channels in self.channels_whitelist.items():
+            # Each guild is processed independently; a failure or skip in one
+            # guild must not starve the others.
             try:
                 last, ctx = await self.get_discord_context(guild_id, channels)
             except Exception:
@@ -35,13 +37,14 @@ class RandomMessageTask(MixinMeta):
             channel = last.channel
 
             if not await self.check_if_valid_for_random_message(guild, last):
-                return
+                continue
 
             topics = await self.config.guild(guild).random_messages_prompts() or None
             if not topics:
-                return logger.warning(
+                logger.warning(
                     f"No random message topics were found in {guild.name}, skipping"
                 )
+                continue
 
             prompt = (
                 await self.config.channel(channel).custom_text_prompt()
@@ -62,7 +65,12 @@ class RandomMessageTask(MixinMeta):
             )
             messages_list.can_reply = False
 
-            return await create_response(self, ctx, messages_list)
+            try:
+                await create_response(self, ctx, messages_list)
+            except Exception:
+                logger.exception(
+                    f"Failed to send random message in {guild.name}, continuing"
+                )
 
     async def get_discord_context(self, guild_id: int, channels: list):
         guild = self.bot.get_guild(guild_id)

@@ -110,11 +110,8 @@ class VectorStore:
 
             target_rowid = rows[idx][0]
 
-            async with aiosqlite.connect(self.db_path) as conn:
-                await conn.execute(
-                    "DELETE FROM memories WHERE rowid = ?", (target_rowid,)
-                )
-                await conn.commit()
+            await conn.execute("DELETE FROM memories WHERE rowid = ?", (target_rowid,))
+            await conn.commit()
             return True
 
     async def delete_user_memories(
