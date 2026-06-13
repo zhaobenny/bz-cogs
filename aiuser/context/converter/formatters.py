@@ -2,6 +2,8 @@ import logging
 
 from discord import Message, MessageType
 
+from aiuser.utils.utilities import mention_to_text
+
 logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 
@@ -31,24 +33,3 @@ async def format_sticker_content(message: Message):
     except Exception:
         sticker_name = message.stickers[0].name
         return f'User "{message.author.display_name}" sent: [Sticker with name "{sticker_name}"]'
-
-
-def mention_to_text(message: Message) -> str:
-    """
-    Converts mentions to text
-    """
-    content = message.content
-    mentions = message.mentions + message.role_mentions + message.channel_mentions
-
-    if not mentions:
-        return content
-
-    for mentioned in mentions:
-        if mentioned in message.channel_mentions:
-            content = content.replace(mentioned.mention, f"#{mentioned.name}")
-        elif mentioned in message.role_mentions:
-            content = content.replace(mentioned.mention, f"@{mentioned.name}")
-        else:
-            content = content.replace(mentioned.mention, f"@{mentioned.display_name}")
-
-    return content

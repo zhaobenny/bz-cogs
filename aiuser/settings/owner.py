@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 from pathlib import Path
@@ -8,8 +7,6 @@ import discord
 from openai import AuthenticationError
 from redbot.core import checks, commands
 from redbot.core.data_manager import cog_data_path
-from redbot.core.utils.menus import start_adding_reactions
-from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.config.constants import OPENROUTER_API_V1_URL
 from aiuser.config.defaults import DEFAULT_LLM_MODEL
@@ -31,6 +28,7 @@ from aiuser.llm.openai_compatible.endpoints import (
 )
 from aiuser.settings.utilities import (
     add_prompt_metrics_fields,
+    confirm_pending,
     truncate_prompt,
 )
 from aiuser.types.abc import MixinMeta
@@ -154,19 +152,9 @@ class OwnerSettings(MixinMeta):
                 \n To fix, make sure you can access the config file: \n `{path}`",
             color=await ctx.embed_color(),
         )
-        confirm = await ctx.send(embed=embed)
-        start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
-        pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
-        try:
-            await ctx.bot.wait_for("reaction_add", timeout=30.0, check=pred)
-        except asyncio.TimeoutError:
-            return await confirm.edit(
-                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
-            )
-        if pred.result is False:
-            return await confirm.edit(
-                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
-            )
+        confirmed, confirm = await confirm_pending(ctx, embed)
+        if not confirmed:
+            return
 
         with path.open("w") as f:
             json.dump(new_config, f, indent=4)
@@ -483,19 +471,5 @@ class OwnerSettings(MixinMeta):
             color=await ctx.embed_color(),
         )
 
-        confirm = await ctx.send(embed=embed)
-        start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
-        pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
-        try:
-            await ctx.bot.wait_for("reaction_add", timeout=30.0, check=pred)
-        except TimeoutError:
-            await confirm.edit(
-                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
-            )
-            return False
-        if pred.result is False:
-            await confirm.edit(
-                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
-            )
-            return False
-        return True
+        confirmed, _ = await confirm_pending(ctx, embed)
+        return confirmed

@@ -98,6 +98,27 @@ async def format_variables(ctx: commands.Context, text: str):
         return text
 
 
+def mention_to_text(message: Message) -> str:
+    """
+    Converts mentions to text
+    """
+    content = message.content
+    mentions = message.mentions + message.role_mentions + message.channel_mentions
+
+    if not mentions:
+        return content
+
+    for mentioned in mentions:
+        if mentioned in message.channel_mentions:
+            content = content.replace(mentioned.mention, f"#{mentioned.name}")
+        elif mentioned in message.role_mentions:
+            content = content.replace(mentioned.mention, f"@{mentioned.name}")
+        else:
+            content = content.replace(mentioned.mention, f"@{mentioned.display_name}")
+
+    return content
+
+
 def is_embed_valid(message: Message):
     if (
         (len(message.embeds) == 0)

@@ -4,7 +4,7 @@ from textwrap import shorten
 import discord
 from emoji import EMOJI_DATA
 
-from aiuser.context.converter.formatters import mention_to_text
+from aiuser.utils.utilities import mention_to_text
 
 logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 

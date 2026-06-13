@@ -12,6 +12,7 @@ from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.config.defaults import DEFAULT_REMOVE_PATTERNS
 from aiuser.settings._groups import aiuser
+from aiuser.settings.utilities import confirm_pending
 from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -103,28 +104,18 @@ class ResponseSettings(MixinMeta):
             description="This will reset this server's removelist to default.",
             color=await ctx.embed_color(),
         )
-        confirm = await ctx.send(embed=embed)
-        start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
-        pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
-        try:
-            await ctx.bot.wait_for("reaction_add", timeout=10.0, check=pred)
-        except asyncio.TimeoutError:
-            return await confirm.edit(
-                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
+        confirmed, confirm = await confirm_pending(ctx, embed, timeout=10.0)
+        if not confirmed:
+            return
+
+        await self.config.guild(ctx.guild).removelist_regexes.set(
+            DEFAULT_REMOVE_PATTERNS
+        )
+        return await confirm.edit(
+            embed=discord.Embed(
+                title="Removelist reset.", color=await ctx.embed_color()
             )
-        if pred.result is False:
-            return await confirm.edit(
-                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
-            )
-        else:
-            await self.config.guild(ctx.guild).removelist_regexes.set(
-                DEFAULT_REMOVE_PATTERNS
-            )
-            return await confirm.edit(
-                embed=discord.Embed(
-                    title="Removelist reset.", color=await ctx.embed_color()
-                )
-            )
+        )
 
     @response.command(name="toggleoptinembed")
     async def toggle_optin_embed(self, ctx):
