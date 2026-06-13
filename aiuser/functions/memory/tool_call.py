@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from aiuser.functions import names
 from aiuser.functions.context import ToolContext
@@ -40,7 +40,9 @@ class SaveMemoryToolCall(ToolCall):
         )
     )
 
-    async def _handle(self, tool_context: ToolContext, arguments: Dict[str, Any]):
+    async def _handle(
+        self, tool_context: ToolContext, arguments: Dict[str, Any]
+    ) -> Optional[str]:
         memory_name = arguments.get("memory_name")
         memory_text = arguments.get("memory_text")
         user = arguments.get("user")
@@ -96,7 +98,9 @@ class ReadMemoryToolCall(ToolCall):
         )
     )
 
-    async def _handle(self, tool_context: ToolContext, arguments: Dict[str, Any]):
+    async def _handle(
+        self, tool_context: ToolContext, arguments: Dict[str, Any]
+    ) -> Optional[str]:
         search_query = arguments.get("search_query")
         user = arguments.get("user")
         channel = arguments.get("channel")

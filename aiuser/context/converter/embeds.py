@@ -1,9 +1,14 @@
+from __future__ import annotations
+
 import copy
 import json
 import logging
+from typing import Optional
 
 import aiohttp
 from discord import Message
+from redbot.core import Config
+from redbot.core.bot import Red
 from tenacity import retry, stop_after_attempt, wait_random
 
 from aiuser.config.constants import URL_PATTERN, YOUTUBE_VIDEO_ID_PATTERN
@@ -18,7 +23,9 @@ YOUTUBE_API_URL = (
 )
 
 
-async def format_embed_content(config, bot, message: Message):
+async def format_embed_content(
+    config: Config, bot: Red, message: Message
+) -> Optional[str]:
     yt_api_key = (await bot.get_shared_api_tokens("youtube")).get("api_key")
     if yt_api_key and contains_youtube_link(message.content):
         return await format_youtube_embed(yt_api_key, message)
@@ -38,13 +45,13 @@ async def format_embed_content(config, bot, message: Message):
         return None
 
 
-def format_embed_message_content(message: Message):
+def format_embed_message_content(message: Message) -> str:
     message_copy = copy.copy(message)
     message_copy.content = URL_PATTERN.sub("", message_copy.content)
     return format_text_content(message_copy)
 
 
-async def format_youtube_embed(api_key: str, message: Message):
+async def format_youtube_embed(api_key: str, message: Message) -> Optional[str]:
     video_id = await get_video_id(message.content)
     author = message.author.display_name
 
@@ -62,7 +69,7 @@ async def format_youtube_embed(api_key: str, message: Message):
     return f'User "{author}" sent: [Link to Youtube video with title "{video_title}" and description "{description}" from channel "{channel_title}"]'
 
 
-async def get_video_id(url):
+async def get_video_id(url: str) -> Optional[str]:
     match = YOUTUBE_VIDEO_ID_PATTERN.search(url)
 
     if match:
@@ -72,7 +79,7 @@ async def get_video_id(url):
 
 
 @retry(wait=wait_random(min=1, max=2), stop=(stop_after_attempt(3)), reraise=True)
-async def get_video_details(api_key, video_id):
+async def get_video_details(api_key: str, video_id: str) -> tuple[str, str, str]:
     url = YOUTUBE_API_URL.format(video_id, api_key)
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:

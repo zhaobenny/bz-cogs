@@ -6,6 +6,7 @@ import random
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
+import discord
 from redbot.core import commands
 
 from aiuser.config.constants import (
@@ -75,7 +76,7 @@ async def is_always_reply_on_words_triggered(
 
 
 async def check_triggers(
-    services: "AIUserServices", ctx: commands.Context, message
+    services: "AIUserServices", ctx: commands.Context, message: discord.Message
 ) -> bool:
     trigger_funcs = [
         lambda: is_bot_mentioned_or_replied(services, message),

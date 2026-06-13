@@ -7,6 +7,7 @@ from typing import Iterable, Set
 
 import discord
 from redbot.core import Config
+from redbot.core.bot import Red
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -23,8 +24,8 @@ class ConsentService:
     filtering, GDPR deletion) must go through this service.
     """
 
-    def __init__(self, bot, config: Config):
-        self.bot = bot
+    def __init__(self, bot: Red, config: Config):
+        self.bot: Red = bot
         self.config = config
         self._lock = asyncio.Lock()
         self._optin: Set[int] = set()
@@ -76,14 +77,12 @@ class ConsentService:
             return True
 
     async def remove_user_data(self, user_id: int):
-        """GDPR deletion: drop the user's opt-in record.
-
-        The opt-out record is deliberately kept, so a deletion request never
-        silently re-enables processing of the user's messages.
-        """
+        """GDPR deletion: drop any stored consent decision for the user."""
         async with self._lock:
-            if user_id in self._optin:
-                self._optin.discard(user_id)
+            changed = user_id in self._optin or user_id in self._optout
+            self._optin.discard(user_id)
+            self._optout.discard(user_id)
+            if changed:
                 await self._persist()
 
     async def _persist(self):

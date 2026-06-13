@@ -74,11 +74,15 @@ class GuildSettingsCache:
         await self._config.guild(guild).optin_by_default.set(value)
         self._optin_by_default[guild.id] = value
 
-    async def set_channels_whitelist(self, guild: discord.Guild, channel_ids: List[int]):
+    async def set_channels_whitelist(
+        self, guild: discord.Guild, channel_ids: List[int]
+    ):
         await self._config.guild(guild).channels_whitelist.set(channel_ids)
         self._channels_whitelist[guild.id] = channel_ids
 
-    async def set_ignore_regex(self, guild: discord.Guild, pattern: Optional[str]):
+    async def set_ignore_regex(
+        self, guild: discord.Guild, pattern: Optional[str]
+    ):
         """Set (and compile) the ignore regex. Raises ``re.error`` if invalid."""
         compiled = re.compile(pattern) if pattern else None
         await self._config.guild(guild).ignore_regex.set(pattern)

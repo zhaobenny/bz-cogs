@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Dict, Optional
 
 from aiuser.functions import names
 from aiuser.functions.context import ToolContext
@@ -27,7 +28,9 @@ class SearXNGToolCall(ToolCall):
     )
     function_name = schema.function.name
 
-    async def _handle(self, tool_context: ToolContext, arguments):
+    async def _handle(
+        self, tool_context: ToolContext, arguments: Dict[str, Any]
+    ) -> Optional[str]:
         """Handle the function call."""
         endpoint = await self.config.guild(
             self.ctx.guild

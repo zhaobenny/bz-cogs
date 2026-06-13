@@ -1,6 +1,8 @@
 import logging
+from typing import Any, Dict, Optional
 
 from aiuser.functions import names
+from aiuser.functions.context import ToolContext
 from aiuser.functions.scrape.scrape import scrape_page
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
@@ -26,7 +28,9 @@ class ScrapeToolCall(ToolCall):
     )
     function_name = schema.function.name
 
-    async def _handle(self, tool_context, arguments):
+    async def _handle(
+        self, tool_context: ToolContext, arguments: Dict[str, Any]
+    ) -> Optional[str]:
         logger.info(f"Attempting scrape of {arguments['url']}")
         try:
             return await scrape_page(arguments["url"])

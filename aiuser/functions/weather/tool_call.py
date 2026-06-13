@@ -1,4 +1,7 @@
+from typing import Any, Dict, Optional
+
 from aiuser.functions import names
+from aiuser.functions.context import ToolContext
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 from aiuser.functions.weather import query
@@ -29,7 +32,9 @@ class LocationWeatherToolCall(ToolCall):
     schema = location_weather_schema
     function_name = schema.function.name
 
-    async def _handle(self, tool_context, arguments):
+    async def _handle(
+        self, tool_context: ToolContext, arguments: Dict[str, Any]
+    ) -> Optional[str]:
         days = arguments.get("days", 1)
         return await query.get_weather(arguments["location"], days=days)
 
@@ -52,5 +57,7 @@ class IsDaytimeToolCall(ToolCall):
     )
     function_name = schema.function.name
 
-    async def _handle(self, tool_context, arguments):
+    async def _handle(
+        self, tool_context: ToolContext, arguments: Dict[str, Any]
+    ) -> Optional[str]:
         return await query.is_daytime(arguments["location"])

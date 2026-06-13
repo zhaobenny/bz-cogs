@@ -3,7 +3,7 @@ import logging
 import random
 import re
 from datetime import datetime, timezone
-from typing import Optional
+from typing import List, Optional
 
 import discord
 from redbot.core import Config, commands
@@ -74,7 +74,10 @@ async def should_reply(ctx: commands.Context) -> bool:
 
 
 async def send_response(
-    ctx: commands.Context, response: str, can_reply: bool, files=None
+    ctx: commands.Context,
+    response: str,
+    can_reply: bool,
+    files: Optional[List[discord.File]] = None,
 ) -> Optional[discord.Message]:
     allowed = discord.AllowedMentions(
         everyone=False, roles=False, users=[ctx.message.author]

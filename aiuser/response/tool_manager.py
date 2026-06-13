@@ -22,7 +22,7 @@ class ToolManager:
         self.enabled_tools: List[ToolCall] = []
         self.enabled_tools_map: Dict[str, ToolCall] = {}
 
-    async def setup(self) -> None:
+    async def setup(self):
         cfg = self.pipeline.config.guild(self.pipeline.ctx.guild)
         if not (await cfg.function_calling()):
             return
@@ -39,7 +39,7 @@ class ToolManager:
 
     async def handle_tool_calls(
         self, tool_calls: List[ChatCompletionMessageToolCall]
-    ) -> None:
+    ):
         conversation = self.pipeline.conversation
         entry = await conversation.append_assistant(tool_calls=tool_calls)
         self.pipeline.tool_call_entries.append(entry)

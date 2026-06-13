@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Set
 
 import discord
 from redbot.core import commands
@@ -28,7 +28,7 @@ class CompactionManager:
         self.config = services.config
         self.bot = services.bot
         self.compaction_store = services.compaction_store
-        self._compaction_locks = set()
+        self._compaction_locks: Set[int] = set()
 
     async def check_and_run_compaction(
         self, ctx: commands.Context, messages: List[discord.Message]
@@ -83,7 +83,7 @@ class CompactionManager:
             )
 
             converter = MessageConverter(self.config, self.bot, ctx)
-            new_msgs_text = []
+            new_msgs_text: List[str] = []
 
             # Format the messages block chronologically (oldest first)
             for msg in reversed(past_messages):

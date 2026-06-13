@@ -1,16 +1,18 @@
 import base64
 import logging
 from io import BytesIO
+from typing import Any, Dict, List
 
 from discord import Message
 from PIL import Image
+from redbot.core import Config
 
 from aiuser.context.converter.formatters import format_text_content
 
 logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 
-async def format_image(config, message: Message):
+async def format_image(config: Config, message: Message) -> List[Dict[str, Any]]:
     attachment = message.attachments[0]
 
     buffer = BytesIO()
@@ -19,7 +21,7 @@ async def format_image(config, message: Message):
     max_size = await config.guild(message.guild).max_image_size()
     image = scale_image(image, max_size)
 
-    content = []
+    content: List[Dict[str, Any]] = []
     if message.content != "":
         content.append({"type": "text", "text": format_text_content(message)})
 
@@ -36,7 +38,7 @@ async def format_image(config, message: Message):
     return content
 
 
-def scale_image(image: Image.Image, target_resolution: int) -> Image:
+def scale_image(image: Image.Image, target_resolution: int) -> Image.Image:
     width, height = image.size
     image_resolution = width * height
     if image_resolution > target_resolution:

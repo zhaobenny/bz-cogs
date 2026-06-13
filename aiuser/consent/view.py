@@ -14,7 +14,9 @@ class ConsentView(discord.ui.View):
         self.consent = consent
 
     @discord.ui.button(label="Opt In", style=discord.ButtonStyle.green)
-    async def confirm(self, interaction: discord.Interaction, _: discord.ui.Button):
+    async def confirm(
+        self, interaction: discord.Interaction, _: discord.ui.Button
+    ):
         if not await self.consent.opt_in(interaction.user.id):
             return await interaction.response.send_message(
                 "You are already opted in.", ephemeral=True
@@ -24,7 +26,9 @@ class ConsentView(discord.ui.View):
         )
 
     @discord.ui.button(label="Opt Out", style=discord.ButtonStyle.grey)
-    async def cancel(self, interaction: discord.Interaction, _: discord.ui.Button):
+    async def cancel(
+        self, interaction: discord.Interaction, _: discord.ui.Button
+    ):
         if not await self.consent.opt_out(interaction.user.id):
             return await interaction.response.send_message(
                 "You are already opted out.", ephemeral=True

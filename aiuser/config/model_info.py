@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Iterable
 
 from aiuser.config.models import (
     OTHER_MODELS_LIMITS,
@@ -27,7 +28,7 @@ class ModelInfo:
     token_limit: int
 
 
-def _matches_any(model: str, candidates) -> bool:
+def _matches_any(model: str, candidates: Iterable[str]) -> bool:
     return any(candidate in model for candidate in candidates)
 
 

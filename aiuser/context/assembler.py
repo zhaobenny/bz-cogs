@@ -5,6 +5,8 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, List, Optional
 
 import discord
+from redbot.core import commands
+from redbot.core.bot import Red
 
 from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.config.model_info import get_model_info
@@ -37,13 +39,14 @@ class ConversationAssembler:
     when the token budget runs out and ends up in chronological order.
     """
 
-    def __init__(self, services: "AIUserServices", ctx):
+    def __init__(self, services: "AIUserServices", ctx: commands.Context):
         self.services = services
         self.config = services.config
-        self.bot = services.bot
+        self.bot: Red = services.bot
+        self.bot_id: int = self.bot.user.id
         self.ctx = ctx
-        self.guild = ctx.guild
-        self.init_message = ctx.message
+        self.guild: discord.Guild = ctx.guild
+        self.init_message: discord.Message = ctx.message
         self.converter = MessageConverter(self.config, self.bot, ctx)
         self._optin_by_default = False
 
@@ -151,7 +154,7 @@ class ConversationAssembler:
             return False
         if not await self.bot.allowed_by_whitelist_blacklist(message.author):
             return False
-        if message.author.id != self.bot.user.id and not self.services.consent.allows(
+        if message.author.id != self.bot_id and not self.services.consent.allows(
             message.author.id, optin_by_default=self._optin_by_default
         ):
             return False
@@ -176,7 +179,7 @@ class ConversationAssembler:
         if (
             reference
             and isinstance(reference.resolved, discord.Message)
-            and message.author.id != self.bot.user.id
+            and message.author.id != self.bot_id
         ):
             referenced = await self._collect_message_entries(
                 reference.resolved, conversation
@@ -258,7 +261,7 @@ class ConversationAssembler:
             for entry in reversed(entries):
                 await conversation.prepend(entry)
 
-            if message.author.id == self.bot.user.id:
+            if message.author.id == self.bot_id:
                 await self._prepend_cached_tool_calls(conversation, message)
 
             if not within_gap:
@@ -286,7 +289,7 @@ class ConversationAssembler:
         conversation: Conversation,
     ) -> List[discord.Message]:
         """Messages that normal history processing is allowed to include."""
-        candidates = []
+        candidates: List[discord.Message] = []
         for i in range(len(past_messages) - 1):
             message = past_messages[i]
 
@@ -313,7 +316,7 @@ class ConversationAssembler:
 
     def _is_consent_embed(self, message: discord.Message) -> bool:
         return (
-            message.author.id == self.bot.user.id
+            message.author.id == self.bot_id
             and message.embeds
             and message.embeds[0].title == CONSENT_EMBED_TITLE
         )

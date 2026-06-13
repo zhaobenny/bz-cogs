@@ -5,10 +5,11 @@ from __future__ import annotations
 import datetime
 import logging
 import random
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Tuple
 
 import discord
 from discord.ext import tasks
+from redbot.core import commands
 
 from aiuser.config.constants import RANDOM_MESSAGE_TASK_RETRY_SECONDS
 from aiuser.config.defaults import DEFAULT_PROMPT
@@ -56,7 +57,9 @@ class RandomMessageTask:
                     f"Failed random message processing for guild {guild_id}, continuing"
                 )
 
-    async def _maybe_send_random_message(self, guild_id: int, channels: list):
+    async def _maybe_send_random_message(
+        self, guild_id: int, channels: List[int]
+    ):
         try:
             last, ctx = await self._get_discord_context(guild_id, channels)
         except Exception:
@@ -94,7 +97,9 @@ class RandomMessageTask:
         logger.debug(f"Sending random message to #{channel.name} at {guild.name}")
         await create_response(self.services, ctx, conversation)
 
-    async def _get_discord_context(self, guild_id: int, channels: list):
+    async def _get_discord_context(
+        self, guild_id: int, channels: List[int]
+    ) -> Tuple[discord.Message, commands.Context]:
         guild = self.bot.get_guild(guild_id)
 
         if not channels:

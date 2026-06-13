@@ -14,10 +14,11 @@ class ScopedConfigResolver:
 
     Precedence: member > role > channel > guild.
 
-    - `None` at a scope means "not set here", and resolution falls through to
-      the next broader scope.
-    - Falsy values like ``0``, ``False`` and ``[]`` are explicit overrides and
-      stop the fallback.
+    - ``None`` is the only unset sentinel; resolution falls through to the next
+      broader scope only when a scoped value is ``None``.
+    - Falsy values like ``0`` and ``False`` are explicit overrides. Empty
+      containers behave the same way for settings that support them, so scoped
+      defaults should stay ``None`` when fallback is desired.
     - When a member has several roles with a configured override, the
       highest-positioned role wins.
     - Member/role scopes only apply to real :class:`discord.Member` objects;

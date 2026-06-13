@@ -1,4 +1,7 @@
+from typing import Any, Dict, Optional
+
 from aiuser.functions import names
+from aiuser.functions.context import ToolContext
 from aiuser.functions.discord.info import DISCORD_INFO_TYPES, get_discord_info
 from aiuser.functions.discord.reaction import add_reaction
 from aiuser.functions.tool_call import ToolCall
@@ -28,7 +31,9 @@ class AddReactionToolCall(ToolCall):
     )
     function_name = schema.function.name
 
-    async def _handle(self, tool_context, arguments):
+    async def _handle(
+        self, tool_context: ToolContext, arguments: Dict[str, Any]
+    ) -> Optional[str]:
         return await add_reaction(tool_context, arguments.get("emoji", ""))
 
 
@@ -56,5 +61,7 @@ class GetDiscordInfoToolCall(ToolCall):
     )
     function_name = schema.function.name
 
-    async def _handle(self, tool_context, arguments):
+    async def _handle(
+        self, tool_context: ToolContext, arguments: Dict[str, Any]
+    ) -> Optional[str]:
         return await get_discord_info(tool_context, arguments.get("info", ""))

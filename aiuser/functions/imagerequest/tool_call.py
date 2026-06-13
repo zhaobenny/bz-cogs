@@ -1,6 +1,6 @@
 import io
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import discord
 
@@ -34,7 +34,9 @@ class ImageRequestToolCall(ToolCall):
     )
     function_name = schema.function.name
 
-    async def _handle(self, tool_context: ToolContext, arguments):
+    async def _handle(
+        self, tool_context: ToolContext, arguments: Dict[str, Any]
+    ) -> Optional[str]:
         description = arguments["description"][:2000]
         preprompt = await self._pick_image_preprompt() or ""
         if preprompt:

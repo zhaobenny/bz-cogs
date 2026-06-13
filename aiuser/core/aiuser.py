@@ -1,7 +1,7 @@
 import logging
 import os
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 import discord
 from redbot.core import Config, app_commands, commands
@@ -39,7 +39,7 @@ class AIUser(
 
     __version__ = "1.10.1"
 
-    def __init__(self, bot):
+    def __init__(self, bot: Red):
         super().__init__()
         self.bot: Red = bot
         self.config = Config.get_conf(self, identifier=754070)
@@ -82,11 +82,13 @@ class AIUser(
         if self.random_task:
             self.random_task.cancel()
 
-    def format_help_for_context(self, ctx):
+    def format_help_for_context(self, ctx: commands.Context) -> str:
         pre_processed = super().format_help_for_context(ctx)
         return f"{pre_processed}\nCog Version: {self.__version__}"
 
-    async def red_delete_data_for_user(self, *, requester, user_id: int):
+    async def red_delete_data_for_user(
+        self, *, requester: Any, user_id: int
+    ):
         for guild in self.bot.guilds:
             await self.config.member_from_ids(guild.id, user_id).clear()
 
@@ -96,7 +98,7 @@ class AIUser(
             await self.services.memories.delete_user_memories(user_id)
 
     @commands.Cog.listener()
-    async def on_red_api_tokens_update(self, service_name, _):
+    async def on_red_api_tokens_update(self, service_name: str, _):
         if service_name in ["openai", "openrouter"]:
             self.services.openai_client = await setup_openai_client(
                 self.bot, self.config
