@@ -10,8 +10,8 @@ from aiuser.tests.conftest import find_message_index, find_system_prompt_index
 @pytest.mark.asyncio
 async def test_cached_tool_calls(
     bot,
-    mock_messages_thread,
-    mock_cog,
+    build_conversation,
+    mock_services,
     test_channel,
     test_member,
     mock_create_response,
@@ -41,23 +41,23 @@ async def test_cached_tool_calls(
         MessageEntry(role="tool", content="Rainy, 15°C", tool_call_id=tool_call.id),
     ]
 
-    mock_cog.cached_tool_calls[(test_channel.id, bot_msg.id)] = cached_entries
+    mock_services.tool_call_cache[(test_channel.id, bot_msg.id)] = cached_entries
 
     new_user_msg = backend.make_message(
         "Thanks! What about Tokyo?", test_member, test_channel
     )
     ctx = await bot.get_context(new_user_msg)
 
-    thread = await mock_messages_thread(init_message=new_user_msg)
+    thread = await build_conversation(init_message=new_user_msg)
 
-    tool_call_entries = [m for m in thread.messages if m.tool_calls]
-    tool_result_entries = [m for m in thread.messages if m.role == "tool"]
+    tool_call_entries = [m for m in thread.entries if m.tool_calls]
+    tool_result_entries = [m for m in thread.entries if m.role == "tool"]
 
     assert len(tool_call_entries) >= 1
     assert len(tool_result_entries) >= 1
 
     # Verify message ordering in the thread (similar to test_history_builder)
-    result = thread.get_json()
+    result = thread.to_chat_payload()
 
     user_ask_idx = find_message_index(result, "What is the weather in Paris?")
     cached_assistant_idx = find_message_index(
@@ -73,7 +73,7 @@ async def test_cached_tool_calls(
     tool_call_idx = -1
     for i, m in enumerate(result):
         if m.get("role") == "assistant" and m.get("tool_calls"):
-            if any(tc.id == paris_tool_call_id for tc in m.get("tool_calls", [])):
+            if any(tc["id"] == paris_tool_call_id for tc in m.get("tool_calls", [])):
                 tool_call_idx = i
                 break
 
@@ -106,7 +106,7 @@ async def test_cached_tool_calls(
     )
     from openai.types.chat.chat_completion import Choice
 
-    mock_cog.openai_client = MagicMock()
+    mock_services.openai_client = MagicMock()
 
     tokyo_tool_call_id = "call_tokyo_weather"
     tokyo_tool_call = ChatCompletionMessageToolCall(
@@ -149,12 +149,12 @@ async def test_cached_tool_calls(
         object="chat.completion",
     )
 
-    mock_cog.openai_client.chat.completions.create = AsyncMock(
+    mock_services.openai_client.chat.completions.create = AsyncMock(
         side_effect=[mock_response, final_response]
     )
 
-    await mock_cog.config.guild(ctx.guild).function_calling.set(True)
-    await mock_cog.config.guild(ctx.guild).function_calling_functions.set(
+    await mock_services.config.guild(ctx.guild).function_calling.set(True)
+    await mock_services.config.guild(ctx.guild).function_calling_functions.set(
         ["get_weather"]
     )
 
@@ -162,7 +162,7 @@ async def test_cached_tool_calls(
         "aiuser.functions.weather.query.get_weather",
         return_value="Sunny, 20°C",
     ):
-        await mock_create_response(mock_cog, ctx, messages_list=thread)
+        await mock_create_response(mock_services, ctx, conversation=thread)
 
     from discord.ext.test import get_message
 
@@ -170,8 +170,8 @@ async def test_cached_tool_calls(
     assert "Tokyo" in sent_msg.content
 
     cache_key = (test_channel.id, sent_msg.id)
-    assert cache_key in mock_cog.cached_tool_calls
-    cached_new = mock_cog.cached_tool_calls[cache_key]
+    assert cache_key in mock_services.tool_call_cache
+    cached_new = mock_services.tool_call_cache[cache_key]
 
     assert any(
         m.role == "assistant"

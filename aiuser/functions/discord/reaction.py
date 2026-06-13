@@ -4,7 +4,7 @@ from textwrap import shorten
 import discord
 from emoji import EMOJI_DATA
 
-from aiuser.context.converter.formatters import mention_to_text
+from aiuser.utils.utilities import mention_to_text
 
 logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
@@ -21,16 +21,16 @@ def parse_custom_emoji(bot, value: str):
     return discord.utils.get(bot.emojis, name=parsed.name, id=parsed.id)
 
 
-async def add_reaction(request, emoji: str):
+async def add_reaction(tool_context, emoji: str):
     emoji = str(emoji).strip()
 
-    if request.ctx.interaction:
+    if tool_context.ctx.interaction:
         return "Cannot add reaction during slash command interactions."
 
     if emoji in EMOJI_DATA:
         reaction = emoji
     else:
-        reaction = parse_custom_emoji(request.bot, emoji)
+        reaction = parse_custom_emoji(tool_context.bot, emoji)
 
     if reaction is None:
         return (
@@ -38,12 +38,12 @@ async def add_reaction(request, emoji: str):
             "Discord emoji usable by this bot."
         )
 
-    permissions = request.ctx.channel.permissions_for(request.ctx.me)
+    permissions = tool_context.ctx.channel.permissions_for(tool_context.ctx.me)
     if not permissions.add_reactions:
         return "Missing Add Reactions permission."
 
     try:
-        await request.ctx.message.add_reaction(reaction)
+        await tool_context.ctx.message.add_reaction(reaction)
     except discord.Forbidden:
         return "Missing Add Reactions permission."
     except discord.NotFound:
@@ -54,5 +54,5 @@ async def add_reaction(request, emoji: str):
 
     return (
         f"Added reaction {emoji} to the message: "
-        f'"{message_preview(mention_to_text(request.ctx.message))}"'
+        f'"{message_preview(mention_to_text(tool_context.ctx.message))}"'
     )

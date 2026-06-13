@@ -8,12 +8,12 @@ from aiuser.functions.imagerequest.providers.util import fetch_image_bytes
 from aiuser.llm.openai_compatible.client import setup_openai_client
 
 if TYPE_CHECKING:
-    from aiuser.response.llm_pipeline import LLMPipeline
+    from aiuser.functions.context import ToolContext
 
 logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 
-async def generate(description: str, request: "LLMPipeline", _: str) -> bytes:
+async def generate(description: str, request: "ToolContext", _: str) -> bytes:
     model = (
         await request.config.guild(request.ctx.guild).function_calling_image_model()
         or f"google/{GEMINI_IMAGE_MODEL}"

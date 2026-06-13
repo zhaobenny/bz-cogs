@@ -1,12 +1,42 @@
 from __future__ import annotations
 
+import asyncio
+from typing import Tuple
+
 import discord
 from redbot.core import Config, commands
+from redbot.core.utils.menus import start_adding_reactions
+from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.types.enums import MentionType
 from aiuser.utils.prompt_metrics import (
     get_prompt_metrics_for_context,
 )
+
+
+async def confirm_pending(
+    ctx: commands.Context, embed: discord.Embed, timeout: float = 30.0
+) -> Tuple[bool, discord.Message]:
+    """Ask a yes/no reaction confirmation.
+
+    Returns ``(confirmed, prompt_message)``. On timeout or "no" the prompt is
+    edited to "Cancelled." and ``confirmed`` is False; on "yes" the caller is
+    expected to edit the returned message with the outcome.
+    """
+    confirm = await ctx.send(embed=embed)
+    start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
+    pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
+    try:
+        await ctx.bot.wait_for("reaction_add", timeout=timeout, check=pred)
+    except asyncio.TimeoutError:
+        pred.result = False
+
+    if pred.result is not True:
+        await confirm.edit(
+            embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
+        )
+        return False, confirm
+    return True, confirm
 
 
 def get_mention_type(mention) -> MentionType:

@@ -11,7 +11,7 @@ from aiuser.tests.conftest import find_message_index, find_system_prompt_index
 @pytest.mark.asyncio
 async def test_basic_history_order(
     bot,
-    mock_messages_thread,
+    build_conversation,
     test_channel,
     test_member,
 ):
@@ -23,8 +23,8 @@ async def test_basic_history_order(
         "i'm down, just finishing some work", test_member, test_channel
     )
 
-    thread = await mock_messages_thread(init_message=trigger)
-    result = thread.get_json()
+    thread = await build_conversation(init_message=trigger)
+    result = thread.to_chat_payload()
 
     # Find message indices
     first_idx = find_message_index(result, "gm everyone ☀️")
@@ -41,7 +41,7 @@ async def test_basic_history_order(
 @pytest.mark.asyncio
 async def test_multi_user_conversation_order(
     bot,
-    mock_messages_thread,
+    build_conversation,
     test_channel,
     test_member,
 ):
@@ -62,8 +62,8 @@ async def test_multi_user_conversation_order(
         "honestly same, need more caffeine ☕", user_alice, test_channel
     )
 
-    thread = await mock_messages_thread(init_message=trigger)
-    result = thread.get_json()
+    thread = await build_conversation(init_message=trigger)
+    result = thread.to_chat_payload()
 
     # Find message indices
     alice_hello = find_message_index(result, "hey guys! did you see the news??")
@@ -89,7 +89,7 @@ async def test_multi_user_conversation_order(
 @pytest.mark.asyncio
 async def test_consecutive_user_messages_order(
     bot,
-    mock_messages_thread,
+    build_conversation,
     test_channel,
     test_member,
 ):
@@ -106,8 +106,8 @@ async def test_consecutive_user_messages_order(
         "understandable have a nice day", user_alice, test_channel
     )
 
-    thread = await mock_messages_thread(init_message=trigger)
-    result = thread.get_json()
+    thread = await build_conversation(init_message=trigger)
+    result = thread.to_chat_payload()
 
     # Find message indices
     msg1 = find_message_index(result, "gm")
@@ -126,8 +126,8 @@ async def test_consecutive_user_messages_order(
 @pytest.mark.asyncio
 async def test_optout_user_excluded(
     bot,
-    mock_cog,
-    mock_messages_thread,
+    mock_services,
+    build_conversation,
     test_channel,
     test_member,
 ):
@@ -136,14 +136,14 @@ async def test_optout_user_excluded(
         backend.make_user("optout_user", "5678"), test_member.guild
     )
 
-    await mock_cog.config.optout.set([optout_member.id])
+    await mock_services.consent.opt_out(optout_member.id)
 
     _ = backend.make_message("No one is listening", optout_member, test_channel)
     _ = backend.make_message("What are you yapping about?", test_member, test_channel)
     trigger = backend.make_message("Just chill.", test_member, test_channel)
 
-    thread = await mock_messages_thread(init_message=trigger)
-    result = thread.get_json()
+    thread = await build_conversation(init_message=trigger)
+    result = thread.to_chat_payload()
 
     # Check by index - optout user's message should not be found
     optout_idx = find_message_index(result, "No one is listening")
@@ -153,8 +153,8 @@ async def test_optout_user_excluded(
 @pytest.mark.asyncio
 async def test_prune_messages_on_over_limit(
     bot,
-    mock_cog,
-    mock_messages_thread,
+    mock_services,
+    build_conversation,
     mock_create_response,
     test_channel,
     test_member,
@@ -178,9 +178,9 @@ async def test_prune_messages_on_over_limit(
         "Okay smart guy, what's the weather in NYC?", test_member, test_channel
     )
 
-    thread = await mock_messages_thread(init_message=trigger)
+    thread = await build_conversation(init_message=trigger)
 
-    thread_json = thread.get_json()
+    thread_json = thread.to_chat_payload()
     prunable_tokens_1 = await encode_text_to_tokens(
         str(thread_json[0].get("content", ""))
     )
@@ -189,7 +189,7 @@ async def test_prune_messages_on_over_limit(
     )
     thread.token_limit = thread.tokens - prunable_tokens_1 - prunable_tokens_2
 
-    mock_cog.openai_client = MagicMock()
+    mock_services.openai_client = MagicMock()
 
     tool_call = ChatCompletionMessageToolCall(
         id="call_prune_test",
@@ -231,12 +231,12 @@ async def test_prune_messages_on_over_limit(
         object="chat.completion",
     )
 
-    mock_cog.openai_client.chat.completions.create = AsyncMock(
+    mock_services.openai_client.chat.completions.create = AsyncMock(
         side_effect=[tool_call_response, final_response]
     )
 
-    await mock_cog.config.guild(test_member.guild).function_calling.set(True)
-    await mock_cog.config.guild(test_member.guild).function_calling_functions.set(
+    await mock_services.config.guild(test_member.guild).function_calling.set(True)
+    await mock_services.config.guild(test_member.guild).function_calling_functions.set(
         ["get_weather"]
     )
 
@@ -245,9 +245,9 @@ async def test_prune_messages_on_over_limit(
         "aiuser.functions.weather.query.get_weather",
         return_value="Sunny, 25°C",
     ):
-        await mock_create_response(mock_cog, ctx, messages_list=thread)
+        await mock_create_response(mock_services, ctx, conversation=thread)
 
-    result = thread.get_json()
+    result = thread.to_chat_payload()
 
     pruned_1_idx = find_message_index(result, "What's the meaning to life?")
     pruned_2_idx = find_message_index(result, "42")
@@ -268,22 +268,24 @@ async def test_prune_messages_on_over_limit(
 @pytest.mark.asyncio
 async def test_messages_backread_limit_respected(
     bot,
-    mock_cog,
-    mock_messages_thread,
+    mock_services,
+    build_conversation,
     test_channel,
     test_member,
 ):
     """Only the configured number of most recent messages should be backread."""
-    await mock_cog.config.guild(test_member.guild).messages_backread.set(2)
-    await mock_cog.config.guild(test_member.guild).messages_backread_seconds.set(300)
+    await mock_services.config.guild(test_member.guild).messages_backread.set(2)
+    await mock_services.config.guild(test_member.guild).messages_backread_seconds.set(
+        300
+    )
 
     _ = backend.make_message("oldest should be dropped", test_member, test_channel)
     _ = backend.make_message("middle should remain", bot.user, test_channel)
     _ = backend.make_message("newest history should remain", test_member, test_channel)
     trigger = backend.make_message("current trigger", test_member, test_channel)
 
-    thread = await mock_messages_thread(init_message=trigger)
-    result = thread.get_json()
+    thread = await build_conversation(init_message=trigger)
+    result = thread.to_chat_payload()
 
     assert find_message_index(result, "oldest should be dropped") == -1
     assert find_message_index(result, "middle should remain") != -1
@@ -292,24 +294,26 @@ async def test_messages_backread_limit_respected(
 
 @pytest.mark.asyncio
 async def test_override_prompt_start_time_filters_older_history(
-    mock_cog,
-    mock_messages_thread,
+    mock_services,
+    build_conversation,
     test_channel,
     test_member,
 ):
     """History backread should honor override_prompt_start_time for the guild."""
-    await mock_cog.config.guild(test_member.guild).messages_backread.set(5)
-    await mock_cog.config.guild(test_member.guild).messages_backread_seconds.set(300)
+    await mock_services.config.guild(test_member.guild).messages_backread.set(5)
+    await mock_services.config.guild(test_member.guild).messages_backread_seconds.set(
+        300
+    )
 
     _ = backend.make_message("recent history one", test_member, test_channel)
     _ = backend.make_message("recent history two", test_member, test_channel)
-    mock_cog.override_prompt_start_time[test_member.guild.id] = datetime.now(
+    mock_services.override_prompt_start_time[test_member.guild.id] = datetime.now(
         tz=timezone.utc
     ) + timedelta(seconds=60)
     trigger = backend.make_message("trigger after cutoff", test_member, test_channel)
 
-    thread = await mock_messages_thread(init_message=trigger)
-    result = thread.get_json()
+    thread = await build_conversation(init_message=trigger)
+    result = thread.to_chat_payload()
 
     assert find_message_index(result, "recent history one") == -1
     assert find_message_index(result, "recent history two") == -1

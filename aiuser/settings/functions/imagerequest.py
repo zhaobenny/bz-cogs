@@ -3,6 +3,7 @@ from typing import Optional
 import discord
 from redbot.core import commands
 
+from aiuser.functions import names
 from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
 from aiuser.settings.utilities import add_prompt_metrics_fields, truncate_prompt
@@ -18,11 +19,7 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
     @imagerequest.command(name="toggle")
     async def imagerequest_toggle(self, ctx: commands.Context):
         """Toggle the image request function on or off"""
-        from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
-
-        await self.toggle_function_group(
-            ctx, [ImageRequestToolCall.function_name], "Image Request"
-        )
+        await self.toggle_function_group(ctx, [names.IMAGE_REQUEST], "Image Request")
 
     @imagerequest.command(name="endpoint")
     async def imagerequest_endpoint(

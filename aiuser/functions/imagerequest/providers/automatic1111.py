@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 import httpx
 
 if TYPE_CHECKING:
-    from aiuser.response.llm_pipeline import LLMPipeline
+    from aiuser.functions.context import ToolContext
 
 
-async def generate(description: str, request: "LLMPipeline", endpoint: str) -> bytes:
+async def generate(description: str, request: "ToolContext", endpoint: str) -> bytes:
     if not endpoint:
         raise ValueError("Automatic1111 provider requires an endpoint")
     endpoint = f"{endpoint.split('/sdapi/')[0].rstrip('/')}/sdapi/v1/txt2img"

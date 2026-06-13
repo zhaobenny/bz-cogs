@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import discord
 import httpx
@@ -12,42 +12,65 @@ from openai.types.chat import (
 )
 from redbot.core import Config, commands
 
-from aiuser.config.models import (
-    UNSUPPORTED_LOGIT_BIAS_MODELS,
-    VISION_SUPPORTED_MODELS,
-)
 from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
-from aiuser.context.messages import MessagesThread
+from aiuser.config.model_info import get_model_info
+from aiuser.context.conversation import Conversation
+from aiuser.functions.context import ToolContext
 from aiuser.llm.base import ChatStepResult, LLMProvider
 from aiuser.llm.openai_compatible.endpoints import is_openrouter_endpoint
 from aiuser.llm.registry import get_llm_provider
 from aiuser.response.logging import log_chat_request, log_chat_step_result
 from aiuser.response.tool_manager import ToolManager
-from aiuser.types.abc import MixinMeta
+
+if TYPE_CHECKING:
+    from aiuser.core.services import AIUserServices
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class LLMPipeline:
-    def __init__(self, cog: MixinMeta, ctx: commands.Context, messages: MessagesThread):
-        self.cog = cog
-        self.ctx: commands.Context = ctx
-        self.config: Config = cog.config
-        self.bot = cog.bot
+    """Drives the request/tool-call loop for one response.
 
-        self.msg_list: MessagesThread = messages
-        self.model: str = messages.model
+    Owns the provider round-trips and the :class:`ToolContext` that tools see.
+    Tool side effects (files, suppression) are read back off the ToolContext
+    when the loop finishes.
+    """
+
+    def __init__(
+        self,
+        services: "AIUserServices",
+        ctx: commands.Context,
+        conversation: Conversation,
+    ):
+        self.services = services
+        self.ctx: commands.Context = ctx
+        self.config: Config = services.config
+
+        self.conversation = conversation
+        self.model: str = conversation.model
 
         self.provider: Optional[LLMProvider] = None
+        self.tool_context = ToolContext(
+            ctx=ctx,
+            config=services.config,
+            bot=services.bot,
+            memories=services.memories,
+        )
         self.tool_manager = ToolManager(self)
         self.completion: Optional[str] = None
-        self.suppress_response: bool = False
-        self.files_to_send: List[discord.File] = []
         self.tool_call_entries: List = []
+
+    @property
+    def files_to_send(self) -> List[discord.File]:
+        return self.tool_context.files_to_send
+
+    @property
+    def suppress_response(self) -> bool:
+        return self.tool_context.suppress_response
 
     async def run(self) -> Optional[str]:
         base_kwargs = await self._build_base_parameters()
-        self.provider = await get_llm_provider(self.cog)
+        self.provider = await get_llm_provider(self.services)
         if self.provider is None:
             logger.error("No LLM backend available while starting response pipeline")
             if self.ctx.interaction:
@@ -103,7 +126,9 @@ class LLMPipeline:
         self, kwargs: Dict[str, Any]
     ) -> Optional[ChatStepResult]:
         try:
-            context: List[ChatCompletionMessageParam] = self.msg_list.get_json()
+            context: List[ChatCompletionMessageParam] = (
+                self.conversation.to_chat_payload()
+            )
             log_chat_request(context)
             step = await self.provider.create_chat_step(self.model, context, kwargs)
             log_chat_step_result(
@@ -137,9 +162,10 @@ class LLMPipeline:
             if weights_dict:
                 kwargs["logit_bias"] = weights_dict
 
-        unsupported_models = VISION_SUPPORTED_MODELS + UNSUPPORTED_LOGIT_BIAS_MODELS
-        is_unsupported_logit_bias = any(m in self.model for m in unsupported_models)
-        if kwargs.get("logit_bias", False) and is_unsupported_logit_bias:
+        if (
+            kwargs.get("logit_bias", False)
+            and not get_model_info(self.model).supports_logit_bias
+        ):
             logger.warning(
                 f"logit_bias is not supported for model {self.model}, removing..."
             )
@@ -150,6 +176,3 @@ class LLMPipeline:
             extra_body.setdefault("session_id", f"{self.ctx.message.id}")
 
         return kwargs
-
-    def _next_index(self) -> int:
-        return len(self.msg_list) + 1

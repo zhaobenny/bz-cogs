@@ -1,4 +1,8 @@
+import logging
+
 import aiosqlite
+
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 CURRENT_SCHEMA_VERSION = 2
 
@@ -27,7 +31,8 @@ async def ensure_compaction_db(db_path: str):
                     "ALTER TABLE compacted_messages ADD COLUMN last_compacted_message_id INTEGER"
                 )
             except Exception:
-                pass  # Column may already exist
+                # Column may already exist
+                logger.debug("Skipping compaction schema migration step", exc_info=True)
 
         await conn.execute(f"PRAGMA user_version = {CURRENT_SCHEMA_VERSION}")
         await conn.commit()

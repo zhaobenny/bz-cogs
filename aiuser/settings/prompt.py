@@ -1,20 +1,20 @@
-import asyncio
 import json
 import logging
 from typing import Optional
 
 import discord
 from redbot.core import checks, commands
-from redbot.core.utils.menus import SimpleMenu, start_adding_reactions
-from redbot.core.utils.predicates import ReactionPredicate
+from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.utilities import (
     add_prompt_metrics_fields,
+    confirm_pending,
     truncate_prompt,
 )
-from aiuser.types.abc import MixinMeta, aiuser
+from aiuser.settings._groups import aiuser
+from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import MentionType
 from aiuser.types.types import COMPATIBLE_MENTIONS
 
@@ -46,34 +46,24 @@ class PromptSettings(MixinMeta):
             description="This will reset *ALL* prompts in this guild to default (including per channel, per role and per member)",
             color=await ctx.embed_color(),
         )
-        confirm = await ctx.send(embed=embed)
-        start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
-        pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
-        try:
-            await ctx.bot.wait_for("reaction_add", timeout=10.0, check=pred)
-        except asyncio.TimeoutError:
-            return await confirm.edit(
-                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
+        confirmed, confirm = await confirm_pending(ctx, embed, timeout=10.0)
+        if not confirmed:
+            return
+
+        self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
+        await self.config.guild(ctx.guild).custom_text_prompt.set(None)
+        for member in ctx.guild.members:
+            await self.config.member(member).custom_text_prompt.set(None)
+        for channel in ctx.guild.channels:
+            await self.config.channel(channel).custom_text_prompt.set(None)
+        for role in ctx.guild.roles:
+            await self.config.role(role).custom_text_prompt.set(None)
+        return await confirm.edit(
+            embed=discord.Embed(
+                title="All prompts have been reset to default.",
+                color=await ctx.embed_color(),
             )
-        if pred.result is False:
-            return await confirm.edit(
-                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
-            )
-        else:
-            self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
-            await self.config.guild(ctx.guild).custom_text_prompt.set(None)
-            for member in ctx.guild.members:
-                await self.config.member(member).custom_text_prompt.set(None)
-            for channel in ctx.guild.channels:
-                await self.config.channel(channel).custom_text_prompt.set(None)
-            for role in ctx.guild.roles:
-                await self.config.role(role).custom_text_prompt.set(None)
-            return await confirm.edit(
-                embed=discord.Embed(
-                    title="All prompts have been reset to default.",
-                    color=await ctx.embed_color(),
-                )
-            )
+        )
 
     @prompt.group(name="show", invoke_without_command=True)
     async def prompt_show(
@@ -326,7 +316,7 @@ class PromptSettings(MixinMeta):
             )
 
         await config_attr.custom_text_prompt.set(prompt)
-        self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
+        self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
 
         embed = discord.Embed(
             title=f"The {mention_type.name.lower()} will use the custom prompt:",

@@ -76,7 +76,7 @@ async def bot_owner_server_config(self: MixinMeta, guild: discord.Guild, **kwarg
     form.whitelist.default = [
         str(id) for id in await self.config.guild(guild).channels_whitelist()
     ]
-    models = await list_llm_models(self)
+    models = await list_llm_models(self.services)
     form.model.default = await self.config.guild(guild).model()
     form.model.choices = [(model, model) for model in models]
 
@@ -111,7 +111,6 @@ async def bot_owner_server_config(self: MixinMeta, guild: discord.Guild, **kwarg
             await self.config.guild(guild).scan_images.set(scan_images)
             await self.config.guild(guild).function_calling.set(function_calling)
             await self.config.guild(guild).random_messages_enabled.set(random_messages)
-            self.channels_whitelist[guild.id] = new_whitelist
         except Exception:
             return {
                 "status": 1,

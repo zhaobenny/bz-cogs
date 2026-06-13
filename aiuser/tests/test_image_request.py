@@ -10,8 +10,8 @@ from discord.ext.test import backend, get_message
 @pytest.mark.asyncio
 async def test_image_request(
     bot,
-    mock_cog,
-    mock_messages_thread,
+    mock_services,
+    build_conversation,
     test_guild,
     test_channel,
     test_member,
@@ -29,13 +29,13 @@ async def test_image_request(
 
     # Set preprompt with variables
     preprompt_template = "Create a safe-for-work image requested by {authorname} watermarked with {botname} "
-    await mock_cog.config.guild(test_guild).function_calling_image_preprompt.set(
+    await mock_services.config.guild(test_guild).function_calling_image_preprompt.set(
         preprompt_template
     )
 
     # Enable function calling and specific tool
-    await mock_cog.config.guild(test_guild).function_calling.set(True)
-    await mock_cog.config.guild(test_guild).function_calling_functions.set(
+    await mock_services.config.guild(test_guild).function_calling.set(True)
+    await mock_services.config.guild(test_guild).function_calling_functions.set(
         ["image_request"]
     )
 
@@ -45,9 +45,9 @@ async def test_image_request(
         test_channel,
     )
     ctx = await bot.get_context(user_message)
-    thread = await mock_messages_thread(init_message=user_message)
+    thread = await build_conversation(init_message=user_message)
 
-    mock_cog.openai_client = MagicMock()
+    mock_services.openai_client = MagicMock()
 
     image_description = "a high-quality image of a fluffy orange cat wearing cool sunglasses, cinematic lighting"
     tool_call = ChatCompletionMessageToolCall(
@@ -93,7 +93,7 @@ async def test_image_request(
         object="chat.completion",
     )
 
-    mock_cog.openai_client.chat.completions.create = AsyncMock(
+    mock_services.openai_client.chat.completions.create = AsyncMock(
         side_effect=[mock_response, final_response]
     )
 
@@ -114,7 +114,7 @@ async def test_image_request(
             return_value="mock",
         ),
     ):
-        await mock_create_response(mock_cog, ctx, messages_list=thread)
+        await mock_create_response(mock_services, ctx, conversation=thread)
 
     sent_message = get_message()
     assert sent_message.attachments

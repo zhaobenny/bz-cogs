@@ -7,7 +7,7 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.constants import CHANNEL_MENTION_OR_ID_PATTERN
-from aiuser.config.models import TOOLS_SUPPORTED_MODELS
+from aiuser.config.model_info import get_model_info
 from aiuser.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
     get_openai_compat_kind,
@@ -62,7 +62,7 @@ class Settings(
         ):
             return await ctx.react_quietly("❌")
 
-        self.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
+        self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
         await ctx.react_quietly("✅")
 
     @aiuser.command(aliases=["settings", "showsettings"])
@@ -284,7 +284,6 @@ class Settings(
             return await ctx.send("Channel already in whitelist")
         new_whitelist.append(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
-        self.channels_whitelist[ctx.guild.id] = new_whitelist
         embed = discord.Embed(
             title="The server whitelist is now:", color=await ctx.embed_color()
         )
@@ -318,7 +317,6 @@ class Settings(
             return await ctx.send("Channel not in whitelist")
         new_whitelist.remove(channel_id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
-        self.channels_whitelist[ctx.guild.id] = new_whitelist
         embed = discord.Embed(
             title="The server whitelist is now:", color=await ctx.embed_color()
         )
@@ -338,7 +336,7 @@ class Settings(
             - `model` The model to use eg. `gpt-4`
         """
         await ctx.message.add_reaction("🔄")
-        models = await list_llm_models(self)
+        models = await list_llm_models(self.services)
         await ctx.message.remove_reaction("🔄", ctx.me)
 
         if model == "list":
@@ -355,8 +353,9 @@ class Settings(
             color=await ctx.embed_color(),
         )
 
-        if await self.config.guild(ctx.guild).function_calling() and not any(
-            m in model for m in TOOLS_SUPPORTED_MODELS
+        if (
+            await self.config.guild(ctx.guild).function_calling()
+            and not get_model_info(model).supports_tools
         ):
             embed.set_footer(
                 text="⚠️ Function calling is enabled - ensure selected model supports it"
@@ -401,15 +400,8 @@ class Settings(
 
         This will allow the bot to reply to your messages or use your messages.
         """
-        optin = await self.config.optin()
-        if ctx.author.id in await self.config.optin():
+        if not await self.consent.opt_in(ctx.author.id):
             return await ctx.send("You are already opted in.")
-        optout = await self.config.optout()
-        if ctx.author.id in optout:
-            optout.remove(ctx.author.id)
-            await self.config.optout.set(optout)
-        optin.append(ctx.author.id)
-        await self.config.optin.set(optin)
         await ctx.send("You are now opted in bot-wide")
 
     @aiuser.command()
@@ -418,15 +410,8 @@ class Settings(
 
         This will prevent the bot from replying to your messages or using your messages.
         """
-        optout = await self.config.optout()
-        if ctx.author.id in optout:
+        if not await self.consent.opt_out(ctx.author.id):
             return await ctx.send("You are already opted out.")
-        optin = await self.config.optin()
-        if ctx.author.id in optin:
-            optin.remove(ctx.author.id)
-            await self.config.optin.set(optin)
-        optout.append(ctx.author.id)
-        await self.config.optout.set(optout)
         await ctx.send("You are now opted out bot-wide")
 
     @aiuser.command(name="optinbydefault", alias=["optindefault"])
@@ -445,7 +430,6 @@ class Settings(
                 "You cannot enable this setting for servers with more than 150 members."
             )
         value = not await self.config.guild(ctx.guild).optin_by_default()
-        self.optindefault[ctx.guild.id] = value
         await self.config.guild(ctx.guild).optin_by_default.set(value)
         embed = discord.Embed(
             title="Users are now opted in by default in this server:",

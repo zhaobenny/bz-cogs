@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 import discord
 from redbot.core import commands
 
-from aiuser.core.hierarchy import get_highest_configured_role_config_value
+from aiuser.config.resolver import ScopedConfigResolver
 from aiuser.settings.utilities import get_config_attribute, get_mention_type
 from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import MentionType
@@ -58,8 +58,8 @@ async def get_broader_scoped_setting_for_target(
         return await getattr(cog.config.guild(ctx.guild), attr_name)()
 
     if mention_type == MentionType.USER and isinstance(mention, discord.Member):
-        role_value = await get_highest_configured_role_config_value(
-            cog, mention, attr_name
+        role_value = await ScopedConfigResolver(cog.config).get_role_override(
+            mention, attr_name
         )
         if role_value is not None:
             return role_value

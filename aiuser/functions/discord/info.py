@@ -81,9 +81,9 @@ def format_server(guild: discord.Guild, me: discord.Member) -> str:
     return "\n".join(lines)
 
 
-async def format_author(request) -> str:
-    author = request.ctx.author
-    app_info = await request.bot.application_info()
+async def format_author(tool_context) -> str:
+    author = tool_context.ctx.author
+    app_info = await tool_context.bot.application_info()
     owner = app_info.owner
     lines = [
         "Discord author info:",
@@ -95,7 +95,7 @@ async def format_author(request) -> str:
         f"- bot: {format_bool(author.bot)}",
         f"- system: {format_bool(getattr(author, 'system', False))}",
         f"- created_at: {format_dt(author.created_at)}",
-        f"- is_server_owner: {format_bool(author.id == request.ctx.guild.owner_id)}",
+        f"- is_server_owner: {format_bool(author.id == tool_context.ctx.guild.owner_id)}",
         f"- is_bot_owner: {format_bool(author.id == owner.id)}",
     ]
 
@@ -123,19 +123,19 @@ def format_server_emojis(guild: discord.Guild) -> str:
     return "Discord server emoji info:\nnone"
 
 
-async def get_discord_info(request, info: str) -> str:
+async def get_discord_info(tool_context, info: str) -> str:
     info = str(info).strip()
 
     if info not in DISCORD_INFO_TYPES:
         return "Invalid info type. Use one of: " + ", ".join(DISCORD_INFO_TYPES) + "."
 
     if info == "channel":
-        return format_channel(request.ctx.channel)
+        return format_channel(tool_context.ctx.channel)
     if info == "server":
-        return format_server(request.ctx.guild, request.ctx.me)
+        return format_server(tool_context.ctx.guild, tool_context.ctx.me)
     if info == "author":
-        return await format_author(request)
+        return await format_author(tool_context)
     if info == "server_emojis":
-        return format_server_emojis(request.ctx.guild)
+        return format_server_emojis(tool_context.ctx.guild)
 
     return "No Discord info found."

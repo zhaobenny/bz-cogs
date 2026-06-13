@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, Any, Dict, List
 
 from openai.types.chat import ChatCompletionMessageToolCall
 
+from aiuser.functions.registry import get_enabled_tools
 from aiuser.functions.tool_call import ToolCall
 
 if TYPE_CHECKING:
-    from aiuser.response.llm_pipeline import LLMPipeline
-from aiuser.utils.utilities import get_enabled_tools
+    from aiuser.response.pipeline import LLMPipeline
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -22,7 +22,7 @@ class ToolManager:
         self.enabled_tools: List[ToolCall] = []
         self.enabled_tools_map: Dict[str, ToolCall] = {}
 
-    async def setup(self) -> None:
+    async def setup(self):
         cfg = self.pipeline.config.guild(self.pipeline.ctx.guild)
         if not (await cfg.function_calling()):
             return
@@ -37,14 +37,10 @@ class ToolManager:
             return {"tools": [asdict(t.schema) for t in self.enabled_tools]}
         return {}
 
-    async def handle_tool_calls(
-        self, tool_calls: List[ChatCompletionMessageToolCall]
-    ) -> None:
-        entry = await self.pipeline.msg_list.add_assistant_message(
-            index=self.pipeline._next_index(), tool_calls=tool_calls
-        )
-        if entry:
-            self.pipeline.tool_call_entries.append(entry)
+    async def handle_tool_calls(self, tool_calls: List[ChatCompletionMessageToolCall]):
+        conversation = self.pipeline.conversation
+        entry = await conversation.append_assistant(tool_calls=tool_calls)
+        self.pipeline.tool_call_entries.append(entry)
 
         for tool_call in tool_calls:
             fn = tool_call.function
@@ -61,12 +57,9 @@ class ToolManager:
                 logger.info(
                     f'Handling tool call "{fn.name}" with args keys: {list(arguments.keys())}'
                 )
-                result = await tool.run(self.pipeline, dict(arguments))
+                result = await tool.run(self.pipeline.tool_context, dict(arguments))
                 if result is not None:
-                    entry = await self.pipeline.msg_list.add_tool_result_message(
-                        result, tool_call.id, index=self.pipeline._next_index()
-                    )
-                    if entry:
-                        self.pipeline.tool_call_entries.append(entry)
+                    entry = await conversation.append_tool_result(result, tool_call.id)
+                    self.pipeline.tool_call_entries.append(entry)
             else:
                 logger.warning(f'Could not find tool "{fn.name}"')

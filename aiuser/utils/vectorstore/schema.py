@@ -1,4 +1,8 @@
+import logging
+
 import aiosqlite
+
+logger = logging.getLogger("red.bz_cogs.aiuser")
 
 CURRENT_SCHEMA_VERSION = 3
 
@@ -28,7 +32,9 @@ async def ensure_sqlite_db(db_path: str):
                 await conn.execute("ALTER TABLE memories ADD COLUMN user TEXT")
                 await conn.execute("ALTER TABLE memories ADD COLUMN channel TEXT")
             except aiosqlite.OperationalError:
-                pass
+                logger.debug(
+                    "Skipping vectorstore schema migration step", exc_info=True
+                )
 
         if current_version < 3:
             try:
@@ -47,7 +53,9 @@ async def ensure_sqlite_db(db_path: str):
                     "CREATE UNIQUE INDEX IF NOT EXISTS idx_memories_unique ON memories (guild_id, memory_name, IFNULL(user, ''), IFNULL(channel, ''))"
                 )
             except aiosqlite.OperationalError:
-                pass
+                logger.debug(
+                    "Skipping vectorstore schema migration step", exc_info=True
+                )
 
         if current_version < CURRENT_SCHEMA_VERSION:
             await conn.execute(f"PRAGMA user_version = {CURRENT_SCHEMA_VERSION}")

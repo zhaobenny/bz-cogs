@@ -5,7 +5,8 @@ import discord
 from redbot.core import commands
 from redbot.core.utils.menus import SimpleMenu
 
-from aiuser.types.abc import MixinMeta, aiuser
+from aiuser.settings._groups import aiuser
+from aiuser.types.abc import MixinMeta
 from aiuser.utils.utilities import encode_text_to_tokens
 
 logger = logging.getLogger("red.bz_cogs.aiuser.memory")
@@ -50,7 +51,7 @@ class MemorySettings(MixinMeta):
         """Shows all memories stored."""
 
         try:
-            memories = await self.db.list(ctx.guild.id)
+            memories = await self.services.memories.list(ctx.guild.id)
         except Exception:
             logger.exception("Memory listing did not succeed")
             return await ctx.message.add_reaction("⚠️")
@@ -100,7 +101,9 @@ class MemorySettings(MixinMeta):
         """Shows a memory by ID."""
 
         try:
-            memory = await self.db.fetch_by_rowid(memory_id, ctx.guild.id)
+            memory = await self.services.memories.fetch_by_rowid(
+                memory_id, ctx.guild.id
+            )
         except Exception:
             logger.exception("Memory fetch did not succeed")
             return await ctx.message.add_reaction("⚠️")
@@ -167,7 +170,7 @@ class MemorySettings(MixinMeta):
 
         current_timestamp = int(time.time())
         try:
-            memory_id = await self.db.upsert(
+            memory_id = await self.services.memories.upsert(
                 ctx.guild.id,
                 memory_name,
                 memory_text,
@@ -192,7 +195,7 @@ class MemorySettings(MixinMeta):
         """Removes a memory by ID."""
 
         try:
-            row = await self.db.fetch_by_rowid(memory_id, ctx.guild.id)
+            row = await self.services.memories.fetch_by_rowid(memory_id, ctx.guild.id)
             if not row:
                 embed = discord.Embed(
                     title="Memory Not Found!",
@@ -201,7 +204,7 @@ class MemorySettings(MixinMeta):
                 )
                 return await ctx.send(embed=embed)
 
-            await self.db.delete(memory_id, ctx.guild.id)
+            await self.services.memories.delete(memory_id, ctx.guild.id)
         except Exception:
             logger.exception("Memory delete did not succeed")
             return await ctx.message.add_reaction("⚠️")

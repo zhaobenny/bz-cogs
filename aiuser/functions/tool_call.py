@@ -1,15 +1,19 @@
-from typing import TYPE_CHECKING, Any, Dict
+from typing import Any, Dict, Optional
 
 from redbot.core import Config, commands
 from redbot.core.bot import Red
 
+from aiuser.functions.context import ToolContext
 from aiuser.functions.types import ToolCallSchema
-
-if TYPE_CHECKING:
-    from aiuser.response.llm_pipeline import LLMPipeline
 
 
 class ToolCall:
+    """Base class for tools the LLM can call.
+
+    Subclasses define a ``schema`` / ``function_name`` and implement
+    ``_handle``.
+    """
+
     schema: ToolCallSchema = None
     function_name: str = None
 
@@ -19,11 +23,11 @@ class ToolCall:
         self.bot: Red = ctx.bot
 
     async def run(
-        self,
-        request: "LLMPipeline",
-        arguments: Dict[str, Any],
-    ):
-        return await self._handle(request, arguments)
+        self, tool_context: ToolContext, arguments: Dict[str, Any]
+    ) -> Optional[str]:
+        return await self._handle(tool_context, arguments)
 
-    async def _handle(self, request: "LLMPipeline", arguments: Dict[str, Any]):
+    async def _handle(
+        self, tool_context: ToolContext, arguments: Dict[str, Any]
+    ) -> Optional[str]:
         raise NotImplementedError

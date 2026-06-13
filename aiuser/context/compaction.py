@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 import asyncio
 import logging
-from typing import List
+from typing import TYPE_CHECKING, List, Set
 
 import discord
 from redbot.core import commands
 
 from aiuser.context.converter.converter import MessageConverter
 from aiuser.llm.registry import get_llm_provider
-from aiuser.types.abc import MixinMeta
+
+if TYPE_CHECKING:
+    from aiuser.core.services import AIUserServices
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -19,12 +23,12 @@ Exclude noise, completely off-topic chitchat, and minor details. Keep the summar
 
 
 class CompactionManager:
-    def __init__(self, cog: MixinMeta):
-        self.cog = cog
-        self.config = cog.config
-        self.bot = cog.bot
-        self.compaction_store = getattr(cog, "compaction_store", None)
-        self._compaction_locks = set()
+    def __init__(self, services: "AIUserServices"):
+        self.services = services
+        self.config = services.config
+        self.bot = services.bot
+        self.compaction_store = services.compaction_store
+        self._compaction_locks: Set[int] = set()
 
     async def check_and_run_compaction(
         self, ctx: commands.Context, messages: List[discord.Message]
@@ -78,8 +82,8 @@ class CompactionManager:
                 guild_id, channel_id
             )
 
-            converter = MessageConverter(self.cog, ctx)
-            new_msgs_text = []
+            converter = MessageConverter(self.config, self.bot, ctx)
+            new_msgs_text: List[str] = []
 
             # Format the messages block chronologically (oldest first)
             for msg in reversed(past_messages):
@@ -125,7 +129,7 @@ class CompactionManager:
 
             model = await self.config.guild(ctx.guild).model()
 
-            provider = await get_llm_provider(self.cog)
+            provider = await get_llm_provider(self.services)
             if provider is None:
                 logger.error("No LLM backend available for context compaction")
                 return
@@ -139,7 +143,6 @@ class CompactionManager:
             new_summary = response.content
             if new_summary:
                 # Record the newest message ID that was compacted
-                # past_messages are newest-first, so [0] is the most recent
                 newest_compacted_id = max(m.id for m in past_messages)
                 await self.compaction_store.upsert_summary(
                     guild_id, channel_id, new_summary, newest_compacted_id

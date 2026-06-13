@@ -21,7 +21,7 @@ from aiuser.config.defaults import (
     DEFAULT_MEMBER,
     DEFAULT_ROLE,
 )
-from aiuser.context.messages import MessagesThread
+from aiuser.context.conversation import Conversation
 
 
 def get_openrouter_api_key():
@@ -133,56 +133,64 @@ def test_member(bot):
 
 
 @pytest_asyncio.fixture
-async def mock_cog(bot, redbot_config, test_guild):
-    """
-    Create a mock cog with all attributes needed by ThreadSetup and MessagesThread.
-    """
+async def mock_services(bot, redbot_config, test_guild):
+    """A real AIUserServices wired to the test bot and config."""
     from unittest.mock import MagicMock
 
+    from aiuser.config.resolver import ScopedConfigResolver
+    from aiuser.consent import ConsentService
+    from aiuser.core.services import AIUserServices, GuildIgnoreRegexCache
     from aiuser.utils.cache import Cache
 
-    cog = MagicMock()
-    cog.bot = bot
-    cog.config = redbot_config
-    cog.ignore_regex = {}  # Dict keyed by guild.id
-    cog.override_prompt_start_time = {}  # Dict keyed by guild.id
-    cog.db = None  # Skip memory retriever
-    cog.cached_tool_calls = Cache(limit=100)
+    consent = ConsentService(bot, redbot_config)
+    await consent.load()
+    ignore_regex_cache = GuildIgnoreRegexCache(redbot_config)
+    await ignore_regex_cache.load_all()
+
+    services = AIUserServices(
+        bot=bot,
+        config=redbot_config,
+        consent=consent,
+        resolver=ScopedConfigResolver(redbot_config),
+        ignore_regex_cache=ignore_regex_cache,
+        memories=None,  # skip memory retriever
+        compaction_store=None,
+        compaction_manager=None,
+        tool_call_cache=Cache(limit=100),
+        cog=MagicMock(),
+    )
 
     # Opt-in by default for the test guild
-    await cog.config.guild(test_guild).optin_by_default.set(True)
+    await services.config.guild(test_guild).optin_by_default.set(True)
 
-    return cog
+    return services
 
 
 @pytest_asyncio.fixture
-async def mock_messages_thread(bot, mock_cog, test_channel, test_member):
+async def build_conversation(bot, mock_services, test_channel, test_member):
     """
-    Factory fixture to create a MessagesThread using ThreadSetup.create_thread()
-    with real dpytest Discord objects and a mock cog.
+    Factory fixture that builds a Conversation via ConversationAssembler
+    with real dpytest Discord objects and real services.
     """
-    from aiuser.context.setup import ThreadSetup
+    from aiuser.context.assembler import ConversationAssembler
 
     async def _create(
         init_message: discord.Message = None,
         prompt: str = None,
-    ) -> MessagesThread:
+    ) -> Conversation:
         """
         Prompt should only be provided when init_message is None.
         """
         if init_message:
-            # Use provided message
             ctx = await bot.get_context(init_message)
         else:
-            # Create a new message
             message = backend.make_message("test content", test_member, test_channel)
             ctx = await bot.get_context(message)
 
-        # Use ThreadSetup to create the thread properly
-        setup = ThreadSetup(mock_cog, ctx)
-        thread = await setup.create_thread(prompt=prompt)
-
-        return thread
+        assembler = ConversationAssembler(mock_services, ctx)
+        return await assembler.build(
+            prompt_override=prompt, include_trigger=prompt is None
+        )
 
     return _create
 
@@ -200,12 +208,12 @@ def mock_create_response(monkeypatch):
     async def noop_typing():
         yield
 
-    async def patched_create_response(cog, ctx, messages_list=None):
+    async def patched_create_response(services, ctx, conversation=None):
         from unittest.mock import patch
 
         with patch("discord.TextChannel.typing") as mock_typing:
             mock_typing.return_value = noop_typing()
-            return await original_create_response(cog, ctx, messages_list)
+            return await original_create_response(services, ctx, conversation)
 
     monkeypatch.setattr(response_module, "create_response", patched_create_response)
     return patched_create_response

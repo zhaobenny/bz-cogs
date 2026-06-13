@@ -98,7 +98,7 @@ DEFAULT_GUILD = {
     "custom_compaction_prompt": None,
 }
 
-DEFAULT_CHANNEL = {
+DEFAULT_SCOPED = {
     "custom_text_prompt": None,
     "reply_percent": None,
     "messages_min_length": None,
@@ -109,25 +109,7 @@ DEFAULT_CHANNEL = {
     "reply_to_webhooks": None,
     "function_calling_image_preprompt": None,
 }
-DEFAULT_ROLE = {
-    "custom_text_prompt": None,
-    "reply_percent": None,
-    "messages_min_length": None,
-    "reply_to_mentions_replies": None,
-    "conversation_reply_percent": None,
-    "conversation_reply_time": None,
-    "always_reply_on_words": None,
-    "reply_to_webhooks": None,
-    "function_calling_image_preprompt": None,
-}
-DEFAULT_MEMBER = {
-    "custom_text_prompt": None,
-    "reply_percent": None,
-    "messages_min_length": None,
-    "reply_to_mentions_replies": None,
-    "conversation_reply_percent": None,
-    "conversation_reply_time": None,
-    "always_reply_on_words": None,
-    "reply_to_webhooks": None,
-    "function_calling_image_preprompt": None,
-}
+
+DEFAULT_CHANNEL = dict(DEFAULT_SCOPED)
+DEFAULT_ROLE = dict(DEFAULT_SCOPED)
+DEFAULT_MEMBER = dict(DEFAULT_SCOPED)

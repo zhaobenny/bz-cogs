@@ -1,22 +1,19 @@
 import asyncio
 import functools
-import importlib
 import logging
 import random
 from datetime import datetime
-from pathlib import Path
 from typing import Callable, Coroutine
 
 import discord
 import tiktoken
 from discord import Message
-from redbot.core import Config, commands
+from redbot.core import commands
 
 from aiuser.config.constants import (
     FALLBACK_TOKENIZER,
     YOUTUBE_URL_PATTERN,
 )
-from aiuser.functions.tool_call import ToolCall
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -30,26 +27,6 @@ def get_tokenizer_encoding(model: str):
         if base_name.startswith(("gpt-5.", "gpt-4.1.", "gpt-4o.")):
             return tiktoken.get_encoding("o200k_base"), "o200k_base", True
         return tiktoken.get_encoding(FALLBACK_TOKENIZER), FALLBACK_TOKENIZER, True
-
-
-class RolesSet:
-    def __init__(self):
-        self._set = set()
-
-    def has(self, role_id):
-        return role_id in self._set
-
-    def add(self, role_id):
-        self._set.add(role_id)
-
-    def __iter__(self):
-        return iter(self._set)
-
-    def __contains__(self, role_id):
-        return role_id in self._set
-
-    def __repr__(self):
-        return repr(self._set)
 
 
 def to_thread(timeout=300):
@@ -121,6 +98,27 @@ async def format_variables(ctx: commands.Context, text: str):
         return text
 
 
+def mention_to_text(message: Message) -> str:
+    """
+    Converts mentions to text
+    """
+    content = message.content
+    mentions = message.mentions + message.role_mentions + message.channel_mentions
+
+    if not mentions:
+        return content
+
+    for mentioned in mentions:
+        if mentioned in message.channel_mentions:
+            content = content.replace(mentioned.mention, f"#{mentioned.name}")
+        elif mentioned in message.role_mentions:
+            content = content.replace(mentioned.mention, f"@{mentioned.name}")
+        else:
+            content = content.replace(mentioned.mention, f"@{mentioned.display_name}")
+
+    return content
+
+
 def is_embed_valid(message: Message):
     if (
         (len(message.embeds) == 0)
@@ -134,30 +132,6 @@ def is_embed_valid(message: Message):
 def contains_youtube_link(content):
     match = YOUTUBE_URL_PATTERN.search(content)
     return bool(match)
-
-
-async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolCall]:
-    functions_dir = Path(__file__).parent.parent / "functions"
-
-    for item in functions_dir.iterdir():
-        if item.is_dir() and not item.name.startswith("__"):
-            try:
-                importlib.import_module(f"aiuser.functions.{item.name}.tool_call")
-            except ImportError:
-                continue
-
-    enabled_tools = await config.guild(ctx.guild).function_calling_functions()
-    if ctx.interaction:
-        enabled_tools = [
-            tool_name for tool_name in enabled_tools if tool_name != "add_reaction"
-        ]
-    tool_classes = {cls.function_name: cls for cls in ToolCall.__subclasses__()}
-
-    return [
-        tool_classes[name](config=config, ctx=ctx)
-        for name in enabled_tools
-        if name in tool_classes
-    ]
 
 
 async def encode_text_to_tokens(text: str, model: str = FALLBACK_TOKENIZER) -> int:

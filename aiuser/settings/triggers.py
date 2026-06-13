@@ -13,7 +13,8 @@ from aiuser.settings.scope import (
     parse_target_or_value,
 )
 from aiuser.settings.utilities import get_mention_type
-from aiuser.types.abc import MixinMeta, aiuser
+from aiuser.settings._groups import aiuser
+from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import MentionType
 from aiuser.types.types import COMPATIBLE_MENTIONS
 
@@ -64,14 +65,14 @@ class TriggerSettings(MixinMeta):
     async def ignore(self, ctx: commands.Context, *, regex_pattern: Optional[str]):
         """Messages matching this regex won't be replied to or seen, by the bot"""
         if not regex_pattern:
-            await self.config.guild(ctx.guild).ignore_regex.set(None)
-            self.ignore_regex[ctx.guild.id] = None
+            await self.services.ignore_regex_cache.set_ignore_regex(ctx.guild, None)
             return await ctx.send("The ignore regex has been cleared.")
         try:
-            self.ignore_regex[ctx.guild.id] = re.compile(regex_pattern)
-        except Exception:
+            await self.services.ignore_regex_cache.set_ignore_regex(
+                ctx.guild, regex_pattern
+            )
+        except re.error:
             return await ctx.send("Sorry, but that regex pattern seems to be invalid.")
-        await self.config.guild(ctx.guild).ignore_regex.set(regex_pattern)
         embed = discord.Embed(
             title="The ignore regex is now:",
             description=f"`{regex_pattern}`",

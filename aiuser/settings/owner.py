@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 from pathlib import Path
@@ -8,8 +7,6 @@ import discord
 from openai import AuthenticationError
 from redbot.core import checks, commands
 from redbot.core.data_manager import cog_data_path
-from redbot.core.utils.menus import start_adding_reactions
-from redbot.core.utils.predicates import ReactionPredicate
 
 from aiuser.config.constants import OPENROUTER_API_V1_URL
 from aiuser.config.defaults import DEFAULT_LLM_MODEL
@@ -31,6 +28,7 @@ from aiuser.llm.openai_compatible.endpoints import (
 )
 from aiuser.settings.utilities import (
     add_prompt_metrics_fields,
+    confirm_pending,
     truncate_prompt,
 )
 from aiuser.types.abc import MixinMeta
@@ -98,7 +96,7 @@ class OwnerSettings(MixinMeta):
             return await ctx.send(":warning: Please enter a positive integer.")
 
         await self.config.openai_endpoint_request_timeout.set(seconds)
-        self.openai_client = await setup_openai_client(self.bot, self.config)
+        self.services.openai_client = await setup_openai_client(self.bot, self.config)
 
         embed = discord.Embed(
             title="The request timeout is now:",
@@ -154,22 +152,14 @@ class OwnerSettings(MixinMeta):
                 \n To fix, make sure you can access the config file: \n `{path}`",
             color=await ctx.embed_color(),
         )
-        confirm = await ctx.send(embed=embed)
-        start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
-        pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
-        try:
-            await ctx.bot.wait_for("reaction_add", timeout=30.0, check=pred)
-        except asyncio.TimeoutError:
-            return await confirm.edit(
-                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
-            )
-        if pred.result is False:
-            return await confirm.edit(
-                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
-            )
+        confirmed, confirm = await confirm_pending(ctx, embed)
+        if not confirmed:
+            return
 
         with path.open("w") as f:
             json.dump(new_config, f, indent=4)
+
+        await self._refresh_cached_guild_options()
 
         return await confirm.edit(
             embed=discord.Embed(
@@ -178,6 +168,11 @@ class OwnerSettings(MixinMeta):
                 color=await ctx.embed_color(),
             )
         )
+
+    async def _refresh_cached_guild_options(self):
+        """Reload in-memory state derived from config."""
+        await self.services.ignore_regex_cache.load_all()
+        await self.services.consent.load()
 
     @aiuserowner.command(name="prompt")
     async def global_prompt(self, ctx: commands.Context, *, prompt: Optional[str]):
@@ -227,14 +222,16 @@ class OwnerSettings(MixinMeta):
         await self.config.custom_openai_endpoint.set(url)
 
         await ctx.message.add_reaction("🔄")
-        self.openai_client = await setup_openai_client(self.bot, self.config)
+        self.services.openai_client = await setup_openai_client(self.bot, self.config)
 
         try:
-            models = await self.openai_client.models.list()
+            models = await self.services.openai_client.models.list()
         except AuthenticationError:
             logger.exception("Authentication failed for endpoint.")
             await self.config.custom_openai_endpoint.set(previous_url)
-            self.openai_client = await setup_openai_client(self.bot, self.config)
+            self.services.openai_client = await setup_openai_client(
+                self.bot, self.config
+            )
             api_type = get_openai_compat_api_token_name(url)
             return await ctx.send(
                 f":warning: Authentication failed for endpoint. "
@@ -244,7 +241,9 @@ class OwnerSettings(MixinMeta):
         except Exception:
             logger.exception("Invalid endpoint.")
             await self.config.custom_openai_endpoint.set(previous_url)
-            self.openai_client = await setup_openai_client(self.bot, self.config)
+            self.services.openai_client = await setup_openai_client(
+                self.bot, self.config
+            )
             return await ctx.send(
                 ":warning: Invalid endpoint. Please check logs for more information."
             )
@@ -344,7 +343,7 @@ class OwnerSettings(MixinMeta):
         oauth = await ensure_valid_codex_oauth(self.config)
         await set_codex_oauth(self.config, oauth)
         await self.config.custom_openai_endpoint.set(CODEX_ENDPOINT_MODE)
-        self.openai_client = await setup_openai_client(self.bot, self.config)
+        self.services.openai_client = await setup_openai_client(self.bot, self.config)
         restored_count, guilds_with_parameters = await self._restore_endpoint_models(
             endpoint_url=CODEX_ENDPOINT_MODE,
             chat_model=CODEX_DEFAULT_MODEL,
@@ -476,19 +475,5 @@ class OwnerSettings(MixinMeta):
             color=await ctx.embed_color(),
         )
 
-        confirm = await ctx.send(embed=embed)
-        start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
-        pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
-        try:
-            await ctx.bot.wait_for("reaction_add", timeout=30.0, check=pred)
-        except TimeoutError:
-            await confirm.edit(
-                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
-            )
-            return False
-        if pred.result is False:
-            await confirm.edit(
-                embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
-            )
-            return False
-        return True
+        confirmed, _ = await confirm_pending(ctx, embed)
+        return confirmed

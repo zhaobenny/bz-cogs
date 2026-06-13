@@ -1,7 +1,8 @@
 import discord
 from redbot.core import checks, commands
 
-from aiuser.types.abc import MixinMeta, aiuser
+from aiuser.settings._groups import aiuser
+from aiuser.types.abc import MixinMeta
 
 
 class FunctionsGroupMixin(MixinMeta):
@@ -15,8 +16,8 @@ class FunctionsGroupMixin(MixinMeta):
         pass
 
 
-# Provide a module-level alias so other settings modules can use `@functions.command(...)`
-# during class body execution (the class attribute on the mixin isn't in the module scope).
+# Module-level alias of the group stub so sibling settings modules can write
+# `@functions.command(...)` at class-body time.
 functions = FunctionsGroupMixin.functions
 
 

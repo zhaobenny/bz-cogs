@@ -7,10 +7,10 @@ import httpx
 from aiuser.functions.imagerequest.providers.util import fetch_image_bytes
 
 if TYPE_CHECKING:
-    from aiuser.response.llm_pipeline import LLMPipeline
+    from aiuser.functions.context import ToolContext
 
 
-async def generate(description: str, _: "LLMPipeline", endpoint: str) -> bytes:
+async def generate(description: str, _: "ToolContext", endpoint: str) -> bytes:
     if not endpoint:
         raise ValueError("Custom HTTP provider requires an endpoint")
     async with httpx.AsyncClient(timeout=120) as c:
