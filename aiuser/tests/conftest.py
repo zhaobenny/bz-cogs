@@ -208,12 +208,16 @@ def mock_create_response(monkeypatch):
     async def noop_typing():
         yield
 
-    async def patched_create_response(services, ctx, conversation=None):
+    async def patched_create_response(
+        services, ctx, conversation=None, history_anchor=None
+    ):
         from unittest.mock import patch
 
         with patch("discord.TextChannel.typing") as mock_typing:
             mock_typing.return_value = noop_typing()
-            return await original_create_response(services, ctx, conversation)
+            return await original_create_response(
+                services, ctx, conversation, history_anchor
+            )
 
     monkeypatch.setattr(response_module, "create_response", patched_create_response)
     return patched_create_response

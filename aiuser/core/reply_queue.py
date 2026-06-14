@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Optional
 
@@ -40,6 +40,7 @@ class ResponseRequest:
     kind: ResponseKind
     channel_id: int
     message_id: int
+    use_latest_history_anchor: bool = False
 
 
 @dataclass
@@ -79,6 +80,7 @@ class ChannelReplyState:
         self.message_burst: Optional[MessageBurst] = None
         self.pending_request: Optional[ResponseRequest] = None
         self.drain_task: Optional[asyncio.Task] = None
+        self.is_executing = False
 
     async def arm_burst(
         self,
@@ -162,6 +164,11 @@ class ChannelReplyState:
 
     async def enqueue(self, services: "AIUserServices", request: ResponseRequest):
         async with self.lock:
+            if self.is_executing:
+                if request.kind != ResponseKind.DIRECT:
+                    return
+                request = replace(request, use_latest_history_anchor=True)
+
             previous = self.pending_request
             if (
                 previous is None
@@ -182,11 +189,17 @@ class ChannelReplyState:
                 async with self.lock:
                     request = self.pending_request
                     self.pending_request = None
+                    if request is not None:
+                        self.is_executing = True
 
                 if request is None:
                     return
 
-                await execute_response_request(services, request)
+                try:
+                    await execute_response_request(services, request)
+                finally:
+                    async with self.lock:
+                        self.is_executing = False
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -230,6 +243,7 @@ async def execute_response_request(
         return False
 
     ctx = await services.bot.get_context(message)
+    history_anchor = await get_history_anchor(channel, request)
 
     try:
         if not (await is_valid_message(services, ctx)):
@@ -238,10 +252,26 @@ async def execute_response_request(
         if not ctx.interaction and URL_PATTERN.search(ctx.message.content):
             ctx = await wait_for_embed(ctx)
 
-        return await create_response(services, ctx)
+        return await create_response(services, ctx, history_anchor=history_anchor)
     except Exception:
         logger.exception("Error generating aiuser response")
         return False
+
+
+async def get_history_anchor(
+    channel, request: ResponseRequest
+) -> Optional[discord.Message]:
+    if not request.use_latest_history_anchor:
+        return None
+
+    message_id = getattr(channel, "last_message_id", None)
+    if not message_id or message_id == request.message_id:
+        return None
+
+    try:
+        return await channel.fetch_message(message_id)
+    except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+        return None
 
 
 def cancel_reply_state_tasks(services: "AIUserServices"):
