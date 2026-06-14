@@ -40,7 +40,7 @@ class ResponseRequest:
     kind: ResponseKind
     channel_id: int
     message_id: int
-    use_latest_history_anchor: bool = False
+    include_latest_channel_context: bool = False
 
 
 @dataclass
@@ -167,7 +167,7 @@ class ChannelReplyState:
             if self.is_executing:
                 if request.kind != ResponseKind.DIRECT:
                     return
-                request = replace(request, use_latest_history_anchor=True)
+                request = replace(request, include_latest_channel_context=True)
 
             previous = self.pending_request
             if (
@@ -243,7 +243,7 @@ async def execute_response_request(
         return False
 
     ctx = await services.bot.get_context(message)
-    history_anchor = await get_history_anchor(channel, request)
+    history_anchor = await get_latest_history_anchor(channel, request)
 
     try:
         if not (await is_valid_message(services, ctx)):
@@ -258,10 +258,10 @@ async def execute_response_request(
         return False
 
 
-async def get_history_anchor(
+async def get_latest_history_anchor(
     channel, request: ResponseRequest
 ) -> Optional[discord.Message]:
-    if not request.use_latest_history_anchor:
+    if not request.include_latest_channel_context:
         return None
 
     message_id = getattr(channel, "last_message_id", None)
