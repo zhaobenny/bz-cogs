@@ -6,7 +6,7 @@ import aiosqlite
 import numpy as np
 from rank_bm25 import BM25Okapi
 
-from aiuser.config.constants import EMBEDDING_DB_NAME
+from aiuser.config.constants import EMBEDDING_CACHE_DIR_NAME, EMBEDDING_DB_NAME
 from aiuser.utils.vectorstore.embeddings import embed_text
 from aiuser.utils.vectorstore.schema import ensure_sqlite_db
 
@@ -15,6 +15,7 @@ class VectorStore:
     def __init__(self, cog_data_path: Union[str, Path]):
         self.cog_data_path = Path(cog_data_path)
         self.db_path = self.cog_data_path / EMBEDDING_DB_NAME
+        self.embedding_cache_path = self.cog_data_path / EMBEDDING_CACHE_DIR_NAME
 
     async def upsert(
         self,
@@ -28,7 +29,7 @@ class VectorStore:
         """Insert a new memory row. Returns number of rows in table after insert."""
         await ensure_sqlite_db(str(self.db_path))
 
-        embedding_array = await embed_text(memory_text, str(self.cog_data_path))
+        embedding_array = await embed_text(memory_text, str(self.embedding_cache_path))
         embedding_bytes = np.array(embedding_array, dtype=np.float32).tobytes()
 
         async with aiosqlite.connect(self.db_path) as conn:
@@ -185,7 +186,7 @@ class VectorStore:
             )
             candidates = await cursor.fetchall()
 
-        query_embedding = await embed_text(query, str(self.cog_data_path))
+        query_embedding = await embed_text(query, str(self.embedding_cache_path))
 
         similarities = []
         for name, text, emb_bytes in candidates:
