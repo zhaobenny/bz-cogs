@@ -45,7 +45,7 @@ async def get_conversation_reply_chance(
 
     cutoff_time = datetime.now(tz=timezone.utc) - timedelta(seconds=reply_time_seconds)
 
-    async for message in ctx.channel.history(limit=10):
+    async for message in ctx.channel.history(limit=10, before=ctx.message):
         if (
             message.author.id == services.bot.user.id
             and len(message.embeds) == 0
