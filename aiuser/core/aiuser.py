@@ -17,6 +17,7 @@ from aiuser.config.defaults import (
 )
 from aiuser.core.handlers import handle_message, handle_slash_command
 from aiuser.core.random_message_task import RandomMessageTask
+from aiuser.core.reply_queue import cancel_reply_state_tasks
 from aiuser.core.services import AIUserServices
 from aiuser.dashboard.base import DashboardIntegration
 from aiuser.llm.openai_compatible.client import setup_openai_client
@@ -77,8 +78,10 @@ class AIUser(
         self.random_task.start()
 
     async def cog_unload(self):
-        if self.services and self.services.openai_client:
-            await self.services.openai_client.close()
+        if self.services:
+            cancel_reply_state_tasks(self.services)
+            if self.services.openai_client:
+                await self.services.openai_client.close()
         if self.random_task:
             self.random_task.cancel()
 

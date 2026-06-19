@@ -129,6 +129,16 @@ def is_embed_valid(message: Message):
     return True
 
 
+async def wait_for_embed(ctx: commands.Context) -> commands.Context:
+    start_time = asyncio.get_event_loop().time()
+    while not is_embed_valid(ctx.message):
+        ctx.message = await ctx.channel.fetch_message(ctx.message.id)
+        if asyncio.get_event_loop().time() - start_time >= 3:
+            break
+        await asyncio.sleep(1)
+    return ctx
+
+
 def contains_youtube_link(content):
     match = YOUTUBE_URL_PATTERN.search(content)
     return bool(match)

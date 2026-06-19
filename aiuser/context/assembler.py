@@ -39,7 +39,12 @@ class ConversationAssembler:
     when the token budget runs out and ends up in chronological order.
     """
 
-    def __init__(self, services: "AIUserServices", ctx: commands.Context):
+    def __init__(
+        self,
+        services: "AIUserServices",
+        ctx: commands.Context,
+        history_anchor: Optional[discord.Message] = None,
+    ):
         self.services = services
         self.config = services.config
         self.bot: Red = services.bot
@@ -47,6 +52,7 @@ class ConversationAssembler:
         self.ctx = ctx
         self.guild: discord.Guild = ctx.guild
         self.init_message: discord.Message = ctx.message
+        self.history_anchor: discord.Message = history_anchor or ctx.message
         self.converter = MessageConverter(self.config, self.bot, ctx)
         self._optin_by_default = False
 
@@ -204,9 +210,9 @@ class ConversationAssembler:
 
         past_messages = [
             message
-            async for message in self.init_message.channel.history(
+            async for message in self.history_anchor.channel.history(
                 limit=limit + 1,
-                before=self.init_message,
+                before=self.history_anchor,
                 after=start_time,
                 oldest_first=False,
             )
@@ -214,8 +220,11 @@ class ConversationAssembler:
         if not past_messages:
             return
 
-        if not self._within_gap(self.init_message, past_messages[0], max_seconds_gap):
+        if not self._within_gap(self.history_anchor, past_messages[0], max_seconds_gap):
             return
+
+        if self.history_anchor.id != self.init_message.id:
+            past_messages = [self.history_anchor] + past_messages
 
         undecided_users = await self.services.consent.get_undecided_users(
             self.guild, past_messages[:10]

@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 
 import discord
 from openai import AsyncOpenAI
@@ -18,6 +18,9 @@ from aiuser.context.compaction import CompactionManager
 from aiuser.utils.cache import Cache
 from aiuser.utils.compaction.store import CompactionStore
 from aiuser.utils.vectorstore import VectorStore
+
+if TYPE_CHECKING:
+    from aiuser.core.reply_queue import ChannelReplyState
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -69,6 +72,7 @@ class AIUserServices:
     compaction_store: Optional[CompactionStore]
     compaction_manager: Optional[CompactionManager]
     tool_call_cache: Cache
+    reply_channel_states: Dict[int, "ChannelReplyState"] = field(default_factory=dict)
     override_prompt_start_time: Dict[int, datetime] = field(default_factory=dict)
     openai_client: Optional[AsyncOpenAI] = None
     # only for Red APIs that require the cog instance (eg. cog_disabled_in_guild)

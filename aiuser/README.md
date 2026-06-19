@@ -5,7 +5,7 @@ The bot will generate responses in whitelisted channels. Bot owners can add a ch
 [p]aiuser add <CHANNEL>
 ```
 
-Bot owners can change the percentage of eligible messages to reply to:
+Bot owners can change the percentage of eligible message bursts to reply to:
 ```
 [p]aiuser percent <PERCENT>
 ```
@@ -132,4 +132,3 @@ Prompts, topics,and image pre-prompt can include certain dynamic variables by in
 Remove list regex patterns only support `{authorname}` (will use authors of last 10 messages) and `{botname}` placeholders.
 
 ---
-

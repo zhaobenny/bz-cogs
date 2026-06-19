@@ -19,7 +19,7 @@ jobs:
       max-parallel: 1
       matrix:
         python-version: ['3.9', '3.11']
-        os: [ubuntu-latest, ubuntu-24.04-arm]
+        os: [ubicloud-standard-2-ubuntu-2404, ubicloud-standard-2-arm-ubuntu-2404]
 
     runs-on: ${{ matrix.os }}
     name: Test Cogs (Py ${{ matrix.python-version }} on ${{ matrix.os }})
@@ -77,7 +77,7 @@ jobs:
 
       - name: Cache pip
         if: ${{ steps.changed-cogs.outputs.cogs != '' }}
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-${{ runner.arch }}-pip-${{ matrix.python-version }}
@@ -103,7 +103,7 @@ jobs:
   ##################################################################
   build-validation-fields:
     name: Build Validation Fields
-    runs-on: ubuntu-latest
+    runs-on: ubicloud-standard-2-ubuntu-2404
     needs: [test-cogs]
     if: always()
     outputs:
@@ -148,7 +148,7 @@ jobs:
   ##################################################################
   display-validation-summary:
     name: Display Validation Summary
-    runs-on: ubuntu-latest
+    runs-on: ubicloud-standard-2-ubuntu-2404
     needs: [test-cogs, build-validation-fields]
     if: always()
 
@@ -169,7 +169,7 @@ jobs:
   ##################################################################
   notify-cog-validation:
     name: Notify Validation Results
-    runs-on: ubuntu-latest
+    runs-on: ubicloud-standard-2-ubuntu-2404
     needs: [build-validation-fields, display-validation-summary]
     if: always()
 

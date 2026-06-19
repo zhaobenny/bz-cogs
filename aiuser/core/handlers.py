@@ -2,21 +2,23 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
-import random
 from typing import TYPE_CHECKING
 
 import discord
 from redbot.core import commands
 
-from aiuser.config.constants import URL_PATTERN
 from aiuser.config.defaults import DEFAULT_REPLY_PERCENT
-from aiuser.core.triggers import check_triggers
+from aiuser.core.reply_queue import (
+    BurstMode,
+    ResponseKind,
+    ResponseRequest,
+    get_channel_reply_state,
+)
+from aiuser.core.triggers import check_direct_triggers, get_conversation_reply_chance
 from aiuser.core.validators import is_valid_message
 from aiuser.response.response import create_response
 from aiuser.utils.logging_context import with_discord_log_context
-from aiuser.utils.utilities import is_embed_valid
 
 if TYPE_CHECKING:
     from aiuser.core.services import AIUserServices
@@ -58,15 +60,33 @@ async def handle_message(services: "AIUserServices", message: discord.Message):
     if not (await is_valid_message(services, ctx)):
         return
 
-    if await check_triggers(services, ctx, message):
-        pass
-    elif random.random() > await get_percentage(services, ctx):
+    if await check_direct_triggers(services, ctx, message):
+        state = get_channel_reply_state(services, ctx.channel.id)
+        await state.cancel_pending_burst()
+        await state.enqueue(
+            services,
+            ResponseRequest(
+                kind=ResponseKind.DIRECT,
+                channel_id=ctx.channel.id,
+                message_id=message.id,
+            ),
+        )
         return
 
-    if URL_PATTERN.search(ctx.message.content):
-        ctx = await wait_for_embed(ctx)
+    conversation_reply_chance = await get_conversation_reply_chance(services, ctx)
+    if conversation_reply_chance is not None:
+        state = get_channel_reply_state(services, ctx.channel.id)
+        await state.arm_burst(
+            services, ctx, conversation_reply_chance, BurstMode.CONVERSATION
+        )
+        return
 
-    await create_response(services, ctx)
+    reply_chance = await get_percentage(services, ctx)
+    if reply_chance <= 0:
+        return
+
+    state = get_channel_reply_state(services, ctx.channel.id)
+    await state.arm_burst(services, ctx, reply_chance, BurstMode.RANDOM)
 
 
 async def get_percentage(services: "AIUserServices", ctx: commands.Context) -> float:
@@ -75,14 +95,3 @@ async def get_percentage(services: "AIUserServices", ctx: commands.Context) -> f
     if percentage is None:
         percentage = DEFAULT_REPLY_PERCENT
     return percentage
-
-
-async def wait_for_embed(ctx: commands.Context) -> commands.Context:
-    """Wait for possible embed to be valid"""
-    start_time = asyncio.get_event_loop().time()
-    while not is_embed_valid(ctx.message):
-        ctx.message = await ctx.channel.fetch_message(ctx.message.id)
-        if asyncio.get_event_loop().time() - start_time >= 3:
-            break
-        await asyncio.sleep(1)
-    return ctx

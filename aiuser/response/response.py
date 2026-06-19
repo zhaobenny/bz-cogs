@@ -13,6 +13,8 @@ from aiuser.response.pipeline import LLMPipeline
 from aiuser.response.sender import remove_patterns_from_response, send_response
 
 if TYPE_CHECKING:
+    import discord
+
     from aiuser.core.services import AIUserServices
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -22,10 +24,13 @@ async def create_response(
     services: "AIUserServices",
     ctx: commands.Context,
     conversation: Optional[Conversation] = None,
+    history_anchor: Optional["discord.Message"] = None,
 ) -> bool:
     async with ctx.message.channel.typing():
         if conversation is None:
-            conversation = await ConversationAssembler(services, ctx).build()
+            conversation = await ConversationAssembler(
+                services, ctx, history_anchor=history_anchor
+            ).build()
 
         pipeline = LLMPipeline(services, ctx, conversation)
         response = await pipeline.run()
