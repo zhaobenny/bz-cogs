@@ -19,7 +19,7 @@ from aiuser.context.entry import (
     MessageEntry,
 )
 from aiuser.context.memory.retriever import MemoryRetriever
-from aiuser.utils.utilities import format_variables
+from aiuser.utils.utilities import format_variables, mention_to_text
 
 if TYPE_CHECKING:
     from aiuser.core.services import AIUserServices
@@ -145,7 +145,7 @@ class ConversationAssembler:
         if self.services.memories is None:
             return None
         retriever = MemoryRetriever(self.ctx, db=self.services.memories)
-        return await retriever.fetch_relevant(self.init_message.content)
+        return await retriever.fetch_relevant(mention_to_text(self.init_message))
 
     # --- message conversion / filtering ---
 
