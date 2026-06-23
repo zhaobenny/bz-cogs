@@ -25,7 +25,7 @@ class RestrictedHTTP:
         sock_read=10,
     )
     BODY_READ_TIMEOUT = 5
-    MAX_BODY_BYTES = 1 * 1024 * 1024
+    MAX_BODY_BYTES = 8 * 1024 * 1024
     SCRAPE_HEADERS = {
         "Cache-Control": "no-cache",
         "Referer": "https://www.google.com/",

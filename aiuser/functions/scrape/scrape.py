@@ -28,6 +28,9 @@ async def scrape_page(
             if "text/html" in content_type:
                 html_content = await RestrictedHTTP.text(response)
                 extracted = extract(html_content) or ""
+                if not extracted:
+                    logger.debug("No content extracted from HTML page: %s", link)
+                    return "Failed to extract content from the HTML page. This may be due to bot anti-scraping measures or the page being mostly non-textual content."
                 res = f"Extracted HTML content:\n {extracted}"
             else:
                 logger.debug("Non-HTML content type: %s", content_type)
