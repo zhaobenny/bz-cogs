@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessageToolCall
@@ -12,6 +12,8 @@ from redbot.core import Config
 class ChatStepResult:
     content: Optional[str]
     tool_calls: List[ChatCompletionMessageToolCall]
+    assistant_extra_fields: Dict[str, Any] = field(default_factory=dict)
+    finish_reason: Optional[str] = None
 
 
 class LLMProvider(ABC):

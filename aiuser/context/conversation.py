@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 from aiuser.context.entry import MessageEntry
 from aiuser.utils.utilities import encode_text_to_tokens
@@ -65,11 +65,19 @@ class Conversation:
         return await self.prepend(MessageEntry("system", content, name=name))
 
     async def append_assistant(
-        self, content: str = "", tool_calls: Optional[list] = None
+        self,
+        content: str = "",
+        tool_calls: Optional[list] = None,
+        assistant_extra_fields: Optional[Dict[str, Any]] = None,
     ) -> MessageEntry:
         await self.prune_oldest_if_over_limit()
         return await self.append(
-            MessageEntry("assistant", content, tool_calls=tool_calls or [])
+            MessageEntry(
+                "assistant",
+                content,
+                tool_calls=tool_calls or [],
+                assistant_extra_fields=assistant_extra_fields or {},
+            )
         )
 
     async def append_tool_result(self, content: str, tool_call_id: str) -> MessageEntry:
@@ -100,6 +108,8 @@ class Conversation:
                 message["tool_call_id"] = entry.tool_call_id
             if entry.name:
                 message["name"] = entry.name
+            if entry.role == "assistant" and entry.assistant_extra_fields:
+                message.update(entry.assistant_extra_fields)
             payload.append(message)
         return payload
 

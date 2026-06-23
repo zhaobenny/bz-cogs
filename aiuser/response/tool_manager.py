@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import asdict
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from openai.types.chat import ChatCompletionMessageToolCall
 
@@ -37,9 +37,15 @@ class ToolManager:
             return {"tools": [asdict(t.schema) for t in self.enabled_tools]}
         return {}
 
-    async def handle_tool_calls(self, tool_calls: List[ChatCompletionMessageToolCall]):
+    async def handle_tool_calls(
+        self,
+        tool_calls: List[ChatCompletionMessageToolCall],
+        assistant_extra_fields: Optional[Dict[str, Any]] = None,
+    ):
         conversation = self.pipeline.conversation
-        entry = await conversation.append_assistant(tool_calls=tool_calls)
+        entry = await conversation.append_assistant(
+            tool_calls=tool_calls, assistant_extra_fields=assistant_extra_fields
+        )
         self.pipeline.tool_call_entries.append(entry)
 
         for tool_call in tool_calls:

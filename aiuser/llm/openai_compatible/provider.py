@@ -14,6 +14,8 @@ from aiuser.llm.openai_compatible.endpoints import (
     get_openai_compat_kind,
 )
 
+ASSISTANT_EXTRA_FIELD_NAMES = ("reasoning", "reasoning_details")
+
 
 class OpenAICompatibleProvider(LLMProvider):
     def __init__(self, config: Config, openai_client: AsyncOpenAI):
@@ -62,9 +64,24 @@ class OpenAICompatibleProvider(LLMProvider):
             **kwargs,
         )
 
-        message = response.choices[0].message
+        choice = response.choices[0]
+        message = choice.message
         tool_calls_raw = message.tool_calls
         tool_calls: List[ChatCompletionMessageToolCall] = (
             list(tool_calls_raw) if tool_calls_raw else []
         )
-        return ChatStepResult(content=message.content, tool_calls=tool_calls)
+        assistant_extra_fields = self._get_assistant_extra_fields(message)
+        return ChatStepResult(
+            content=message.content,
+            tool_calls=tool_calls,
+            assistant_extra_fields=assistant_extra_fields,
+            finish_reason=choice.finish_reason,
+        )
+
+    def _get_assistant_extra_fields(self, message: Any) -> Dict[str, Any]:
+        extra_fields: Dict[str, Any] = {}
+        for field_name in ASSISTANT_EXTRA_FIELD_NAMES:
+            value = getattr(message, field_name, None)
+            if value is not None:
+                extra_fields[field_name] = value
+        return extra_fields

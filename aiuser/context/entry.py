@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Literal, Optional, Union
+from typing import Any, Dict, Literal, Optional, Union
 
 
 @dataclass(frozen=True)
@@ -15,6 +15,7 @@ class MessageEntry:
     tool_calls: list = field(default_factory=list)
     tool_call_id: Optional[str] = None
     name: Optional[str] = None
+    assistant_extra_fields: Dict[str, Any] = field(default_factory=dict)
 
 
 SYSTEM_NAME_MEMORY = "memory"

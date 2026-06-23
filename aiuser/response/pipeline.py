@@ -100,13 +100,19 @@ class LLMPipeline:
                 self.completion = step.content
                 break
             if step.tool_calls:
-                await self.tool_manager.handle_tool_calls(step.tool_calls)
+                await self.tool_manager.handle_tool_calls(
+                    step.tool_calls, step.assistant_extra_fields
+                )
                 if self.suppress_response:
                     break
                 continue
 
             logger.warning(
-                f"No content or tool calls received during round {round_idx} for message {self.ctx.message.id}"
+                "No content or tool calls received during round %s for message %s "
+                "(finish_reason=%s)",
+                round_idx,
+                self.ctx.message.id,
+                step.finish_reason,
             )
             break
         else:
