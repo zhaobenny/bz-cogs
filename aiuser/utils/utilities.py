@@ -25,7 +25,13 @@ def get_tokenizer_encoding(model: str):
         model_name = str(model or "")
         base_name = model_name.rsplit("/", 1)[-1]
         if base_name.startswith(("gpt-5.", "gpt-4.1.", "gpt-4o.")):
-            return tiktoken.get_encoding("o200k_base"), "o200k_base", True
+            try:
+                return tiktoken.get_encoding("o200k_base"), "o200k_base", True
+            except ValueError:
+                logger.debug(
+                    "tiktoken does not provide o200k_base; falling back to %s",
+                    FALLBACK_TOKENIZER,
+                )
         return tiktoken.get_encoding(FALLBACK_TOKENIZER), FALLBACK_TOKENIZER, True
 
 
