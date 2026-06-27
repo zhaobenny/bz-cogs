@@ -71,12 +71,19 @@ class ImageScanSettings(MixinMeta):
         await ctx.message.add_reaction("🔄")
         models = await list_llm_models(self.services)
         await ctx.message.remove_reaction("🔄", ctx.me)
+        models = [model for model in models if get_model_info(model).supports_vision]
 
         if not models:
-            return await ctx.send(":warning: No models are currently available.")
+            return await ctx.send(
+                ":warning: No image scanning models are currently available."
+            )
+
+        if model_name == "list":
+            return await self._paginate_models(ctx, models)
 
         if model_name not in models:
-            return await ctx.send("⚠️ Not a valid model!")
+            await ctx.send("⚠️ Not a valid image scanning model!")
+            return await self._paginate_models(ctx, models, query=model_name)
 
         await self.config.guild(ctx.guild).scan_images_model.set(model_name)
         embed = discord.Embed(
@@ -84,7 +91,4 @@ class ImageScanSettings(MixinMeta):
             description=f"`{model_name}`",
             color=await ctx.embed_color(),
         )
-
-        if not get_model_info(model_name).supports_vision:
-            embed.set_footer(text="⚠️ Model has not been validated for image scanning.")
         return await ctx.send(embed=embed)

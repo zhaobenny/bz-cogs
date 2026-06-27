@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from difflib import SequenceMatcher
 from typing import Tuple
 
 import discord
@@ -90,3 +91,32 @@ def truncate_prompt(prompt: str, limit: int = 1900) -> str:
     if len(prompt) > limit:
         return prompt[:limit] + "..."
     return prompt
+
+
+def rank_choices_for_query(choices: list, query: str) -> list:
+    query = (query or "").casefold().strip()
+    if not query:
+        return choices
+
+    query_parts = [part for part in query.replace("/", " ").replace("-", " ").split()]
+
+    def score(choice: str) -> tuple:
+        normalized = choice.casefold()
+        parts = normalized.replace("/", " ").replace("-", " ").split()
+        ratio = SequenceMatcher(None, query, normalized).ratio()
+        windows = (
+            normalized[index : index + len(query)]
+            for index in range(max(len(normalized) - len(query) + 1, 1))
+        )
+        partial_ratio = max(
+            (SequenceMatcher(None, query, window).ratio() for window in windows),
+            default=0,
+        )
+        token_hits = sum(
+            1 for query_part in query_parts if any(query_part in part for part in parts)
+        )
+        startswith = normalized.startswith(query)
+        contains = query in normalized
+        return (startswith, contains, token_hits, partial_ratio, ratio)
+
+    return sorted(choices, key=score, reverse=True)

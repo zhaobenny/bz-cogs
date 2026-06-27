@@ -23,6 +23,7 @@ from aiuser.settings.random_message import RandomMessageSettings
 from aiuser.settings.response import ResponseSettings
 from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.triggers import TriggerSettings
+from aiuser.settings.utilities import rank_choices_for_query
 from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import MentionType
 from aiuser.types.types import COMPATIBLE_CHANNELS, COMPATIBLE_MENTIONS
@@ -344,7 +345,7 @@ class Settings(
 
         if model not in models:
             await ctx.send(":warning: Not a valid model!")
-            return await self._paginate_models(ctx, models)
+            return await self._paginate_models(ctx, models, query=model)
 
         await self.config.guild(ctx.guild).model.set(model)
         embed = discord.Embed(
@@ -363,16 +364,19 @@ class Settings(
 
         return await ctx.send(embed=embed)
 
-    async def _paginate_models(self, ctx, models):
+    async def _paginate_models(self, ctx, models, query: Optional[str] = None):
         if not models:
             return await ctx.send(":warning: No models are currently available.")
+
+        if query:
+            models = rank_choices_for_query(models, query)
 
         pagified_models = [models[i : i + 10] for i in range(0, len(models), 10)]
         menu_pages = []
 
         for models_page in pagified_models:
             embed = discord.Embed(
-                title="Available Models",
+                title=("Available Models"),
                 color=await ctx.embed_color(),
             )
             embed.description = "\n".join([f"`{model}`" for model in models_page])
