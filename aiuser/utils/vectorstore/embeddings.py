@@ -1,9 +1,16 @@
+import shutil
+from pathlib import Path
+
 import numpy as np
 import tiktoken
 from fastembed import TextEmbedding
 from fastembed.common.types import NumpyArray
 
-from aiuser.config.constants import EMBEDDING_MODEL, FALLBACK_TOKENIZER
+from aiuser.config.constants import (
+    EMBEDDING_CACHE_DIR_NAME,
+    EMBEDDING_MODEL,
+    FALLBACK_TOKENIZER,
+)
 from aiuser.utils.utilities import encode_text_to_tokens, to_thread
 
 
@@ -17,9 +24,19 @@ async def embed_text(text: str, cache_folder: str) -> NumpyArray:
 
 @to_thread()
 def embed_sync(text: str, cache_folder: str) -> NumpyArray:
-    model = TextEmbedding(EMBEDDING_MODEL, cache_dir=cache_folder)
-    res = model.embed([text])
-    return next(iter(res))
+    try:
+        model = TextEmbedding(EMBEDDING_MODEL, cache_dir=cache_folder)
+        res = model.embed([text])
+        return next(iter(res))
+    except (OSError, ValueError):
+        cache_path = Path(cache_folder)
+        if cache_path.name != EMBEDDING_CACHE_DIR_NAME:
+            raise
+        if cache_path.exists():
+            shutil.rmtree(cache_path)
+        model = TextEmbedding(EMBEDDING_MODEL, cache_dir=cache_folder)
+        res = model.embed([text])
+        return next(iter(res))
 
 
 @to_thread()

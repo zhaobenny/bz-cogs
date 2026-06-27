@@ -1019,7 +1019,7 @@ OPENROUTER_MODEL_PROMPT_PRICES = {
     "qwen3.5-flash-02-23": "6.5E-8",
     "qwen3.5-plus-02-15": "2.6E-7",
     "qwen3.5-plus-20260420": "3E-7",
-    "qwen3.6-27b": "2.885E-7",
+    "qwen3.6-27b": "2.596E-7",
     "qwen3.6-35b-a3b": "1.4E-7",
     "qwen3.6-flash": "1.875E-7",
     "qwen3.6-max-preview": "0.00000104",

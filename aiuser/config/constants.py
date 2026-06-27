@@ -25,6 +25,7 @@ OPENROUTER_URL = "https://openrouter.ai/api/"
 OPENROUTER_API_V1_URL = f"{OPENROUTER_URL}v1/"
 
 EMBEDDING_MODEL = "Snowflake/snowflake-arctic-embed-s"
+EMBEDDING_CACHE_DIR_NAME = "fastembed_cache"
 EMBEDDING_DB_NAME = "embeddings.sqlite"
 COMPACTION_DB_NAME = "compaction.sqlite"
 
