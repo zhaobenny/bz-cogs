@@ -1,0 +1,102 @@
+import io
+import logging
+import re
+from typing import Any, Dict, Optional
+
+import discord
+
+from aiuser.functions import names
+from aiuser.functions.context import ToolContext
+from aiuser.functions.tool_call import ToolCall
+from aiuser.functions.types import Function, Parameters, ToolCallSchema
+from aiuser.functions.voice.constants import MAX_VOICE_WORDS
+from aiuser.functions.voice.native import send_voice_message
+from aiuser.functions.voice.providers.factory import FINEVOICE, PROVIDERS
+
+logger = logging.getLogger("red.bz_cogs.aiuser.tools")
+
+CUSTOM_EMOJI_RE = re.compile(r"<a?:[A-Za-z0-9_]{2,32}:\d{17,20}>?")
+
+
+class VoiceRequestToolCall(ToolCall):
+    schema = ToolCallSchema(
+        function=Function(
+            name=names.VOICE_REQUEST,
+            description=(
+                "Use this to send a voice message instead of a text reply. Use it "
+                "when voice would make the conversation more engaging, such as "
+                "when something is funny or annoying. If asked to say, speak, or "
+                "read something out loud, use voice when it is 3 sentences or "
+                "shorter."
+            ),
+            parameters=Parameters(
+                properties={
+                    "text": {
+                        "type": "string",
+                        "description": (
+                            "The text to turn into spoken audio. Tone modifiers "
+                            "can be placed in brackets, such as [pause], [happy], "
+                            "[angry], [sad], [soft], [excited], [laughing], "
+                            "[whispering], [screaming], [sobbing], [moaning], "
+                            "[sighing], or [clear throat]. If using [singing], "
+                            "repeat it for every verse or half-verse."
+                        ),
+                    },
+                },
+                required=["text"],
+            ),
+        )
+    )
+    function_name = schema.function.name
+
+    async def _handle(
+        self, tool_context: ToolContext, arguments: Dict[str, Any]
+    ) -> Optional[str]:
+        text = str(arguments.get("text") or "").strip()
+        if not text:
+            return "No text was provided for voice generation."
+
+        provider = (
+            (
+                await self.config.guild(
+                    self.ctx.guild
+                ).function_calling_voice_provider()
+                or FINEVOICE
+            )
+            .strip()
+            .lower()
+        )
+        gen_fn = PROVIDERS.get(provider)
+        if gen_fn is None:
+            return f"Voice provider `{provider}` is not available."
+
+        voice_text = CUSTOM_EMOJI_RE.sub(".", text)
+        voice_text = " ".join(voice_text.split())
+
+        word_count = len(voice_text.split())
+        if word_count > MAX_VOICE_WORDS:
+            return (
+                f"Voice generation is limited to {MAX_VOICE_WORDS} words. "
+                f"The provided text has {word_count} words."
+            )
+
+        try:
+            audio = await gen_fn(voice_text, tool_context)
+        except ValueError as e:
+            return str(e)
+        except Exception:
+            logger.exception("Failed to generate voice audio")
+            return "Couldn't generate voice audio."
+
+        try:
+            if await send_voice_message(self.ctx, audio):
+                return "The requested voice message was generated and sent."
+        except Exception:
+            logger.debug(
+                "Native Discord voice message send failed; falling back to audio file",
+                exc_info=True,
+            )
+
+        filename = f"{self.ctx.me.display_name} speaking.mp3"
+        tool_context.attach_file(discord.File(io.BytesIO(audio), filename=filename))
+        return "The requested voice audio was generated and sent."

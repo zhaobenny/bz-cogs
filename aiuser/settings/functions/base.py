@@ -11,6 +11,7 @@ from aiuser.settings.functions.utilities import (
     FunctionsGroupMixin,
     functions,
 )
+from aiuser.settings.functions.voice import VoiceFunctionSettings
 from aiuser.settings.functions.weather import WeatherFunctionSettings
 
 
@@ -18,6 +19,7 @@ class FunctionCallingSettings(
     FunctionsGroupMixin,
     WeatherFunctionSettings,
     ImageRequestFunctionSettings,
+    VoiceFunctionSettings,
     SearXNGFunctionSettings,
     MemoryFunctionSettings,
 ):
@@ -59,6 +61,7 @@ class FunctionCallingSettings(
         groups = {
             "Weather": [names.IS_DAYTIME, names.GET_WEATHER],
             "Image Request": [names.IMAGE_REQUEST],
+            "Voice Request": [names.VOICE_REQUEST],
             "Serper": [names.SEARCH_GOOGLE],
             "SearXNG": [names.SEARXNG],
             "Scrape": [names.OPEN_URL],
@@ -133,6 +136,24 @@ class FunctionCallingSettings(
         )
         if image_enabled:
             embeds.append(image_embed)
+
+        voice_tools = groups["Voice Request"]
+        voice_enabled = any(t in enabled_tools for t in voice_tools)
+        voice_provider = await guild_conf.function_calling_voice_provider()
+        voice_model = await guild_conf.function_calling_voice_model() or "Not set"
+        voice_name = await guild_conf.function_calling_voice() or "Not set"
+
+        voice_embed = discord.Embed(
+            title="Voice Request Function Settings", color=colour
+        )
+        voice_embed.add_field(
+            name="Enabled", value=f"{icon(voice_enabled)}", inline=True
+        )
+        voice_embed.add_field(name="Provider", value=f"`{voice_provider}`", inline=True)
+        voice_embed.add_field(name="Model", value=f"`{voice_model}`", inline=True)
+        voice_embed.add_field(name="Voice", value=f"`{voice_name}`", inline=True)
+        if voice_enabled:
+            embeds.append(voice_embed)
 
         for em in embeds:
             await ctx.send(embed=em)
