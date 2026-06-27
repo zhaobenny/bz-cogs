@@ -18,6 +18,12 @@ logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 CUSTOM_EMOJI_RE = re.compile(r"<a?:[A-Za-z0-9_]{2,32}:\d{17,20}>?")
 
 
+def _audio_file_extension(audio: bytes) -> str:
+    if audio.startswith(b"RIFF") and audio[8:12] == b"WAVE":
+        return "wav"
+    return "mp3"
+
+
 class VoiceRequestToolCall(ToolCall):
     schema = ToolCallSchema(
         function=Function(
@@ -97,6 +103,6 @@ class VoiceRequestToolCall(ToolCall):
                 exc_info=True,
             )
 
-        filename = f"{self.ctx.me.display_name} speaking.mp3"
+        filename = f"{self.ctx.me.display_name} speaking.{_audio_file_extension(audio)}"
         tool_context.attach_file(discord.File(io.BytesIO(audio), filename=filename))
         return "The requested voice audio was generated and sent."

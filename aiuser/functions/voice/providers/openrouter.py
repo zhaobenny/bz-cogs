@@ -1,4 +1,6 @@
+from io import BytesIO
 import re
+import wave
 
 import httpx
 from redbot.core.bot import Red
@@ -13,6 +15,16 @@ INLINE_TAG_MODELS = {
 }
 
 INLINE_TAG_RE = re.compile(r"\s*\[[A-Za-z][A-Za-z0-9_ :,.'-]{0,60}\]\s*")
+
+
+def _pcm_to_wav(audio: bytes) -> bytes:
+    wav = BytesIO()
+    with wave.open(wav, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(24000)
+        wf.writeframes(audio)
+    return wav.getvalue()
 
 
 def _strip_inline_tags(text: str) -> str:
@@ -45,7 +57,6 @@ async def generate(text: str, request: ToolContext) -> bytes:
         "model": model,
         "input": text,
         "voice": voice,
-        "response_format": "mp3",
     }
 
     async with httpx.AsyncClient(timeout=TTS_PROVIDER_TIMEOUT) as client:
@@ -55,4 +66,6 @@ async def generate(text: str, request: ToolContext) -> bytes:
             headers=headers,
         )
         response.raise_for_status()
+        if response.headers.get("content-type", "").split(";")[0] == "audio/pcm":
+            return _pcm_to_wav(response.content)
         return response.content
