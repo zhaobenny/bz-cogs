@@ -16,6 +16,7 @@ class ToolCall:
 
     schema: ToolCallSchema = None
     function_name: str = None
+    parallel_safe: bool = False
 
     def __init__(self, config: Config, ctx: commands.Context):
         self.config = config

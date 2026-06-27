@@ -27,6 +27,7 @@ class ScrapeToolCall(ToolCall):
         )
     )
     function_name = schema.function.name
+    parallel_safe = True
 
     async def _handle(
         self, tool_context: ToolContext, arguments: Dict[str, Any]

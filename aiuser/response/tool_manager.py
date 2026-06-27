@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from openai.types.chat import ChatCompletionMessageToolCall
@@ -14,6 +15,13 @@ if TYPE_CHECKING:
     from aiuser.response.pipeline import LLMPipeline
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
+
+
+@dataclass
+class PendingToolCall:
+    tool_call: ChatCompletionMessageToolCall
+    tool: ToolCall
+    arguments: Dict[str, Any]
 
 
 class ToolManager:
@@ -48,24 +56,66 @@ class ToolManager:
         )
         self.pipeline.tool_call_entries.append(entry)
 
+        parallel_batch: List[PendingToolCall] = []
+
         for tool_call in tool_calls:
-            fn = tool_call.function
-            try:
-                arguments = json.loads(fn.arguments or "{}")
-            except json.JSONDecodeError:
-                logger.exception(
-                    f"Could not decode tool call arguments for {fn.name}; arguments: {fn.arguments!r}"
-                )
+            pending = self._prepare_tool_call(tool_call)
+            if pending is None:
                 continue
 
-            tool = self.enabled_tools_map.get(fn.name)
-            if tool:
-                logger.info(
-                    f'Handling tool call "{fn.name}" with args keys: {list(arguments.keys())}'
+            if not pending.tool.parallel_safe:
+                await self._run_batch(parallel_batch)
+                parallel_batch = []
+                await self._run_batch([pending])
+                continue
+
+            parallel_batch.append(pending)
+
+        await self._run_batch(parallel_batch)
+
+    def _prepare_tool_call(
+        self, tool_call: ChatCompletionMessageToolCall
+    ) -> Optional[PendingToolCall]:
+        fn = tool_call.function
+        try:
+            arguments = json.loads(fn.arguments or "{}")
+        except json.JSONDecodeError:
+            logger.exception(
+                f"Could not decode tool call arguments for {fn.name}; arguments: {fn.arguments!r}"
+            )
+            return None
+
+        tool = self.enabled_tools_map.get(fn.name)
+        if not tool:
+            logger.warning(f'Could not find tool "{fn.name}"')
+            return None
+
+        logger.info(
+            f'Handling tool call "{fn.name}" with args keys: {list(arguments.keys())}'
+        )
+        return PendingToolCall(tool_call, tool, dict(arguments))
+
+    async def _run_batch(self, batch: List[PendingToolCall]) -> None:
+        if not batch:
+            return
+
+        if len(batch) > 1:
+            logger.debug("Handling %s parallel-safe tool calls", len(batch))
+            results = await asyncio.gather(
+                *(
+                    pending.tool.run(self.pipeline.tool_context, pending.arguments)
+                    for pending in batch
                 )
-                result = await tool.run(self.pipeline.tool_context, dict(arguments))
-                if result is not None:
-                    entry = await conversation.append_tool_result(result, tool_call.id)
-                    self.pipeline.tool_call_entries.append(entry)
-            else:
-                logger.warning(f'Could not find tool "{fn.name}"')
+            )
+        else:
+            pending = batch[0]
+            results = [
+                await pending.tool.run(self.pipeline.tool_context, pending.arguments)
+            ]
+
+        for pending, result in zip(batch, results):
+            if result is not None:
+                entry = await self.pipeline.conversation.append_tool_result(
+                    result, pending.tool_call.id
+                )
+                self.pipeline.tool_call_entries.append(entry)

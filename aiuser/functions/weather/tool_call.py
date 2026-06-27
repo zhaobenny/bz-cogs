@@ -31,6 +31,7 @@ location_weather_schema = ToolCallSchema(
 class LocationWeatherToolCall(ToolCall):
     schema = location_weather_schema
     function_name = schema.function.name
+    parallel_safe = True
 
     async def _handle(
         self, tool_context: ToolContext, arguments: Dict[str, Any]
@@ -56,6 +57,7 @@ class IsDaytimeToolCall(ToolCall):
         )
     )
     function_name = schema.function.name
+    parallel_safe = True
 
     async def _handle(
         self, tool_context: ToolContext, arguments: Dict[str, Any]
