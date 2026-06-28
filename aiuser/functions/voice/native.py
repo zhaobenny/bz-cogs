@@ -1,8 +1,8 @@
 import asyncio
 import base64
-import math
 import re
 import shutil
+import struct
 from typing import Tuple
 
 import httpx
@@ -13,6 +13,8 @@ from redbot.core.bot import Red
 VOICE_MESSAGE_FLAG = 1 << 13
 VOICE_MESSAGE_FILENAME = "voice-message.ogg"
 FFMPEG_TIME_RE = re.compile(rb"time=(\d+):(\d+):(\d+(?:\.\d+)?)")
+WAVEFORM_SAMPLE_COUNT = 64
+WAVEFORM_SAMPLE_RATE = 8000
 
 
 async def send_voice_message(ctx: commands.Context, audio: bytes) -> bool:
@@ -29,9 +31,7 @@ async def send_voice_message(ctx: commands.Context, audio: bytes) -> bool:
 
     ogg, duration = await _to_ogg_opus(audio)
     bot: Red = ctx.bot
-    waveform = base64.b64encode(
-        bytes(int(96 + 80 * abs(math.sin(i / 8))) for i in range(64))
-    ).decode("ascii")
+    waveform = base64.b64encode(await _waveform_from_audio(audio)).decode("ascii")
 
     upload = await bot.http.request(
         Route(
@@ -107,6 +107,48 @@ async def _to_ogg_opus(audio: bytes) -> Tuple[bytes, float]:
         raise RuntimeError("ffmpeg failed to convert voice audio")
 
     return ogg, _duration_from_ffmpeg_progress(stderr)
+
+
+async def _waveform_from_audio(audio: bytes) -> bytes:
+    proc = await asyncio.create_subprocess_exec(
+        "ffmpeg",
+        "-i",
+        "pipe:0",
+        "-ac",
+        "1",
+        "-ar",
+        str(WAVEFORM_SAMPLE_RATE),
+        "-f",
+        "s16le",
+        "pipe:1",
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+    pcm, _ = await proc.communicate(audio)
+    if proc.returncode != 0 or not pcm:
+        return bytes(WAVEFORM_SAMPLE_COUNT)
+
+    samples = [
+        abs(sample[0])
+        for sample in struct.iter_unpack("<h", pcm[: len(pcm) - (len(pcm) % 2)])
+    ]
+    if not samples:
+        return bytes(WAVEFORM_SAMPLE_COUNT)
+
+    bucket_size = len(samples) / WAVEFORM_SAMPLE_COUNT
+    buckets = []
+    for i in range(WAVEFORM_SAMPLE_COUNT):
+        start = int(i * bucket_size)
+        end = int((i + 1) * bucket_size)
+        bucket = samples[start:end] or samples[start : start + 1]
+        buckets.append(max(bucket) if bucket else 0)
+
+    peak = max(buckets)
+    if peak <= 0:
+        return bytes(WAVEFORM_SAMPLE_COUNT)
+
+    return bytes(min(255, round((value / peak) ** 0.5 * 255)) for value in buckets)
 
 
 def _duration_from_ffmpeg_progress(stderr: bytes) -> float:

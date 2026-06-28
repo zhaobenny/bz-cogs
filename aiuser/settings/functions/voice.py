@@ -4,7 +4,12 @@ import discord
 from redbot.core import commands
 
 from aiuser.functions import names
-from aiuser.functions.voice.providers.factory import FINEVOICE, OPENROUTER, PROVIDERS
+from aiuser.functions.voice.providers.factory import (
+    ELEVENLAB,
+    FINEVOICE,
+    OPENROUTER,
+    PROVIDERS,
+)
 from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
 
 
@@ -27,7 +32,13 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
         guild_conf = self.config.guild(ctx.guild)
         warnings: list[str] = []
 
-        if provider == FINEVOICE:
+        if provider == ELEVENLAB:
+            if not (await guild_conf.function_calling_voice()):
+                warnings.append(
+                    f"- Voice ID: `{ctx.clean_prefix}aiuser functions voice id <voice>`"
+                )
+
+        elif provider == FINEVOICE:
             if not (await guild_conf.function_calling_voice()):
                 warnings.append(
                     f"- Voice ID: `{ctx.clean_prefix}aiuser functions voice id <voice>`"
@@ -100,7 +111,7 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
     @functions_voice.command(name="provider")
     async def set_voice_provider(self, ctx: commands.Context, provider: str):
         """Set the voice provider.
-        Available providers: `openrouter`, `finevoice`
+        Available providers: `elevenlab`, `openrouter`, `finevoice`
         """
         provider = provider.strip().lower()
 
