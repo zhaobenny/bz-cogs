@@ -318,8 +318,8 @@ class ConversationAssembler:
         self, conversation: Conversation, bot_message: discord.Message
     ):
         """Re-inject cached tool call entries before an assistant response."""
-        cache_key = (bot_message.channel.id, bot_message.id)
-        cached_entries = self.services.tool_call_cache[cache_key]
+        cache_key = ("tool_calls", bot_message.channel.id, bot_message.id)
+        cached_entries = self.services.context_cache[cache_key]
         if not cached_entries:
             return
 

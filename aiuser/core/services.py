@@ -71,7 +71,7 @@ class AIUserServices:
     memories: Optional[VectorStore]
     compaction_store: Optional[CompactionStore]
     compaction_manager: Optional[CompactionManager]
-    tool_call_cache: Cache
+    context_cache: Cache
     reply_channel_states: Dict[int, "ChannelReplyState"] = field(default_factory=dict)
     override_prompt_start_time: Dict[int, datetime] = field(default_factory=dict)
     openai_client: Optional[AsyncOpenAI] = None
@@ -97,7 +97,7 @@ class AIUserServices:
             memories=VectorStore(data_path),
             compaction_store=CompactionStore(data_path),
             compaction_manager=None,
-            tool_call_cache=Cache(limit=100),
+            context_cache=Cache(limit=200),
             cog=cog,
         )
         services.compaction_manager = CompactionManager(services)

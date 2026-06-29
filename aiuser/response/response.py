@@ -53,7 +53,7 @@ async def create_response(
 
         # Cache tool call entries so future context rebuilding can re-inject them
         if sent_message and pipeline.tool_call_entries:
-            cache_key = (ctx.channel.id, sent_message.id)
-            services.tool_call_cache[cache_key] = pipeline.tool_call_entries
+            cache_key = ("tool_calls", ctx.channel.id, sent_message.id)
+            services.context_cache[cache_key] = pipeline.tool_call_entries
 
         return sent_message is not None

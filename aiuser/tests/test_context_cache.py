@@ -1,4 +1,4 @@
-# ./.venv/bin/python -m pytest aiuser/tests/test_tool_call_cache.py -q -s
+# ./.venv/bin/python -m pytest aiuser/tests/test_context_cache.py -q -s
 
 import pytest
 from discord.ext.test import backend
@@ -41,7 +41,9 @@ async def test_cached_tool_calls(
         MessageEntry(role="tool", content="Rainy, 15°C", tool_call_id=tool_call.id),
     ]
 
-    mock_services.tool_call_cache[(test_channel.id, bot_msg.id)] = cached_entries
+    mock_services.context_cache[
+        ("tool_calls", test_channel.id, bot_msg.id)
+    ] = cached_entries
 
     new_user_msg = backend.make_message(
         "Thanks! What about Tokyo?", test_member, test_channel
@@ -169,9 +171,9 @@ async def test_cached_tool_calls(
     sent_msg = get_message()
     assert "Tokyo" in sent_msg.content
 
-    cache_key = (test_channel.id, sent_msg.id)
-    assert cache_key in mock_services.tool_call_cache
-    cached_new = mock_services.tool_call_cache[cache_key]
+    cache_key = ("tool_calls", test_channel.id, sent_msg.id)
+    assert cache_key in mock_services.context_cache
+    cached_new = mock_services.context_cache[cache_key]
 
     assert any(
         m.role == "assistant"

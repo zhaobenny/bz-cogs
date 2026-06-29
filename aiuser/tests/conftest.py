@@ -156,7 +156,7 @@ async def mock_services(bot, redbot_config, test_guild):
         memories=None,  # skip memory retriever
         compaction_store=None,
         compaction_manager=None,
-        tool_call_cache=Cache(limit=100),
+        context_cache=Cache(limit=200),
         cog=MagicMock(),
     )
 
