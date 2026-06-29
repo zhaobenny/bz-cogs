@@ -3,6 +3,10 @@ from redbot.core import commands
 
 from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
 from aiuser.functions import names
+from aiuser.functions.voice.providers.factory import (
+    DEFAULT_MODELS,
+    DEFAULT_VOICES,
+)
 from aiuser.config.model_info import get_model_info
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
 from aiuser.settings.functions.memory import MemoryFunctionSettings
@@ -140,8 +144,16 @@ class FunctionCallingSettings(
         voice_tools = groups["Voice Request"]
         voice_enabled = any(t in enabled_tools for t in voice_tools)
         voice_provider = await guild_conf.function_calling_voice_provider()
-        voice_model = await guild_conf.function_calling_voice_model() or "Not set"
-        voice_name = await guild_conf.function_calling_voice() or "Not set"
+        voice_provider_key = voice_provider.strip().lower()
+        default_voice_model = DEFAULT_MODELS.get(voice_provider_key)
+        voice_model = (
+            await guild_conf.function_calling_voice_model()
+            or default_voice_model
+        )
+        default_voice = DEFAULT_VOICES.get(voice_provider_key)
+        voice_name = (
+            await guild_conf.function_calling_voice() or default_voice
+        )
 
         voice_embed = discord.Embed(
             title="Voice Request Function Settings", color=colour

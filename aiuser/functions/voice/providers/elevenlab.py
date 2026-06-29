@@ -2,10 +2,15 @@ import httpx
 from redbot.core.bot import Red
 
 from aiuser.functions.context import ToolContext
-from aiuser.functions.voice.constants import TTS_PROVIDER_TIMEOUT
+from aiuser.functions.voice.constants import (
+    DEFAULT_ELEVENLAB_MODEL,
+    DEFAULT_ELEVENLAB_VOICE,
+    TTS_PROVIDER_TIMEOUT,
+)
 
 ELEVENLAB_API_V1_URL = "https://api.elevenlabs.io/v1/"
-DEFAULT_MODEL = "eleven_multilingual_v2"
+DEFAULT_MODEL = DEFAULT_ELEVENLAB_MODEL
+DEFAULT_VOICE = DEFAULT_ELEVENLAB_VOICE
 DEFAULT_OUTPUT_FORMAT = "mp3_44100_128"
 
 
@@ -17,10 +22,8 @@ async def generate(text: str, request: ToolContext) -> bytes:
         raise ValueError("ElevenLab API key is not configured")
 
     guild_conf = request.config.guild(request.ctx.guild)
-    voice = await guild_conf.function_calling_voice()
+    voice = await guild_conf.function_calling_voice() or DEFAULT_VOICE
     model = await guild_conf.function_calling_voice_model() or DEFAULT_MODEL
-    if not voice:
-        raise ValueError("ElevenLab voice is not configured")
 
     payload = {
         "text": text,

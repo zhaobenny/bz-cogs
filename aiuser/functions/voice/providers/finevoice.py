@@ -4,10 +4,14 @@ import httpx
 from redbot.core.bot import Red
 
 from aiuser.functions.context import ToolContext
-from aiuser.functions.voice.constants import TTS_PROVIDER_TIMEOUT
+from aiuser.functions.voice.constants import (
+    DEFAULT_FINEVOICE_VOICE,
+    TTS_PROVIDER_TIMEOUT,
+)
 
 FINEVOICE_API_V1_URL = "https://apis.finevoice.ai/v1/"
 TTS_POLL_INTERVAL = 5
+DEFAULT_VOICE = DEFAULT_FINEVOICE_VOICE
 
 
 async def generate(text: str, request: ToolContext) -> bytes:
@@ -18,9 +22,7 @@ async def generate(text: str, request: ToolContext) -> bytes:
         raise ValueError("FineVoice API key is not configured")
 
     guild_conf = request.config.guild(request.ctx.guild)
-    voice = await guild_conf.function_calling_voice()
-    if not voice:
-        raise ValueError("FineVoice voice is not configured")
+    voice = await guild_conf.function_calling_voice() or DEFAULT_VOICE
 
     payload = {
         "voice": voice,

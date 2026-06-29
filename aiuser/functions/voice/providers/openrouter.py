@@ -7,12 +7,18 @@ from redbot.core.bot import Red
 
 from aiuser.config.constants import OPENROUTER_API_V1_URL
 from aiuser.functions.context import ToolContext
-from aiuser.functions.voice.constants import TTS_PROVIDER_TIMEOUT
+from aiuser.functions.voice.constants import (
+    DEFAULT_OPENROUTER_TTS_MODEL,
+    DEFAULT_OPENROUTER_TTS_VOICE,
+    TTS_PROVIDER_TIMEOUT,
+)
 
 INLINE_TAG_MODELS = {
     "google/gemini-3.1-flash-tts-preview",
     "x-ai/grok-voice-tts-1.0",
 }
+DEFAULT_MODEL = DEFAULT_OPENROUTER_TTS_MODEL
+DEFAULT_VOICE = DEFAULT_OPENROUTER_TTS_VOICE
 
 INLINE_TAG_RE = re.compile(r"\s*\[[A-Za-z][A-Za-z0-9_ :,.'-]{0,60}\]\s*")
 
@@ -40,12 +46,8 @@ async def generate(text: str, request: ToolContext) -> bytes:
         raise ValueError("OpenRouter API key is not configured")
 
     guild_conf = request.config.guild(request.ctx.guild)
-    model = await guild_conf.function_calling_voice_model()
-    voice = await guild_conf.function_calling_voice()
-    if not model:
-        raise ValueError("OpenRouter voice model is not configured")
-    if not voice:
-        raise ValueError("OpenRouter voice is not configured")
+    model = await guild_conf.function_calling_voice_model() or DEFAULT_MODEL
+    voice = await guild_conf.function_calling_voice() or DEFAULT_VOICE
 
     if model not in INLINE_TAG_MODELS:
         text = _strip_inline_tags(text)

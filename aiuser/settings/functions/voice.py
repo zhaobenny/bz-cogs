@@ -5,9 +5,8 @@ from redbot.core import commands
 
 from aiuser.functions import names
 from aiuser.functions.voice.providers.factory import (
-    ELEVENLAB,
-    FINEVOICE,
-    OPENROUTER,
+    DEFAULT_MODELS,
+    DEFAULT_VOICES,
     PROVIDERS,
 )
 from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
@@ -26,45 +25,31 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
             f"`{ctx.clean_prefix}set api {provider} api_key,APIKEY`."
         )
 
-    async def _voice_setup_warnings(
-        self, ctx: commands.Context, provider: str
-    ) -> list[str]:
-        guild_conf = self.config.guild(ctx.guild)
-        warnings: list[str] = []
+    async def _save_current_voice_provider_settings(self, guild_conf, provider: str):
+        history = await guild_conf.function_calling_voice_provider_history()
+        history[provider] = {
+            "model": await guild_conf.function_calling_voice_model(),
+            "voice": await guild_conf.function_calling_voice(),
+        }
+        await guild_conf.function_calling_voice_provider_history.set(history)
 
-        if provider == ELEVENLAB:
-            if not (await guild_conf.function_calling_voice()):
-                warnings.append(
-                    f"- Voice ID: `{ctx.clean_prefix}aiuser functions voice id <voice>`"
-                )
+    async def _restore_voice_provider_settings(
+        self, guild_conf, provider: str
+    ) -> tuple[Optional[str], Optional[str], bool]:
+        history = await guild_conf.function_calling_voice_provider_history()
+        saved_settings = history.get(provider)
+        restored = saved_settings is not None
 
-        elif provider == FINEVOICE:
-            if not (await guild_conf.function_calling_voice()):
-                warnings.append(
-                    f"- Voice ID: `{ctx.clean_prefix}aiuser functions voice id <voice>`"
-                )
+        if saved_settings is None:
+            model = DEFAULT_MODELS.get(provider)
+            voice = DEFAULT_VOICES.get(provider)
+        else:
+            model = saved_settings.get("model") or DEFAULT_MODELS.get(provider)
+            voice = saved_settings.get("voice") or DEFAULT_VOICES.get(provider)
 
-        elif provider == OPENROUTER:
-            if not (await guild_conf.function_calling_voice_model()):
-                warnings.append(
-                    f"- Model: `{ctx.clean_prefix}aiuser functions voice model <model>`"
-                )
-            if not (await guild_conf.function_calling_voice()):
-                warnings.append(
-                    f"- Voice ID: `{ctx.clean_prefix}aiuser functions voice id <voice>`"
-                )
-
-        return warnings
-
-    def _format_voice_setup_warnings(self, warnings: list[str]) -> Optional[str]:
-        if not warnings:
-            return None
-
-        return (
-            "**⚠️ Setup Incomplete**\n\n"
-            "Configure the following for voice generation to work:\n"
-            + "\n".join(warnings)
-        )
+        await guild_conf.function_calling_voice_model.set(model)
+        await guild_conf.function_calling_voice.set(voice)
+        return model, voice, restored
 
     @functions.group(name="voice")
     async def functions_voice(self, ctx: commands.Context):
@@ -77,7 +62,7 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
         guild_conf = self.config.guild(ctx.guild)
 
         provider = await guild_conf.function_calling_voice_provider()
-        provider = (provider or OPENROUTER).strip().lower()
+        provider = provider.strip().lower()
 
         enabled_tools: list = await guild_conf.function_calling_functions() or []
         enabling = names.VOICE_REQUEST not in enabled_tools
@@ -100,12 +85,6 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
             color=await ctx.embed_color(),
         )
 
-        if enabling:
-            warnings = await self._voice_setup_warnings(ctx, provider)
-            warning_text = self._format_voice_setup_warnings(warnings)
-            if warning_text:
-                embed.description += f"\n\n{warning_text}"
-
         await ctx.send(embed=embed)
 
     @functions_voice.command(name="provider")
@@ -125,18 +104,36 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
             return await ctx.send(key_error)
 
         guild_conf = self.config.guild(ctx.guild)
-        await guild_conf.function_calling_voice_provider.set(provider)
+        previous_provider = await guild_conf.function_calling_voice_provider()
+        previous_provider = previous_provider.strip().lower()
+
+        if previous_provider != provider:
+            await self._save_current_voice_provider_settings(
+                guild_conf, previous_provider
+            )
+            await guild_conf.function_calling_voice_provider.set(provider)
+            model, voice, restored = await self._restore_voice_provider_settings(
+                guild_conf, provider
+            )
+        else:
+            await guild_conf.function_calling_voice_provider.set(provider)
+            model = await guild_conf.function_calling_voice_model()
+            voice = await guild_conf.function_calling_voice()
+            restored = False
 
         embed = discord.Embed(
             title="Voice provider now set to:",
             description=f"`{provider}`",
             color=await ctx.embed_color(),
         )
-
-        warnings = await self._voice_setup_warnings(ctx, provider)
-        warning_text = self._format_voice_setup_warnings(warnings)
-        if warning_text:
-            embed.description += f"\n\n{warning_text}"
+        if restored:
+            embed.add_field(
+                name="🔄 Restored",
+                value="Restored previously set model and voice for this provider.",
+                inline=False,
+            )
+        embed.add_field(name="Model", value=f"`{model}`", inline=True)
+        embed.add_field(name="Voice", value=f"`{voice}`", inline=True)
 
         await ctx.send(embed=embed)
 
@@ -146,7 +143,8 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
     ):
         """Set the voice model name that may be used by a supported provider."""
         model = model.strip() if model else None
-        await self.config.guild(ctx.guild).function_calling_voice_model.set(model)
+        guild_conf = self.config.guild(ctx.guild)
+        await guild_conf.function_calling_voice_model.set(model)
 
         embed = discord.Embed(
             title="Voice model now set to:",
@@ -161,7 +159,8 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
     ):
         """Set the voice name / ID that may be used by a supported provider."""
         voice = voice.strip() if voice else None
-        await self.config.guild(ctx.guild).function_calling_voice.set(voice)
+        guild_conf = self.config.guild(ctx.guild)
+        await guild_conf.function_calling_voice.set(voice)
 
         embed = discord.Embed(
             title="Voice name now set to:",
