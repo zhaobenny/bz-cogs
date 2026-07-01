@@ -82,7 +82,7 @@ class CompactionManager:
                 guild_id, channel_id
             )
 
-            converter = MessageConverter(self.config, self.bot, ctx)
+            converter = MessageConverter(self.services, ctx)
             new_msgs_text: List[str] = []
 
             # Format the messages block chronologically (oldest first)

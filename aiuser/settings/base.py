@@ -7,12 +7,14 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.constants import CHANNEL_MENTION_OR_ID_PATTERN
+from aiuser.config.defaults import DEFAULT_STT_MODEL
 from aiuser.config.model_info import get_model_info
 from aiuser.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
     get_openai_compat_kind,
 )
 from aiuser.llm.registry import list_llm_models
+from aiuser.settings.audio_scan import AudioScanSettings
 from aiuser.settings.functions.base import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
 from aiuser.settings.image_scan import ImageScanSettings
@@ -34,6 +36,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 class Settings(
     PromptSettings,
     ImageScanSettings,
+    AudioScanSettings,
     HistorySettings,
     ResponseSettings,
     TriggerSettings,
@@ -163,19 +166,24 @@ class Settings(
             ),
         )
 
-        main_embed.add_field(
-            name="",
-            inline=True,
-            value="",
+        media_embed = discord.Embed(
+            title="Media Settings", color=await ctx.embed_color()
         )
-
-        main_embed.add_field(
+        media_embed.add_field(
             name="Scan Images", inline=True, value=f"`{config['scan_images']}`"
         )
-        main_embed.add_field(
+        media_embed.add_field(
             name="Scan Image Max Size",
             inline=True,
             value=f"`{config['max_image_size'] / 1024 / 1024:.2f}` MB",
+        )
+        media_embed.add_field(
+            name="Transcribe Audio", inline=True, value=f"`{config['scan_audio']}`"
+        )
+        media_embed.add_field(
+            name="Speech to Text Model",
+            inline=True,
+            value=f"`{config['scan_audio_model'] or DEFAULT_STT_MODEL}`",
         )
 
         whitelisted_trigger = bool(
@@ -216,6 +224,7 @@ class Settings(
             value=f"`{config['public_forget']}`",
         )
         embeds.append(main_embed)
+        embeds.append(media_embed)
 
         parameters = config["parameters"]
         if parameters is not None:

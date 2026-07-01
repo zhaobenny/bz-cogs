@@ -40,6 +40,10 @@ DEFAULT_MESSAGE_BURST_IDLE_SECONDS = 2
 DEFAULT_MESSAGE_BURST_MAX_SECONDS = 8
 DEFAULT_MIN_MESSAGE_LENGTH = 2
 DEFAULT_IMAGE_UPLOAD_LIMIT = 10 * (1024 * 1024)  # 10 MB
+DEFAULT_AUDIO_UPLOAD_LIMIT = 25 * (1024 * 1024)  # 25 MB
+DEFAULT_AUDIO_DURATION_LIMIT = 60
+DEFAULT_STT_PROVIDER = "openrouter"
+DEFAULT_STT_MODEL = "openai/whisper-large-v3"
 DEFAULT_LLM_MODEL = "gpt-4.1-nano"
 DEFAULT_TOOL_CALL_ROUNDS = 10
 
@@ -65,6 +69,10 @@ DEFAULT_GUILD = {
     "scan_images": False,
     "scan_images_model": None,
     "max_image_size": DEFAULT_IMAGE_UPLOAD_LIMIT,
+    "scan_audio": False,
+    "scan_audio_provider": DEFAULT_STT_PROVIDER,
+    "scan_audio_model": DEFAULT_STT_MODEL,
+    "max_audio_duration": DEFAULT_AUDIO_DURATION_LIMIT,
     "model": DEFAULT_LLM_MODEL,
     "custom_text_prompt": None,
     "channels_whitelist": [],

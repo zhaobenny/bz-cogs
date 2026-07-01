@@ -53,7 +53,7 @@ class ConversationAssembler:
         self.guild: discord.Guild = ctx.guild
         self.init_message: discord.Message = ctx.message
         self.history_anchor: discord.Message = history_anchor or ctx.message
-        self.converter = MessageConverter(self.config, self.bot, ctx)
+        self.converter = MessageConverter(services, ctx)
         self._optin_by_default = False
 
     async def build(

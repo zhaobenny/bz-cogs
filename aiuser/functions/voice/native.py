@@ -3,7 +3,7 @@ import base64
 import re
 import shutil
 import struct
-from typing import Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import httpx
 from discord.http import Route
@@ -17,9 +17,11 @@ WAVEFORM_SAMPLE_COUNT = 64
 WAVEFORM_SAMPLE_RATE = 8000
 
 
-async def send_voice_message(ctx: commands.Context, audio: bytes) -> bool:
+async def send_voice_message(
+    ctx: commands.Context, audio: bytes
+) -> Optional[Dict[str, Any]]:
     if not ctx.guild or not ctx.channel or not shutil.which("ffmpeg"):
-        return False
+        return None
 
     permissions = ctx.channel.permissions_for(ctx.guild.me)
     if not (
@@ -27,7 +29,7 @@ async def send_voice_message(ctx: commands.Context, audio: bytes) -> bool:
         and permissions.attach_files
         and getattr(permissions, "send_voice_messages", False)
     ):
-        return False
+        return None
 
     ogg, duration = await _to_ogg_opus(audio)
     bot: Red = ctx.bot
@@ -58,7 +60,7 @@ async def send_voice_message(ctx: commands.Context, audio: bytes) -> bool:
         )
         uploaded.raise_for_status()
 
-    await bot.http.request(
+    return await bot.http.request(
         Route(
             "POST",
             "/channels/{channel_id}/messages",
@@ -77,7 +79,6 @@ async def send_voice_message(ctx: commands.Context, audio: bytes) -> bool:
             ],
         },
     )
-    return True
 
 
 async def _to_ogg_opus(audio: bytes) -> Tuple[bytes, float]:

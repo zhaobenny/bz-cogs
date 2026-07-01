@@ -8,6 +8,12 @@ from redbot.core import Config
 from redbot.core import commands
 from redbot.core.bot import Red
 
+from aiuser.config.defaults import DEFAULT_AUDIO_UPLOAD_LIMIT
+from aiuser.context.converter.audio import (
+    create_audio_transcript,
+    format_audio,
+    is_audio_attachment,
+)
 from aiuser.context.converter.embeds import (
     format_embed_content,
     format_embed_message_content,
@@ -21,14 +27,17 @@ from aiuser.context.converter.images import format_image
 from aiuser.context.entry import MessageEntry
 from aiuser.utils.utilities import contains_youtube_link, is_embed_valid
 
+from aiuser.core.services import AIUserServices
+
 logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 
 class MessageConverter:
-    def __init__(self, config: Config, bot: Red, ctx: commands.Context):
-        self.config = config
-        self.bot = bot
-        self.bot_id: int = bot.user.id
+    def __init__(self, services: "AIUserServices", ctx: commands.Context):
+        self.services = services
+        self.config: Config = services.config
+        self.bot: Red = services.bot
+        self.bot_id: int = self.bot.user.id
         self.init_msg = ctx.message
         self.ctx = ctx
 
@@ -54,35 +63,45 @@ class MessageConverter:
     async def handle_attachment(
         self, message: Message, res: List[MessageEntry], role: str
     ):
-        if not message.attachments[0].content_type.startswith("image/"):
-            content = f'User "{message.author.display_name}" sent: [Attachment: "{message.attachments[0].filename}"]'
-            await self.add_entry(content, res, role)
-        elif (
-            message.attachments[0].size
-            > await self.config.guild(message.guild).max_image_size()
-        ):
-            content = format_image_placeholder(message)
-            await self.add_entry(content, res, role)
-        # scans images only if the msg is the trigger, or if the msg was replied to by the trigger
-        elif (
-            (
-                (self.init_msg.id == message.id)
-                or (
-                    self.init_msg.reference
-                    and self.init_msg.reference.message_id == message.id
-                )
+        attachment = message.attachments[0]
+        content_type = attachment.content_type or ""
+        is_trigger_attachment = (
+            (self.init_msg.id == message.id)
+            or (
+                self.init_msg.reference
+                and self.init_msg.reference.message_id == message.id
             )
-            and not self.ctx.interaction
+        )
+        can_scan_attachment = is_trigger_attachment and not self.ctx.interaction
+
+        if is_audio_attachment(message):
+            should_scan_audio = (
+                attachment.size <= DEFAULT_AUDIO_UPLOAD_LIMIT
+                and can_scan_attachment
+                and message.author.id != self.bot_id
+                and await self.config.guild(message.guild).scan_audio()
+            )
+            transcript = (
+                await create_audio_transcript(self.services, message)
+                if should_scan_audio
+                else None
+            )
+            content = transcript or await format_audio(self.services, message)
+        elif not content_type.startswith("image/"):
+            content = f'User "{message.author.display_name}" sent: [Attachment: "{message.attachments[0].filename}"]'
+        elif attachment.size > await self.config.guild(message.guild).max_image_size():
+            content = format_image_placeholder(message)
+        elif (
+            can_scan_attachment
             and await self.config.guild(message.guild).scan_images()
         ):
             content = await format_image(self.config, message)
             await self.add_entry(content, res, role)
-            if isinstance(content, list):
-                return
+            return
         else:
             content = format_image_placeholder(message)
-            await self.add_entry(content, res, role)
 
+        await self.add_entry(content, res, role)
         content = format_text_content(message)
         await self.add_entry(content, res, role)
 
