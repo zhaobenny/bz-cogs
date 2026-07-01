@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 
 import discord
 
+from aiuser.context.converter.audio import cache_audio_transcript
 from aiuser.functions import names
 from aiuser.functions.context import ToolContext
 from aiuser.functions.tool_call import ToolCall
@@ -95,7 +96,13 @@ class VoiceRequestToolCall(ToolCall):
             return "Couldn't generate voice audio."
 
         try:
-            if await send_voice_message(self.ctx, audio):
+            sent = await send_voice_message(self.ctx, audio)
+            if sent:
+                att = next(iter(sent.get("attachments") or []), None)
+                if att:
+                    cache_audio_transcript(
+                        tool_context.services, int(sent["id"]), voice_text
+                    )
                 return "The requested voice message was generated and sent."
         except Exception:
             logger.debug(
@@ -105,4 +112,5 @@ class VoiceRequestToolCall(ToolCall):
 
         filename = f"{self.ctx.me.display_name} speaking.{_audio_file_extension(audio)}"
         tool_context.attach_file(discord.File(io.BytesIO(audio), filename=filename))
+        tool_context.audio_transcripts_to_cache.append(voice_text)
         return "The requested voice audio was generated and sent."

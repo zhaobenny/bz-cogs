@@ -147,13 +147,10 @@ class FunctionCallingSettings(
         voice_provider_key = voice_provider.strip().lower()
         default_voice_model = DEFAULT_MODELS.get(voice_provider_key)
         voice_model = (
-            await guild_conf.function_calling_voice_model()
-            or default_voice_model
+            await guild_conf.function_calling_voice_model() or default_voice_model
         )
         default_voice = DEFAULT_VOICES.get(voice_provider_key)
-        voice_name = (
-            await guild_conf.function_calling_voice() or default_voice
-        )
+        voice_name = await guild_conf.function_calling_voice() or default_voice
 
         voice_embed = discord.Embed(
             title="Voice Request Function Settings", color=colour

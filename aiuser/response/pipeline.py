@@ -51,6 +51,7 @@ class LLMPipeline:
 
         self.provider: Optional[LLMProvider] = None
         self.tool_context = ToolContext(
+            services=services,
             ctx=ctx,
             config=services.config,
             bot=services.bot,

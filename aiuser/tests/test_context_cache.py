@@ -41,9 +41,9 @@ async def test_cached_tool_calls(
         MessageEntry(role="tool", content="Rainy, 15°C", tool_call_id=tool_call.id),
     ]
 
-    mock_services.context_cache[
-        ("tool_calls", test_channel.id, bot_msg.id)
-    ] = cached_entries
+    mock_services.context_cache[("tool_calls", test_channel.id, bot_msg.id)] = (
+        cached_entries
+    )
 
     new_user_msg = backend.make_message(
         "Thanks! What about Tokyo?", test_member, test_channel

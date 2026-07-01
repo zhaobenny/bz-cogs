@@ -14,7 +14,6 @@ from aiuser.config.defaults import (
     DEFAULT_STT_MODEL,
     DEFAULT_STT_PROVIDER,
 )
-from aiuser.functions.context import AUDIO_TRANSCRIPT_CACHE_NAMESPACE
 from aiuser.speech.providers.factory import PROVIDERS
 
 if TYPE_CHECKING:
@@ -23,6 +22,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 SUPPORTED_AUDIO_FORMATS = {"wav", "mp3", "flac", "m4a", "ogg", "webm", "aac", "mp4"}
+AUDIO_TRANSCRIPT_CACHE_NAMESPACE = "audio_transcript"
 CONTENT_TYPE_FORMATS = {
     "audio/wav": "wav",
     "audio/x-wav": "wav",
@@ -35,6 +35,14 @@ CONTENT_TYPE_FORMATS = {
     "audio/webm": "webm",
     "video/mp4": "mp4",
 }
+
+
+def cache_audio_transcript(
+    services: "AIUserServices", message_id: int, transcript: str
+) -> None:
+    services.context_cache[(AUDIO_TRANSCRIPT_CACHE_NAMESPACE, message_id)] = (
+        f'[Voice message: "{transcript}"]'
+    )
 
 
 def is_audio_attachment(message: Message) -> bool:

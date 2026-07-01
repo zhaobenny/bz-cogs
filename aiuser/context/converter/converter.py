@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from discord import Message
 from redbot.core import Config
@@ -27,7 +27,8 @@ from aiuser.context.converter.images import format_image
 from aiuser.context.entry import MessageEntry
 from aiuser.utils.utilities import contains_youtube_link, is_embed_valid
 
-from aiuser.core.services import AIUserServices
+if TYPE_CHECKING:
+    from aiuser.core.services import AIUserServices
 
 logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
@@ -65,12 +66,8 @@ class MessageConverter:
     ):
         attachment = message.attachments[0]
         content_type = attachment.content_type or ""
-        is_trigger_attachment = (
-            (self.init_msg.id == message.id)
-            or (
-                self.init_msg.reference
-                and self.init_msg.reference.message_id == message.id
-            )
+        is_trigger_attachment = (self.init_msg.id == message.id) or (
+            self.init_msg.reference and self.init_msg.reference.message_id == message.id
         )
         can_scan_attachment = is_trigger_attachment and not self.ctx.interaction
 
@@ -92,8 +89,7 @@ class MessageConverter:
         elif attachment.size > await self.config.guild(message.guild).max_image_size():
             content = format_image_placeholder(message)
         elif (
-            can_scan_attachment
-            and await self.config.guild(message.guild).scan_images()
+            can_scan_attachment and await self.config.guild(message.guild).scan_images()
         ):
             content = await format_image(self.config, message)
             await self.add_entry(content, res, role)
