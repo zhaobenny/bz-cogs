@@ -1,5 +1,4 @@
 from io import BytesIO
-import re
 import wave
 
 import httpx
@@ -10,17 +9,13 @@ from aiuser.functions.context import ToolContext
 from aiuser.functions.voice.constants import (
     DEFAULT_OPENROUTER_TTS_MODEL,
     DEFAULT_OPENROUTER_TTS_VOICE,
+    OPENROUTER_INLINE_TAG_MODELS,
     TTS_PROVIDER_TIMEOUT,
+    strip_inline_tags,
 )
 
-INLINE_TAG_MODELS = {
-    "google/gemini-3.1-flash-tts-preview",
-    "x-ai/grok-voice-tts-1.0",
-}
 DEFAULT_MODEL = DEFAULT_OPENROUTER_TTS_MODEL
 DEFAULT_VOICE = DEFAULT_OPENROUTER_TTS_VOICE
-
-INLINE_TAG_RE = re.compile(r"\s*\[[A-Za-z][A-Za-z0-9_ :,.'-]{0,60}\]\s*")
 
 
 def _pcm_to_wav(audio: bytes) -> bytes:
@@ -31,11 +26,6 @@ def _pcm_to_wav(audio: bytes) -> bytes:
         wf.setframerate(24000)
         wf.writeframes(audio)
     return wav.getvalue()
-
-
-def _strip_inline_tags(text: str) -> str:
-    cleaned = INLINE_TAG_RE.sub(" ", text)
-    return " ".join(cleaned.split()).strip()
 
 
 async def generate(text: str, request: ToolContext) -> bytes:
@@ -49,8 +39,8 @@ async def generate(text: str, request: ToolContext) -> bytes:
     model = await guild_conf.function_calling_voice_model() or DEFAULT_MODEL
     voice = await guild_conf.function_calling_voice() or DEFAULT_VOICE
 
-    if model not in INLINE_TAG_MODELS:
-        text = _strip_inline_tags(text)
+    if model not in OPENROUTER_INLINE_TAG_MODELS:
+        text = strip_inline_tags(text)
         if not text:
             raise ValueError("Voice text only contained unsupported inline tags")
 

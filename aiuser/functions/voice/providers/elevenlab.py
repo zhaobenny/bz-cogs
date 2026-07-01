@@ -5,7 +5,9 @@ from aiuser.functions.context import ToolContext
 from aiuser.functions.voice.constants import (
     DEFAULT_ELEVENLAB_MODEL,
     DEFAULT_ELEVENLAB_VOICE,
+    ELEVENLAB_INLINE_TAG_MODELS,
     TTS_PROVIDER_TIMEOUT,
+    strip_inline_tags,
 )
 
 ELEVENLAB_API_V1_URL = "https://api.elevenlabs.io/v1/"
@@ -24,6 +26,11 @@ async def generate(text: str, request: ToolContext) -> bytes:
     guild_conf = request.config.guild(request.ctx.guild)
     voice = await guild_conf.function_calling_voice() or DEFAULT_VOICE
     model = await guild_conf.function_calling_voice_model() or DEFAULT_MODEL
+
+    if model not in ELEVENLAB_INLINE_TAG_MODELS:
+        text = strip_inline_tags(text)
+        if not text:
+            raise ValueError("Voice text only contained unsupported inline tags")
 
     payload = {
         "text": text,
