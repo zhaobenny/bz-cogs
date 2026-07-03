@@ -8,6 +8,7 @@ from redbot.core.bot import Red
 from aiuser.config.constants import OPENROUTER_API_V1_URL
 
 TRANSCRIPTION_TIMEOUT = 30
+DEFAULT_MODEL = "openai/whisper-large-v3"
 
 
 async def transcribe(bot: Red, audio: bytes, audio_format: str, model: str) -> str:
@@ -16,19 +17,18 @@ async def transcribe(bot: Red, audio: bytes, audio_format: str, model: str) -> s
     if not api_key:
         raise ValueError("OpenRouter API key is not configured")
 
-    payload = {
-        "model": model,
-        "input_audio": {
-            "data": base64.b64encode(audio).decode("ascii"),
-            "format": audio_format,
-        },
-    }
     headers = {"Authorization": f"Bearer {api_key}"}
 
     async with httpx.AsyncClient(timeout=TRANSCRIPTION_TIMEOUT) as client:
         response = await client.post(
             f"{OPENROUTER_API_V1_URL}audio/transcriptions",
-            json=payload,
+            json={
+                "model": model or DEFAULT_MODEL,
+                "input_audio": {
+                    "data": base64.b64encode(audio).decode("ascii"),
+                    "format": audio_format,
+                },
+            },
             headers=headers,
         )
         response.raise_for_status()

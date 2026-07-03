@@ -42,8 +42,8 @@ DEFAULT_MIN_MESSAGE_LENGTH = 2
 DEFAULT_IMAGE_UPLOAD_LIMIT = 10 * (1024 * 1024)  # 10 MB
 DEFAULT_AUDIO_UPLOAD_LIMIT = 25 * (1024 * 1024)  # 25 MB
 DEFAULT_AUDIO_DURATION_LIMIT = 60
-DEFAULT_STT_PROVIDER = "openrouter"
-DEFAULT_STT_MODEL = "openai/whisper-large-v3"
+DEFAULT_STT_PROVIDER = "openai"
+DEFAULT_STT_MODEL = "gpt-4o-mini-transcribe"
 DEFAULT_LLM_MODEL = "gpt-4.1-nano"
 DEFAULT_TOOL_CALL_ROUNDS = 10
 
@@ -72,6 +72,7 @@ DEFAULT_GUILD = {
     "scan_audio": False,
     "scan_audio_provider": DEFAULT_STT_PROVIDER,
     "scan_audio_model": DEFAULT_STT_MODEL,
+    "scan_audio_provider_history": {},
     "max_audio_duration": DEFAULT_AUDIO_DURATION_LIMIT,
     "model": DEFAULT_LLM_MODEL,
     "custom_text_prompt": None,
@@ -93,7 +94,7 @@ DEFAULT_GUILD = {
     "function_calling_image_custom_endpoint": None,
     "function_calling_image_model": None,
     "function_calling_image_preprompt": None,
-    "function_calling_voice_provider": "openrouter",
+    "function_calling_voice_provider": "openai",
     "function_calling_voice_model": None,
     "function_calling_voice": None,
     "function_calling_voice_provider_history": {},

@@ -90,7 +90,7 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
     @functions_voice.command(name="provider")
     async def set_voice_provider(self, ctx: commands.Context, provider: str):
         """Set the voice provider.
-        Available providers: `elevenlab`, `openrouter`, `finevoice`
+        Available providers: `elevenlab`, `openai`, `openrouter`, `finevoice`
         """
         provider = provider.strip().lower()
 

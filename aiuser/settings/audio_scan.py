@@ -7,7 +7,7 @@ from redbot.core import checks, commands
 
 from aiuser.config.defaults import DEFAULT_STT_MODEL, DEFAULT_STT_PROVIDER
 from aiuser.settings._groups import aiuser
-from aiuser.speech.providers.factory import PROVIDERS
+from aiuser.speech.providers.factory import DEFAULT_MODELS, PROVIDERS
 from aiuser.types.abc import MixinMeta
 
 
@@ -74,11 +74,38 @@ class AudioScanSettings(MixinMeta):
         if key_error:
             return await ctx.send(key_error)
 
-        await self.config.guild(ctx.guild).scan_audio_provider.set(provider)
+        guild_conf = self.config.guild(ctx.guild)
+        previous_provider = await guild_conf.scan_audio_provider()
+        previous_provider = previous_provider.strip().lower()
+        model = await guild_conf.scan_audio_model()
+        restored = False
+
+        if previous_provider != provider:
+            history = await guild_conf.scan_audio_provider_history()
+            history[previous_provider] = model
+            saved_model = history.get(provider)
+            model = saved_model or DEFAULT_MODELS.get(provider) or DEFAULT_STT_MODEL
+            restored = saved_model is not None
+            await guild_conf.scan_audio_provider_history.set(history)
+            await guild_conf.scan_audio_model.set(model)
+
+        await guild_conf.scan_audio_provider.set(provider)
+
         embed = discord.Embed(
             title="Audio transcription provider now set to:",
             description=f"`{provider}`",
             color=await ctx.embed_color(),
+        )
+        if restored:
+            embed.add_field(
+                name="🔄 Restored",
+                value="Restored previously set model for this provider.",
+                inline=False,
+            )
+        embed.add_field(
+            name="Model",
+            value=f"`{model or DEFAULT_STT_MODEL}`",
+            inline=True,
         )
         await ctx.send(embed=embed)
 
