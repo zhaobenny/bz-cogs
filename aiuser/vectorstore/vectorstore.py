@@ -7,8 +7,8 @@ import numpy as np
 from rank_bm25 import BM25Okapi
 
 from aiuser.config.constants import EMBEDDING_CACHE_DIR_NAME, EMBEDDING_DB_NAME
-from aiuser.utils.vectorstore.embeddings import embed_text
-from aiuser.utils.vectorstore.schema import ensure_sqlite_db
+from aiuser.vectorstore.embeddings import embed_text
+from aiuser.vectorstore.schema import ensure_sqlite_db
 
 
 class VectorStore:

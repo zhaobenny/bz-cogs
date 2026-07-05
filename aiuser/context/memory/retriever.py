@@ -6,7 +6,7 @@ from redbot.core import commands
 from aiuser.config.defaults import DEFAULT_MEMORY_RETRIEVAL_PREFIX
 
 if TYPE_CHECKING:
-    from aiuser.utils.vectorstore import VectorStore
+    from aiuser.vectorstore import VectorStore
 
 logger = logging.getLogger("red.bz_cogs.aiuser.memory")
 

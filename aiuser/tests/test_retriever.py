@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from aiuser.context.memory.retriever import MemoryRetriever
-from aiuser.utils.vectorstore import VectorStore
+from aiuser.vectorstore import VectorStore
 
 
 @pytest.fixture

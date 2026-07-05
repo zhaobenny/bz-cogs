@@ -2,7 +2,7 @@ import pytest
 
 # ./.venv/bin/python -m pytest aiuser/tests/test_vectorstore.py -q -s
 
-from aiuser.utils.vectorstore import VectorStore
+from aiuser.vectorstore import VectorStore
 
 
 @pytest.fixture

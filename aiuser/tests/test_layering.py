@@ -17,6 +17,7 @@ LAYERS = {
     "consent": 2,
     "llm": 2,
     "speech": 2,  # STT/TTS provider clients, peers of llm
+    "vectorstore": 2,
     "functions": 3,
     "context": 4,
     "response": 5,
