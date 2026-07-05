@@ -4,7 +4,7 @@ from typing import Optional, Union
 import aiosqlite
 
 from aiuser.config.constants import COMPACTION_DB_NAME
-from aiuser.utils.compaction.schema import ensure_compaction_db
+from aiuser.context.compaction.schema import ensure_compaction_db
 
 
 class CompactionStore:

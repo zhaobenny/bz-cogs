@@ -14,9 +14,8 @@ from redbot.core.bot import Red
 
 from aiuser.config.resolver import ScopedConfigResolver
 from aiuser.consent import ConsentService
-from aiuser.context.compaction import CompactionManager
+from aiuser.context.compaction import CompactionManager, CompactionStore
 from aiuser.utils.cache import Cache
-from aiuser.utils.compaction.store import CompactionStore
 from aiuser.utils.vectorstore import VectorStore
 
 if TYPE_CHECKING:
