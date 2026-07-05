@@ -2,8 +2,6 @@
 
 A module may only import aiuser modules from its own layer or below.
 ``if TYPE_CHECKING:`` imports are exempt (annotations only).
-
-See aiuser/ARCHITECTURE.md for the rationale behind each layer.
 """
 
 import ast
@@ -18,6 +16,7 @@ LAYERS = {
     "utils": 1,
     "consent": 2,
     "llm": 2,
+    "speech": 2,  # STT/TTS provider clients, peers of llm
     "functions": 3,
     "context": 4,
     "response": 5,
