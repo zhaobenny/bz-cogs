@@ -11,12 +11,14 @@ if TYPE_CHECKING:
 
 async def generate(description: str, request: "ToolContext", endpoint: str) -> bytes:
     model = (
-        await request.config.guild(request.ctx.guild).function_calling_image_model()
+        await request.services.config.guild(
+            request.ctx.guild
+        ).function_calling_image_model()
         or "gpt-image-1"
     )
     client = await setup_openai_client(
-        request.bot,
-        request.config,
+        request.services.bot,
+        request.services.config,
         base_url=endpoint,
     )
     if client is None:

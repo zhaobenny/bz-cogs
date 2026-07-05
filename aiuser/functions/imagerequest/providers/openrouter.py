@@ -15,12 +15,14 @@ logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 async def generate(description: str, request: "ToolContext", _: str) -> bytes:
     model = (
-        await request.config.guild(request.ctx.guild).function_calling_image_model()
+        await request.services.config.guild(
+            request.ctx.guild
+        ).function_calling_image_model()
         or f"google/{GEMINI_IMAGE_MODEL}"
     )
     client = await setup_openai_client(
-        request.bot,
-        request.config,
+        request.services.bot,
+        request.services.config,
         base_url=OPENROUTER_API_V1_URL,
     )
     if client is None:

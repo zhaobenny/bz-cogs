@@ -14,7 +14,9 @@ async def generate(description: str, request: "ToolContext", endpoint: str) -> b
         raise ValueError("Automatic1111 provider requires an endpoint")
     endpoint = f"{endpoint.split('/sdapi/')[0].rstrip('/')}/sdapi/v1/txt2img"
 
-    model = await request.config.guild(request.ctx.guild).function_calling_image_model()
+    model = await request.services.config.guild(
+        request.ctx.guild
+    ).function_calling_image_model()
 
     payload = {"prompt": description}
     if model:

@@ -55,8 +55,4 @@ async def get_enabled_tools(config: Config, ctx: commands.Context) -> List[ToolC
         # reactions cannot be added to the invoking message of a slash command
         enabled = [name for name in enabled if name != names.ADD_REACTION]
 
-    return [
-        TOOLS_BY_NAME[name](config=config, ctx=ctx)
-        for name in enabled
-        if name in TOOLS_BY_NAME
-    ]
+    return [TOOLS_BY_NAME[name]() for name in enabled if name in TOOLS_BY_NAME]

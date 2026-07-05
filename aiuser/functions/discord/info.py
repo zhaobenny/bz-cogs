@@ -83,7 +83,7 @@ def format_server(guild: discord.Guild, me: discord.Member) -> str:
 
 async def format_author(tool_context) -> str:
     author = tool_context.ctx.author
-    app_info = await tool_context.bot.application_info()
+    app_info = await tool_context.services.bot.application_info()
     owner = app_info.owner
     lines = [
         "Discord author info:",

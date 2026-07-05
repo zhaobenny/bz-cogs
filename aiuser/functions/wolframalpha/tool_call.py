@@ -31,6 +31,8 @@ class WolframAlphaFunctionCall(ToolCall):
     ) -> Optional[str]:
         return await ask_wolfram_alpha(
             arguments["query"],
-            (await self.bot.get_shared_api_tokens("wolfram_alpha")).get("app_id"),
-            self.ctx,
+            (
+                await tool_context.services.bot.get_shared_api_tokens("wolfram_alpha")
+            ).get("app_id"),
+            tool_context.ctx,
         )

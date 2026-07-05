@@ -31,6 +31,8 @@ class SerperToolCall(ToolCall):
     ) -> Optional[str]:
         return await serper_search(
             arguments["query"],
-            (await self.bot.get_shared_api_tokens("serper")).get("api_key"),
-            self.ctx,
+            (await tool_context.services.bot.get_shared_api_tokens("serper")).get(
+                "api_key"
+            ),
+            tool_context.ctx,
         )

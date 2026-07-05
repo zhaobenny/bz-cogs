@@ -38,7 +38,7 @@ class CodeRunnerToolCall(ToolCall):
     async def _handle(
         self, tool_context: ToolContext, arguments: Dict[str, Any]
     ) -> Optional[str]:
-        tokens = await self.bot.get_shared_api_tokens("modal")
+        tokens = await tool_context.services.bot.get_shared_api_tokens("modal")
         token_id = tokens.get("token_id")
         token_secret = tokens.get("token_secret")
 

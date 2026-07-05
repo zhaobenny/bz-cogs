@@ -30,7 +30,7 @@ async def add_reaction(tool_context, emoji: str):
     if emoji in EMOJI_DATA:
         reaction = emoji
     else:
-        reaction = parse_custom_emoji(tool_context.bot, emoji)
+        reaction = parse_custom_emoji(tool_context.services.bot, emoji)
 
     if reaction is None:
         return (

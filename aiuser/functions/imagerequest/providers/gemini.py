@@ -12,17 +12,19 @@ if TYPE_CHECKING:
 
 
 async def generate(description: str, request: "ToolContext", endpoint: str) -> bytes:
-    tokens = await request.bot.get_shared_api_tokens("gemini")
+    tokens = await request.services.bot.get_shared_api_tokens("gemini")
     api_key = tokens.get("apikey") or tokens.get("api_key")
     if not api_key:
-        tokens = await request.bot.get_shared_api_tokens("openai")
+        tokens = await request.services.bot.get_shared_api_tokens("openai")
         api_key = tokens.get("apikey") or tokens.get("api_key")
     if not api_key:
         raise ValueError(
             "Gemini API key not configured. Set with: [p]set api gemini apikey,<KEY>"
         )
 
-    model = await request.config.guild(request.ctx.guild).function_calling_image_model()
+    model = await request.services.config.guild(
+        request.ctx.guild
+    ).function_calling_image_model()
     if not model and endpoint and "models/" in endpoint:
         seg = endpoint.split("models/", 1)[1].split(":", 1)[0].split("?", 1)[0]
         if seg:
