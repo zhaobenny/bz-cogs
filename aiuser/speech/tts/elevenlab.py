@@ -1,32 +1,32 @@
+from __future__ import annotations
+
+from typing import Optional
+
 import httpx
+from redbot.core import Config
 from redbot.core.bot import Red
 
-from aiuser.functions.context import ToolContext
-from aiuser.functions.voice.constants import (
-    DEFAULT_ELEVENLAB_MODEL,
-    DEFAULT_ELEVENLAB_VOICE,
+from aiuser.speech.constants import (
     ELEVENLAB_INLINE_TAG_MODELS,
     TTS_PROVIDER_TIMEOUT,
     strip_inline_tags,
 )
 
 ELEVENLAB_API_V1_URL = "https://api.elevenlabs.io/v1/"
-DEFAULT_MODEL = DEFAULT_ELEVENLAB_MODEL
-DEFAULT_VOICE = DEFAULT_ELEVENLAB_VOICE
+DEFAULT_MODEL = "eleven_multilingual_v2"
+DEFAULT_VOICE = "21m00Tcm4TlvDq8ikWAM"
 DEFAULT_OUTPUT_FORMAT = "mp3_44100_128"
 
 
-async def generate(text: str, request: ToolContext) -> bytes:
-    bot: Red = request.bot
+async def generate(
+    bot: Red, config: Config, text: str, model: Optional[str], voice: Optional[str]
+) -> bytes:
     tokens = await bot.get_shared_api_tokens("elevenlab")
     api_key = tokens.get("api_key")
     if not api_key:
         raise ValueError("ElevenLab API key is not configured")
 
-    guild_conf = request.config.guild(request.ctx.guild)
-    voice = await guild_conf.function_calling_voice() or DEFAULT_VOICE
-    model = await guild_conf.function_calling_voice_model() or DEFAULT_MODEL
-
+    model = model or DEFAULT_MODEL
     if model not in ELEVENLAB_INLINE_TAG_MODELS:
         text = strip_inline_tags(text)
         if not text:
@@ -44,7 +44,7 @@ async def generate(text: str, request: ToolContext) -> bytes:
 
     async with httpx.AsyncClient(timeout=TTS_PROVIDER_TIMEOUT) as client:
         response = await client.post(
-            f"{ELEVENLAB_API_V1_URL}text-to-speech/{voice}",
+            f"{ELEVENLAB_API_V1_URL}text-to-speech/{voice or DEFAULT_VOICE}",
             json=payload,
             headers=headers,
             params=params,

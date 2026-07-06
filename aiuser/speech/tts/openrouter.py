@@ -1,21 +1,22 @@
-from io import BytesIO
+from __future__ import annotations
+
 import wave
+from io import BytesIO
+from typing import Optional
 
 import httpx
+from redbot.core import Config
 from redbot.core.bot import Red
 
 from aiuser.config.constants import OPENROUTER_API_V1_URL
-from aiuser.functions.context import ToolContext
-from aiuser.functions.voice.constants import (
-    DEFAULT_OPENROUTER_TTS_MODEL,
-    DEFAULT_OPENROUTER_TTS_VOICE,
+from aiuser.speech.constants import (
     OPENROUTER_INLINE_TAG_MODELS,
     TTS_PROVIDER_TIMEOUT,
     strip_inline_tags,
 )
 
-DEFAULT_MODEL = DEFAULT_OPENROUTER_TTS_MODEL
-DEFAULT_VOICE = DEFAULT_OPENROUTER_TTS_VOICE
+DEFAULT_MODEL = "x-ai/grok-voice-tts-1.0"
+DEFAULT_VOICE = "Eve"
 
 
 def _pcm_to_wav(audio: bytes) -> bytes:
@@ -28,17 +29,15 @@ def _pcm_to_wav(audio: bytes) -> bytes:
     return wav.getvalue()
 
 
-async def generate(text: str, request: ToolContext) -> bytes:
-    bot: Red = request.bot
+async def generate(
+    bot: Red, config: Config, text: str, model: Optional[str], voice: Optional[str]
+) -> bytes:
     tokens = await bot.get_shared_api_tokens("openrouter")
     api_key = tokens.get("api_key")
     if not api_key:
         raise ValueError("OpenRouter API key is not configured")
 
-    guild_conf = request.config.guild(request.ctx.guild)
-    model = await guild_conf.function_calling_voice_model() or DEFAULT_MODEL
-    voice = await guild_conf.function_calling_voice() or DEFAULT_VOICE
-
+    model = model or DEFAULT_MODEL
     if model not in OPENROUTER_INLINE_TAG_MODELS:
         text = strip_inline_tags(text)
         if not text:
@@ -48,7 +47,7 @@ async def generate(text: str, request: ToolContext) -> bytes:
     payload = {
         "model": model,
         "input": text,
-        "voice": voice,
+        "voice": voice or DEFAULT_VOICE,
     }
 
     async with httpx.AsyncClient(timeout=TTS_PROVIDER_TIMEOUT) as client:

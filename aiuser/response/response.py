@@ -9,7 +9,7 @@ from redbot.core import commands
 
 from aiuser.context.assembler import ConversationAssembler
 from aiuser.context.conversation import Conversation
-from aiuser.context.converter.audio import cache_audio_transcript
+from aiuser.speech.transcripts import cache_audio_transcript
 from aiuser.response.pipeline import LLMPipeline
 from aiuser.response.sender import remove_patterns_from_response, send_response
 

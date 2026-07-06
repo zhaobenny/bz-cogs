@@ -3,10 +3,7 @@ from redbot.core import commands
 
 from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
 from aiuser.functions import names
-from aiuser.functions.voice.providers.factory import (
-    DEFAULT_MODELS,
-    DEFAULT_VOICES,
-)
+from aiuser.speech.tts import DEFAULT_MODELS, DEFAULT_VOICES
 from aiuser.config.model_info import get_model_info
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
 from aiuser.settings.functions.memory import MemoryFunctionSettings

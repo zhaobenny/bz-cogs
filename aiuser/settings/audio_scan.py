@@ -7,7 +7,7 @@ from redbot.core import checks, commands
 
 from aiuser.config.defaults import DEFAULT_STT_MODEL, DEFAULT_STT_PROVIDER
 from aiuser.settings._groups import aiuser
-from aiuser.speech.providers.factory import DEFAULT_MODELS, PROVIDERS
+from aiuser.speech.stt import DEFAULT_MODELS, PROVIDERS
 from aiuser.types.abc import MixinMeta
 
 

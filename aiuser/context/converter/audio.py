@@ -9,12 +9,8 @@ from typing import TYPE_CHECKING, Optional, Tuple
 
 from discord import Message
 
-from aiuser.config.defaults import (
-    DEFAULT_AUDIO_DURATION_LIMIT,
-    DEFAULT_STT_MODEL,
-    DEFAULT_STT_PROVIDER,
-)
-from aiuser.speech.providers.factory import PROVIDERS
+from aiuser.speech.stt import PROVIDERS, transcription_settings
+from aiuser.speech.transcripts import AUDIO_TRANSCRIPT_CACHE_NAMESPACE
 
 if TYPE_CHECKING:
     from aiuser.core.services import AIUserServices
@@ -22,7 +18,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 SUPPORTED_AUDIO_FORMATS = {"wav", "mp3", "flac", "m4a", "ogg", "webm", "aac", "mp4"}
-AUDIO_TRANSCRIPT_CACHE_NAMESPACE = "audio_transcript"
 CONTENT_TYPE_FORMATS = {
     "audio/wav": "wav",
     "audio/x-wav": "wav",
@@ -35,14 +30,6 @@ CONTENT_TYPE_FORMATS = {
     "audio/webm": "webm",
     "video/mp4": "mp4",
 }
-
-
-def cache_audio_transcript(
-    services: "AIUserServices", message_id: int, transcript: str
-) -> None:
-    services.context_cache[(AUDIO_TRANSCRIPT_CACHE_NAMESPACE, message_id)] = (
-        f'[Voice message: "{transcript}"]'
-    )
 
 
 def is_audio_attachment(message: Message) -> bool:
@@ -75,16 +62,14 @@ async def create_audio_transcript(
     services: "AIUserServices", message: Message
 ) -> Optional[str]:
     attachment = message.attachments[0]
-    provider, model, max_duration = await _audio_transcription_options(
-        services, message.guild
-    )
+    settings = await transcription_settings(services.config, message.guild)
     cache_key = (AUDIO_TRANSCRIPT_CACHE_NAMESPACE, message.id)
     cached = services.context_cache[cache_key]
     if cached:
         return cached
 
-    gen_fn = PROVIDERS.get(provider)
-    if gen_fn is None:
+    transcribe_fn = PROVIDERS.get(settings.provider)
+    if transcribe_fn is None:
         return None
 
     content_type = (attachment.content_type or "").split(";")[0].lower()
@@ -100,16 +85,17 @@ async def create_audio_transcript(
     await attachment.save(buffer)
     audio = buffer.getvalue()
 
-    prepared_audio, prepared_format = await _trim_audio(audio, max_duration)
+    prepared_audio, prepared_format = await _trim_audio(audio, settings.max_duration)
     if not prepared_audio:
         return None
 
     try:
-        transcript = await gen_fn(
+        transcript = await transcribe_fn(
             services.bot,
+            services.config,
             prepared_audio,
             prepared_format or original_format,
-            model,
+            settings.model,
         )
     except ValueError:
         return None
@@ -126,20 +112,6 @@ async def create_audio_transcript(
         )
     services.context_cache[cache_key] = content
     return content
-
-
-async def _audio_transcription_options(
-    services: "AIUserServices", guild
-) -> Tuple[str, str, int]:
-    guild_conf = services.config.guild(guild)
-    provider = (
-        (await guild_conf.scan_audio_provider() or DEFAULT_STT_PROVIDER).strip().lower()
-    )
-    model = await guild_conf.scan_audio_model() or DEFAULT_STT_MODEL
-    max_duration = int(
-        await guild_conf.max_audio_duration() or DEFAULT_AUDIO_DURATION_LIMIT
-    )
-    return provider, model, max_duration
 
 
 async def _trim_audio(audio: bytes, max_duration: int) -> Tuple[Optional[bytes], str]:
