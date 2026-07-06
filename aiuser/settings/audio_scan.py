@@ -13,7 +13,6 @@ from aiuser.types.abc import MixinMeta
 
 
 class AudioScanSettings(MixinMeta):
-
     @aiuser.group()
     @checks.is_owner()
     async def audioscan(self, _):

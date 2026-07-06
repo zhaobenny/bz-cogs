@@ -250,7 +250,9 @@ class FunctionCallingSettings(
     @functions.command(name="wolframalpha")
     async def toggle_wolfram_alpha_function(self, ctx: commands.Context):
         """Enable/disable the functionality for the LLM to ask Wolfram Alpha about math, exchange rates, or the weather."""
-        key_error = await provider_key_error(self.bot, ctx, "wolfram_alpha", key_name="app_id")
+        key_error = await provider_key_error(
+            self.bot, ctx, "wolfram_alpha", key_name="app_id"
+        )
         if key_error:
             return await ctx.send(key_error)
 

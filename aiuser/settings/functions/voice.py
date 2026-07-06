@@ -13,7 +13,6 @@ from aiuser.settings.functions.utilities import (
 
 
 class VoiceFunctionSettings(FunctionToggleHelperMixin):
-
     async def _save_current_voice_provider_settings(self, guild_conf, provider: str):
         history = await guild_conf.function_calling_voice_provider_history()
         history[provider] = {

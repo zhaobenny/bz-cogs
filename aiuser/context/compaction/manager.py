@@ -40,7 +40,9 @@ class CompactionManager:
         if not self.compaction_store or not messages:
             return
 
-        compaction_enabled = await self.services.config.guild(ctx.guild).compaction_enabled()
+        compaction_enabled = await self.services.config.guild(
+            ctx.guild
+        ).compaction_enabled()
         if not compaction_enabled:
             return
 
@@ -48,7 +50,9 @@ class CompactionManager:
         if channel_id in self._compaction_locks:
             return
 
-        messages_backread = await self.services.config.guild(ctx.guild).messages_backread()
+        messages_backread = await self.services.config.guild(
+            ctx.guild
+        ).messages_backread()
 
         # Filter out messages that have already been compacted
         last_compacted_id = await self.compaction_store.get_last_compacted_message_id(
