@@ -10,7 +10,10 @@ from typing import TYPE_CHECKING, Optional, Tuple
 from discord import Message
 
 from aiuser.speech.stt import PROVIDERS, transcription_settings
-from aiuser.speech.transcripts import AUDIO_TRANSCRIPT_CACHE_NAMESPACE
+from aiuser.speech.transcripts import (
+    AUDIO_TRANSCRIPT_CACHE_NAMESPACE,
+    cached_audio_transcript,
+)
 
 if TYPE_CHECKING:
     from aiuser.core.services import AIUserServices
@@ -54,7 +57,7 @@ def _format_audio_placeholder(message: Message) -> str:
 
 
 async def format_audio(services: "AIUserServices", message: Message) -> str:
-    transcript = services.context_cache[(AUDIO_TRANSCRIPT_CACHE_NAMESPACE, message.id)]
+    transcript = cached_audio_transcript(services, message.id)
     return transcript or _format_audio_placeholder(message)
 
 
@@ -64,7 +67,7 @@ async def create_audio_transcript(
     attachment = message.attachments[0]
     settings = await transcription_settings(services.config, message.guild)
     cache_key = (AUDIO_TRANSCRIPT_CACHE_NAMESPACE, message.id)
-    cached = services.context_cache[cache_key]
+    cached = cached_audio_transcript(services, message.id)
     if cached:
         return cached
 

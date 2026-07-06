@@ -4,9 +4,7 @@ import logging
 from typing import TYPE_CHECKING, List, Optional, Union
 
 from discord import Message
-from redbot.core import Config
 from redbot.core import commands
-from redbot.core.bot import Red
 
 from aiuser.config.defaults import DEFAULT_AUDIO_UPLOAD_LIMIT
 from aiuser.context.converter.audio import (
@@ -36,9 +34,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser.context")
 class MessageConverter:
     def __init__(self, services: "AIUserServices", ctx: commands.Context):
         self.services = services
-        self.config: Config = services.config
-        self.bot: Red = services.bot
-        self.bot_id: int = self.bot.user.id
+        self.bot_id: int = services.bot.user.id
         self.init_msg = ctx.message
         self.ctx = ctx
 
@@ -76,7 +72,7 @@ class MessageConverter:
                 attachment.size <= DEFAULT_AUDIO_UPLOAD_LIMIT
                 and can_scan_attachment
                 and message.author.id != self.bot_id
-                and await self.config.guild(message.guild).scan_audio()
+                and await self.services.config.guild(message.guild).scan_audio()
             )
             transcript = (
                 await create_audio_transcript(self.services, message)
@@ -86,12 +82,12 @@ class MessageConverter:
             content = transcript or await format_audio(self.services, message)
         elif not content_type.startswith("image/"):
             content = f'User "{message.author.display_name}" sent: [Attachment: "{message.attachments[0].filename}"]'
-        elif attachment.size > await self.config.guild(message.guild).max_image_size():
+        elif attachment.size > await self.services.config.guild(message.guild).max_image_size():
             content = format_image_placeholder(message)
         elif (
-            can_scan_attachment and await self.config.guild(message.guild).scan_images()
+            can_scan_attachment and await self.services.config.guild(message.guild).scan_images()
         ):
-            content = await format_image(self.config, message)
+            content = await format_image(self.services.config, message)
             await self.add_entry(content, res, role)
             return
         else:
@@ -102,7 +98,7 @@ class MessageConverter:
         await self.add_entry(content, res, role)
 
     async def handle_embed(self, message: Message, res: List[MessageEntry], role: str):
-        content = await format_embed_content(self.config, self.bot, message)
+        content = await format_embed_content(self.services.config, self.services.bot, message)
         if not content:
             content = format_text_content(message)
             await self.add_entry(content, res, role)
