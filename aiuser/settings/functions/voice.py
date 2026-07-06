@@ -5,21 +5,14 @@ from redbot.core import commands
 
 from aiuser.functions import names
 from aiuser.speech.tts import DEFAULT_MODELS, DEFAULT_VOICES, PROVIDERS
-from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
+from aiuser.settings.functions.utilities import (
+    FunctionToggleHelperMixin,
+    functions,
+    provider_key_error,
+)
 
 
 class VoiceFunctionSettings(FunctionToggleHelperMixin):
-    async def _voice_provider_key_error(
-        self, ctx: commands.Context, provider: str
-    ) -> Optional[str]:
-        tokens = await self.bot.get_shared_api_tokens(provider)
-        if tokens.get("api_key"):
-            return None
-
-        return (
-            f"{provider} key not set! Set it using "
-            f"`{ctx.clean_prefix}set api {provider} api_key,APIKEY`."
-        )
 
     async def _save_current_voice_provider_settings(self, guild_conf, provider: str):
         history = await guild_conf.function_calling_voice_provider_history()
@@ -64,7 +57,7 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
         enabling = names.VOICE_REQUEST not in enabled_tools
 
         if enabling:
-            key_error = await self._voice_provider_key_error(ctx, provider)
+            key_error = await provider_key_error(self.bot, ctx, provider)
             if key_error:
                 return await ctx.send(key_error)
 
@@ -95,7 +88,7 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
                 "Available voice providers: " + ", ".join(f"`{p}`" for p in PROVIDERS)
             )
 
-        key_error = await self._voice_provider_key_error(ctx, provider)
+        key_error = await provider_key_error(self.bot, ctx, provider)
         if key_error:
             return await ctx.send(key_error)
 

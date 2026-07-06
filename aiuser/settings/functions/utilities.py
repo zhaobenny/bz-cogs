@@ -1,8 +1,33 @@
+from __future__ import annotations
+
+from typing import Optional
+
 import discord
 from redbot.core import checks, commands
+from redbot.core.bot import Red
 
 from aiuser.settings._groups import aiuser
 from aiuser.types.abc import MixinMeta
+
+
+async def provider_key_error(
+    bot: Red, ctx: commands.Context, provider: str, key_name: str = "api_key"
+) -> Optional[str]:
+    """Return an error string if *provider* has no *key_name* token set, else None.
+
+    Args:
+        bot: The Red bot instance.
+        ctx: Redbot command invocation context (used for clean_prefix).
+        provider: The shared-API-token service name (e.g. ``"serper"``).
+        key_name: The token field name to check (default ``"api_key"``).
+    """
+    tokens = await bot.get_shared_api_tokens(provider)
+    if tokens.get(key_name):
+        return None
+    return (
+        f"{provider} {key_name} not set! Set it using "
+        f"`{ctx.clean_prefix}set api {provider} {key_name},VALUE`."
+    )
 
 
 class FunctionsGroupMixin(MixinMeta):
