@@ -6,9 +6,7 @@ from redbot.core import Config
 from redbot.core.bot import Red
 
 from aiuser.llm.openai_compatible.client import setup_openai_client
-from aiuser.speech.constants import TTS_PROVIDER_TIMEOUT, strip_inline_tags
-
-OPENAI_API_V1_URL = "https://api.openai.com/v1"
+from aiuser.speech.constants import OPENAI_API_V1_URL, TTS_PROVIDER_TIMEOUT, strip_inline_tags
 
 DEFAULT_MODEL = "gpt-4o-mini-tts"
 DEFAULT_VOICE = "alloy"

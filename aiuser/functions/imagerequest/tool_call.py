@@ -56,7 +56,7 @@ class ImageRequestToolCall(ToolCall):
         provider = detect_image_provider(provider_endpoint)
         try:
             gen_fn = PROVIDERS[provider]
-            data = await gen_fn(description, tool_context, image_endpoint_override)
+            data = await gen_fn(description, tool_context, provider_endpoint)
             bio = io.BytesIO(data)
             bio.seek(0)
             tool_context.attach_file(discord.File(bio, filename="image.png"))

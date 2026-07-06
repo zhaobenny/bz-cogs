@@ -1,5 +1,7 @@
 import re
 
+OPENAI_API_V1_URL = "https://api.openai.com/v1"
+
 # provider names, as stored in config and shown in settings commands
 ELEVENLAB = "elevenlab"
 FINEVOICE = "finevoice"
