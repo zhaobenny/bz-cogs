@@ -10,12 +10,12 @@ from aiuser.functions.context import ToolContext
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 from aiuser.functions.voice.native import send_voice_message
+from aiuser.speech.constants import MAX_VOICE_WORDS
 from aiuser.speech.transcripts import cache_audio_transcript
 from aiuser.speech.tts import PROVIDERS, voice_settings
 
 logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
-MAX_VOICE_WORDS = 75
 CUSTOM_EMOJI_RE = re.compile(r"<a?:[A-Za-z0-9_]{2,32}:\d{17,20}>?")
 
 

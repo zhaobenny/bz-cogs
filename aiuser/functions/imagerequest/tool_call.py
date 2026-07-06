@@ -40,7 +40,7 @@ class ImageRequestToolCall(ToolCall):
         config = tool_context.services.config
 
         description = arguments["description"][:2000]
-        preprompt = await self._pick_image_preprompt(tool_context) or ""
+        preprompt = await _pick_image_preprompt(tool_context) or ""
         if preprompt:
             preprompt = await format_variables(ctx, preprompt)
             description = f"{preprompt} {description}"
@@ -67,12 +67,13 @@ class ImageRequestToolCall(ToolCall):
             return "Couldn't generate an image..."
         return "The requested image was generated and was sent."
 
-    async def _pick_image_preprompt(self, tool_context: ToolContext) -> Optional[str]:
-        """Select the image preprompt via member > role > channel > guild"""
-        ctx = tool_context.ctx
-        return await tool_context.services.resolver.resolve(
-            "function_calling_image_preprompt",
-            guild=ctx.guild,
-            channel=ctx.channel,
-            member=ctx.message.author,
-        )
+
+async def _pick_image_preprompt(tool_context: ToolContext) -> Optional[str]:
+    """Select the image preprompt via member > role > channel > guild"""
+    ctx = tool_context.ctx
+    return await tool_context.services.resolver.resolve(
+        "function_calling_image_preprompt",
+        guild=ctx.guild,
+        channel=ctx.channel,
+        member=ctx.message.author,
+    )

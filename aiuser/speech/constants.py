@@ -9,6 +9,7 @@ OPENAI = "openai"
 OPENROUTER = "openrouter"
 
 TTS_PROVIDER_TIMEOUT = 45
+MAX_VOICE_WORDS = 75
 
 # tone modifiers like [happy] that only some TTS models understand
 INLINE_TAG_RE = re.compile(r"\s*\[[A-Za-z][A-Za-z0-9_ :,.'-]{0,60}\]\s*")
