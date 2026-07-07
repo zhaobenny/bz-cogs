@@ -1,10 +1,11 @@
+import json
 import logging
-
-import aiohttp
 import ssl
 import unicodedata
-from redbot.core import commands
 
+import aiohttp
+
+from aiuser.functions.context import ToolContext
 from aiuser.functions.scrape.scrape import scrape_page
 from aiuser.utils.utilities import contains_youtube_link
 
@@ -13,18 +14,22 @@ logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 WORDS_LIMIT = 5000
 
 
-async def search_searxng(
-    query: str, endpoint: str, results: int, ctx: commands.Context
-):
+async def search(query: str, tool_context: ToolContext) -> str:
+    guild_conf = tool_context.services.config.guild(tool_context.ctx.guild)
+    endpoint = await guild_conf.function_calling_search_endpoint()
+    results = await guild_conf.function_calling_search_max_results()
     if not endpoint:
         return "SearXNG endpoint missing."
-    return await SearXNGQuery(query, endpoint, results, ctx).execute_search()
+    logger.debug(f"Attempting SearXNG url {endpoint}")
+    return await SearXNGQuery(
+        query, endpoint, results, tool_context.ctx.guild.name
+    ).execute_search()
 
 
 class SearXNGQuery:
-    def __init__(self, query: str, endpoint: str, results: int, ctx: commands.Context):
+    def __init__(self, query: str, endpoint: str, results: int, guild: str):
         self.query = query
-        self.guild = ctx.guild.name
+        self.guild = guild
         self.endpoint = endpoint
         self.results = results
 
@@ -93,8 +98,6 @@ class SearXNGQuery:
 
         if not results_json:
             return "No relevant information was found using a SearXNG search."
-
-        import json
 
         return json.dumps(results_json[: self.results])
 

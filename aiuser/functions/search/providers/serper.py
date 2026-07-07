@@ -2,8 +2,8 @@ import json
 import logging
 
 import aiohttp
-from redbot.core import commands
 
+from aiuser.functions.context import ToolContext
 from aiuser.functions.scrape.scrape import scrape_page
 from aiuser.utils.utilities import contains_youtube_link
 
@@ -12,15 +12,22 @@ logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 SERPER_ENDPOINT = "https://google.serper.dev/search"
 
 
-async def serper_search(query: str, api_key: str, ctx: commands.Context):
-    return await SerperQuery(query, api_key, ctx).execute_search()
+async def search(query: str, tool_context: ToolContext) -> str:
+    api_key = (await tool_context.services.bot.get_shared_api_tokens("serper")).get(
+        "api_key"
+    )
+    if not api_key:
+        return "Serper API key missing."
+    return await SerperQuery(
+        query, api_key, tool_context.ctx.guild.name
+    ).execute_search()
 
 
 class SerperQuery:
-    def __init__(self, query: str, api_key: str, ctx: commands.Context):
+    def __init__(self, query: str, api_key: str, guild: str):
         self.api_key = api_key
         self.query = query
-        self.guild = ctx.guild.name
+        self.guild = guild
 
     async def execute_search(self):
         payload = json.dumps({"q": self.query})

@@ -7,7 +7,7 @@ from aiuser.speech.tts import DEFAULT_MODELS, DEFAULT_VOICES
 from aiuser.config.model_info import get_model_info
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
 from aiuser.settings.functions.memory import MemoryFunctionSettings
-from aiuser.settings.functions.searxng import SearXNGFunctionSettings
+from aiuser.settings.functions.search import SearchFunctionSettings
 from aiuser.settings.functions.utilities import (
     FunctionsGroupMixin,
     functions,
@@ -22,7 +22,7 @@ class FunctionCallingSettings(
     WeatherFunctionSettings,
     ImageRequestFunctionSettings,
     VoiceFunctionSettings,
-    SearXNGFunctionSettings,
+    SearchFunctionSettings,
     MemoryFunctionSettings,
 ):
     @functions.command(name="toggle")
@@ -64,8 +64,7 @@ class FunctionCallingSettings(
             "Weather": [names.IS_DAYTIME, names.GET_WEATHER],
             "Image Request": [names.IMAGE_REQUEST],
             "Voice Request": [names.VOICE_REQUEST],
-            "Serper": [names.SEARCH_GOOGLE],
-            "SearXNG": [names.SEARXNG],
+            "Search": [names.SEARCH_WEB],
             "Scrape": [names.OPEN_URL],
             "No Response": [names.DO_NOT_RESPOND],
             "Wolfram Alpha": [names.ASK_WOLFRAM_ALPHA],
@@ -216,16 +215,6 @@ class FunctionCallingSettings(
             color=await ctx.embed_color(),
         )
         await ctx.send(embed=embed)
-
-    @functions.command(name="serper")
-    async def toggle_serper_function(self, ctx: commands.Context):
-        """Enable/disable searching/scraping the Internet using Serper.dev"""
-        key_error = await provider_key_error(self.bot, ctx, "serper")
-        if key_error:
-            return await ctx.send(key_error)
-
-        tool_names = [names.SEARCH_GOOGLE]
-        await self.toggle_function_group(ctx, tool_names, "Search")
 
     @functions.command(name="scrape")
     async def toggle_scrape_function(self, ctx: commands.Context):
