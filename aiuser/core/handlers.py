@@ -55,6 +55,12 @@ async def handle_slash_command(
 @with_discord_log_context("message")
 async def handle_message(services: "AIUserServices", message: discord.Message):
     """Handle regular message events"""
+    if message.author.id == services.bot.user.id:
+        if not message.embeds:
+            state = get_channel_reply_state(services, message.channel.id)
+            state.last_bot_reply_at = message.created_at
+        return
+
     ctx: commands.Context = await services.bot.get_context(message)
 
     if not (await is_valid_message(services, ctx)):

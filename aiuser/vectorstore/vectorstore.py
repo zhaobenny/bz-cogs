@@ -7,8 +7,27 @@ import numpy as np
 from rank_bm25 import BM25Okapi
 
 from aiuser.config.constants import EMBEDDING_CACHE_DIR_NAME, EMBEDDING_DB_NAME
+from aiuser.utils.utilities import to_thread
 from aiuser.vectorstore.embeddings import embed_text
 from aiuser.vectorstore.schema import ensure_sqlite_db
+
+
+@to_thread()
+def _bm25_candidate_rowids(query: str, text_rows: list) -> List[int]:
+    """Rank (rowid, name, text) rows by BM25; building the index is O(corpus)."""
+    # memory name included in tokenization for better matching
+    tokenized_corpus = [
+        re.findall(r"\w+", f"{row[1]} {row[2]}".lower()) for row in text_rows
+    ]
+    bm25 = BM25Okapi(tokenized_corpus)
+    tokenized_query = re.findall(r"\w+", query.lower())
+    bm25_scores = bm25.get_scores(tokenized_query)
+
+    if np.max(bm25_scores) > 0:
+        top_indices = np.argsort(bm25_scores)[-50:][::-1]
+        return [text_rows[i][0] for i in top_indices]
+    # Fallback to recent 50
+    return [row[0] for row in text_rows[-50:]]
 
 
 class VectorStore:
@@ -164,20 +183,7 @@ class VectorStore:
             if not text_rows:
                 return []
 
-            # memory name included in tokenization for better matching
-            tokenized_corpus = [
-                re.findall(r"\w+", f"{row[1]} {row[2]}".lower()) for row in text_rows
-            ]
-            bm25 = BM25Okapi(tokenized_corpus)
-            tokenized_query = re.findall(r"\w+", query.lower())
-            bm25_scores = bm25.get_scores(tokenized_query)
-
-            if np.max(bm25_scores) > 0:
-                top_indices = np.argsort(bm25_scores)[-50:][::-1]
-                candidate_rowids = [text_rows[i][0] for i in top_indices]
-            else:
-                # Fallback to recent 50
-                candidate_rowids = [row[0] for row in text_rows[-50:]]
+            candidate_rowids = await _bm25_candidate_rowids(query, text_rows)
 
             placeholders = ",".join("?" * len(candidate_rowids))
             cursor = await conn.execute(

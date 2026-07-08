@@ -45,6 +45,8 @@ class RandomMessageTask:
 
         all_config = await self.services.config.all_guilds()
         for guild_id, guild_config in all_config.items():
+            if not guild_config["random_messages_enabled"]:
+                continue
             # Each guild is processed independently; a failure or skip in one
             # guild must not starve the others.
             try:

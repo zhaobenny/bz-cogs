@@ -4,6 +4,7 @@ import asyncio
 import logging
 import random
 from dataclasses import dataclass, replace
+from datetime import datetime
 from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Optional
 
@@ -81,6 +82,7 @@ class ChannelReplyState:
         self.pending_request: Optional[ResponseRequest] = None
         self.drain_task: Optional[asyncio.Task] = None
         self.is_executing = False
+        self.last_bot_reply_at: Optional[datetime] = None
 
     async def arm_burst(
         self,
@@ -237,13 +239,16 @@ async def execute_response_request(
     if channel is None:
         return False
 
-    try:
-        message = await channel.fetch_message(request.message_id)
-    except (discord.NotFound, discord.Forbidden, discord.HTTPException):
-        return False
+    # gateway cache is kept up to date on edits/deletes, so prefer it over a REST call
+    message = discord.utils.get(services.bot.cached_messages, id=request.message_id)
+    if message is None:
+        try:
+            message = await channel.fetch_message(request.message_id)
+        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+            return False
 
     ctx = await services.bot.get_context(message)
-    history_anchor = await get_latest_history_anchor(channel, request)
+    history_anchor = await get_latest_history_anchor(services, channel, request)
 
     try:
         if not (await is_valid_message(services, ctx)):
@@ -259,7 +264,7 @@ async def execute_response_request(
 
 
 async def get_latest_history_anchor(
-    channel, request: ResponseRequest
+    services: "AIUserServices", channel, request: ResponseRequest
 ) -> Optional[discord.Message]:
     if not request.include_latest_channel_context:
         return None
@@ -267,6 +272,10 @@ async def get_latest_history_anchor(
     message_id = getattr(channel, "last_message_id", None)
     if not message_id or message_id == request.message_id:
         return None
+
+    cached = discord.utils.get(services.bot.cached_messages, id=message_id)
+    if cached is not None:
+        return cached
 
     try:
         return await channel.fetch_message(message_id)
