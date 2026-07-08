@@ -8,6 +8,7 @@ from aiuser.functions import names
 from aiuser.functions.context import ToolContext
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
+from aiuser.llm.codex.oauth import CODEX_ENDPOINT_MODE
 from aiuser.utils.utilities import format_variables
 
 from .providers.factory import PROVIDERS, detect_image_provider
@@ -52,6 +53,8 @@ class ImageRequestToolCall(ToolCall):
             provider_endpoint = image_endpoint_override
         else:
             provider_endpoint = await config.custom_openai_endpoint()
+            if provider_endpoint == CODEX_ENDPOINT_MODE:
+                provider_endpoint = None
 
         provider = detect_image_provider(provider_endpoint)
         try:
