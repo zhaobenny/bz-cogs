@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 
-from aiuser.utils.compaction.store import CompactionStore
+from aiuser.context.compaction.store import CompactionStore
 
 
 @pytest.fixture

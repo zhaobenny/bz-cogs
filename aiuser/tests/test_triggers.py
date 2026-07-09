@@ -4,7 +4,7 @@ import discord
 import pytest
 from discord.ext.test import backend
 
-from aiuser.core.handlers import get_percentage
+from aiuser.core.handlers import get_percentage, handle_message
 from aiuser.core.triggers import (
     get_conversation_reply_chance,
     is_always_reply_on_words_triggered,
@@ -20,7 +20,8 @@ async def _get_conversation_reply_chance(
     bot, mock_services, test_channel, test_member, text
 ):
     """Create a recent bot message + user trigger, then evaluate conversation follow-up."""
-    _ = backend.make_message("recent bot message", bot.user, test_channel)
+    bot_message = backend.make_message("recent bot message", bot.user, test_channel)
+    await handle_message(mock_services, bot_message)
     trigger = backend.make_message(text, test_member, test_channel)
     ctx = await bot.get_context(trigger)
     return await get_conversation_reply_chance(mock_services, ctx)
@@ -271,17 +272,19 @@ async def test_conversation_reply_requires_recent_plain_bot_message(
     await mock_services.config.guild(test_guild).conversation_reply_time.set(300)
 
     embed = discord.Embed(title="Status")
-    _ = backend.make_message(
+    embed_message = backend.make_message(
         "embedded status message",
         bot.user,
         test_channel,
         embeds=[embed],
     )
+    await handle_message(mock_services, embed_message)
     trigger = backend.make_message("does embed count?", test_member, test_channel)
     ctx = await bot.get_context(trigger)
     assert await get_conversation_reply_chance(mock_services, ctx) is None
 
-    _ = backend.make_message("plain follow-up", bot.user, test_channel)
+    plain_message = backend.make_message("plain follow-up", bot.user, test_channel)
+    await handle_message(mock_services, plain_message)
     trigger = backend.make_message("how about now?", test_member, test_channel)
     ctx = await bot.get_context(trigger)
     assert await get_conversation_reply_chance(mock_services, ctx) == 0.9

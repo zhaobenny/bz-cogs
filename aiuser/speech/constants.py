@@ -1,21 +1,17 @@
 import re
 
-MAX_VOICE_WORDS = 75
-TTS_PROVIDER_TIMEOUT = 45
+OPENAI_API_V1_URL = "https://api.openai.com/v1"
 
+# provider names, as stored in config and shown in settings commands
 ELEVENLAB = "elevenlab"
 FINEVOICE = "finevoice"
 OPENAI = "openai"
 OPENROUTER = "openrouter"
 
-DEFAULT_ELEVENLAB_MODEL = "eleven_multilingual_v2"
-DEFAULT_ELEVENLAB_VOICE = "21m00Tcm4TlvDq8ikWAM"
-DEFAULT_FINEVOICE_VOICE = "james"
-DEFAULT_OPENAI_TTS_MODEL = "gpt-4o-mini-tts"
-DEFAULT_OPENAI_TTS_VOICE = "alloy"
-DEFAULT_OPENROUTER_TTS_MODEL = "x-ai/grok-voice-tts-1.0"
-DEFAULT_OPENROUTER_TTS_VOICE = "Eve"
+TTS_PROVIDER_TIMEOUT = 45
+MAX_VOICE_WORDS = 75
 
+# tone modifiers like [happy] that only some TTS models understand
 INLINE_TAG_RE = re.compile(r"\s*\[[A-Za-z][A-Za-z0-9_ :,.'-]{0,60}\]\s*")
 ELEVENLAB_INLINE_TAG_MODELS = {"eleven_v3"}
 OPENROUTER_INLINE_TAG_MODELS = {

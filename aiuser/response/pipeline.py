@@ -10,7 +10,7 @@ import openai
 from openai.types.chat import (
     ChatCompletionMessageParam,
 )
-from redbot.core import Config, commands
+from redbot.core import commands
 
 from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
 from aiuser.config.model_info import get_model_info
@@ -44,19 +44,12 @@ class LLMPipeline:
     ):
         self.services = services
         self.ctx: commands.Context = ctx
-        self.config: Config = services.config
 
         self.conversation = conversation
         self.model: str = conversation.model
 
         self.provider: Optional[LLMProvider] = None
-        self.tool_context = ToolContext(
-            services=services,
-            ctx=ctx,
-            config=services.config,
-            bot=services.bot,
-            memories=services.memories,
-        )
+        self.tool_context = ToolContext(services=services, ctx=ctx)
         self.tool_manager = ToolManager(self)
         self.completion: Optional[str] = None
         self.tool_call_entries: List = []
@@ -85,7 +78,9 @@ class LLMPipeline:
             return None
         await self.tool_manager.setup()
         tool_call_rounds = (
-            await self.config.guild(self.ctx.guild).function_calling_tool_call_rounds()
+            await self.services.config.guild(
+                self.ctx.guild
+            ).function_calling_tool_call_rounds()
             or DEFAULT_TOOL_CALL_ROUNDS
         )
         tools_kwargs = self.tool_manager.get_tools_kwargs()
@@ -160,11 +155,11 @@ class LLMPipeline:
         """
         Build a base kwargs dict for the OpenAI call, including logit_bias handling.
         """
-        params = await self.config.guild(self.ctx.guild).parameters()
+        params = await self.services.config.guild(self.ctx.guild).parameters()
         kwargs: Dict[str, Any] = json.loads(params) if params else {}
 
         if "logit_bias" not in kwargs:
-            weights = await self.config.guild(self.ctx.guild).weights()
+            weights = await self.services.config.guild(self.ctx.guild).weights()
             weights_dict = json.loads(weights or "{}")
             if weights_dict:
                 kwargs["logit_bias"] = weights_dict
@@ -178,7 +173,7 @@ class LLMPipeline:
             )
             kwargs.pop("logit_bias", None)
 
-        if is_openrouter_endpoint(await self.config.custom_openai_endpoint()):
+        if is_openrouter_endpoint(await self.services.config.custom_openai_endpoint()):
             extra_body = kwargs.setdefault("extra_body", {})
             extra_body.setdefault("session_id", f"{self.ctx.message.id}")
 

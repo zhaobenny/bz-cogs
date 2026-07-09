@@ -1,24 +1,25 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List
 
 import discord
-from redbot.core import Config, commands
-from redbot.core.bot import Red
+from redbot.core import commands
 
 if TYPE_CHECKING:
     from aiuser.core.services import AIUserServices
-    from aiuser.utils.vectorstore import VectorStore
 
 
 @dataclass
 class ToolContext:
+    """Everything a tool invocation can see and produce.
+
+    Reads go through ``services`` (config, bot, memories, ...) and ``ctx``;
+    the remaining fields collect tool side effects for the pipeline.
+    """
+
     services: "AIUserServices"
     ctx: commands.Context
-    config: Config
-    bot: Red
-    memories: Optional["VectorStore"] = None
     files_to_send: List[discord.File] = field(default_factory=list)
     audio_transcripts_to_cache: List[str] = field(default_factory=list)
     suppress_response: bool = False

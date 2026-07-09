@@ -3,17 +3,15 @@ from redbot.core import commands
 
 from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
 from aiuser.functions import names
-from aiuser.functions.voice.providers.factory import (
-    DEFAULT_MODELS,
-    DEFAULT_VOICES,
-)
+from aiuser.speech.tts import DEFAULT_MODELS, DEFAULT_VOICES
 from aiuser.config.model_info import get_model_info
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
 from aiuser.settings.functions.memory import MemoryFunctionSettings
-from aiuser.settings.functions.searxng import SearXNGFunctionSettings
+from aiuser.settings.functions.search import SearchFunctionSettings
 from aiuser.settings.functions.utilities import (
     FunctionsGroupMixin,
     functions,
+    provider_key_error,
 )
 from aiuser.settings.functions.voice import VoiceFunctionSettings
 from aiuser.settings.functions.weather import WeatherFunctionSettings
@@ -24,7 +22,7 @@ class FunctionCallingSettings(
     WeatherFunctionSettings,
     ImageRequestFunctionSettings,
     VoiceFunctionSettings,
-    SearXNGFunctionSettings,
+    SearchFunctionSettings,
     MemoryFunctionSettings,
 ):
     @functions.command(name="toggle")
@@ -66,8 +64,7 @@ class FunctionCallingSettings(
             "Weather": [names.IS_DAYTIME, names.GET_WEATHER],
             "Image Request": [names.IMAGE_REQUEST],
             "Voice Request": [names.VOICE_REQUEST],
-            "Serper": [names.SEARCH_GOOGLE],
-            "SearXNG": [names.SEARXNG],
+            "Search": [names.SEARCH_WEB],
             "Scrape": [names.OPEN_URL],
             "No Response": [names.DO_NOT_RESPOND],
             "Wolfram Alpha": [names.ASK_WOLFRAM_ALPHA],
@@ -219,17 +216,6 @@ class FunctionCallingSettings(
         )
         await ctx.send(embed=embed)
 
-    @functions.command(name="serper")
-    async def toggle_serper_function(self, ctx: commands.Context):
-        """Enable/disable searching/scraping the Internet using Serper.dev"""
-        if not (await self.bot.get_shared_api_tokens("serper")).get("api_key"):
-            return await ctx.send(
-                f"Serper.dev key not set! Set it using `{ctx.clean_prefix}set api serper api_key,APIKEY`."
-            )
-
-        tool_names = [names.SEARCH_GOOGLE]
-        await self.toggle_function_group(ctx, tool_names, "Search")
-
     @functions.command(name="scrape")
     async def toggle_scrape_function(self, ctx: commands.Context):
         """
@@ -253,10 +239,11 @@ class FunctionCallingSettings(
     @functions.command(name="wolframalpha")
     async def toggle_wolfram_alpha_function(self, ctx: commands.Context):
         """Enable/disable the functionality for the LLM to ask Wolfram Alpha about math, exchange rates, or the weather."""
-        if not (await self.bot.get_shared_api_tokens("wolfram_alpha")).get("app_id"):
-            return await ctx.send(
-                f"Wolfram Alpha app id not set! Set it using `{ctx.clean_prefix}set api wolfram_alpha app_id,APPID`."
-            )
+        key_error = await provider_key_error(
+            self.bot, ctx, "wolfram_alpha", key_name="app_id"
+        )
+        if key_error:
+            return await ctx.send(key_error)
 
         tool_names = [names.ASK_WOLFRAM_ALPHA]
         await self.toggle_function_group(ctx, tool_names, "Wolfram Alpha")

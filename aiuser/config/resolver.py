@@ -6,6 +6,8 @@ from typing import Any, Optional
 import discord
 from redbot.core import Config, commands
 
+from aiuser.config.defaults import DEFAULT_PROMPT
+
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
@@ -72,6 +74,19 @@ class ScopedConfigResolver:
                 return channel_value
 
         return await getattr(self.config.guild(guild), attr_name)()
+
+    async def resolve_prompt(
+        self,
+        *,
+        guild: discord.Guild,
+        channel: Optional[discord.abc.GuildChannel] = None,
+        member: Optional[discord.abc.User] = None,
+    ) -> str:
+        """Resolve the system prompt: member > role > channel > guild > global > default."""
+        scoped = await self.resolve(
+            "custom_text_prompt", guild=guild, channel=channel, member=member
+        )
+        return scoped or await self.config.custom_text_prompt() or DEFAULT_PROMPT
 
     async def resolve_for_ctx(self, attr_name: str, ctx: commands.Context) -> Any:
         return await self.resolve(

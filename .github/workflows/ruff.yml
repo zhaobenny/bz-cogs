@@ -8,7 +8,7 @@ on:
 jobs:
   ruff:
     name: Ruff Check
-    runs-on: ubicloud-standard-2-ubuntu-2404
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:

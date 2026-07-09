@@ -40,6 +40,9 @@ def detect_image_provider(endpoint):
     if endpoint_kind is CompatEndpointKind.OPENROUTER:
         return OPENROUTER
 
+    if endpoint_kind is CompatEndpointKind.OPENAI:
+        return OPENAI
+
     if hostname == "generativelanguage.googleapis.com":
         return GEMINI
 

@@ -55,7 +55,7 @@ async def format_variables(ctx: commands.Context, text: str):
     Insert supported variables into string if they are present
     """
     botname = ctx.message.guild.me.nick or ctx.bot.user.display_name
-    app_info = await ctx.bot.application_info()
+    app_info = ctx.bot.application or await ctx.bot.application_info()
     botowner = app_info.owner.name
     authorname = ctx.message.author.display_name
     # Webhook messages have User objects instead of Member objects

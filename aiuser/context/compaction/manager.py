@@ -25,8 +25,6 @@ Exclude noise, completely off-topic chitchat, and minor details. Keep the summar
 class CompactionManager:
     def __init__(self, services: "AIUserServices"):
         self.services = services
-        self.config = services.config
-        self.bot = services.bot
         self.compaction_store = services.compaction_store
         self._compaction_locks: Set[int] = set()
 
@@ -42,7 +40,9 @@ class CompactionManager:
         if not self.compaction_store or not messages:
             return
 
-        compaction_enabled = await self.config.guild(ctx.guild).compaction_enabled()
+        compaction_enabled = await self.services.config.guild(
+            ctx.guild
+        ).compaction_enabled()
         if not compaction_enabled:
             return
 
@@ -50,7 +50,9 @@ class CompactionManager:
         if channel_id in self._compaction_locks:
             return
 
-        messages_backread = await self.config.guild(ctx.guild).messages_backread()
+        messages_backread = await self.services.config.guild(
+            ctx.guild
+        ).messages_backread()
 
         # Filter out messages that have already been compacted
         last_compacted_id = await self.compaction_store.get_last_compacted_message_id(
@@ -113,7 +115,7 @@ class CompactionManager:
             new_messages_block = "\n".join(new_msgs_text)
 
             # Use custom prompt if configured, otherwise use default
-            custom_prompt = await self.config.guild(
+            custom_prompt = await self.services.config.guild(
                 ctx.guild
             ).custom_compaction_prompt()
             instructions = custom_prompt if custom_prompt else COMPACTION_PROMPT
@@ -127,7 +129,7 @@ class CompactionManager:
 {new_messages_block}
 """
 
-            model = await self.config.guild(ctx.guild).model()
+            model = await self.services.config.guild(ctx.guild).model()
 
             provider = await get_llm_provider(self.services)
             if provider is None:

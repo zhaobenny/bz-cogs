@@ -1,31 +1,29 @@
+from __future__ import annotations
+
 import asyncio
+from typing import Optional
 
 import httpx
+from redbot.core import Config
 from redbot.core.bot import Red
 
-from aiuser.functions.context import ToolContext
-from aiuser.functions.voice.constants import (
-    DEFAULT_FINEVOICE_VOICE,
-    TTS_PROVIDER_TIMEOUT,
-)
+from aiuser.speech.constants import TTS_PROVIDER_TIMEOUT
 
 FINEVOICE_API_V1_URL = "https://apis.finevoice.ai/v1/"
 TTS_POLL_INTERVAL = 5
-DEFAULT_VOICE = DEFAULT_FINEVOICE_VOICE
+DEFAULT_VOICE = "james"
 
 
-async def generate(text: str, request: ToolContext) -> bytes:
-    bot: Red = request.bot
+async def generate(
+    bot: Red, config: Config, text: str, model: Optional[str], voice: Optional[str]
+) -> bytes:
     tokens = await bot.get_shared_api_tokens("finevoice")
     api_key = tokens.get("api_key")
     if not api_key:
         raise ValueError("FineVoice API key is not configured")
 
-    guild_conf = request.config.guild(request.ctx.guild)
-    voice = await guild_conf.function_calling_voice() or DEFAULT_VOICE
-
     payload = {
-        "voice": voice,
+        "voice": voice or DEFAULT_VOICE,
         "text": text,
     }
     headers = {"Authorization": f"Bearer {api_key}"}

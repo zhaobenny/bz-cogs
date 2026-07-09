@@ -53,8 +53,10 @@ class SaveMemoryToolCall(ToolCall):
 
         try:
             current_timestamp = int(time.time())
-            guild_id = self.ctx.guild.id
-            db = tool_context.memories
+            guild_id = tool_context.ctx.guild.id
+            db = tool_context.services.memories
+            if db is None:
+                return "Failed: Memory service is not available"
 
             memory_id = await db.upsert(
                 guild_id,
@@ -109,8 +111,10 @@ class ReadMemoryToolCall(ToolCall):
             return "Failed: Missing search_query"
 
         try:
-            guild_id = self.ctx.guild.id
-            db = tool_context.memories
+            guild_id = tool_context.ctx.guild.id
+            db = tool_context.services.memories
+            if db is None:
+                return "Failed: Memory service is not available"
 
             memory_results = await db.search_similar(
                 search_query, guild_id, k=3, user=user, channel=channel

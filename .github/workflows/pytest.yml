@@ -1,0 +1,40 @@
+name: "Run Tests"
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    name: Pytest (aiuser)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-pytest-${{ hashFiles('aiuser/requirements.txt', 'aiuser/info.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-pytest-
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          pip install Red-DiscordBot pytest pytest-asyncio dpytest
+          pip install -r aiuser/requirements.txt
+          # info.json lists the cog's runtime deps; skip -r entries (already installed above)
+          python -c "import json; print('\n'.join(r for r in json.load(open('aiuser/info.json'))['requirements'] if not r.startswith('-r')))" > /tmp/cog-reqs.txt
+          pip install -r /tmp/cog-reqs.txt
+
+      - name: Run tests
+        run: python -m pytest aiuser/tests/ -v

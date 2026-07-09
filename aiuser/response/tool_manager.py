@@ -31,11 +31,11 @@ class ToolManager:
         self.enabled_tools_map: Dict[str, ToolCall] = {}
 
     async def setup(self):
-        cfg = self.pipeline.config.guild(self.pipeline.ctx.guild)
+        cfg = self.pipeline.services.config.guild(self.pipeline.ctx.guild)
         if not (await cfg.function_calling()):
             return
         self.enabled_tools = await get_enabled_tools(
-            self.pipeline.config, self.pipeline.ctx
+            self.pipeline.services.config, self.pipeline.ctx
         )
         self.enabled_tools_map = {t.function_name: t for t in self.enabled_tools}
 

@@ -17,8 +17,7 @@ from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
 from aiuser.functions.memory.tool_call import ReadMemoryToolCall, SaveMemoryToolCall
 from aiuser.functions.noresponse.tool_call import NoResponseToolCall
 from aiuser.functions.scrape.tool_call import ScrapeToolCall
-from aiuser.functions.searxng.tool_call import SearXNGToolCall
-from aiuser.functions.serper.tool_call import SerperToolCall
+from aiuser.functions.search.tool_call import SearchToolCall
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.voice.tool_call import VoiceRequestToolCall
 from aiuser.functions.weather.tool_call import (
@@ -34,8 +33,7 @@ ALL_TOOLS = [
     ImageRequestToolCall,
     VoiceRequestToolCall,
     ScrapeToolCall,
-    SerperToolCall,
-    SearXNGToolCall,
+    SearchToolCall,
     LocationWeatherToolCall,
     IsDaytimeToolCall,
     WolframAlphaFunctionCall,
@@ -55,8 +53,4 @@ async def get_enabled_tools(config: Config, ctx: commands.Context) -> List[ToolC
         # reactions cannot be added to the invoking message of a slash command
         enabled = [name for name in enabled if name != names.ADD_REACTION]
 
-    return [
-        TOOLS_BY_NAME[name](config=config, ctx=ctx)
-        for name in enabled
-        if name in TOOLS_BY_NAME
-    ]
+    return [TOOLS_BY_NAME[name]() for name in enabled if name in TOOLS_BY_NAME]

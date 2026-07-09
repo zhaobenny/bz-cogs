@@ -6,9 +6,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 import discord
 from redbot.core import commands
-from redbot.core.bot import Red
 
-from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.config.model_info import get_model_info
 from aiuser.consent import CONSENT_EMBED_TITLE
 from aiuser.context.conversation import Conversation
@@ -46,9 +44,7 @@ class ConversationAssembler:
         history_anchor: Optional[discord.Message] = None,
     ):
         self.services = services
-        self.config = services.config
-        self.bot: Red = services.bot
-        self.bot_id: int = self.bot.user.id
+        self.bot_id: int = self.services.bot.user.id
         self.ctx = ctx
         self.guild: discord.Guild = ctx.guild
         self.init_message: discord.Message = ctx.message
@@ -63,7 +59,7 @@ class ConversationAssembler:
         include_history: bool = True,
         include_trigger: bool = True,
     ) -> Conversation:
-        guild_conf = self.config.guild(self.guild)
+        guild_conf = self.services.config.guild(self.guild)
 
         model = await guild_conf.model()
         token_limit = (
@@ -76,7 +72,11 @@ class ConversationAssembler:
         conversation = Conversation(model=model, token_limit=token_limit)
         self._optin_by_default = await guild_conf.optin_by_default()
 
-        prompt = prompt_override or await self._pick_prompt()
+        prompt = prompt_override or await self.services.resolver.resolve_prompt(
+            guild=self.guild,
+            channel=self.ctx.channel,
+            member=self.init_message.author,
+        )
         await conversation.append_system(await format_variables(self.ctx, prompt))
 
         if include_history:
@@ -98,21 +98,11 @@ class ConversationAssembler:
 
     # --- prompt / model selection ---
 
-    async def _pick_prompt(self) -> str:
-        """Select the prompt via member > role > channel > guild > global"""
-        scoped_prompt = await self.services.resolver.resolve(
-            "custom_text_prompt",
-            guild=self.guild,
-            channel=self.ctx.channel,
-            member=self.init_message.author,
-        )
-        return scoped_prompt or await self.config.custom_text_prompt() or DEFAULT_PROMPT
-
     async def _should_use_image_model(self) -> bool:
         """Check if we should switch to the image scanning model"""
         if (
             self.ctx.interaction
-            or not await self.config.guild(self.guild).scan_images()
+            or not await self.services.config.guild(self.guild).scan_images()
         ):
             return False
 
@@ -127,7 +117,7 @@ class ConversationAssembler:
             ref = message.reference
             if not ref.channel_id or not ref.message_id:
                 return False
-            replied = ref.cached_message or await self.bot.get_channel(
+            replied = ref.cached_message or await self.services.bot.get_channel(
                 ref.channel_id
             ).fetch_message(ref.message_id)
             return bool(
@@ -140,7 +130,7 @@ class ConversationAssembler:
     # --- memory ---
 
     async def _fetch_relevant_memory(self) -> Optional[str]:
-        if not await self.config.guild(self.guild).query_memories():
+        if not await self.services.config.guild(self.guild).query_memories():
             return None
         if self.services.memories is None:
             return None
@@ -161,7 +151,7 @@ class ConversationAssembler:
         ignore_regex = self.services.ignore_regex_cache.ignore_regex(self.guild.id)
         if ignore_regex and ignore_regex.search(message.content):
             return False
-        if not await self.bot.allowed_by_whitelist_blacklist(message.author):
+        if not await self.services.bot.allowed_by_whitelist_blacklist(message.author):
             return False
         if message.author.id != self.bot_id and not self.services.consent.allows(
             message.author.id, optin_by_default=self._optin_by_default
@@ -200,7 +190,7 @@ class ConversationAssembler:
     # --- history ---
 
     async def _prepend_history(self, conversation: Conversation):
-        guild_conf = self.config.guild(self.guild)
+        guild_conf = self.services.config.guild(self.guild)
         limit = await guild_conf.messages_backread()
         max_seconds_gap = await guild_conf.messages_backread_seconds()
 

@@ -2,23 +2,21 @@ from __future__ import annotations
 
 from typing import Any
 
+from redbot.core import Config
 from redbot.core.bot import Red
 
 from aiuser.llm.openai_compatible.client import setup_openai_client
-
-OPENAI_API_V1_URL = "https://api.openai.com/v1"
+from aiuser.speech.constants import OPENAI_API_V1_URL
 
 DEFAULT_MODEL = "gpt-4o-mini-transcribe"
 
 
-async def transcribe(bot: Red, audio: bytes, audio_format: str, model: str) -> str:
-    cog = bot.get_cog("AIUser")
-    if cog is None:
-        raise ValueError("AIUser cog is not loaded")
-
+async def transcribe(
+    bot: Red, config: Config, audio: bytes, audio_format: str, model: str
+) -> str:
     client = await setup_openai_client(
         bot,
-        cog.config,
+        config,
         base_url=OPENAI_API_V1_URL,
     )
     if client is None:
@@ -27,7 +25,7 @@ async def transcribe(bot: Red, audio: bytes, audio_format: str, model: str) -> s
     try:
         response: Any = await client.audio.transcriptions.create(
             file=(f"audio.{audio_format}", audio),
-            model=model or DEFAULT_MODEL,
+            model=model,
             response_format="json",
         )
     finally:

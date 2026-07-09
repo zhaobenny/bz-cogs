@@ -5,14 +5,14 @@ from typing import Any, Dict, Optional
 
 import discord
 
-from aiuser.context.converter.audio import cache_audio_transcript
 from aiuser.functions import names
 from aiuser.functions.context import ToolContext
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
-from aiuser.functions.voice.constants import MAX_VOICE_WORDS
 from aiuser.functions.voice.native import send_voice_message
-from aiuser.functions.voice.providers.factory import FINEVOICE, PROVIDERS
+from aiuser.speech.constants import MAX_VOICE_WORDS
+from aiuser.speech.transcripts import cache_audio_transcript
+from aiuser.speech.tts import PROVIDERS, voice_settings
 
 logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
@@ -63,19 +63,12 @@ class VoiceRequestToolCall(ToolCall):
         if not text:
             return "No text was provided for voice generation."
 
-        provider = (
-            (
-                await self.config.guild(
-                    self.ctx.guild
-                ).function_calling_voice_provider()
-                or FINEVOICE
-            )
-            .strip()
-            .lower()
+        settings = await voice_settings(
+            tool_context.services.config, tool_context.ctx.guild
         )
-        gen_fn = PROVIDERS.get(provider)
+        gen_fn = PROVIDERS.get(settings.provider)
         if gen_fn is None:
-            return f"Voice provider `{provider}` is not available."
+            return f"Voice provider `{settings.provider}` is not available."
 
         voice_text = CUSTOM_EMOJI_RE.sub(".", text)
         voice_text = " ".join(voice_text.split())
@@ -88,7 +81,13 @@ class VoiceRequestToolCall(ToolCall):
             )
 
         try:
-            audio = await gen_fn(voice_text, tool_context)
+            audio = await gen_fn(
+                tool_context.services.bot,
+                tool_context.services.config,
+                voice_text,
+                settings.model,
+                settings.voice,
+            )
         except ValueError as e:
             return str(e)
         except Exception:
@@ -96,7 +95,7 @@ class VoiceRequestToolCall(ToolCall):
             return "Couldn't generate voice audio."
 
         try:
-            sent = await send_voice_message(self.ctx, audio)
+            sent = await send_voice_message(tool_context.ctx, audio)
             if sent:
                 att = next(iter(sent.get("attachments") or []), None)
                 if att:
@@ -110,7 +109,7 @@ class VoiceRequestToolCall(ToolCall):
                 exc_info=True,
             )
 
-        filename = f"{self.ctx.me.display_name} speaking.{_audio_file_extension(audio)}"
+        filename = f"{tool_context.ctx.me.display_name} speaking.{_audio_file_extension(audio)}"
         tool_context.attach_file(discord.File(io.BytesIO(audio), filename=filename))
         tool_context.audio_transcripts_to_cache.append(voice_text)
         return "The requested voice audio was generated and sent."

@@ -5,7 +5,6 @@ import pathlib
 
 import discord
 
-from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.dashboard.decorator import dashboard_page
 from aiuser.types.abc import MixinMeta
 from aiuser.utils.prompt_metrics import (
@@ -127,10 +126,7 @@ def _load_presets(raw_presets: str):
 )
 async def prompt_overview(self: MixinMeta, guild: discord.Guild, **kwargs):
     model = await self.config.guild(guild).model()
-    guild_prompt = await self.config.guild(guild).custom_text_prompt()
-    server_prompt = (
-        guild_prompt or await self.config.custom_text_prompt() or DEFAULT_PROMPT
-    )
+    server_prompt = await self.services.resolver.resolve_prompt(guild=guild)
 
     template_path = TEMPLATES_PATH / "prompt_page.html"
     source = template_path.read_text()

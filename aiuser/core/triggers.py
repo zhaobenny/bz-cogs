@@ -43,15 +43,13 @@ async def get_conversation_reply_chance(
     if reply_percent == 0 or reply_time_seconds == 0:
         return None
 
-    cutoff_time = datetime.now(tz=timezone.utc) - timedelta(seconds=reply_time_seconds)
+    state = services.reply_channel_states.get(ctx.channel.id)
+    if state is None or state.last_bot_reply_at is None:
+        return None
 
-    async for message in ctx.channel.history(limit=10, before=ctx.message):
-        if (
-            message.author.id == services.bot.user.id
-            and len(message.embeds) == 0
-            and message.created_at > cutoff_time
-        ):
-            return reply_percent
+    cutoff_time = datetime.now(tz=timezone.utc) - timedelta(seconds=reply_time_seconds)
+    if state.last_bot_reply_at > cutoff_time:
+        return reply_percent
 
     return None
 

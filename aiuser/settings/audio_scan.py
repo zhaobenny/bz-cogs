@@ -7,22 +7,12 @@ from redbot.core import checks, commands
 
 from aiuser.config.defaults import DEFAULT_STT_MODEL, DEFAULT_STT_PROVIDER
 from aiuser.settings._groups import aiuser
-from aiuser.speech.providers.factory import DEFAULT_MODELS, PROVIDERS
+from aiuser.settings.functions.utilities import provider_key_error
+from aiuser.speech.stt import DEFAULT_MODELS, PROVIDERS
 from aiuser.types.abc import MixinMeta
 
 
 class AudioScanSettings(MixinMeta):
-    async def _audio_provider_key_error(
-        self, ctx: commands.Context, provider: str
-    ) -> Optional[str]:
-        tokens = await self.bot.get_shared_api_tokens(provider)
-        if tokens.get("api_key"):
-            return None
-        return (
-            f"{provider} key not set! Set it using "
-            f"`{ctx.clean_prefix}set api {provider} api_key,APIKEY`."
-        )
-
     @aiuser.group()
     @checks.is_owner()
     async def audioscan(self, _):
@@ -39,7 +29,7 @@ class AudioScanSettings(MixinMeta):
         ).lower()
 
         if value:
-            key_error = await self._audio_provider_key_error(ctx, provider)
+            key_error = await provider_key_error(self.bot, ctx, provider)
             if key_error:
                 return await ctx.send(key_error)
 
@@ -70,7 +60,7 @@ class AudioScanSettings(MixinMeta):
                 + ", ".join(f"`{p}`" for p in PROVIDERS)
             )
 
-        key_error = await self._audio_provider_key_error(ctx, provider)
+        key_error = await provider_key_error(self.bot, ctx, provider)
         if key_error:
             return await ctx.send(key_error)
 
