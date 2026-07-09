@@ -36,7 +36,7 @@ async def test_image_request(
     # Enable function calling and specific tool
     await mock_services.config.guild(test_guild).function_calling.set(True)
     await mock_services.config.guild(test_guild).function_calling_functions.set(
-        ["image_request"]
+        ["generate_image"]
     )
 
     user_message = backend.make_message(
@@ -54,7 +54,7 @@ async def test_image_request(
         id="call_image_123",
         type="function",
         function=Function(
-            name="image_request",
+            name="generate_image",
             arguments=f'{{"description": "{image_description}"}}',
         ),
     )
