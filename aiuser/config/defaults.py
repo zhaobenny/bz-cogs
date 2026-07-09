@@ -98,7 +98,7 @@ DEFAULT_GUILD = {
     "function_calling_voice_model": None,
     "function_calling_voice": None,
     "function_calling_voice_provider_history": {},
-    "function_calling_search_provider": "serper",
+    "function_calling_search_provider": "exa",
     "function_calling_search_endpoint": None,
     "function_calling_search_max_results": 5,
     "conversation_reply_percent": 0,

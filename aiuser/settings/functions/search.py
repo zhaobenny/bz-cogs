@@ -46,7 +46,7 @@ class SearchFunctionSettings(FunctionToggleHelperMixin):
     async def search_provider(self, ctx: commands.Context, provider: str):
         """Set the search provider.
 
-        Available providers: `serper`, `searxng`
+        Available providers: `exa`, `searxng`
         """
         provider = provider.strip().lower()
 

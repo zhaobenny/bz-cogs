@@ -18,7 +18,7 @@ async def provider_key_error(
     Args:
         bot: The Red bot instance.
         ctx: Redbot command invocation context (used for clean_prefix).
-        provider: The shared-API-token service name (e.g. ``"serper"``).
+        provider: The shared-API-token service name (e.g. ``"exa"``).
         key_name: The token field name to check (default ``"api_key"``).
     """
     tokens = await bot.get_shared_api_tokens(provider)

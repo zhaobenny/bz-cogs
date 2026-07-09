@@ -6,17 +6,17 @@ then register it in PROVIDERS here (plus PROVIDER_KEY_SERVICES if it
 needs a shared API token).
 """
 
-from aiuser.functions.search.providers import searxng, serper
+from aiuser.functions.search.providers import exa, searxng
 
-SERPER = "serper"
+EXA = "exa"
 SEARXNG = "searxng"
 
 PROVIDERS = {
-    SERPER: serper.search,
+    EXA: exa.search,
     SEARXNG: searxng.search,
 }
 
 # provider -> shared-API-token service name that must have an api_key set
 PROVIDER_KEY_SERVICES = {
-    SERPER: "serper",
+    EXA: "exa",
 }
