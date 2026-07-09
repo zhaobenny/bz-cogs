@@ -7,6 +7,7 @@ from aiuser.speech.tts import DEFAULT_MODELS, DEFAULT_VOICES
 from aiuser.config.model_info import get_model_info
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
 from aiuser.settings.functions.memory import MemoryFunctionSettings
+from aiuser.settings.functions.scrape import ScrapeFunctionSettings
 from aiuser.settings.functions.search import SearchFunctionSettings
 from aiuser.settings.functions.utilities import (
     FunctionsGroupMixin,
@@ -23,6 +24,7 @@ class FunctionCallingSettings(
     ImageRequestFunctionSettings,
     VoiceFunctionSettings,
     SearchFunctionSettings,
+    ScrapeFunctionSettings,
     MemoryFunctionSettings,
 ):
     @functions.command(name="toggle")
@@ -215,16 +217,6 @@ class FunctionCallingSettings(
             color=await ctx.embed_color(),
         )
         await ctx.send(embed=embed)
-
-    @functions.command(name="scrape")
-    async def toggle_scrape_function(self, ctx: commands.Context):
-        """
-        Enable/disable the functionality for the LLM to open URLs in messages
-
-        (May not be called if the link generated an Discord embed)
-        """
-        tool_names = [names.OPEN_URL]
-        await self.toggle_function_group(ctx, tool_names, "Scrape")
 
     @functions.command(name="noresponse")
     async def toggle_ignore_function(self, ctx: commands.Context):

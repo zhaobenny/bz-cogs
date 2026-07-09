@@ -3,7 +3,10 @@ from typing import Any, Dict, Optional
 
 from aiuser.functions import names
 from aiuser.functions.context import ToolContext
-from aiuser.functions.scrape.scrape import scrape_page
+from aiuser.functions.scrape.providers import (
+    MAX_SCRAPED_CHARS,
+    configured_scrape_provider,
+)
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 
@@ -34,7 +37,10 @@ class ScrapeToolCall(ToolCall):
     ) -> Optional[str]:
         logger.info(f"Attempting scrape of {arguments['url']}")
         try:
-            return await scrape_page(arguments["url"])
+            scrape_provider = await configured_scrape_provider(tool_context)
+            return await scrape_provider(
+                arguments["url"], tool_context, MAX_SCRAPED_CHARS
+            )
         except Exception:
             logger.debug(f"Failed to scrape {arguments['url']}", exc_info=True)
             return f"Unable to open the requested {arguments['url']}.."

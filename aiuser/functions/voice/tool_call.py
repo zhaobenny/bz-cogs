@@ -66,8 +66,8 @@ class VoiceRequestToolCall(ToolCall):
         settings = await voice_settings(
             tool_context.services.config, tool_context.ctx.guild
         )
-        gen_fn = PROVIDERS.get(settings.provider)
-        if gen_fn is None:
+        voice_provider = PROVIDERS.get(settings.provider)
+        if voice_provider is None:
             return f"Voice provider `{settings.provider}` is not available."
 
         voice_text = CUSTOM_EMOJI_RE.sub(".", text)
@@ -81,7 +81,7 @@ class VoiceRequestToolCall(ToolCall):
             )
 
         try:
-            audio = await gen_fn(
+            audio = await voice_provider(
                 tool_context.services.bot,
                 tool_context.services.config,
                 voice_text,

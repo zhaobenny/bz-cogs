@@ -101,6 +101,7 @@ DEFAULT_GUILD = {
     "function_calling_search_provider": "exa",
     "function_calling_search_endpoint": None,
     "function_calling_search_max_results": 5,
+    "function_calling_scrape_provider": "local",
     "conversation_reply_percent": 0,
     "conversation_reply_time": 20,
     "message_burst_idle_seconds": DEFAULT_MESSAGE_BURST_IDLE_SECONDS,

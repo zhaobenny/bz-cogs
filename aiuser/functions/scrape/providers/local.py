@@ -5,21 +5,16 @@ from trafilatura import extract
 from aiuser.utils.restricted_http import RestrictedHTTP
 
 logger = logging.getLogger("red.bz_cogs.aiuser.tools")
-MAX_SCRAPED_CHARS = 5000
 
 
-def _truncate_scraped_content(text: str, *, max_chars: int) -> str:
+def truncate_scraped_content(text: str, *, max_chars: int) -> str:
     if len(text) > max_chars:
         return text[:max_chars] + "...."
     return text
 
 
-async def scrape_page(
-    link: str,
-    *,
-    max_chars: int = MAX_SCRAPED_CHARS,
-):
-    logger.info("Requesting %s to scrape", link)
+async def local_scrape(link: str, _tool_context, max_chars: int) -> str:
+    logger.info("Requesting %s to scrape with local provider", link)
 
     async with RestrictedHTTP.session() as session:
         async with session.get(link) as response:
@@ -38,4 +33,4 @@ async def scrape_page(
                 text_preview = raw.decode("utf-8", errors="replace")
                 res = f"Content-Type:\n {content_type}. Extracted content:\n {text_preview}"
 
-            return _truncate_scraped_content(res, max_chars=max_chars)
+            return truncate_scraped_content(res, max_chars=max_chars)

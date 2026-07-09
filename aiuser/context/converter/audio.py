@@ -71,8 +71,8 @@ async def create_audio_transcript(
     if cached:
         return cached
 
-    transcribe_fn = PROVIDERS.get(settings.provider)
-    if transcribe_fn is None:
+    audio_provider = PROVIDERS.get(settings.provider)
+    if audio_provider is None:
         return None
 
     content_type = (attachment.content_type or "").split(";")[0].lower()
@@ -93,7 +93,7 @@ async def create_audio_transcript(
         return None
 
     try:
-        transcript = await transcribe_fn(
+        transcript = await audio_provider(
             services.bot,
             services.config,
             prepared_audio,
