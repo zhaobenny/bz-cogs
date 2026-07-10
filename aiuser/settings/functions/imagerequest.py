@@ -95,5 +95,5 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
             description=truncate_prompt(preprompt),
             color=await ctx.embed_color(),
         )
-        await add_prompt_metrics_fields(e, self.config, ctx, preprompt)
+        await add_prompt_metrics_fields(e, self.services, ctx, preprompt)
         await ctx.send(embed=e)

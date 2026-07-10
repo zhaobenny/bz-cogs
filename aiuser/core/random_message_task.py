@@ -86,7 +86,7 @@ class RandomMessageTask:
         conversation = await ConversationAssembler(self.services, ctx).build(
             prompt_override=prompt, include_history=False, include_trigger=False
         )
-        topic = await format_variables(ctx, random.choice(topics))
+        topic = await format_variables(ctx, random.choice(topics), self.services)
         await conversation.append_system(
             f"Using the persona above, follow these instructions: {topic}"
         )

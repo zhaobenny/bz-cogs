@@ -119,6 +119,9 @@ Prompts, topics,and image pre-prompt can include certain dynamic variables by in
 - `{authorname}` - the author of the message the bot is activated on
 - `{authortoprole}` - the author's highest role
 - `{authormention}` - the author's mention in string format
+- `{serverprompt}` - the configured server prompt, falling back to the global/default prompt
+- `{channelprompt}` - the configured channel prompt, if one is set
+- `{roleprompt}` - the author's highest configured role prompt, if one is set
 - `{serveremojis}` - all of the server emojis, in a string format (eg. `<:emoji:12345> <:emoji2:78912>`)
 - `{servername}` - the server name
 - `{channelname}` - the current channel name

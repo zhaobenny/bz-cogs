@@ -77,7 +77,9 @@ class ConversationAssembler:
             channel=self.ctx.channel,
             member=self.init_message.author,
         )
-        await conversation.append_system(await format_variables(self.ctx, prompt))
+        await conversation.append_system(
+            await format_variables(self.ctx, prompt, self.services)
+        )
 
         if include_history:
             memory = await self._fetch_relevant_memory()

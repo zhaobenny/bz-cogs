@@ -3,7 +3,7 @@ import functools
 import logging
 import random
 from datetime import datetime
-from typing import Callable, Coroutine
+from typing import TYPE_CHECKING, Callable, Coroutine
 
 import discord
 import tiktoken
@@ -15,7 +15,12 @@ from aiuser.config.constants import (
     YOUTUBE_URL_PATTERN,
 )
 
+if TYPE_CHECKING:
+    from aiuser.core.services import AIUserServices
+
 logger = logging.getLogger("red.bz_cogs.aiuser")
+
+PROMPT_SCOPE_VARIABLES = ("serverprompt", "channelprompt", "roleprompt")
 
 
 def get_tokenizer_encoding(model: str):
@@ -50,7 +55,62 @@ def to_thread(timeout=300):
     return decorator
 
 
-async def format_variables(ctx: commands.Context, text: str):
+async def _get_prompt_scope_variables(
+    ctx: commands.Context,
+    text: str,
+    format_values: dict,
+    services: "AIUserServices",
+):
+    names_to_fetch = {name for name in PROMPT_SCOPE_VARIABLES if f"{{{name}}}" in text}
+    if not names_to_fetch:
+        return {}
+
+    prompt_values = {}
+    while names_to_fetch:
+        name = names_to_fetch.pop()
+        if name == "serverprompt":
+            value = await services.resolver.resolve_prompt(guild=ctx.guild) or ""
+        elif name == "channelprompt":
+            value = (
+                await services.config.channel(ctx.channel).custom_text_prompt() or ""
+            )
+        else:  # roleprompt
+            value = ""
+            if isinstance(ctx.message.author, discord.Member):
+                value = (
+                    await services.resolver.get_role_override(
+                        ctx.message.author, "custom_text_prompt"
+                    )
+                    or ""
+                )
+        prompt_values[name] = value
+        names_to_fetch |= {
+            name
+            for name in PROMPT_SCOPE_VARIABLES
+            if f"{{{name}}}" in value and name not in prompt_values
+        }
+
+    # Expand broadest scope first so a channel/role prompt can embed
+    # {serverprompt}; the reverse direction leaves the token as-is.
+    known_tokens = tuple(
+        f"{{{key}}}" for key in (*format_values, *PROMPT_SCOPE_VARIABLES)
+    )
+    for name in PROMPT_SCOPE_VARIABLES:
+        value = prompt_values.get(name)
+        if not value or not any(token in value for token in known_tokens):
+            continue
+        other_values = {**format_values, **prompt_values}
+        other_values.pop(name)
+        try:
+            prompt_values[name] = value.format(**other_values)
+        except (KeyError, ValueError, IndexError):
+            logger.exception("Invalid format string in scoped prompt")
+    return prompt_values
+
+
+async def format_variables(
+    ctx: commands.Context, text: str, services: "AIUserServices"
+):
     """
     Insert supported variables into string if they are present
     """
@@ -81,26 +141,33 @@ async def format_variables(ctx: commands.Context, text: str):
     serveremojis = [str(e) for e in ctx.message.guild.emojis]
     random.shuffle(serveremojis)
     serveremojis = " ".join(serveremojis)
+    format_values = {
+        "botname": botname,
+        "botowner": botowner,
+        "authorname": authorname,
+        "authortoprole": authortoprole,
+        "authormention": authormention,
+        "servername": servername,
+        "serveremojis": serveremojis,
+        "channelname": channelname,
+        "channeltopic": channeltopic,
+        "currentdate": currentdate,
+        "currentweekday": currentweekday,
+        "currenttime": currenttime,
+        "randomnumber": randomnumber,
+    }
+    format_values.update(
+        await _get_prompt_scope_variables(ctx, text, format_values, services)
+    )
 
     try:
-        res = text.format(
-            botname=botname,
-            botowner=botowner,
-            authorname=authorname,
-            authortoprole=authortoprole,
-            authormention=authormention,
-            servername=servername,
-            serveremojis=serveremojis,
-            channelname=channelname,
-            channeltopic=channeltopic,
-            currentdate=currentdate,
-            currentweekday=currentweekday,
-            currenttime=currenttime,
-            randomnumber=randomnumber,
-        )
+        known_tokens = tuple(f"{{{key}}}" for key in format_values)
+        if not any(token in text for token in known_tokens):
+            return text
+        res = text.format(**format_values)
         return res
-    except KeyError:
-        logger.exception("Invalid key in message", exc_info=True)
+    except (KeyError, ValueError, IndexError):
+        logger.exception("Invalid format string in message", exc_info=True)
         return text
 
 

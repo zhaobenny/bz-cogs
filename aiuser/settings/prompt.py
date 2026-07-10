@@ -31,7 +31,7 @@ def _set_page_footers(pages: list[discord.Embed]) -> None:
 
 async def _build_prompt_pages(
     ctx: commands.Context,
-    config,
+    services,
     title: str,
     prompt: str,
     *,
@@ -47,7 +47,7 @@ async def _build_prompt_pages(
         for prompt_page in prompt_pages
     ]
     if include_metrics:
-        await add_prompt_metrics_fields(pages[0], config, ctx, prompt)
+        await add_prompt_metrics_fields(pages[0], services, ctx, prompt)
     return pages
 
 
@@ -147,7 +147,7 @@ class PromptSettings(MixinMeta):
     async def _send_prompt_pages(
         self, ctx: commands.Context, title: str, prompt: str
     ) -> None:
-        pages = await _build_prompt_pages(ctx, self.config, title, prompt)
+        pages = await _build_prompt_pages(ctx, self.services, title, prompt)
 
         if len(pages) == 1:
             await ctx.send(embed=pages[0])
@@ -167,7 +167,7 @@ class PromptSettings(MixinMeta):
 
         return await _build_prompt_pages(
             ctx,
-            self.config,
+            self.services,
             await self._get_embed_title(mention_type, entity),
             custom_prompt,
         )
@@ -217,7 +217,7 @@ class PromptSettings(MixinMeta):
             pages.extend(
                 await _build_prompt_pages(
                     ctx,
-                    self.config,
+                    self.services,
                     f"Preset `{preset}`",
                     prompt,
                 )
@@ -263,7 +263,7 @@ class PromptSettings(MixinMeta):
             description=truncate_prompt(prompt),
             color=await ctx.embed_color(),
         )
-        await add_prompt_metrics_fields(embed, self.config, ctx, prompt)
+        await add_prompt_metrics_fields(embed, self.services, ctx, prompt)
         return await ctx.send(embed=embed)
 
     @prompt_preset.command(name="remove", aliases=["rm", "delete"])
@@ -298,7 +298,9 @@ class PromptSettings(MixinMeta):
     ):
         """Set a custom prompt or preset for the server (or provided channel/role/member)
 
-        If multiple prompts can be used, the most specific prompt will be used, eg. it will go for: member > role > channel > server
+        If multiple prompts can be used, the most specific prompt will be used, eg. it will go for: member > role > channel > server.
+
+        Prompts can include variables like `{serverprompt}`, `{channelprompt}`, and `{roleprompt}`.
 
         **Arguments**
             - `mention` *(Optional)* A specific user or channel
@@ -347,5 +349,5 @@ class PromptSettings(MixinMeta):
             description=f"{truncate_prompt(prompt)}",
             color=await ctx.embed_color(),
         )
-        await add_prompt_metrics_fields(embed, self.config, ctx, prompt)
+        await add_prompt_metrics_fields(embed, self.services, ctx, prompt)
         return await ctx.send(embed=embed)

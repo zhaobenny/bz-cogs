@@ -203,7 +203,7 @@ class OwnerSettings(MixinMeta):
             description=f"{truncate_prompt(prompt)}",
             color=await ctx.embed_color(),
         )
-        await add_prompt_metrics_fields(embed, self.config, ctx, prompt)
+        await add_prompt_metrics_fields(embed, self.services, ctx, prompt)
         return await ctx.send(embed=embed)
 
     async def _set_custom_endpoint(self, ctx: commands.Context, url: Optional[str]):

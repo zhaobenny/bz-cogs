@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from difflib import SequenceMatcher
-from typing import Tuple
+from typing import TYPE_CHECKING, Tuple
 
 import discord
-from redbot.core import Config, commands
+from redbot.core import commands
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
@@ -13,6 +13,9 @@ from aiuser.types.enums import MentionType
 from aiuser.utils.prompt_metrics import (
     get_prompt_metrics_for_context,
 )
+
+if TYPE_CHECKING:
+    from aiuser.core.services import AIUserServices
 
 
 async def confirm_pending(
@@ -74,11 +77,11 @@ def get_config_attribute(
 
 async def add_prompt_metrics_fields(
     embed: discord.Embed,
-    config: Config,
+    services: AIUserServices,
     ctx: commands.Context,
     prompt: str,
 ) -> None:
-    metrics = await get_prompt_metrics_for_context(ctx, config, prompt)
+    metrics = await get_prompt_metrics_for_context(ctx, services, prompt)
     embed.add_field(name="Tokens", value=metrics.token_label)
     if metrics.cost_per_1k_label:
         embed.add_field(

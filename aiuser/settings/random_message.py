@@ -105,7 +105,7 @@ class RandomMessageSettings(MixinMeta):
             description=f"{prompt}",
             color=await ctx.embed_color(),
         )
-        await add_prompt_metrics_fields(embed, self.config, ctx, prompt)
+        await add_prompt_metrics_fields(embed, self.services, ctx, prompt)
         return await ctx.send(embed=embed)
 
     @randommessage.command(name="remove", aliases=["rm", "delete"])

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from aiuser.config.models import OPENROUTER_MODEL_PROMPT_PRICES
 from aiuser.utils.utilities import (
@@ -9,6 +10,9 @@ from aiuser.utils.utilities import (
     format_variables,
     get_tokenizer_encoding,
 )
+
+if TYPE_CHECKING:
+    from aiuser.core.services import AIUserServices
 
 
 @dataclass
@@ -62,7 +66,9 @@ async def get_prompt_metrics(text: str, model: str) -> PromptMetrics:
     )
 
 
-async def get_prompt_metrics_for_context(ctx, config, text: str) -> PromptMetrics:
-    model = await config.guild(ctx.guild).model()
-    formatted = await format_variables(ctx, text) if text else text
+async def get_prompt_metrics_for_context(
+    ctx, services: AIUserServices, text: str
+) -> PromptMetrics:
+    model = await services.config.guild(ctx.guild).model()
+    formatted = await format_variables(ctx, text, services) if text else text
     return await get_prompt_metrics(formatted, model)

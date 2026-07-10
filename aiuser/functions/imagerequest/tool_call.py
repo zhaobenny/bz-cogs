@@ -43,7 +43,7 @@ class ImageRequestToolCall(ToolCall):
         description = arguments["description"][:2000]
         preprompt = await _pick_image_preprompt(tool_context) or ""
         if preprompt:
-            preprompt = await format_variables(ctx, preprompt)
+            preprompt = await format_variables(ctx, preprompt, tool_context.services)
             description = f"{preprompt} {description}"
 
         image_endpoint_override = await config.guild(
