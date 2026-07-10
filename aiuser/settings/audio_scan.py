@@ -5,7 +5,7 @@ from typing import Optional
 import discord
 from redbot.core import checks, commands
 
-from aiuser.config.defaults import DEFAULT_STT_MODEL, DEFAULT_STT_PROVIDER
+from aiuser.config.defaults import DEFAULT_STT_PROVIDER
 from aiuser.settings._groups import aiuser
 from aiuser.settings.functions.utilities import provider_key_error
 from aiuser.speech.stt import DEFAULT_MODELS, PROVIDERS
@@ -74,7 +74,7 @@ class AudioScanSettings(MixinMeta):
             history = await guild_conf.scan_audio_provider_history()
             history[previous_provider] = model
             saved_model = history.get(provider)
-            model = saved_model or DEFAULT_MODELS.get(provider) or DEFAULT_STT_MODEL
+            model = saved_model or DEFAULT_MODELS.get(provider)
             restored = saved_model is not None
             await guild_conf.scan_audio_provider_history.set(history)
             await guild_conf.scan_audio_model.set(model)
@@ -94,7 +94,7 @@ class AudioScanSettings(MixinMeta):
             )
         embed.add_field(
             name="Model",
-            value=f"`{model or DEFAULT_STT_MODEL}`",
+            value=f"`{model or DEFAULT_MODELS.get(provider)}`",
             inline=True,
         )
         await ctx.send(embed=embed)
@@ -103,11 +103,15 @@ class AudioScanSettings(MixinMeta):
     async def audio_model(self, ctx: commands.Context, *, model: Optional[str] = None):
         """Set the speech-to-text model, or blank to reset to the default."""
         model = model.strip() if model else None
-        await self.config.guild(ctx.guild).scan_audio_model.set(model)
+        guild_conf = self.config.guild(ctx.guild)
+        await guild_conf.scan_audio_model.set(model)
+        provider = (
+            await guild_conf.scan_audio_provider() or DEFAULT_STT_PROVIDER
+        ).lower()
 
         embed = discord.Embed(
             title="Audio transcription model now set to:",
-            description=f"`{model or DEFAULT_STT_MODEL}`",
+            description=f"`{model or DEFAULT_MODELS.get(provider)}`",
             color=await ctx.embed_color(),
         )
         await ctx.send(embed=embed)

@@ -7,7 +7,7 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.constants import CHANNEL_MENTION_OR_ID_PATTERN
-from aiuser.config.defaults import DEFAULT_STT_MODEL
+from aiuser.config.defaults import DEFAULT_STT_PROVIDER
 from aiuser.config.model_info import get_model_info
 from aiuser.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
@@ -23,6 +23,7 @@ from aiuser.settings.owner import OwnerSettings
 from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.random_message import RandomMessageSettings
 from aiuser.settings.response import ResponseSettings
+from aiuser.speech.stt import DEFAULT_MODELS as STT_DEFAULT_MODELS
 from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.triggers import TriggerSettings
 from aiuser.settings.utilities import rank_choices_for_query
@@ -180,10 +181,12 @@ class Settings(
         media_embed.add_field(
             name="Transcribe Audio", inline=True, value=f"`{config['scan_audio']}`"
         )
+        stt_provider = (config["scan_audio_provider"] or DEFAULT_STT_PROVIDER).lower()
+        stt_model = config["scan_audio_model"] or STT_DEFAULT_MODELS.get(stt_provider)
         media_embed.add_field(
             name="Speech to Text Model",
             inline=True,
-            value=f"`{config['scan_audio_model'] or DEFAULT_STT_MODEL}`",
+            value=f"`{stt_model}`",
         )
 
         whitelisted_trigger = bool(

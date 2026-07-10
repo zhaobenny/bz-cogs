@@ -43,7 +43,6 @@ DEFAULT_IMAGE_UPLOAD_LIMIT = 10 * (1024 * 1024)  # 10 MB
 DEFAULT_AUDIO_UPLOAD_LIMIT = 25 * (1024 * 1024)  # 25 MB
 DEFAULT_AUDIO_DURATION_LIMIT = 60
 DEFAULT_STT_PROVIDER = "openai"
-DEFAULT_STT_MODEL = "gpt-4o-transcribe"
 DEFAULT_LLM_MODEL = "gpt-5.4-mini"
 DEFAULT_TOOL_CALL_ROUNDS = 10
 
@@ -71,7 +70,7 @@ DEFAULT_GUILD = {
     "max_image_size": DEFAULT_IMAGE_UPLOAD_LIMIT,
     "scan_audio": False,
     "scan_audio_provider": DEFAULT_STT_PROVIDER,
-    "scan_audio_model": DEFAULT_STT_MODEL,
+    "scan_audio_model": None,
     "scan_audio_provider_history": {},
     "max_audio_duration": DEFAULT_AUDIO_DURATION_LIMIT,
     "model": DEFAULT_LLM_MODEL,

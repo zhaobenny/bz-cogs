@@ -7,7 +7,6 @@ from redbot.core import Config
 
 from aiuser.config.defaults import (
     DEFAULT_AUDIO_DURATION_LIMIT,
-    DEFAULT_STT_MODEL,
     DEFAULT_STT_PROVIDER,
 )
 from aiuser.speech.constants import OPENAI, OPENROUTER
@@ -39,11 +38,7 @@ async def transcription_settings(
     provider = (
         (await guild_conf.scan_audio_provider() or DEFAULT_STT_PROVIDER).strip().lower()
     )
-    model = (
-        await guild_conf.scan_audio_model()
-        or DEFAULT_MODELS.get(provider)
-        or DEFAULT_STT_MODEL
-    )
+    model = await guild_conf.scan_audio_model() or DEFAULT_MODELS.get(provider)
     max_duration = int(
         await guild_conf.max_audio_duration() or DEFAULT_AUDIO_DURATION_LIMIT
     )
