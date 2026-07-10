@@ -4,16 +4,17 @@ from typing import Optional
 
 import discord
 from redbot.core import checks, commands
+from redbot.core.utils.chat_formatting import pagify
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.defaults import DEFAULT_PROMPT
+from aiuser.settings._groups import aiuser
 from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.utilities import (
     add_prompt_metrics_fields,
     confirm_pending,
     truncate_prompt,
 )
-from aiuser.settings._groups import aiuser
 from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import MentionType
 from aiuser.types.types import COMPATIBLE_MENTIONS
@@ -26,6 +27,28 @@ def _set_page_footers(pages: list[discord.Embed]) -> None:
         footer = page.footer.text or ""
         suffix = f"Page {index} of {len(pages)}"
         page.set_footer(text=f"{footer} | {suffix}" if footer else suffix)
+
+
+async def _build_prompt_pages(
+    ctx: commands.Context,
+    config,
+    title: str,
+    prompt: str,
+    *,
+    include_metrics: bool = True,
+) -> list[discord.Embed]:
+    prompt_pages = list(pagify(prompt, page_length=3900)) or [prompt or " "]
+    pages = [
+        discord.Embed(
+            title=title,
+            description=prompt_page,
+            color=await ctx.embed_color(),
+        )
+        for prompt_page in prompt_pages
+    ]
+    if include_metrics:
+        await add_prompt_metrics_fields(pages[0], config, ctx, prompt)
+    return pages
 
 
 class PromptSettings(MixinMeta):
@@ -92,14 +115,9 @@ class PromptSettings(MixinMeta):
                 description=f"`The {mention_type.name.lower()} does not have a specific custom prompt set.`",
                 color=await ctx.embed_color(),
             )
+            await ctx.send(embed=embed)
         else:
-            embed = discord.Embed(
-                title=title,
-                description=truncate_prompt(prompt),
-                color=await ctx.embed_color(),
-            )
-            await add_prompt_metrics_fields(embed, self.config, ctx, prompt)
-        await ctx.send(embed=embed)
+            await self._send_prompt_pages(ctx, title, prompt)
 
     @prompt_show.command(name="members", aliases=["users"])
     async def show_user_prompts(self, ctx: commands.Context):
@@ -126,6 +144,18 @@ class PromptSettings(MixinMeta):
         else:
             return "The prompt for this server is:"
 
+    async def _send_prompt_pages(
+        self, ctx: commands.Context, title: str, prompt: str
+    ) -> None:
+        pages = await _build_prompt_pages(ctx, self.config, title, prompt)
+
+        if len(pages) == 1:
+            await ctx.send(embed=pages[0])
+            return
+
+        _set_page_footers(pages)
+        await SimpleMenu(pages).start(ctx)
+
     async def _get_custom_prompt(self, ctx, entity, mention_type: MentionType):
         custom_prompt = None
         if mention_type != MentionType.SERVER:
@@ -135,20 +165,19 @@ class PromptSettings(MixinMeta):
         if not custom_prompt:
             return None
 
-        embed = discord.Embed(
-            title=await self._get_embed_title(mention_type, entity),
-            description=truncate_prompt(custom_prompt),
-            color=await ctx.embed_color(),
+        return await _build_prompt_pages(
+            ctx,
+            self.config,
+            await self._get_embed_title(mention_type, entity),
+            custom_prompt,
         )
-        await add_prompt_metrics_fields(embed, self.config, ctx, custom_prompt)
-        return embed
 
     async def _show_prompts(self, ctx, entities, mention_type: MentionType):
         pages = []
         for entity in entities:
-            embed = await self._get_custom_prompt(ctx, entity, mention_type)
-            if embed:
-                pages.append(embed)
+            prompt_pages = await self._get_custom_prompt(ctx, entity, mention_type)
+            if prompt_pages:
+                pages.extend(prompt_pages)
 
         if not pages:
             return await ctx.send(
@@ -170,13 +199,7 @@ class PromptSettings(MixinMeta):
             or await self.config.custom_text_prompt()
             or DEFAULT_PROMPT
         )
-        embed = discord.Embed(
-            title="The prompt for this server is:",
-            description=truncate_prompt(prompt),
-            color=await ctx.embed_color(),
-        )
-        await add_prompt_metrics_fields(embed, self.config, ctx, prompt)
-        await ctx.send(embed=embed)
+        await self._send_prompt_pages(ctx, "The prompt for this server is:", prompt)
 
     @prompt.group(name="preset")
     async def prompt_preset(self, _: commands.Context):
@@ -191,13 +214,14 @@ class PromptSettings(MixinMeta):
             return await ctx.send("No presets set for this server")
         pages = []
         for preset, prompt in presets.items():
-            page = discord.Embed(
-                title=f"Preset `{preset}`",
-                description=truncate_prompt(prompt),
-                color=await ctx.embed_color(),
+            pages.extend(
+                await _build_prompt_pages(
+                    ctx,
+                    self.config,
+                    f"Preset `{preset}`",
+                    prompt,
+                )
             )
-            await add_prompt_metrics_fields(page, self.config, ctx, prompt)
-            pages.append(page)
         if len(pages) == 1:
             return await ctx.send(embed=pages[0])
         _set_page_footers(pages)
