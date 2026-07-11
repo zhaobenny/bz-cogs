@@ -91,6 +91,7 @@ async def bot():
     dpytest.configure(b)
 
     # Mock Red-bot specific methods
+    b.owner_ids.add(dpytest.get_config().members[0].id)
     b.allowed_by_whitelist_blacklist = AsyncMock(return_value=True)
     b.get_embed_color = AsyncMock(return_value=discord.Color.blue())
 

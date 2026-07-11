@@ -83,8 +83,7 @@ def format_server(guild: discord.Guild, me: discord.Member) -> str:
 
 async def format_author(tool_context) -> str:
     author = tool_context.ctx.author
-    app_info = await tool_context.services.bot.application_info()
-    owner = app_info.owner
+    is_bot_owner = await tool_context.services.bot.is_owner(author)
     lines = [
         "Discord author info:",
         f"- display_name: {getattr(author, 'display_name', author.name)}",
@@ -96,7 +95,7 @@ async def format_author(tool_context) -> str:
         f"- system: {format_bool(getattr(author, 'system', False))}",
         f"- created_at: {format_dt(author.created_at)}",
         f"- is_server_owner: {format_bool(author.id == tool_context.ctx.guild.owner_id)}",
-        f"- is_bot_owner: {format_bool(author.id == owner.id)}",
+        f"- is_bot_owner: {format_bool(is_bot_owner)}",
     ]
 
     if isinstance(author, discord.Member):

@@ -115,8 +115,11 @@ async def format_variables(
     Insert supported variables into string if they are present
     """
     botname = ctx.message.guild.me.nick or ctx.bot.user.display_name
-    app_info = ctx.bot.application or await ctx.bot.application_info()
-    botowner = app_info.owner.name
+    owners = [
+        ctx.bot.get_user(owner_id) or await ctx.bot.fetch_user(owner_id)
+        for owner_id in sorted(ctx.bot.owner_ids)
+    ]
+    botowner = ", ".join(owner.name for owner in owners)
     authorname = ctx.message.author.display_name
     # Webhook messages have User objects instead of Member objects
     if isinstance(ctx.message.author, discord.Member):

@@ -115,7 +115,7 @@ Admins also manage topics here:
 Prompts, topics,and image pre-prompt can include certain dynamic variables by including one of the following strings:
 
 - `{botname}` - the bot's current nickname or username
-- `{botowner}` - the bot owner's username
+- `{botowner}` - the bot owner(s) username(s)
 - `{authorname}` - the author of the message the bot is activated on
 - `{authortoprole}` - the author's highest role
 - `{authormention}` - the author's mention in string format
