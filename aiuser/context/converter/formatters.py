@@ -20,9 +20,15 @@ def format_text_content(message: Message) -> Optional[str]:
 
 
 def format_image_placeholder(message: Message) -> str:
+    filenames = ", ".join(
+        f'"{attachment.filename}"'
+        for attachment in message.attachments
+        if (attachment.content_type or "").startswith("image/")
+    )
+    filenames = filenames or f'"{message.attachments[0].filename}"'
     if message.author.id == message.guild.me.id:
-        return f'[Image: "{message.attachments[0].filename}"]'
-    return f'User "{message.author.display_name}" sent: [Image: "{message.attachments[0].filename}"]'
+        return f"[Images: {filenames}]"
+    return f'User "{message.author.display_name}" sent: [Images: {filenames}]'
 
 
 async def format_sticker_content(message: Message) -> str:

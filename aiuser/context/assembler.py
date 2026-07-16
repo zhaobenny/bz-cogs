@@ -66,9 +66,6 @@ class ConversationAssembler:
             await guild_conf.custom_model_tokens_limit()
             or get_model_info(model).token_limit
         )
-        if await self._should_use_image_model():
-            model = await guild_conf.scan_images_model() or model
-
         conversation = Conversation(model=model, token_limit=token_limit)
         self._optin_by_default = await guild_conf.optin_by_default()
 
@@ -96,38 +93,24 @@ class ConversationAssembler:
         if include_history:
             await self._prepend_history(conversation)
 
-        return conversation
-
-    # --- prompt / model selection ---
-
-    async def _should_use_image_model(self) -> bool:
-        """Check if we should switch to the image scanning model"""
-        if (
-            self.ctx.interaction
-            or not await self.services.config.guild(self.guild).scan_images()
-        ):
-            return False
-
-        message = self.init_message
-
-        if message.attachments and (
-            message.attachments[0].content_type or ""
-        ).startswith("image/"):
-            return True
-
-        if message.reference:
-            ref = message.reference
-            if not ref.channel_id or not ref.message_id:
-                return False
-            replied = ref.cached_message or await self.services.bot.get_channel(
-                ref.channel_id
-            ).fetch_message(ref.message_id)
-            return bool(
-                replied.attachments
-                and (replied.attachments[0].content_type or "").startswith("image/")
+        has_images = any(
+            isinstance(entry.content, list)
+            and any(
+                isinstance(item, dict) and item.get("type") == "image_url"
+                for item in entry.content
             )
+            for entry in conversation.entries
+        )
+        if has_images:
+            image_model = await guild_conf.scan_images_model() or model
+            conversation.model = image_model
+            conversation.token_limit = (
+                await guild_conf.custom_model_tokens_limit()
+                or get_model_info(image_model).token_limit
+            )
+            await conversation.prune_oldest_if_over_limit()
 
-        return False
+        return conversation
 
     # --- memory ---
 

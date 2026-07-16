@@ -7,7 +7,8 @@ from aiuser.utils.utilities import encode_text_to_tokens
 
 logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
-IMAGE_TOKEN_COST = 255  # TODO: calculate actual image token cost
+LOW_DETAIL_IMAGE_TOKEN_COST = 512
+HIGH_DETAIL_IMAGE_TOKEN_COST = 2500
 
 
 class Conversation:
@@ -126,6 +127,11 @@ class Conversation:
                 if item.get("type") == "text":
                     cost += await encode_text_to_tokens(item.get("text", ""))
                 elif item.get("type") == "image_url":
-                    cost += IMAGE_TOKEN_COST  # TODO: calculate actual image token cost based on model and image size
+                    detail = (item.get("image_url") or {}).get("detail")
+                    cost += (
+                        LOW_DETAIL_IMAGE_TOKEN_COST
+                        if detail == "low"
+                        else HIGH_DETAIL_IMAGE_TOKEN_COST
+                    )
             return cost
         return await encode_text_to_tokens(str(content))

@@ -51,6 +51,15 @@ class ImageScanSettings(MixinMeta):
         )
         return await ctx.send(embed=embed)
 
+    @imagescan.command(name="detail")
+    async def image_detail(self, ctx: commands.Context, detail: str):
+        """Set image scan detail to low, high, or auto."""
+        detail = detail.lower()
+        if detail not in {"low", "high", "auto"}:
+            return await ctx.send("Image detail must be `low`, `high`, or `auto`.")
+        await self.config.guild(ctx.guild).scan_images_detail.set(detail)
+        await ctx.send(f"Image scan detail set to `{detail}`.")
+
     @imagescan.command(name="model")
     async def image_model(self, ctx: commands.Context, model_name: str = None):
         """Set a specific LLM for image scanning, or blank to reset to the main model."""

@@ -35,7 +35,6 @@ class MessageConverter:
     def __init__(self, services: "AIUserServices", ctx: commands.Context):
         self.services = services
         self.bot_id: int = services.bot.user.id
-        self.init_msg = ctx.message
         self.ctx = ctx
 
     async def convert(self, message: Message) -> Optional[List[MessageEntry]]:
@@ -61,16 +60,15 @@ class MessageConverter:
         self, message: Message, res: List[MessageEntry], role: str
     ):
         attachment = message.attachments[0]
-        content_type = attachment.content_type or ""
-        is_trigger_attachment = (self.init_msg.id == message.id) or (
-            self.init_msg.reference and self.init_msg.reference.message_id == message.id
-        )
-        can_scan_attachment = is_trigger_attachment and not self.ctx.interaction
-
+        image_attachments = [
+            item
+            for item in message.attachments
+            if (item.content_type or "").startswith("image/")
+        ]
         if is_audio_attachment(message):
             should_scan_audio = (
                 attachment.size <= DEFAULT_AUDIO_UPLOAD_LIMIT
-                and can_scan_attachment
+                and not self.ctx.interaction
                 and message.author.id != self.bot_id
                 and await self.services.config.guild(message.guild).scan_audio()
             )
@@ -80,20 +78,25 @@ class MessageConverter:
                 else None
             )
             content = transcript or await format_audio(self.services, message)
-        elif not content_type.startswith("image/"):
+        elif not image_attachments:
             content = f'User "{message.author.display_name}" sent: [Attachment: "{message.attachments[0].filename}"]'
         elif (
-            attachment.size
-            > await self.services.config.guild(message.guild).max_image_size()
-        ):
-            content = format_image_placeholder(message)
-        elif (
-            can_scan_attachment
+            role == "user"
+            and not self.ctx.interaction
             and await self.services.config.guild(message.guild).scan_images()
         ):
-            content = await format_image(self.services.config, message)
-            await self.add_entry(content, res, role)
-            return
+            guild_conf = self.services.config.guild(message.guild)
+            max_size = await guild_conf.max_image_size()
+            scan_attachments = [
+                item for item in image_attachments if item.size <= max_size
+            ]
+            if scan_attachments:
+                content = await format_image(
+                    self.services.config, message, scan_attachments
+                )
+                await self.add_entry(content, res, role)
+                return
+            content = format_image_placeholder(message)
         else:
             content = format_image_placeholder(message)
 

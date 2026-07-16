@@ -179,6 +179,11 @@ class Settings(
             value=f"`{config['max_image_size'] / 1024 / 1024:.2f}` MB",
         )
         media_embed.add_field(
+            name="Image Detail",
+            inline=True,
+            value=f"`{config['scan_images_detail']}`",
+        )
+        media_embed.add_field(
             name="Transcribe Audio", inline=True, value=f"`{config['scan_audio']}`"
         )
         stt_provider = (config["scan_audio_provider"] or DEFAULT_STT_PROVIDER).lower()

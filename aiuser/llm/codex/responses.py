@@ -30,7 +30,11 @@ def _convert_content_parts(content: Any) -> List[Dict[str, Any]]:
         if not image_url:
             continue
 
-        parts.append({"type": "input_image", "image_url": image_url})
+        part = {"type": "input_image", "image_url": image_url}
+        detail = (item.get("image_url") or {}).get("detail")
+        if detail:
+            part["detail"] = detail
+        parts.append(part)
     return parts
 
 

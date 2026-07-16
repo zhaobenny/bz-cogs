@@ -75,6 +75,8 @@ Bot owners can configure image scanning with the following commands:
   - Toggles scanning on or off.
 - `[p]aiuser imagescan maxsize <size_in_mb>`
   - Sets the maximum size in Megabytes for an image to be scanned.
+- `[p]aiuser imagescan detail <low|high|auto>`
+  - Sets image input detail. `low` is the default to bound token usage; use `high` for screenshots or fine text.
 - `[p]aiuser imagescan model <model_name>`
   - Sets a specific model for image scanning. By default, the model used for chatting is used. Run without a model name to revert to using the chat model.
 

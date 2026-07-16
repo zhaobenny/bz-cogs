@@ -40,6 +40,7 @@ DEFAULT_MESSAGE_BURST_IDLE_SECONDS = 2
 DEFAULT_MESSAGE_BURST_MAX_SECONDS = 8
 DEFAULT_MIN_MESSAGE_LENGTH = 2
 DEFAULT_IMAGE_UPLOAD_LIMIT = 10 * (1024 * 1024)  # 10 MB
+DEFAULT_IMAGE_DETAIL = "low"
 DEFAULT_AUDIO_UPLOAD_LIMIT = 25 * (1024 * 1024)  # 25 MB
 DEFAULT_AUDIO_DURATION_LIMIT = 60
 DEFAULT_STT_PROVIDER = "openai"
@@ -68,6 +69,7 @@ DEFAULT_GUILD = {
     "scan_images": False,
     "scan_images_model": None,
     "max_image_size": DEFAULT_IMAGE_UPLOAD_LIMIT,
+    "scan_images_detail": DEFAULT_IMAGE_DETAIL,
     "scan_audio": False,
     "scan_audio_provider": DEFAULT_STT_PROVIDER,
     "scan_audio_model": None,
