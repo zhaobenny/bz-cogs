@@ -840,7 +840,7 @@ OPENROUTER_MODEL_PROMPT_PRICES = {
     "glm-5": "9.5E-7",
     "glm-5-turbo": "0.0000012",
     "glm-5.1": "9.66E-7",
-    "glm-5.2": "9.52E-7",
+    "glm-5.2": "9.702E-7",
     "glm-5v-turbo": "0.0000012",
     "gpt-3.5-turbo": "5E-7",
     "gpt-3.5-turbo-0613": "0.000001",

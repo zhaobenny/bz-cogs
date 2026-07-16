@@ -1,3 +1,4 @@
+import re
 from typing import Any, Dict, List
 
 from openai import AsyncOpenAI
@@ -58,10 +59,23 @@ class OpenAICompatibleProvider(LLMProvider):
         messages: List[ChatCompletionMessageParam],
         kwargs: Dict[str, Any],
     ) -> ChatStepResult:
+        request_kwargs = dict(kwargs)
+        endpoint_kind = get_openai_compat_kind(
+            await self.config.custom_openai_endpoint()
+        )
+        if endpoint_kind is CompatEndpointKind.OPENAI and request_kwargs.get("tools"):
+            # OpenAI decided to not support reasoning with tool calls in the completions API
+            version_match = re.match(r"^gpt-(\d+)(?:\.(\d+))?(?:-|$)", model)
+            if version_match and (
+                int(version_match.group(1)),
+                int(version_match.group(2) or 0),
+            ) >= (5, 6):
+                request_kwargs["reasoning_effort"] = "none"
+
         response: ChatCompletion = await self.openai_client.chat.completions.create(
             model=model,
             messages=messages,
-            **kwargs,
+            **request_kwargs,
         )
 
         choice = response.choices[0]
