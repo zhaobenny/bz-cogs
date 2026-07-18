@@ -5,6 +5,7 @@ import pytest
 from discord.ext.test import backend
 
 from aiuser.core.handlers import get_percentage, handle_message
+from aiuser.core.reply_queue import get_or_create_channel_reply_state
 from aiuser.core.triggers import (
     get_conversation_reply_chance,
     is_always_reply_on_words_triggered,
@@ -19,9 +20,10 @@ from aiuser.core.validators import (
 async def _get_conversation_reply_chance(
     bot, mock_services, test_channel, test_member, text
 ):
-    """Create a recent bot message + user trigger, then evaluate conversation follow-up."""
+    """Record a recent aiuser response, then evaluate a conversation follow-up."""
     bot_message = backend.make_message("recent bot message", bot.user, test_channel)
-    await handle_message(mock_services, bot_message)
+    state = get_or_create_channel_reply_state(mock_services, test_channel.id)
+    state.last_bot_reply_at = bot_message.created_at
     trigger = backend.make_message(text, test_member, test_channel)
     ctx = await bot.get_context(trigger)
     return await get_conversation_reply_chance(mock_services, ctx)
@@ -260,14 +262,14 @@ async def test_conversation_reply_uses_highest_role_override(
 
 
 @pytest.mark.asyncio
-async def test_conversation_reply_requires_recent_plain_bot_message(
+async def test_conversation_reply_requires_recorded_aiuser_response(
     bot,
     mock_services,
     test_guild,
     test_channel,
     test_member,
 ):
-    """Conversation continuation should ignore bot embeds but allow plain replies."""
+    """Conversation continuation should ignore unrelated bot-authored messages."""
     await mock_services.config.guild(test_guild).conversation_reply_percent.set(0.9)
     await mock_services.config.guild(test_guild).conversation_reply_time.set(300)
 
@@ -286,6 +288,12 @@ async def test_conversation_reply_requires_recent_plain_bot_message(
     plain_message = backend.make_message("plain follow-up", bot.user, test_channel)
     await handle_message(mock_services, plain_message)
     trigger = backend.make_message("how about now?", test_member, test_channel)
+    ctx = await bot.get_context(trigger)
+    assert await get_conversation_reply_chance(mock_services, ctx) is None
+
+    state = get_or_create_channel_reply_state(mock_services, test_channel.id)
+    state.last_bot_reply_at = plain_message.created_at
+    trigger = backend.make_message("after an aiuser response?", test_member, test_channel)
     ctx = await bot.get_context(trigger)
     assert await get_conversation_reply_chance(mock_services, ctx) == 0.9
 

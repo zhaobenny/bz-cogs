@@ -212,8 +212,10 @@ def mock_create_response(monkeypatch):
     async def patched_create_response(
         services, ctx, conversation=None, history_anchor=None
     ):
+        from aiuser.core.reply_queue import get_or_create_channel_reply_state
         from unittest.mock import patch
 
+        get_or_create_channel_reply_state(services, ctx.channel.id)
         with patch("discord.TextChannel.typing") as mock_typing:
             mock_typing.return_value = noop_typing()
             return await original_create_response(

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from uuid import uuid4
 
 import discord
 import httpx
@@ -53,6 +54,12 @@ class LLMPipeline:
         self.tool_manager = ToolManager(self)
         self.completion: Optional[str] = None
         self.tool_call_entries: List = []
+        self.session_id: Optional[str] = None
+        self.request_id = (
+            str(self.ctx.message.id)
+            if self.conversation.seen_message_ids
+            else uuid4().hex
+        )
 
     @property
     def files_to_send(self) -> List[discord.File]:
@@ -174,7 +181,31 @@ class LLMPipeline:
             kwargs.pop("logit_bias", None)
 
         if is_openrouter_endpoint(await self.services.config.custom_openai_endpoint()):
+            self.session_id = await self._session_id()
             extra_body = kwargs.setdefault("extra_body", {})
-            extra_body.setdefault("session_id", f"{self.ctx.message.id}")
+            self.session_id = extra_body.setdefault("session_id", self.session_id)
+            trace = extra_body.setdefault("trace", {})
+            self.request_id = trace.setdefault("trace_id", self.request_id)
+            self.tool_context.llm_session_id = self.session_id
+            self.tool_context.llm_trace_id = self.request_id
 
         return kwargs
+
+    async def _session_id(self) -> str:
+        state = self.services.reply_channel_states.get(self.ctx.channel.id)
+        if (
+            self.conversation.seen_message_ids
+            and state
+            and state.llm_session_id
+            and state.last_bot_reply_at
+        ):
+            max_history_gap = await self.services.config.guild(
+                self.ctx.guild
+            ).messages_backread_seconds()
+            elapsed = abs(
+                (self.ctx.message.created_at - state.last_bot_reply_at).total_seconds()
+            )
+            if max_history_gap and elapsed <= max_history_gap:
+                return state.llm_session_id
+
+        return self.request_id

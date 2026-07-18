@@ -61,4 +61,10 @@ async def create_response(
             cache_key = ("tool_calls", ctx.channel.id, sent_message.id)
             services.context_cache[cache_key] = pipeline.tool_call_entries
 
+        if sent_message:
+            state = services.reply_channel_states[ctx.channel.id]
+            state.last_bot_reply_at = sent_message.created_at
+            if pipeline.session_id:
+                state.llm_session_id = pipeline.session_id
+
         return sent_message is not None

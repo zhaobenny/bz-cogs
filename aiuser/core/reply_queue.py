@@ -83,6 +83,7 @@ class ChannelReplyState:
         self.drain_task: Optional[asyncio.Task] = None
         self.is_executing = False
         self.last_bot_reply_at: Optional[datetime] = None
+        self.llm_session_id: Optional[str] = None
 
     async def arm_burst(
         self,
@@ -226,7 +227,7 @@ class ChannelReplyState:
             self.drain_task.cancel()
 
 
-def get_channel_reply_state(
+def get_or_create_channel_reply_state(
     services: "AIUserServices", channel_id: int
 ) -> ChannelReplyState:
     return services.reply_channel_states.setdefault(channel_id, ChannelReplyState())

@@ -13,7 +13,7 @@ from aiuser.core.reply_queue import (
     BurstMode,
     ResponseKind,
     ResponseRequest,
-    get_channel_reply_state,
+    get_or_create_channel_reply_state,
 )
 from aiuser.core.triggers import check_direct_triggers, get_conversation_reply_chance
 from aiuser.core.validators import is_valid_message
@@ -45,6 +45,7 @@ async def handle_slash_command(
     elif not (await services.config.guild(ctx.guild).reply_to_mentions_replies()):
         return await ctx.send("This command is not enabled.", ephemeral=True)
 
+    get_or_create_channel_reply_state(services, ctx.channel.id)
     try:
         await create_response(services, ctx)
     except Exception:
@@ -56,9 +57,6 @@ async def handle_slash_command(
 async def handle_message(services: "AIUserServices", message: discord.Message):
     """Handle regular message events"""
     if message.author.id == services.bot.user.id:
-        if not message.embeds:
-            state = get_channel_reply_state(services, message.channel.id)
-            state.last_bot_reply_at = message.created_at
         return
 
     ctx: commands.Context = await services.bot.get_context(message)
@@ -67,7 +65,7 @@ async def handle_message(services: "AIUserServices", message: discord.Message):
         return
 
     if await check_direct_triggers(services, ctx, message):
-        state = get_channel_reply_state(services, ctx.channel.id)
+        state = get_or_create_channel_reply_state(services, ctx.channel.id)
         await state.cancel_pending_burst()
         await state.enqueue(
             services,
@@ -81,7 +79,7 @@ async def handle_message(services: "AIUserServices", message: discord.Message):
 
     conversation_reply_chance = await get_conversation_reply_chance(services, ctx)
     if conversation_reply_chance is not None:
-        state = get_channel_reply_state(services, ctx.channel.id)
+        state = get_or_create_channel_reply_state(services, ctx.channel.id)
         await state.arm_burst(
             services, ctx, conversation_reply_chance, BurstMode.CONVERSATION
         )
@@ -91,7 +89,7 @@ async def handle_message(services: "AIUserServices", message: discord.Message):
     if reply_chance <= 0:
         return
 
-    state = get_channel_reply_state(services, ctx.channel.id)
+    state = get_or_create_channel_reply_state(services, ctx.channel.id)
     await state.arm_burst(services, ctx, reply_chance, BurstMode.RANDOM)
 
 

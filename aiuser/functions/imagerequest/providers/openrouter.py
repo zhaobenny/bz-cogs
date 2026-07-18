@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 from aiuser.config.constants import GEMINI_IMAGE_MODEL, OPENROUTER_API_V1_URL
 from aiuser.functions.imagerequest.providers.util import fetch_image_bytes
@@ -30,11 +31,20 @@ async def generate(description: str, request: "ToolContext", _: str) -> bytes:
             "Image generation is unavailable because no OpenRouter client could be created"
         )
     try:
+        session_id = request.llm_session_id or uuid4().hex
+        trace_id = request.llm_trace_id or uuid4().hex
         r = await client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": description}],
             modalities=["image", "text"],
-            extra_body={"session_id": f"{request.ctx.message.id}"},
+            extra_body={
+                "session_id": session_id,
+                "trace": {
+                    "trace_id": trace_id,
+                    "trace_name": "aiuser response",
+                    "generation_name": "image generation",
+                },
+            },
         )
     finally:
         await client.close()
