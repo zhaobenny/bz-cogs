@@ -61,6 +61,11 @@ class ToolManager:
         for tool_call in tool_calls:
             pending = self._prepare_tool_call(tool_call)
             if pending is None:
+                entry = await conversation.append_tool_result(
+                    f"Invalid tool call {tool_call.function.name!r}; check the tool name and JSON arguments.",
+                    tool_call.id,
+                )
+                self.pipeline.tool_call_entries.append(entry)
                 continue
 
             if not pending.tool.parallel_safe:
@@ -101,19 +106,20 @@ class ToolManager:
 
         if len(batch) > 1:
             logger.debug("Handling %s parallel-safe tool calls", len(batch))
-            results = await asyncio.gather(
-                *(
-                    pending.tool.run(self.pipeline.tool_context, pending.arguments)
-                    for pending in batch
-                )
-            )
-        else:
-            pending = batch[0]
-            results = [
-                await pending.tool.run(self.pipeline.tool_context, pending.arguments)
-            ]
+        results = await asyncio.gather(
+            *(
+                pending.tool.run(self.pipeline.tool_context, pending.arguments)
+                for pending in batch
+            ),
+            return_exceptions=True,
+        )
 
         for pending, result in zip(batch, results):
+            if isinstance(result, BaseException):
+                logger.error(
+                    f'Tool call "{pending.tool.function_name}" failed', exc_info=result
+                )
+                result = f"Tool {pending.tool.function_name} failed with {result!r}."
             if result is not None:
                 entry = await self.pipeline.conversation.append_tool_result(
                     result, pending.tool_call.id
