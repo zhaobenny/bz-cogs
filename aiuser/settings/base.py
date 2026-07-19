@@ -14,31 +14,29 @@ from aiuser.llm.openai_compatible.endpoints import (
     get_openai_compat_kind,
 )
 from aiuser.llm.registry import list_llm_models
-from aiuser.settings.audio_scan import AudioScanSettings
 from aiuser.settings.functions.base import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
-from aiuser.settings.image_scan import ImageScanSettings
+from aiuser.settings.media import MediaSettings
 from aiuser.settings.memory import MemorySettings
 from aiuser.settings.owner import OwnerSettings
 from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.random_message import RandomMessageSettings
+from aiuser.settings.reply import ReplySettings
 from aiuser.settings.response import ResponseSettings
-from aiuser.speech.stt import DEFAULT_MODELS as STT_DEFAULT_MODELS
-from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.triggers import TriggerSettings
 from aiuser.settings.utilities import rank_choices_for_query
+from aiuser.speech.stt import DEFAULT_MODELS as STT_DEFAULT_MODELS
 from aiuser.types.abc import MixinMeta
-from aiuser.types.enums import MentionType
-from aiuser.types.types import COMPATIBLE_CHANNELS, COMPATIBLE_MENTIONS
+from aiuser.types.types import COMPATIBLE_CHANNELS
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
 class Settings(
     PromptSettings,
-    ImageScanSettings,
-    AudioScanSettings,
+    MediaSettings,
     HistorySettings,
+    ReplySettings,
     ResponseSettings,
     TriggerSettings,
     OwnerSettings,
@@ -51,7 +49,7 @@ class Settings(
     @commands.bot_has_permissions(embed_links=True, add_reactions=True)
     @commands.guild_only()
     async def aiuser(self, _):
-        """Utilize OpenAI to reply to messages and images in approved channels and by opt-in users"""
+        """Configure replies to messages and images in enabled reply channels"""
         pass
 
     @aiuser.command(aliases=["lobotomize"])
@@ -70,9 +68,9 @@ class Settings(
         self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
         await ctx.react_quietly("✅")
 
-    @aiuser.command(aliases=["settings", "showsettings"])
-    async def config(self, ctx: commands.Context):
-        """Returns current config
+    @aiuser.command(aliases=["config", "settings", "showsettings"])
+    async def status(self, ctx: commands.Context):
+        """Returns current settings
 
         (Current config per server)
         """
@@ -89,7 +87,7 @@ class Settings(
 
         main_embed.add_field(name="Model", inline=True, value=f"`{config['model']}`")
         main_embed.add_field(
-            name="Server Reply Percent",
+            name="Server Reply Chance",
             inline=True,
             value=f"`{config['reply_percent'] * 100:.2f}`%",
         )
@@ -101,17 +99,17 @@ class Settings(
         )
 
         main_embed.add_field(
-            name="Always Reply if Pinged",
+            name="Always Reply to Mentions/Replies",
             inline=True,
             value=f"`{config['reply_to_mentions_replies']}`",
         )
         main_embed.add_field(
-            name="Max History Size",
+            name="Context Message Limit",
             inline=True,
             value=f"`{config['messages_backread']}` messages",
         )
         main_embed.add_field(
-            name="Max History Gap",
+            name="Context Message Gap",
             inline=True,
             value=f"`{config['messages_backread_seconds']}` seconds",
         )
@@ -124,7 +122,7 @@ class Settings(
         )
 
         main_embed.add_field(
-            name="Whitelisted Channels",
+            name="Reply Channels",
             inline=True,
             value=" ".join(channels) if channels else "`None`",
         )
@@ -135,7 +133,7 @@ class Settings(
         elif get_openai_compat_kind(endpoint_url) is CompatEndpointKind.OPENROUTER:
             endpoint_text = "Using [OpenRouter](https://openrouter.ai) endpoint"
         elif endpoint_url:
-            endpoint_text = "Using an custom endpoint"
+            endpoint_text = "Using a custom endpoint"
         else:
             endpoint_text = "Using [OpenAI](https://openai.com/)"
         main_embed.add_field(name="LLM Endpoint", inline=True, value=endpoint_text)
@@ -147,23 +145,23 @@ class Settings(
         )
 
         main_embed.add_field(
-            name="Memories",
+            name="Memory Retrieval",
             inline=True,
-            value=f"`{config['query_memories']}`",
+            value="Enabled" if config["query_memories"] else "Disabled",
         )
 
         main_embed.add_field(
-            name="Function Calling",
+            name="Tools",
             inline=True,
-            value=f"`{config['function_calling']}`",
+            value="Enabled" if config["function_calling"] else "Disabled",
         )
         main_embed.add_field(
-            name="Random Message",
+            name="Random Messages",
             inline=True,
             value=(
-                f"`{config['random_messages_percent'] * 100:.2f}`% every `33` min"
+                f"Enabled: `{config['random_messages_percent'] * 100:.2f}`% every `33` min"
                 if config["random_messages_enabled"]
-                else "`False`"
+                else "Disabled"
             ),
         )
 
@@ -171,41 +169,66 @@ class Settings(
             title="Media Settings", color=await ctx.embed_color()
         )
         media_embed.add_field(
-            name="Scan Images", inline=True, value=f"`{config['scan_images']}`"
-        )
-        media_embed.add_field(
-            name="Scan Image Max Size",
+            name="Image Processing",
             inline=True,
-            value=f"`{config['max_image_size'] / 1024 / 1024:.2f}` MB",
+            value="Enabled" if config["scan_images"] else "Disabled",
         )
+        if config["scan_images"]:
+            media_embed.add_field(
+                name="Maximum Image Size",
+                inline=True,
+                value=f"`{config['max_image_size'] / 1024 / 1024:.2f}` MB",
+            )
+            media_embed.add_field(
+                name="Image Detail",
+                inline=True,
+                value=f"`{config['scan_images_detail']}`",
+            )
+            media_embed.add_field(
+                name="Image Model",
+                inline=True,
+                value=f"`{config['scan_images_model'] or 'Chat model'}`",
+            )
         media_embed.add_field(
-            name="Image Detail",
+            name="Audio Transcription",
             inline=True,
-            value=f"`{config['scan_images_detail']}`",
+            value="Enabled" if config["scan_audio"] else "Disabled",
         )
-        media_embed.add_field(
-            name="Transcribe Audio", inline=True, value=f"`{config['scan_audio']}`"
-        )
-        stt_provider = (config["scan_audio_provider"] or DEFAULT_STT_PROVIDER).lower()
-        stt_model = config["scan_audio_model"] or STT_DEFAULT_MODELS.get(stt_provider)
-        media_embed.add_field(
-            name="Speech to Text Model",
-            inline=True,
-            value=f"`{stt_model}`",
-        )
+        if config["scan_audio"]:
+            stt_provider = (
+                config["scan_audio_provider"] or DEFAULT_STT_PROVIDER
+            ).lower()
+            media_embed.add_field(
+                name="Audio Provider",
+                inline=True,
+                value=f"`{stt_provider}`",
+            )
+            media_embed.add_field(
+                name="Maximum Audio Duration",
+                inline=True,
+                value=f"`{config['max_audio_duration']}` seconds",
+            )
+            stt_model = config["scan_audio_model"] or STT_DEFAULT_MODELS.get(
+                stt_provider
+            )
+            media_embed.add_field(
+                name="Audio Model",
+                inline=True,
+                value=f"`{stt_model}`",
+            )
 
         whitelisted_trigger = bool(
             config["members_whitelist"] or config["roles_whitelist"]
         )
 
         main_embed.add_field(
-            name="Only Whitelist Trigger",
+            name="Trigger Allowlist Active",
             inline=True,
             value=f"`{whitelisted_trigger}`",
         )
 
         main_embed.add_field(
-            name="Whitelisted Members",
+            name="Allowed Members",
             inline=True,
             value=" ".join(
                 [f"<@{member_id}>" for member_id in config["members_whitelist"]]
@@ -214,7 +237,7 @@ class Settings(
         )
 
         main_embed.add_field(
-            name="Whitelisted Roles",
+            name="Allowed Roles",
             inline=True,
             value=" ".join([f"<@&{role_id}>" for role_id in config["roles_whitelist"]])
             or "`None`",
@@ -224,7 +247,9 @@ class Settings(
         regexes_num = 0
         if removelist_regexes is not None:
             regexes_num = len(removelist_regexes)
-        main_embed.add_field(name="Remove list", value=f"`{regexes_num}` regexes set")
+        main_embed.add_field(
+            name="Response Filters", value=f"`{regexes_num}` regexes set"
+        )
         main_embed.add_field(name="Ignore Regex", value=f"`{config['ignore_regex']}`")
         main_embed.add_field(
             name="Public Forget Command",
@@ -250,47 +275,26 @@ class Settings(
             await ctx.send(embed=embed)
         return
 
-    @aiuser.command()
+    @aiuser.group()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def channels(self, _):
+        """Manage enabled reply channels"""
+        pass
+
+    @channels.command(name="list")
+    async def channels_list(self, ctx: commands.Context):
+        """List enabled reply channels"""
+        whitelist = await self.config.guild(ctx.guild).channels_whitelist()
+        return await self._send_channel_whitelist(ctx, whitelist)
+
+    @channels.command(name="add")
     @checks.is_owner()
-    async def percent(
-        self,
-        ctx: commands.Context,
-        mention: Optional[COMPATIBLE_MENTIONS],
-        percent: Optional[float],
-    ):
-        """Change the bot's response chance for a server (or a provided user, role, and channel)
-
-        If multiple percentage can be used, the most specific percentage will be used, eg. it will go for: member > role > channel > server
-
-        **Arguments**
-            - `mention` (Optional) A mention of a user, role, or channel
-            - `percent` (Optional) A number between 0 and 100, if omitted, will reset to using other percentages
-        (Setting is per server)
-        """
-        mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
-        if percent is None and mention_type == MentionType.SERVER:
-            return await ctx.send(":warning: No percent provided")
-        if percent is not None or mention_type == MentionType.SERVER:
-            await config_attr.reply_percent.set(percent / 100)
-            desc = f"{percent:.2f}%"
-        else:
-            await config_attr.reply_percent.set(None)
-            desc = "`Custom percent no longer set, will default to other percents`"
-        embed = discord.Embed(
-            title=f"Chance that the bot will reply on this {mention_type.name.lower()} is now:",
-            description=desc,
-            color=await ctx.embed_color(),
-        )
-        return await ctx.send(embed=embed)
-
-    @aiuser.command()
-    @checks.is_owner()
-    async def add(
+    async def channels_add(
         self,
         ctx: commands.Context,
         channel: COMPATIBLE_CHANNELS,
     ):
-        """Adds a channel to the whitelist
+        """Enable replies in a channel
 
         **Arguments**
             - `channel` A mention of the channel
@@ -299,24 +303,18 @@ class Settings(
             return await ctx.send("Invalid channel")
         new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         if channel.id in new_whitelist:
-            return await ctx.send("Channel already in whitelist")
+            return await ctx.send("Replies are already enabled in that channel.")
         new_whitelist.append(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
-        embed = discord.Embed(
-            title="The server whitelist is now:", color=await ctx.embed_color()
-        )
-        channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
-        embed.description = "\n".join(channels) if channels else "None"
-        return await ctx.send(embed=embed)
+        return await self._send_channel_whitelist(ctx, new_whitelist)
 
-    @aiuser.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def remove(
+    @channels.command(name="remove")
+    async def channels_remove(
         self,
         ctx: commands.Context,
         channel: Union[COMPATIBLE_CHANNELS, str],
     ):
-        """Remove a channel from the whitelist
+        """Disable replies in a channel
 
         **Arguments**
             - `channel` A mention or ID of the channel
@@ -332,33 +330,42 @@ class Settings(
             channel_id = channel.id
         new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         if channel_id not in new_whitelist:
-            return await ctx.send("Channel not in whitelist")
+            return await ctx.send("Replies are not enabled in that channel.")
         new_whitelist.remove(channel_id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
+        return await self._send_channel_whitelist(ctx, new_whitelist)
+
+    async def _send_channel_whitelist(self, ctx: commands.Context, whitelist):
         embed = discord.Embed(
-            title="The server whitelist is now:", color=await ctx.embed_color()
+            title="Enabled reply channels:", color=await ctx.embed_color()
         )
-        channels = [f"<#{channel_id}>" for channel_id in new_whitelist]
+        channels = [f"<#{channel_id}>" for channel_id in whitelist]
         embed.description = "\n".join(channels) if channels else "None"
         return await ctx.send(embed=embed)
 
-    @aiuser.command()
+    @aiuser.group(invoke_without_command=True)
     @checks.is_owner()
-    async def model(self, ctx: commands.Context, model: str):
-        """Changes chat completion model
+    async def model(self, ctx: commands.Context):
+        """Show the current chat completion model"""
+        model = await self.config.guild(ctx.guild).model()
+        return await ctx.maybe_send_embed(f"This server's chat model is: `{model}`")
 
-         To see a list of available models, use `[p]aiuser model list`
-         (Setting is per server)
+    @model.command(name="list")
+    async def model_list(self, ctx: commands.Context):
+        """List available chat completion models"""
+        async with ctx.typing():
+            models = await list_llm_models(self.services)
+        return await self._paginate_models(ctx, models)
+
+    @model.command(name="set")
+    async def model_set(self, ctx: commands.Context, model: str):
+        """Change the chat completion model
 
         **Arguments**
             - `model` The model to use eg. `gpt-4`
         """
-        await ctx.message.add_reaction("🔄")
-        models = await list_llm_models(self.services)
-        await ctx.message.remove_reaction("🔄", ctx.me)
-
-        if model == "list":
-            return await self._paginate_models(ctx, models)
+        async with ctx.typing():
+            models = await list_llm_models(self.services)
 
         if model not in models:
             await ctx.send(":warning: Not a valid model!")
@@ -376,7 +383,7 @@ class Settings(
             and not get_model_info(model).supports_tools
         ):
             embed.set_footer(
-                text="⚠️ Function calling is enabled - ensure selected model supports it"
+                text="⚠️ Tool use is enabled - ensure the selected model supports tools"
             )
 
         return await ctx.send(embed=embed)
@@ -435,10 +442,21 @@ class Settings(
             return await ctx.send("You are already opted out.")
         await ctx.send("You are now opted out bot-wide")
 
-    @aiuser.command(name="optinbydefault", alias=["optindefault"])
+    @aiuser.group()
     @checks.admin_or_permissions(manage_guild=True)
-    async def optin_by_default(self, ctx: commands.Context):
-        """Toggles whether users are opted in by default in this server
+    async def consent(self, _):
+        """Configure server-wide consent defaults"""
+        pass
+
+    @consent.group(name="default", invoke_without_command=True)
+    async def consent_default(self, ctx: commands.Context):
+        """Show whether server members are opted in by default"""
+        value = await self.config.guild(ctx.guild).optin_by_default()
+        return await ctx.maybe_send_embed(f"Users opted in by default: `{value}`")
+
+    @consent_default.command(name="enable")
+    async def consent_default_enable(self, ctx: commands.Context):
+        """Opt server members in by default
 
         This command is disabled for servers with more than 150 members.
         """
@@ -450,11 +468,49 @@ class Settings(
             return await ctx.send(
                 "You cannot enable this setting for servers with more than 150 members."
             )
-        value = not await self.config.guild(ctx.guild).optin_by_default()
+        return await self._set_consent_default(ctx, True)
+
+    @consent_default.command(name="disable")
+    async def consent_default_disable(self, ctx: commands.Context):
+        """Require server members to opt in individually"""
+        return await self._set_consent_default(ctx, False)
+
+    async def _set_consent_default(self, ctx: commands.Context, value: bool):
         await self.config.guild(ctx.guild).optin_by_default.set(value)
         embed = discord.Embed(
             title="Users are now opted in by default in this server:",
             description=f"{value}",
             color=await ctx.embed_color(),
         )
+        return await ctx.send(embed=embed)
+
+    @consent.group(name="warning", invoke_without_command=True)
+    async def consent_warning(self, ctx: commands.Context):
+        """Show whether the opt-in warning is enabled"""
+        disabled = await self.config.guild(ctx.guild).optin_disable_embed()
+        return await ctx.maybe_send_embed(f"Opt-in warning enabled: `{not disabled}`")
+
+    @consent_warning.command(name="enable")
+    async def consent_warning_enable(self, ctx: commands.Context):
+        """Show the opt-in warning to users who have not chosen"""
+        return await self._set_consent_warning(ctx, True)
+
+    @consent_warning.command(name="disable")
+    async def consent_warning_disable(self, ctx: commands.Context):
+        """Stop showing the opt-in warning"""
+        return await self._set_consent_warning(ctx, False)
+
+    async def _set_consent_warning(self, ctx: commands.Context, enabled: bool):
+        await self.config.guild(ctx.guild).optin_disable_embed.set(not enabled)
+        embed = discord.Embed(
+            title="Opt-in warning embed is now:",
+            description="Enabled" if enabled else "Disabled",
+            color=await ctx.embed_color(),
+        )
+        if not enabled:
+            embed.add_field(
+                name=":warning: Warning :warning:",
+                value="Users not yet opt-in/out will be unaware their messages are not being processed",
+                inline=False,
+            )
         return await ctx.send(embed=embed)

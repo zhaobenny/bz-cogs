@@ -23,7 +23,7 @@ async def bot_owner_server_config(self: MixinMeta, guild: discord.Guild, **kwarg
             super().__init__(prefix="bot_owner_server_config_")
 
         percent = wtforms.FloatField(
-            "Server Response Percent",
+            "Server Reply Chance",
             validators=[
                 wtforms.validators.InputRequired(),
                 wtforms.validators.NumberRange(min=0, max=100),
@@ -35,18 +35,18 @@ async def bot_owner_server_config(self: MixinMeta, guild: discord.Guild, **kwarg
             validators=[wtforms.validators.InputRequired()],
         )
         whitelist = wtforms.SelectMultipleField(
-            "Whitelisted Channels",
+            "Enabled Reply Channels",
             choices=[(channel.id, channel.name) for channel in guild.text_channels],
         )
         messages_backread = wtforms.IntegerField(
-            "History Backread / Message Context Size (Increases 💵 usage)",
+            "Context Message Limit (Increases 💵 usage)",
             validators=[
                 wtforms.validators.InputRequired(),
                 wtforms.validators.NumberRange(min=0),
             ],
         )
         messages_backread_seconds = wtforms.IntegerField(
-            "History / Context Cutoff Time in Seconds (If messages are spaced further apart, history stops accumulating)",
+            "Context Message Gap in Seconds (History stops when messages are spaced further apart)",
             description="Time in seconds.",
             validators=[
                 wtforms.validators.InputRequired(),
@@ -54,9 +54,11 @@ async def bot_owner_server_config(self: MixinMeta, guild: discord.Guild, **kwarg
             ],
         )
         reply_to_mentions = wtforms.BooleanField("Always respond to mentions/replies")
-        scan_images = wtforms.BooleanField("Read Images (Increases 💵 usage)")
+        scan_images = wtforms.BooleanField(
+            "Process Attached Images (Increases 💵 usage)"
+        )
         function_calling = wtforms.BooleanField(
-            "Enable Function Calling (⚠️ Ensure selected model supports function calling)"
+            "Enable Tool Use (⚠️ Ensure the selected model supports tools)"
         )
         random_messages = wtforms.BooleanField(
             "Randomly Send Messages (Send random messages at random intervals)"

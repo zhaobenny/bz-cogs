@@ -44,42 +44,49 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
         """Voice generation function settings (per server)."""
         pass
 
-    @functions_voice.command(name="toggle")
-    async def toggle_voice_function(self, ctx: commands.Context):
-        """Enable/disable the voice generation function."""
+    @functions_voice.command(name="show")
+    async def show_voice_function(self, ctx: commands.Context):
+        """Show voice generation tool settings."""
         guild_conf = self.config.guild(ctx.guild)
-
         provider = await guild_conf.function_calling_voice_provider()
-        provider = provider.strip().lower()
-
         enabled_tools: list = await guild_conf.function_calling_functions() or []
-        enabling = names.VOICE_REQUEST not in enabled_tools
-
-        if enabling:
-            key_error = await provider_key_error(self.bot, ctx, provider)
-            if key_error:
-                return await ctx.send(key_error)
-
-            enabled_tools.append(names.VOICE_REQUEST)
-        else:
-            if names.VOICE_REQUEST in enabled_tools:
-                enabled_tools.remove(names.VOICE_REQUEST)
-
-        await guild_conf.function_calling_functions.set(enabled_tools)
-
+        model = await guild_conf.function_calling_voice_model()
+        voice = await guild_conf.function_calling_voice()
         embed = discord.Embed(
-            title="Voice Request function calling now set to:",
-            description=f"`{enabling}`",
-            color=await ctx.embed_color(),
+            title="Voice tool settings", color=await ctx.embed_color()
         )
+        embed.add_field(
+            name="Enabled",
+            value="Yes" if names.VOICE_REQUEST in enabled_tools else "No",
+        )
+        embed.add_field(name="Provider", value=f"`{provider}`")
+        embed.add_field(name="Model", value=f"`{model or 'Default'}`")
+        embed.add_field(name="Voice", value=f"`{voice or 'Default'}`")
+        return await ctx.send(embed=embed)
 
-        await ctx.send(embed=embed)
+    @functions_voice.command(name="enable")
+    async def enable_voice_function(self, ctx: commands.Context):
+        """Enable the voice generation tool."""
+        provider = await self.config.guild(ctx.guild).function_calling_voice_provider()
+        key_error = await provider_key_error(self.bot, ctx, provider.strip().lower())
+        if key_error:
+            return await ctx.send(key_error)
+        return await self.set_function_group(ctx, [names.VOICE_REQUEST], "Voice", True)
 
-    @functions_voice.command(name="provider")
+    @functions_voice.command(name="disable")
+    async def disable_voice_function(self, ctx: commands.Context):
+        """Disable the voice generation tool."""
+        return await self.set_function_group(ctx, [names.VOICE_REQUEST], "Voice", False)
+
+    @functions_voice.group(name="provider", invoke_without_command=True)
+    async def voice_provider(self, ctx: commands.Context):
+        """Show the voice generation provider"""
+        provider = await self.config.guild(ctx.guild).function_calling_voice_provider()
+        return await ctx.maybe_send_embed(f"Voice provider: `{provider}`")
+
+    @voice_provider.command(name="set")
     async def set_voice_provider(self, ctx: commands.Context, provider: str):
-        """Set the voice provider.
-        Available providers: `elevenlab`, `openai`, `openrouter`, `finevoice`
-        """
+        """Set the voice generation provider"""
         provider = provider.strip().lower()
 
         if provider not in PROVIDERS:
@@ -125,34 +132,40 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
 
         await ctx.send(embed=embed)
 
-    @functions_voice.command(name="model")
-    async def set_voice_model(
-        self, ctx: commands.Context, *, model: Optional[str] = None
-    ):
-        """Set the voice model name that may be used by a supported provider."""
-        model = model.strip() if model else None
-        guild_conf = self.config.guild(ctx.guild)
-        await guild_conf.function_calling_voice_model.set(model)
+    @functions_voice.group(name="model", invoke_without_command=True)
+    async def voice_model(self, ctx: commands.Context):
+        """Show the voice generation model"""
+        model = await self.config.guild(ctx.guild).function_calling_voice_model()
+        return await ctx.maybe_send_embed(f"Voice model: `{model or 'Default'}`")
 
-        embed = discord.Embed(
-            title="Voice model now set to:",
-            description=f"`{model or 'not set'}`",
-            color=await ctx.embed_color(),
+    @voice_model.command(name="set")
+    async def set_voice_model(self, ctx: commands.Context, *, model: str):
+        """Set the voice generation model"""
+        await self.config.guild(ctx.guild).function_calling_voice_model.set(
+            model.strip()
         )
-        await ctx.send(embed=embed)
+        return await ctx.send(f"Voice model set to `{model.strip()}`.")
 
-    @functions_voice.command(name="id")
-    async def set_voice_name(
-        self, ctx: commands.Context, *, voice: Optional[str] = None
-    ):
-        """Set the voice name / ID that may be used by a supported provider."""
-        voice = voice.strip() if voice else None
-        guild_conf = self.config.guild(ctx.guild)
-        await guild_conf.function_calling_voice.set(voice)
+    @voice_model.command(name="clear")
+    async def clear_voice_model(self, ctx: commands.Context):
+        """Use the voice provider's default model"""
+        await self.config.guild(ctx.guild).function_calling_voice_model.set(None)
+        return await ctx.send("Voice model reset to the provider default.")
 
-        embed = discord.Embed(
-            title="Voice name now set to:",
-            description=f"`{voice or 'not set'}`",
-            color=await ctx.embed_color(),
-        )
-        await ctx.send(embed=embed)
+    @functions_voice.group(name="voice_id", aliases=["id"], invoke_without_command=True)
+    async def voice_id(self, ctx: commands.Context):
+        """Show the voice name or ID"""
+        voice = await self.config.guild(ctx.guild).function_calling_voice()
+        return await ctx.maybe_send_embed(f"Voice name or ID: `{voice or 'Default'}`")
+
+    @voice_id.command(name="set")
+    async def set_voice_name(self, ctx: commands.Context, *, voice: str):
+        """Set the voice name or ID"""
+        await self.config.guild(ctx.guild).function_calling_voice.set(voice.strip())
+        return await ctx.send(f"Voice name or ID set to `{voice.strip()}`.")
+
+    @voice_id.command(name="clear")
+    async def clear_voice_name(self, ctx: commands.Context):
+        """Use the voice provider's default voice"""
+        await self.config.guild(ctx.guild).function_calling_voice.set(None)
+        return await ctx.send("Voice reset to the provider default.")

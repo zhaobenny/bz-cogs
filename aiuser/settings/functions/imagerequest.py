@@ -4,96 +4,145 @@ import discord
 from redbot.core import commands
 
 from aiuser.functions import names
-from aiuser.settings.scope import get_settings_target_scope
+from aiuser.settings.scope import (
+    get_effective_scoped_setting_for_target,
+    get_settings_target_scope,
+)
 from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
 from aiuser.settings.utilities import add_prompt_metrics_fields, truncate_prompt
 from aiuser.types.types import COMPATIBLE_MENTIONS
 
 
 class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
-    @functions.group(name="imagerequest")
+    @functions.group(name="image", aliases=["imagerequest"])
     async def imagerequest(self, ctx: commands.Context):
         """Image generation function settings (per server)"""
         pass
 
-    @imagerequest.command(name="toggle")
-    async def imagerequest_toggle(self, ctx: commands.Context):
-        """Toggle the image request function on or off"""
-        await self.toggle_function_group(ctx, [names.IMAGE_REQUEST], "Image Request")
+    @imagerequest.command(name="show")
+    async def imagerequest_show(self, ctx: commands.Context):
+        """Show image generation tool settings"""
+        guild_conf = self.config.guild(ctx.guild)
+        enabled_tools = await guild_conf.function_calling_functions()
+        endpoint = await guild_conf.function_calling_image_custom_endpoint()
+        model = await guild_conf.function_calling_image_model()
+        embed = discord.Embed(
+            title="Image tool settings", color=await ctx.embed_color()
+        )
+        embed.add_field(
+            name="Enabled",
+            value="Yes" if names.IMAGE_REQUEST in enabled_tools else "No",
+        )
+        embed.add_field(name="Endpoint", value=f"`{endpoint or 'Autodetected'}`")
+        embed.add_field(name="Model", value=f"`{model or 'Default'}`")
+        return await ctx.send(embed=embed)
 
-    @imagerequest.command(name="endpoint")
-    async def imagerequest_endpoint(
-        self, ctx: commands.Context, *, endpoint: str = None
-    ):
-        """Set a custom image generation endpoint
+    @imagerequest.command(name="enable")
+    async def imagerequest_enable(self, ctx: commands.Context):
+        """Enable the image generation tool"""
+        await self.set_function_group(ctx, [names.IMAGE_REQUEST], "Image", True)
 
-        If not set, the cog will attempt to use the currently set OpenAI endpoint to generate images.
-        """
+    @imagerequest.command(name="disable")
+    async def imagerequest_disable(self, ctx: commands.Context):
+        """Disable the image generation tool"""
+        await self.set_function_group(ctx, [names.IMAGE_REQUEST], "Image", False)
+
+    @imagerequest.group(name="endpoint", invoke_without_command=True)
+    async def imagerequest_endpoint(self, ctx: commands.Context):
+        """Show the image generation endpoint"""
+        endpoint = await self.config.guild(
+            ctx.guild
+        ).function_calling_image_custom_endpoint()
+        return await ctx.maybe_send_embed(
+            f"Image endpoint: `{endpoint or 'Autodetected'}`"
+        )
+
+    @imagerequest_endpoint.command(name="set")
+    async def imagerequest_endpoint_set(self, ctx: commands.Context, *, endpoint: str):
+        """Set a custom image generation endpoint"""
         await self.config.guild(ctx.guild).function_calling_image_custom_endpoint.set(
-            endpoint or None
+            endpoint
         )
-        e = discord.Embed(
-            title="Image request endpoint set to:",
-            description=f"{endpoint or 'Autodetected'}",
-            color=await ctx.embed_color(),
-        )
-        await ctx.send(embed=e)
+        return await ctx.send(f"Image endpoint set to `{endpoint}`.")
 
-    @imagerequest.command(name="model")
-    async def imagerequest_model(self, ctx: commands.Context, *, model: str = None):
-        """Set the image generation model to use for supported endpoints.
-
-        If not set, the cog will attempt to use reasonable defaults based on the endpoint.
-        """
-        await self.config.guild(ctx.guild).function_calling_image_model.set(
-            model or None
+    @imagerequest_endpoint.command(name="clear")
+    async def imagerequest_endpoint_clear(self, ctx: commands.Context):
+        """Use the currently configured OpenAI endpoint for image generation"""
+        await self.config.guild(ctx.guild).function_calling_image_custom_endpoint.set(
+            None
         )
-        desc = f"{model}" if model else "Default"
-        e = discord.Embed(
-            title="Image request model set to:",
-            description=desc,
-            color=await ctx.embed_color(),
-        )
-        await ctx.send(embed=e)
+        return await ctx.send("Image endpoint reset to autodetection.")
 
-    @imagerequest.command(name="preprompt")
+    @imagerequest.group(name="model", invoke_without_command=True)
+    async def imagerequest_model(self, ctx: commands.Context):
+        """Show the image generation model"""
+        model = await self.config.guild(ctx.guild).function_calling_image_model()
+        return await ctx.maybe_send_embed(f"Image model: `{model or 'Default'}`")
+
+    @imagerequest_model.command(name="set")
+    async def imagerequest_model_set(self, ctx: commands.Context, *, model: str):
+        """Set the image generation model"""
+        await self.config.guild(ctx.guild).function_calling_image_model.set(model)
+        return await ctx.send(f"Image model set to `{model}`.")
+
+    @imagerequest_model.command(name="clear")
+    async def imagerequest_model_clear(self, ctx: commands.Context):
+        """Use the default image generation model"""
+        await self.config.guild(ctx.guild).function_calling_image_model.set(None)
+        return await ctx.send("Image model reset to the provider default.")
+
+    @imagerequest.group(name="preprompt", invoke_without_command=True)
     async def imagerequest_preprompt(
         self,
         ctx: commands.Context,
-        mention: Optional[COMPATIBLE_MENTIONS],
-        *,
-        preprompt: Optional[str] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,
     ):
-        """Set or clear a preprompt that is prepended to image generation prompts.
+        """Show the effective image preprompt for the server or a target"""
+        mention_type, _ = get_settings_target_scope(self, ctx, mention)
+        preprompt = await get_effective_scoped_setting_for_target(
+            self, ctx, mention, "function_calling_image_preprompt"
+        )
+        embed = discord.Embed(
+            title=f"Image preprompt on this {mention_type.name.lower()}:",
+            description=truncate_prompt(preprompt) if preprompt else "None",
+            color=await ctx.embed_color(),
+        )
+        return await ctx.send(embed=embed)
 
-        If multiple preprompts can be used, the most specific preprompt will be used, eg. it will go for: member > role > channel > server
-
-        **Arguments**
-            - `mention` *(Optional)* A specific user, role, or channel. If not provided, sets for the server.
-            - `preprompt` *(Optional)* The preprompt to set. If blank, will remove current preprompt.
-        """
+    @imagerequest_preprompt.command(name="set")
+    async def imagerequest_preprompt_set(
+        self,
+        ctx: commands.Context,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        *,
+        preprompt: str,
+    ):
+        """Set an image preprompt for the server or a target"""
         PREPROMPT_LIMIT = 3200
-        if preprompt and len(preprompt) > PREPROMPT_LIMIT:
+        if len(preprompt) > PREPROMPT_LIMIT:
             return await ctx.send(
                 f"Preprompt too long ({len(preprompt)}/{PREPROMPT_LIMIT}). Please shorten it to under {PREPROMPT_LIMIT} characters."
             )
 
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
-
-        if not config_attr:
-            return await ctx.send(":warning: Invalid mention type provided.")
-
-        if not preprompt:
-            await config_attr.function_calling_image_preprompt.set(None)
-            return await ctx.send(
-                f"The preprompt for this {mention_type.name.lower()} will no longer use a custom preprompt."
-            )
-
         await config_attr.function_calling_image_preprompt.set(preprompt)
         e = discord.Embed(
-            title=f"Image request preprompt set for {mention_type.name.lower()}:",
+            title=f"Image preprompt set for {mention_type.name.lower()}:",
             description=truncate_prompt(preprompt),
             color=await ctx.embed_color(),
         )
         await add_prompt_metrics_fields(e, self.services, ctx, preprompt)
-        await ctx.send(embed=e)
+        return await ctx.send(embed=e)
+
+    @imagerequest_preprompt.command(name="clear")
+    async def imagerequest_preprompt_clear(
+        self,
+        ctx: commands.Context,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,
+    ):
+        """Clear an image preprompt so broader settings can apply"""
+        mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
+        await config_attr.function_calling_image_preprompt.set(None)
+        return await ctx.send(
+            f"Image preprompt cleared for this {mention_type.name.lower()}."
+        )

@@ -27,33 +27,32 @@ class FunctionCallingSettings(
     ScrapeFunctionSettings,
     MemoryFunctionSettings,
 ):
-    @functions.command(name="toggle")
-    async def toggle_function_calling(self, ctx: commands.Context):
-        """Toggle functions calling
+    @functions.command(name="enable")
+    async def enable_function_calling(self, ctx: commands.Context):
+        """Allow the model to use configured tools."""
+        return await self._set_function_calling(ctx, True)
 
-        Requires a model that is whitelisted or supported for function calling
-        If enabled, the LLM will call functions to generate responses when needed
-        This will generate additional API calls and token usage!
+    @functions.command(name="disable")
+    async def disable_function_calling(self, ctx: commands.Context):
+        """Prevent the model from using tools without changing tool selections."""
+        return await self._set_function_calling(ctx, False)
 
-        """
-
-        current_value = not await self.config.guild(ctx.guild).function_calling()
-        await self.config.guild(ctx.guild).function_calling.set(current_value)
-
+    async def _set_function_calling(self, ctx: commands.Context, enabled: bool):
+        await self.config.guild(ctx.guild).function_calling.set(enabled)
         embed = discord.Embed(
-            title="Functions Calling now set to:",
-            description=f"{current_value}",
+            title="Tool use is now:",
+            description="Enabled" if enabled else "Disabled",
             color=await ctx.embed_color(),
         )
 
         current_model = await self.config.guild(ctx.guild).model()
-        if current_value and not get_model_info(current_model).supports_tools:
-            embed.set_footer(text="⚠️ Ensure selected model supports function calling!")
-        await ctx.send(embed=embed)
+        if enabled and not get_model_info(current_model).supports_tools:
+            embed.set_footer(text="⚠️ Ensure the selected model supports tools!")
+        return await ctx.send(embed=embed)
 
-    @functions.command(name="config", aliases=["show", "settings"])
+    @functions.command(name="status", aliases=["config", "show", "settings"])
     async def functions_config(self, ctx: commands.Context):
-        """Show function calling configuration overview."""
+        """Show tool configuration overview."""
         guild_conf = self.config.guild(ctx.guild)
         enabled = await guild_conf.function_calling()
         enabled_tools: list = await guild_conf.function_calling_functions() or []
@@ -84,7 +83,7 @@ class FunctionCallingSettings(
 
         # Summary / main embed
         colour = await ctx.embed_color()
-        main_embed = discord.Embed(title="Function Calling Settings", color=colour)
+        main_embed = discord.Embed(title="Tool Settings", color=colour)
         main_embed.add_field(name="Enabled", value=f"{icon(enabled)}", inline=True)
 
         # Spacer to keep grid layout consistent
@@ -124,9 +123,7 @@ class FunctionCallingSettings(
         if len(preprompt_display) > 500:
             preprompt_display = preprompt_display[:497] + "..."
 
-        image_embed = discord.Embed(
-            title="Image Request Function Settings", color=colour
-        )
+        image_embed = discord.Embed(title="Image Tool Settings", color=colour)
         image_embed.add_field(
             name="Enabled", value=f"{icon(image_enabled)}", inline=True
         )
@@ -151,9 +148,7 @@ class FunctionCallingSettings(
         default_voice = DEFAULT_VOICES.get(voice_provider_key)
         voice_name = await guild_conf.function_calling_voice() or default_voice
 
-        voice_embed = discord.Embed(
-            title="Voice Request Function Settings", color=colour
-        )
+        voice_embed = discord.Embed(title="Voice Tool Settings", color=colour)
         voice_embed.add_field(
             name="Enabled", value=f"{icon(voice_enabled)}", inline=True
         )
@@ -169,86 +164,164 @@ class FunctionCallingSettings(
 
     @functions.group(name="discord")
     async def functions_discord(self, ctx: commands.Context):
-        """Configure native Discord action functions."""
+        """Configure native Discord tools."""
         pass
 
-    @functions_discord.command(name="react", aliases=["reaction"])
-    async def toggle_discord_reaction_function(self, ctx: commands.Context):
-        """Enable/disable the functionality for adding reactions to triggering Discord messages."""
-        tool_names = [names.ADD_REACTION]
+    @functions_discord.command(name="show")
+    async def show_discord_functions(self, ctx: commands.Context):
+        """Show native Discord tool settings."""
         enabled_tools: list = await self.config.guild(
             ctx.guild
         ).function_calling_functions()
-        new_state = names.ADD_REACTION not in enabled_tools
-
-        if new_state:
-            enabled_tools.extend(tool_names)
-        else:
-            for tool in tool_names:
-                if tool in enabled_tools:
-                    enabled_tools.remove(tool)
-
-        await self.config.guild(ctx.guild).function_calling_functions.set(enabled_tools)
-
         embed = discord.Embed(
-            title="Discord reaction function calling now set to:",
-            description=f"{new_state}",
-            color=await ctx.embed_color(),
+            title="Discord tool settings", color=await ctx.embed_color()
         )
-        await ctx.send(embed=embed)
+        embed.add_field(
+            name="Reactions",
+            value="Enabled" if names.ADD_REACTION in enabled_tools else "Disabled",
+        )
+        embed.add_field(
+            name="Information",
+            value="Enabled" if names.GET_DISCORD_INFO in enabled_tools else "Disabled",
+        )
+        return await ctx.send(embed=embed)
 
-    @functions_discord.command(name="info")
-    async def toggle_discord_info_function(self, ctx: commands.Context):
-        """Enable/disable the functionality for reading some select Discord channel, server, author, and emoji info."""
-        tool_names = [names.GET_DISCORD_INFO]
-        await self.toggle_function_group(ctx, tool_names, "Discord info")
+    @functions_discord.group(name="reactions", aliases=["react", "reaction"])
+    async def functions_discord_reactions(self, _):
+        """Configure the Discord reaction tool."""
+        pass
 
-    @functions.command(name="maxrounds", aliases=["maxcalls"])
-    async def functions_max_rounds(self, ctx: commands.Context, rounds: int):
+    @functions_discord_reactions.command(name="enable")
+    async def enable_discord_reaction_function(self, ctx: commands.Context):
+        """Allow the model to add reactions to triggering messages."""
+        return await self.set_function_group(
+            ctx, [names.ADD_REACTION], "Discord reactions", True
+        )
+
+    @functions_discord_reactions.command(name="disable")
+    async def disable_discord_reaction_function(self, ctx: commands.Context):
+        """Prevent the model from adding reactions."""
+        return await self.set_function_group(
+            ctx, [names.ADD_REACTION], "Discord reactions", False
+        )
+
+    @functions_discord.group(name="info")
+    async def functions_discord_info(self, _):
+        """Configure the Discord information tool."""
+        pass
+
+    @functions_discord_info.command(name="enable")
+    async def enable_discord_info_function(self, ctx: commands.Context):
+        """Allow the model to read selected Discord context."""
+        return await self.set_function_group(
+            ctx, [names.GET_DISCORD_INFO], "Discord information", True
+        )
+
+    @functions_discord_info.command(name="disable")
+    async def disable_discord_info_function(self, ctx: commands.Context):
+        """Prevent the model from reading additional Discord context."""
+        return await self.set_function_group(
+            ctx, [names.GET_DISCORD_INFO], "Discord information", False
+        )
+
+    @functions.group(
+        name="max_rounds",
+        aliases=["maxrounds", "maxcalls"],
+        invoke_without_command=True,
+    )
+    async def functions_max_rounds(self, ctx: commands.Context):
+        """Show the maximum tool-call rounds per response."""
+        rounds = (
+            await self.config.guild(ctx.guild).function_calling_tool_call_rounds()
+            or DEFAULT_TOOL_CALL_ROUNDS
+        )
+        return await ctx.maybe_send_embed(f"Maximum tool-call rounds: `{rounds}`")
+
+    @functions_max_rounds.command(name="set")
+    async def functions_max_rounds_set(self, ctx: commands.Context, rounds: int):
         """Set the maximum number of tool call rounds per response."""
         if rounds < 1:
-            return await ctx.react_quietly("❌")
+            return await ctx.send("Please enter a positive number.")
 
         await self.config.guild(ctx.guild).function_calling_tool_call_rounds.set(rounds)
+        return await ctx.send(f"Maximum tool-call rounds set to `{rounds}`.")
 
-        embed = discord.Embed(
-            title="Function calling tool call rounds now set to:",
-            description=f"`{rounds}`",
-            color=await ctx.embed_color(),
+    @functions.group(
+        name="no_response", aliases=["noresponse"], invoke_without_command=True
+    )
+    async def ignore_function(self, ctx: commands.Context):
+        """Show whether the no-response tool is enabled."""
+        return await self.show_function_group(
+            ctx, [names.DO_NOT_RESPOND], "No response"
         )
-        await ctx.send(embed=embed)
 
-    @functions.command(name="noresponse")
-    async def toggle_ignore_function(self, ctx: commands.Context):
-        """
-        Enable/disable the functionality for the LLM to choose to not respond and ignore messages.
+    @ignore_function.command(name="enable")
+    async def enable_ignore_function(self, ctx: commands.Context):
+        """Allow the model to choose not to respond."""
+        return await self.set_function_group(
+            ctx, [names.DO_NOT_RESPOND], "No response", True
+        )
 
-        Temperamental, may require additional prompting to work better.
-        """
-        tool_names = [names.DO_NOT_RESPOND]
-        await self.toggle_function_group(ctx, tool_names, "No response")
+    @ignore_function.command(name="disable")
+    async def disable_ignore_function(self, ctx: commands.Context):
+        """Require the model to produce a response when triggered."""
+        return await self.set_function_group(
+            ctx, [names.DO_NOT_RESPOND], "No response", False
+        )
 
-    @functions.command(name="wolframalpha")
-    async def toggle_wolfram_alpha_function(self, ctx: commands.Context):
-        """Enable/disable the functionality for the LLM to ask Wolfram Alpha about math, exchange rates, or the weather."""
+    @functions.group(
+        name="wolfram_alpha", aliases=["wolframalpha"], invoke_without_command=True
+    )
+    async def wolfram_alpha_function(self, ctx: commands.Context):
+        """Show whether the Wolfram Alpha tool is enabled."""
+        return await self.show_function_group(
+            ctx, [names.ASK_WOLFRAM_ALPHA], "Wolfram Alpha"
+        )
+
+    @wolfram_alpha_function.command(name="enable")
+    async def enable_wolfram_alpha_function(self, ctx: commands.Context):
+        """Allow the model to query Wolfram Alpha."""
         key_error = await provider_key_error(
             self.bot, ctx, "wolfram_alpha", key_name="app_id"
         )
         if key_error:
             return await ctx.send(key_error)
+        return await self.set_function_group(
+            ctx, [names.ASK_WOLFRAM_ALPHA], "Wolfram Alpha", True
+        )
 
-        tool_names = [names.ASK_WOLFRAM_ALPHA]
-        await self.toggle_function_group(ctx, tool_names, "Wolfram Alpha")
+    @wolfram_alpha_function.command(name="disable")
+    async def disable_wolfram_alpha_function(self, ctx: commands.Context):
+        """Prevent the model from querying Wolfram Alpha."""
+        return await self.set_function_group(
+            ctx, [names.ASK_WOLFRAM_ALPHA], "Wolfram Alpha", False
+        )
 
-    @functions.command(name="modalcoderunner")
-    async def toggle_modal_function(self, ctx: commands.Context):
-        """Enable/disable the functionality for the LLM to run Python code in a ephemeral environment backed by Modal."""
+    @functions.group(
+        name="code_runner", aliases=["modalcoderunner"], invoke_without_command=True
+    )
+    async def code_runner_function(self, ctx: commands.Context):
+        """Show whether the Python code runner is enabled."""
+        return await self.show_function_group(
+            ctx, [names.RUN_PYTHON_CODE], "Code runner"
+        )
+
+    @code_runner_function.command(name="enable")
+    async def enable_code_runner_function(self, ctx: commands.Context):
+        """Allow the model to run Python code through Modal."""
         tokens = await self.bot.get_shared_api_tokens("modal")
         if not tokens.get("token_id") and not tokens.get("token_secret"):
             return await ctx.send(
                 f"[Modal.com](https://modal.com/settings/) API Token not set! Set them using: \n`{ctx.clean_prefix}set api modal token_id,TOKENID` \n`{ctx.clean_prefix}set api modal token_secret,TOKENSECRET`.",
                 suppress_embeds=True,
             )
+        return await self.set_function_group(
+            ctx, [names.RUN_PYTHON_CODE], "Code runner", True
+        )
 
-        tool_names = [names.RUN_PYTHON_CODE]
-        await self.toggle_function_group(ctx, tool_names, "Modal Code Runner")
+    @code_runner_function.command(name="disable")
+    async def disable_code_runner_function(self, ctx: commands.Context):
+        """Prevent the model from running Python code."""
+        return await self.set_function_group(
+            ctx, [names.RUN_PYTHON_CODE], "Code runner", False
+        )

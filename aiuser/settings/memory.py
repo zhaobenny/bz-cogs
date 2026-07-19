@@ -17,34 +17,28 @@ class MemorySettings(MixinMeta):
     @commands.has_permissions(manage_guild=True)
     async def memory(self, _):
         """
-        This feature is **WIP**! Manual memory creation / English is only supported for now.
-        Breaking changes could happen! (such as losing all saved memories)
-
-        Manages saved memory settings
+        Manages memory settings
         (All subcommands are per server)
         """
         pass
 
-    @memory.command(name="toggle")
-    @commands.has_permissions(manage_guild=True)
-    async def toggle_memory_usage(self, ctx: commands.Context):
-        """Enable/disable querying saved memories whenever responding to a message
+    @memory.command(name="status")
+    async def memory_status(self, ctx: commands.Context):
+        """Show whether saved memories are included in responses"""
+        enabled = await self.config.guild(ctx.guild).query_memories()
+        return await ctx.send(f"Saved memory retrieval enabled: `{enabled}`")
 
-        (Via just comparing semantic similarity of the previous message, no tool calling yet!)
-        """
+    @memory.command(name="enable")
+    async def memory_enable(self, ctx: commands.Context):
+        """Include relevant saved memories in responses"""
+        await self.config.guild(ctx.guild).query_memories.set(True)
+        return await ctx.send("Saved memory retrieval enabled.")
 
-        current = await self.config.guild(ctx.guild).query_memories()
-        new_value = not current
-        await self.config.guild(ctx.guild).query_memories.set(new_value)
-        embed = discord.Embed(
-            title="Querying of saved memories for this server now set to:",
-            description=f"{new_value}",
-            color=await ctx.embed_color(),
-        )
-        embed.set_footer(
-            text="This feature is WIP! Breaking changes could happen! (such as losing all saved memories)"
-        )
-        await ctx.send(embed=embed)
+    @memory.command(name="disable")
+    async def memory_disable(self, ctx: commands.Context):
+        """Stop including saved memories in responses"""
+        await self.config.guild(ctx.guild).query_memories.set(False)
+        return await ctx.send("Saved memory retrieval disabled.")
 
     @memory.command(name="list")
     async def list_memory(self, ctx: commands.Context):

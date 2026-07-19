@@ -16,28 +16,45 @@ class ScrapeFunctionSettings(FunctionToggleHelperMixin):
         """Scrape function settings (per server)."""
         pass
 
-    @functions_scrape.command(name="toggle")
-    async def scrape_toggle(self, ctx: commands.Context):
-        """Toggle the scrape function on or off."""
+    @functions_scrape.command(name="show")
+    async def scrape_show(self, ctx: commands.Context):
+        """Show web page reading tool settings."""
         guild_conf = self.config.guild(ctx.guild)
         enabled_tools: list = await guild_conf.function_calling_functions() or []
-        enabling = names.OPEN_URL not in enabled_tools
+        provider = await guild_conf.function_calling_scrape_provider()
+        embed = discord.Embed(
+            title="Web page reading tool settings", color=await ctx.embed_color()
+        )
+        embed.add_field(
+            name="Enabled", value="Yes" if names.OPEN_URL in enabled_tools else "No"
+        )
+        embed.add_field(name="Provider", value=f"`{provider}`")
+        return await ctx.send(embed=embed)
 
-        if enabling:
-            provider = await guild_conf.function_calling_scrape_provider()
-            if provider == FIRECRAWL:
-                key_error = await provider_key_error(self.bot, ctx, provider)
-                if key_error:
-                    return await ctx.send(key_error)
+    @functions_scrape.command(name="enable")
+    async def scrape_enable(self, ctx: commands.Context):
+        """Enable the web page reading tool."""
+        provider = await self.config.guild(ctx.guild).function_calling_scrape_provider()
+        if provider == FIRECRAWL:
+            key_error = await provider_key_error(self.bot, ctx, provider)
+            if key_error:
+                return await ctx.send(key_error)
+        return await self.set_function_group(ctx, [names.OPEN_URL], "Scrape", True)
 
-        await self.toggle_function_group(ctx, [names.OPEN_URL], "Scrape")
+    @functions_scrape.command(name="disable")
+    async def scrape_disable(self, ctx: commands.Context):
+        """Disable the web page reading tool."""
+        return await self.set_function_group(ctx, [names.OPEN_URL], "Scrape", False)
 
-    @functions_scrape.command(name="provider")
-    async def scrape_provider(self, ctx: commands.Context, provider: str):
-        """Set the scrape provider.
+    @functions_scrape.group(name="provider", invoke_without_command=True)
+    async def scrape_provider(self, ctx: commands.Context):
+        """Show the web page reading provider"""
+        provider = await self.config.guild(ctx.guild).function_calling_scrape_provider()
+        return await ctx.maybe_send_embed(f"Web page reading provider: `{provider}`")
 
-        Available providers: `local`, `firecrawl`
-        """
+    @scrape_provider.command(name="set")
+    async def scrape_provider_set(self, ctx: commands.Context, provider: str):
+        """Set the web page reading provider"""
         provider = provider.strip().lower()
 
         if provider not in PROVIDERS:

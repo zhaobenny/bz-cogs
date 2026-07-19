@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import asyncio
 from difflib import SequenceMatcher
 from typing import TYPE_CHECKING, Tuple
 
 import discord
 from redbot.core import commands
-from redbot.core.utils.menus import start_adding_reactions
-from redbot.core.utils.predicates import ReactionPredicate
+from redbot.core.utils.views import ConfirmView
 
 from aiuser.types.enums import MentionType
 from aiuser.utils.prompt_metrics import (
@@ -21,23 +19,21 @@ if TYPE_CHECKING:
 async def confirm_pending(
     ctx: commands.Context, embed: discord.Embed, timeout: float = 30.0
 ) -> Tuple[bool, discord.Message]:
-    """Ask a yes/no reaction confirmation.
+    """Ask for confirmation using Red's native button view.
 
     Returns ``(confirmed, prompt_message)``. On timeout or "no" the prompt is
     edited to "Cancelled." and ``confirmed`` is False; on "yes" the caller is
     expected to edit the returned message with the outcome.
     """
-    confirm = await ctx.send(embed=embed)
-    start_adding_reactions(confirm, ReactionPredicate.YES_OR_NO_EMOJIS)
-    pred = ReactionPredicate.yes_or_no(confirm, ctx.author)
-    try:
-        await ctx.bot.wait_for("reaction_add", timeout=timeout, check=pred)
-    except asyncio.TimeoutError:
-        pred.result = False
+    view = ConfirmView(ctx.author, timeout=timeout, disable_buttons=True)
+    confirm = await ctx.send(embed=embed, view=view)
+    view.message = confirm
+    await view.wait()
 
-    if pred.result is not True:
+    if view.result is not True:
         await confirm.edit(
-            embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
+            embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()),
+            view=None,
         )
         return False, confirm
     return True, confirm

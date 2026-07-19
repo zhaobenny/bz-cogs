@@ -61,7 +61,7 @@ class PromptSettings(MixinMeta):
         """
         pass
 
-    @prompt.command(name="reset")
+    @prompt.command(name="reset_all", aliases=["reset"])
     async def prompt_reset(self, ctx: commands.Context):
         """Reset ALL prompts in this guild to default (inc. channels and members)"""
         embed = discord.Embed(
@@ -105,6 +105,7 @@ class PromptSettings(MixinMeta):
             prompt = (
                 channel_prompt
                 or await self.config.guild(ctx.guild).custom_text_prompt()
+                or await self.config.custom_text_prompt()
                 or DEFAULT_PROMPT
             )
             title = f"The prompt for {ctx.channel.mention if channel_prompt else 'this server'} is:"
@@ -201,13 +202,8 @@ class PromptSettings(MixinMeta):
         )
         await self._send_prompt_pages(ctx, "The prompt for this server is:", prompt)
 
-    @prompt.group(name="preset")
-    async def prompt_preset(self, _: commands.Context):
-        """Manage presets for the current server"""
-        pass
-
-    @prompt_preset.command(name="show", aliases=["list"])
-    async def show_presets(self, ctx: commands.Context):
+    @prompt.group(name="preset", invoke_without_command=True)
+    async def prompt_preset(self, ctx: commands.Context):
         """Show all presets for the current server"""
         presets = json.loads(await self.config.guild(ctx.guild).presets())
         if not presets:
@@ -228,25 +224,20 @@ class PromptSettings(MixinMeta):
         await SimpleMenu(pages).start(ctx)
 
     @prompt_preset.command(name="add", aliases=["a"])
-    async def add_preset(self, ctx: commands.Context, *, prompt: str):
-        """Add a new preset to the presets list
+    async def add_preset(self, ctx: commands.Context, name: str, *, prompt: str):
+        """Add a named prompt preset
 
         **Arguments**
-            - `prompt` The prompt to set. Use `|` to separate the preset name (no spaces) from the prompt at the start. eg. `preset_name|prompt_text`
+            - `name` The preset name
+            - `prompt` The preset prompt
         """
         presets = json.loads(await self.config.guild(ctx.guild).presets())
-        split = prompt.split("|", 1)
-        if not len(split) == 2:
-            return await ctx.send(
-                "Invalid format. Use `|` to separate the preset name (no spaces) from the prompt at the start. eg. `preset_name|prompt text`"
-            )
-        preset, prompt = split
         for channel in ctx.guild.channels:
-            if channel.name.lower() == preset.lower():
+            if channel.name.lower() == name.lower():
                 return await ctx.send(
-                    f"Cannot use `{preset}` as a preset name as it conflicts with the channel name <#{channel.id}>"
+                    f"Cannot use `{name}` as a preset name because it conflicts with <#{channel.id}>."
                 )
-        if preset in presets:
+        if name in presets:
             return await ctx.send("That preset name already exists.")
         if len(
             prompt
@@ -256,10 +247,10 @@ class PromptSettings(MixinMeta):
             return await ctx.send(
                 f"Prompt too long. Max length is {await self.config.max_prompt_length()} characters."
             )
-        presets[preset] = prompt
+        presets[name] = prompt
         await self.config.guild(ctx.guild).presets.set(json.dumps(presets))
         embed = discord.Embed(
-            title=f"Added preset `{preset}`",
+            title=f"Added preset `{name}`",
             description=truncate_prompt(prompt),
             color=await ctx.embed_color(),
         )
@@ -296,7 +287,7 @@ class PromptSettings(MixinMeta):
         *,
         prompt: Optional[str],
     ):
-        """Set a custom prompt or preset for the server (or provided channel/role/member)
+        """Set a custom prompt or preset for the server or a target
 
         If multiple prompts can be used, the most specific prompt will be used, eg. it will go for: member > role > channel > server.
 
@@ -304,7 +295,7 @@ class PromptSettings(MixinMeta):
 
         **Arguments**
             - `mention` *(Optional)* A specific user or channel
-            - `prompt` *(Optional)* The prompt (or name of a preset) to set. If blank, will remove current prompt.
+            - `prompt` *(Optional)* The prompt or preset name. May be omitted when attaching a text file.
             - `<ATTACHMENT>` *(Optional)* An `.txt` file to use as the prompt
         """
         if not prompt and ctx.message.attachments:
@@ -315,7 +306,7 @@ class PromptSettings(MixinMeta):
             prompt = (await ctx.message.attachments[0].read()).decode("utf-8")
 
         if not prompt:
-            prompt = None
+            return await ctx.send("Provide a prompt or attach a `.txt` file.")
 
         if (
             prompt
@@ -332,15 +323,6 @@ class PromptSettings(MixinMeta):
 
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
 
-        if not config_attr:
-            return await ctx.send(":warning: Invalid mention type provided.")
-
-        if not prompt:
-            await config_attr.custom_text_prompt.set(None)
-            return await ctx.send(
-                f"The prompt for this {mention_type.name.lower()} will no longer use a custom prompt."
-            )
-
         await config_attr.custom_text_prompt.set(prompt)
         self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
 
@@ -351,3 +333,17 @@ class PromptSettings(MixinMeta):
         )
         await add_prompt_metrics_fields(embed, self.services, ctx, prompt)
         return await ctx.send(embed=embed)
+
+    @prompt.command(name="clear")
+    async def prompt_clear(
+        self,
+        ctx: commands.Context,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,
+    ):
+        """Clear a custom prompt so broader prompt settings can apply"""
+        mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
+        await config_attr.custom_text_prompt.set(None)
+        self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
+        return await ctx.send(
+            f"Custom prompt cleared for this {mention_type.name.lower()}."
+        )

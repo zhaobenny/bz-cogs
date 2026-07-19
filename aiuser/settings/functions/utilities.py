@@ -31,10 +31,10 @@ async def provider_key_error(
 
 
 class FunctionsGroupMixin(MixinMeta):
-    @aiuser.group()
+    @aiuser.group(name="tools", aliases=["functions"])
     @checks.is_owner()
     async def functions(self, ctx: commands.Context):
-        """Settings to manage function calling
+        """Configure tools the model can use
 
         (All subcommands are per server)
         """
@@ -47,61 +47,48 @@ functions = FunctionsGroupMixin.functions
 
 
 class FunctionToggleHelperMixin(MixinMeta):
-    async def toggle_function_group(
-        self, ctx: commands.Context, tool_names: list, embed_title: str
+    async def set_function_group(
+        self,
+        ctx: commands.Context,
+        tool_names: list,
+        embed_title: str,
+        enabled: bool,
     ):
-        """Toggle a group of related function-calling tools on or off for the guild.
+        """Enable or disable a group of related tools for the guild.
 
         Args:
             ctx: Redbot command invocation context.
             tool_names: List of internal function/tool identifiers to toggle together.
             embed_title: Human friendly title for the resulting embed.
+            enabled: Whether the tools should be enabled.
         """
-        enabled_tools: list = await self.config.guild(
-            ctx.guild
-        ).function_calling_functions()
+        guild_conf = self.config.guild(ctx.guild)
+        enabled_tools: list = await guild_conf.function_calling_functions() or []
 
-        if tool_names and tool_names[0] not in enabled_tools:
-            # Enable all tools in the group
-            enabled_tools.extend(tool_names)
+        if enabled:
+            enabled_tools.extend(
+                name for name in tool_names if name not in enabled_tools
+            )
+            await guild_conf.function_calling.set(True)
         else:
-            # Disable all tools in the group
-            for tool in tool_names:
-                if tool in enabled_tools:
-                    enabled_tools.remove(tool)
+            enabled_tools = [name for name in enabled_tools if name not in tool_names]
 
-        await self.config.guild(ctx.guild).function_calling_functions.set(enabled_tools)
+        await guild_conf.function_calling_functions.set(enabled_tools)
 
         embed = discord.Embed(
-            title=f"{embed_title} function calling now set to:",
-            description=f"{bool(tool_names and tool_names[0] in enabled_tools)}",
+            title=f"{embed_title} tool is now:",
+            description="Enabled" if enabled else "Disabled",
             color=await ctx.embed_color(),
         )
-        await ctx.send(embed=embed)
+        return await ctx.send(embed=embed)
 
-    async def toggle_single_function(
-        self, ctx: commands.Context, tool_name: str, display_name: str
+    async def show_function_group(
+        self, ctx: commands.Context, tool_names: list, embed_title: str
     ):
-        """Toggle a single function/tool on or off.
-
-        Args:
-            ctx: Redbot command context.
-            tool_name: Internal function identifier.
-            display_name: Human friendly display name for embeds.
-        """
         enabled_tools: list = await self.config.guild(
             ctx.guild
         ).function_calling_functions()
-        if tool_name in enabled_tools:
-            enabled_tools.remove(tool_name)
-            new_state = False
-        else:
-            enabled_tools.append(tool_name)
-            new_state = True
-        await self.config.guild(ctx.guild).function_calling_functions.set(enabled_tools)
-        embed = discord.Embed(
-            title=f"{display_name} function calling now set to:",
-            description=f"{new_state}",
-            color=await ctx.embed_color(),
+        enabled = all(name in enabled_tools for name in tool_names)
+        return await ctx.maybe_send_embed(
+            f"{embed_title} tool: `{'Enabled' if enabled else 'Disabled'}`"
         )
-        await ctx.send(embed=embed)

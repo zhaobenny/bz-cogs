@@ -67,23 +67,23 @@ async def check_guild_permissions(
 async def check_channel_settings(
     services: "AIUserServices", ctx: commands.Context
 ) -> Tuple[bool, str]:
-    """Validate channel whitelist and thread settings"""
+    """Validate enabled reply channels and thread settings"""
     whitelist = await services.config.guild(ctx.guild).channels_whitelist()
     if not whitelist:
-        return False, "No whitelisted channels"
+        return False, "No enabled reply channels"
 
     if not ctx.interaction:
         if (
             isinstance(ctx.channel, discord.Thread)
             and ctx.channel.parent.id not in whitelist
         ):
-            return False, "Parent channel not whitelisted"
+            return False, "Parent channel is not enabled for replies"
 
         if (
             not isinstance(ctx.channel, discord.Thread)
             and ctx.channel.id not in whitelist
         ):
-            return False, "Channel not whitelisted"
+            return False, "Channel is not enabled for replies"
 
     return True, ""
 
@@ -118,14 +118,14 @@ async def check_user_status(
             # Use webhook_id for webhooks, author.id for app bots
             user_id = ctx.message.webhook_id if is_webhook else ctx.author.id
             if user_id not in webhook_whitelist:
-                return False, "Webhook/app not in whitelist"
+                return False, "Webhook/app is not in the allowlist"
         return True, ""
 
     if ctx.author.bot:
         return False, f"User {ctx.author.name} is bot"
 
     if not await services.bot.allowed_by_whitelist_blacklist(ctx.author):
-        return False, f"User {ctx.author.name} not allowed by whitelist/blacklist"
+        return False, f"User {ctx.author.name} is not allowed by the access filters"
 
     if services.consent.is_opted_out(ctx.author.id):
         return False, "User opted out"
@@ -149,7 +149,7 @@ async def check_user_status(
             (ctx.author.id in whitelisted_members)
             or (user_roles & set(whitelisted_roles))
         ):
-            return False, f"User {ctx.author.name} not in role/member whitelist"
+            return False, f"User {ctx.author.name} is not in the trigger allowlist"
 
     return True, ""
 

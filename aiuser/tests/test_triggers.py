@@ -174,6 +174,11 @@ async def test_trigger_words_hierarchy(
     ctx = await bot.get_context(msg)
     assert await is_always_reply_on_words_triggered(mock_services, ctx) is True
 
+    await mock_services.config.channel(test_channel).always_reply_on_words.set([])
+    msg = backend.make_message("hello guildword", test_member, test_channel)
+    ctx = await bot.get_context(msg)
+    assert await is_always_reply_on_words_triggered(mock_services, ctx) is False
+
     await mock_services.config.channel(test_channel).always_reply_on_words.set(
         ["channelword"]
     )
@@ -204,22 +209,22 @@ async def test_trigger_words_hierarchy(
 
 
 @pytest.mark.asyncio
-async def test_trigger_words_empty_list_blocks_inherited_words(
+async def test_trigger_words_clear_inherits_broader_words(
     bot,
     mock_services,
     test_guild,
     test_channel,
     test_member,
 ):
-    """Explicit empty list override should block inherited trigger words."""
+    """An unset scoped value should use the broader trigger-word setting."""
     await mock_services.config.guild(test_guild).always_reply_on_words.set(
         ["guildword"]
     )
-    await mock_services.config.channel(test_channel).always_reply_on_words.set([])
+    await mock_services.config.channel(test_channel).always_reply_on_words.set(None)
 
     msg = backend.make_message("hello guildword", test_member, test_channel)
     ctx = await bot.get_context(msg)
-    assert await is_always_reply_on_words_triggered(mock_services, ctx) is False
+    assert await is_always_reply_on_words_triggered(mock_services, ctx) is True
 
 
 @pytest.mark.asyncio

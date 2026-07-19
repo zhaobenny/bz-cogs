@@ -1,5 +1,3 @@
-from typing import Optional
-
 import discord
 from redbot.core import commands
 
@@ -18,36 +16,40 @@ class SearchFunctionSettings(FunctionToggleHelperMixin):
         """Web search function settings (per server)."""
         pass
 
-    @functions_search.command(name="toggle")
-    async def search_toggle(self, ctx: commands.Context):
-        """Toggle the web search function on or off"""
+    @functions_search.command(name="enable")
+    async def search_enable(self, ctx: commands.Context):
+        """Enable the web search tool"""
         guild_conf = self.config.guild(ctx.guild)
-        enabled_tools: list = await guild_conf.function_calling_functions() or []
-        enabling = names.SEARCH_WEB not in enabled_tools
+        provider = await guild_conf.function_calling_search_provider()
+        key_service = PROVIDER_KEY_SERVICES.get(provider)
+        if key_service:
+            key_error = await provider_key_error(self.bot, ctx, key_service)
+            if key_error:
+                return await ctx.send(key_error)
+        if (
+            provider == SEARXNG
+            and not await guild_conf.function_calling_search_endpoint()
+        ):
+            return await ctx.send(
+                f"SearXNG endpoint not set! Set it using `{ctx.clean_prefix}aiuser tools search endpoint set <url>`."
+            )
 
-        if enabling:
-            provider = await guild_conf.function_calling_search_provider()
-            key_service = PROVIDER_KEY_SERVICES.get(provider)
-            if key_service:
-                key_error = await provider_key_error(self.bot, ctx, key_service)
-                if key_error:
-                    return await ctx.send(key_error)
-            if (
-                provider == SEARXNG
-                and not await guild_conf.function_calling_search_endpoint()
-            ):
-                return await ctx.send(
-                    f"SearXNG endpoint not set! Set it using `{ctx.clean_prefix}aiuser functions search endpoint <url>`."
-                )
+        return await self.set_function_group(ctx, [names.SEARCH_WEB], "Search", True)
 
-        await self.toggle_function_group(ctx, [names.SEARCH_WEB], "Search")
+    @functions_search.command(name="disable")
+    async def search_disable(self, ctx: commands.Context):
+        """Disable the web search tool"""
+        return await self.set_function_group(ctx, [names.SEARCH_WEB], "Search", False)
 
-    @functions_search.command(name="provider")
-    async def search_provider(self, ctx: commands.Context, provider: str):
-        """Set the search provider.
+    @functions_search.group(name="provider", invoke_without_command=True)
+    async def search_provider(self, ctx: commands.Context):
+        """Show the web search provider"""
+        provider = await self.config.guild(ctx.guild).function_calling_search_provider()
+        return await ctx.maybe_send_embed(f"Search provider: `{provider}`")
 
-        Available providers: `exa`, `searxng`
-        """
+    @search_provider.command(name="set")
+    async def search_provider_set(self, ctx: commands.Context, provider: str):
+        """Set the web search provider"""
         provider = provider.strip().lower()
 
         if provider not in PROVIDERS:
@@ -77,30 +79,39 @@ class SearchFunctionSettings(FunctionToggleHelperMixin):
             ).function_calling_search_endpoint()
         ):
             embed.set_footer(
-                text=f"⚠️ Set the SearXNG endpoint using {ctx.clean_prefix}aiuser functions search endpoint <url>"
+                text=f"⚠️ Set the SearXNG endpoint using {ctx.clean_prefix}aiuser tools search endpoint set <url>"
             )
         await ctx.send(embed=embed)
 
-    @functions_search.command(name="endpoint")
-    async def search_endpoint(self, ctx: commands.Context, url: Optional[str] = None):
-        """Sets the search endpoint url (used by the `searxng` provider)
+    @functions_search.group(name="endpoint", invoke_without_command=True)
+    async def search_endpoint(self, ctx: commands.Context):
+        """Show the SearXNG endpoint"""
+        url = await self.config.guild(ctx.guild).function_calling_search_endpoint()
+        return await ctx.maybe_send_embed(f"Search endpoint: `{url or 'Not set'}`")
 
-        **Arguments:**
-        - `url`: The url to set the endpoint to. Leave blank to unset.
-        """
+    @search_endpoint.command(name="set")
+    async def search_endpoint_set(self, ctx: commands.Context, url: str):
+        """Set the SearXNG endpoint"""
         await self.config.guild(ctx.guild).function_calling_search_endpoint.set(url)
+        return await ctx.send(f"Search endpoint set to `{url}`.")
 
-        embed = discord.Embed(title="Search endpoint", color=await ctx.embed_color())
-        if url:
-            embed.description = f"Endpoint set to {url}."
-        else:
-            embed.description = "Endpoint not set."
-        await ctx.send(embed=embed)
+    @search_endpoint.command(name="clear")
+    async def search_endpoint_clear(self, ctx: commands.Context):
+        """Clear the SearXNG endpoint"""
+        await self.config.guild(ctx.guild).function_calling_search_endpoint.set(None)
+        return await ctx.send("Search endpoint cleared.")
 
-    @functions_search.command(name="results")
-    async def search_max_results(self, ctx: commands.Context, results: int):
-        """Sets the max results returned per search (used by the `searxng` provider)"""
+    @functions_search.group(name="results", invoke_without_command=True)
+    async def search_max_results(self, ctx: commands.Context):
+        """Show the maximum search results"""
+        results = await self.config.guild(
+            ctx.guild
+        ).function_calling_search_max_results()
+        return await ctx.maybe_send_embed(f"Maximum search results: `{results}`")
 
+    @search_max_results.command(name="set")
+    async def search_max_results_set(self, ctx: commands.Context, results: int):
+        """Set the maximum search results"""
         if results < 1:
             return await ctx.send(":warning: Please enter a positive integer.")
 
@@ -108,12 +119,7 @@ class SearchFunctionSettings(FunctionToggleHelperMixin):
             results
         )
 
-        embed = discord.Embed(
-            title="The max results is now:",
-            description=f"`{results}` results",
-            color=await ctx.embed_color(),
-        )
-        return await ctx.send(embed=embed)
+        return await ctx.send(f"Maximum search results set to `{results}`.")
 
     @functions_search.command(name="show")
     async def search_show_config(self, ctx: commands.Context):
