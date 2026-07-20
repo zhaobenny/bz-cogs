@@ -35,7 +35,13 @@ class MemoryRetriever:
             return None
 
         try:
-            memory_results = await self.db.search_similar(query, self.ctx.guild.id, k=1)
+            memory_results = await self.db.search_similar(
+                query,
+                self.ctx.guild.id,
+                k=1,
+                user=str(self.ctx.author.id),
+                channel=str(self.ctx.channel.id),
+            )
         except Exception:
             logger.exception("Database error while searching memories")
             return None

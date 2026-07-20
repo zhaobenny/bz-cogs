@@ -120,8 +120,6 @@ class ConversationAssembler:
     async def _fetch_relevant_memory(self) -> Optional[str]:
         if not await self.services.config.guild(self.guild).query_memories():
             return None
-        if self.services.memories is None:
-            return None
         retriever = MemoryRetriever(self.ctx, db=self.services.memories)
         return await retriever.fetch_relevant(mention_to_text(self.init_message))
 

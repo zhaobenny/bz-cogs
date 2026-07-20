@@ -17,6 +17,7 @@ from aiuser.consent import ConsentService
 from aiuser.context.compaction import CompactionManager, CompactionStore
 from aiuser.utils.cache import Cache
 from aiuser.vectorstore import VectorStore
+from aiuser.vectorstore.schema import ensure_sqlite_db
 
 if TYPE_CHECKING:
     from aiuser.core.reply_queue import ChannelReplyState
@@ -67,7 +68,7 @@ class AIUserServices:
     consent: ConsentService
     resolver: ScopedConfigResolver
     ignore_regex_cache: GuildIgnoreRegexCache
-    memories: Optional[VectorStore]
+    memories: VectorStore
     compaction_store: Optional[CompactionStore]
     compaction_manager: Optional[CompactionManager]
     context_cache: Cache
@@ -87,13 +88,16 @@ class AIUserServices:
         ignore_regex_cache = GuildIgnoreRegexCache(config)
         await ignore_regex_cache.load_all()
 
+        memories = VectorStore(data_path)
+        await ensure_sqlite_db(str(memories.db_path))
+
         services = cls(
             bot=bot,
             config=config,
             consent=consent,
             resolver=ScopedConfigResolver(config),
             ignore_regex_cache=ignore_regex_cache,
-            memories=VectorStore(data_path),
+            memories=memories,
             compaction_store=CompactionStore(data_path),
             compaction_manager=None,
             context_cache=Cache(limit=200),

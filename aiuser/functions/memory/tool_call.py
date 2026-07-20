@@ -1,6 +1,7 @@
 import logging
-import time
 from typing import Any, Dict, Optional
+
+from redbot.core import commands
 
 from aiuser.functions import names
 from aiuser.functions.context import ToolContext
@@ -8,6 +9,30 @@ from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 
 logger = logging.getLogger("red.bz_cogs.aiuser.memory")
+
+
+async def _canonical_scope_ids(
+    ctx: commands.Context, user: Optional[str], channel: Optional[str]
+):
+    user_id = None
+    channel_id = None
+
+    if user:
+        member = await commands.MemberConverter().convert(ctx, str(user))
+        user_id = str(member.id)
+
+    if channel:
+        try:
+            resolved_channel = await commands.GuildChannelConverter().convert(
+                ctx, str(channel)
+            )
+        except commands.BadArgument:
+            resolved_channel = await commands.ThreadConverter().convert(
+                ctx, str(channel)
+            )
+        channel_id = str(resolved_channel.id)
+
+    return user_id, channel_id
 
 
 class SaveMemoryToolCall(ToolCall):
@@ -28,11 +53,11 @@ class SaveMemoryToolCall(ToolCall):
                     },
                     "user": {
                         "type": "string",
-                        "description": "Optional: If this memory is specifically about a user, provide their Username or UserID.",
+                        "description": "Optional: If this memory is specifically about a user, provide their username, mention, or Discord user ID.",
                     },
                     "channel": {
                         "type": "string",
-                        "description": "Optional: If this memory is specifically about an ongoing event/context in a certain channel, provide the channel name or ID.",
+                        "description": "Optional: If this memory is specifically about an ongoing event/context in a certain channel, provide its name, mention, or Discord channel ID.",
                     },
                 },
                 required=["memory_name", "memory_text"],
@@ -52,23 +77,22 @@ class SaveMemoryToolCall(ToolCall):
             return "Failed: Missing memory_name or memory_text"
 
         try:
-            current_timestamp = int(time.time())
+            user, channel = await _canonical_scope_ids(tool_context.ctx, user, channel)
             guild_id = tool_context.ctx.guild.id
             db = tool_context.services.memories
-            if db is None:
-                return "Failed: Memory service is not available"
 
             memory_id = await db.upsert(
                 guild_id,
                 memory_name,
                 memory_text,
-                current_timestamp,
                 user=user,
                 channel=channel,
             )
 
             logger.info("Saved memory '%s'", memory_name)
             return f"Success: Saved memory with ID {memory_id}"
+        except commands.BadArgument:
+            return "Failed: Could not resolve the requested user or channel scope"
         except Exception:
             logger.exception("Failed to save memory")
             return "Failed: Internal error while saving memory"
@@ -88,11 +112,11 @@ class ReadMemoryToolCall(ToolCall):
                     },
                     "user": {
                         "type": "string",
-                        "description": "Optional: Only search memories related to this specific user (Username or UserID).",
+                        "description": "Optional: Only search memories related to this specific user, identified by username, mention, or Discord user ID.",
                     },
                     "channel": {
                         "type": "string",
-                        "description": "Optional: Only search memories related to this specific channel name or ID.",
+                        "description": "Optional: Only search memories related to this specific channel name, mention, or Discord channel ID.",
                     },
                 },
                 required=["search_query"],
@@ -111,10 +135,9 @@ class ReadMemoryToolCall(ToolCall):
             return "Failed: Missing search_query"
 
         try:
+            user, channel = await _canonical_scope_ids(tool_context.ctx, user, channel)
             guild_id = tool_context.ctx.guild.id
             db = tool_context.services.memories
-            if db is None:
-                return "Failed: Memory service is not available"
 
             memory_results = await db.search_similar(
                 search_query, guild_id, k=3, user=user, channel=channel
@@ -133,6 +156,8 @@ class ReadMemoryToolCall(ToolCall):
             )
             return f"Found relevant memories:\n{formatted_results}"
 
+        except commands.BadArgument:
+            return "Failed: Could not resolve the requested user or channel scope"
         except Exception:
             logger.exception("Failed to read memory")
             return "Failed: Internal error while reading memory"

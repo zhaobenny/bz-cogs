@@ -18,7 +18,6 @@
         "modal~=1.2.5",
         "tiktoken>=0.9.0",
         "trafilatura==2.0.0",
-        "rank-bm25==0.2.2",
         "emoji",
         "fastembed",
         "tenacity",

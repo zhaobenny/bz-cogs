@@ -1,156 +1,115 @@
-import re
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 import aiosqlite
 import numpy as np
-from rank_bm25 import BM25Okapi
 
 from aiuser.config.constants import EMBEDDING_CACHE_DIR_NAME, EMBEDDING_DB_NAME
-from aiuser.utils.utilities import to_thread
 from aiuser.vectorstore.embeddings import embed_text
-from aiuser.vectorstore.schema import ensure_sqlite_db
-
-
-@to_thread()
-def _bm25_candidate_rowids(query: str, text_rows: list) -> List[int]:
-    """Rank (rowid, name, text) rows by BM25; building the index is O(corpus)."""
-    # memory name included in tokenization for better matching
-    tokenized_corpus = [
-        re.findall(r"\w+", f"{row[1]} {row[2]}".lower()) for row in text_rows
-    ]
-    bm25 = BM25Okapi(tokenized_corpus)
-    tokenized_query = re.findall(r"\w+", query.lower())
-    bm25_scores = bm25.get_scores(tokenized_query)
-
-    if np.max(bm25_scores) > 0:
-        top_indices = np.argsort(bm25_scores)[-50:][::-1]
-        return [text_rows[i][0] for i in top_indices]
-    # Fallback to recent 50
-    return [row[0] for row in text_rows[-50:]]
 
 
 class VectorStore:
     def __init__(self, cog_data_path: Union[str, Path]):
-        self.cog_data_path = Path(cog_data_path)
-        self.db_path = self.cog_data_path / EMBEDDING_DB_NAME
-        self.cache_path = self.cog_data_path / EMBEDDING_CACHE_DIR_NAME
+        data_path = Path(cog_data_path)
+        self.db_path = data_path / EMBEDDING_DB_NAME
+        self.cache_path = data_path / EMBEDDING_CACHE_DIR_NAME
 
     async def upsert(
         self,
         guild_id: int,
         memory_name: str,
         memory_text: str,
-        last_updated: int,
         user: Optional[str] = None,
         channel: Optional[str] = None,
     ) -> int:
-        """Insert a new memory row. Returns number of rows in table after insert."""
-        await ensure_sqlite_db(str(self.db_path))
+        """Insert or update a memory and return its stable database ID."""
+        for scope_name, scope_id in (("user", user), ("channel", channel)):
+            if scope_id is not None and not (scope_id.isascii() and scope_id.isdigit()):
+                raise ValueError(f"{scope_name} scope must be a Discord ID")
 
-        embedding_array = await embed_text(memory_text, str(self.cache_path))
-        embedding_bytes = np.array(embedding_array, dtype=np.float32).tobytes()
+        embedding_bytes = (
+            await embed_text(memory_text, str(self.cache_path))
+        ).tobytes()
 
         async with aiosqlite.connect(self.db_path) as conn:
             await conn.execute(
                 """
-                INSERT OR REPLACE INTO memories (guild_id, memory_name, memory_text, last_updated, embedding, user, channel)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO memories (guild_id, memory_name, memory_text, embedding, user, channel)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT (guild_id, memory_name, IFNULL(user, ''), IFNULL(channel, ''))
+                DO UPDATE SET
+                    memory_text = excluded.memory_text,
+                    embedding = excluded.embedding
                 """,
                 (
                     guild_id,
                     memory_name,
                     memory_text,
-                    last_updated,
                     embedding_bytes,
                     user,
                     channel,
                 ),
             )
-            await conn.commit()
-
             cursor = await conn.execute(
-                "SELECT COUNT(*) FROM memories WHERE guild_id = ?", (guild_id,)
+                """
+                SELECT id FROM memories
+                WHERE guild_id = ? AND memory_name = ?
+                  AND user IS ? AND channel IS ?
+                """,
+                (guild_id, memory_name, user, channel),
             )
-            row = await cursor.fetchone()
-            return row[0] if row else 0
+            memory_id = (await cursor.fetchone())[0]
+            await conn.commit()
+            return memory_id
 
     async def list(self, guild_id: int) -> List[Tuple[int, str]]:
         """List memory names for a guild."""
-        await ensure_sqlite_db(str(self.db_path))
         async with aiosqlite.connect(self.db_path) as conn:
             cursor = await conn.execute(
-                "SELECT memory_name FROM memories WHERE guild_id = ? ORDER BY rowid ASC",
+                "SELECT id, memory_name FROM memories WHERE guild_id = ? ORDER BY id ASC",
                 (guild_id,),
             )
             res = await cursor.fetchall()
 
-        if not res:
-            return []
-        return [(i + 1, r[0]) for i, r in enumerate(res)]
+        return [(r[0], r[1]) for r in res]
 
-    async def fetch_by_rowid(
-        self, rowid: int, guild_id: int
+    async def fetch_by_id(
+        self, memory_id: int, guild_id: int
     ) -> Optional[Tuple[str, str]]:
-        """Fetch a memory by its 1-based row index for the guild."""
-        await ensure_sqlite_db(str(self.db_path))
+        """Fetch a memory by its stable database ID for the guild."""
         async with aiosqlite.connect(self.db_path) as conn:
             cursor = await conn.execute(
-                "SELECT memory_name, memory_text FROM memories WHERE guild_id = ? ORDER BY rowid ASC",
-                (guild_id,),
+                "SELECT memory_name, memory_text FROM memories WHERE id = ? AND guild_id = ?",
+                (memory_id, guild_id),
             )
-            res = await cursor.fetchall()
+            row = await cursor.fetchone()
+        return (row[0], row[1]) if row else None
 
-        if not res:
-            return None
-
-        idx = rowid - 1
-        if idx < 0 or idx >= len(res):
-            return None
-
-        r = res[idx]
-        return r[0], r[1]
-
-    async def delete(self, rowid: int, guild_id: int) -> bool:
-        """Delete a memory by its 1-based row index for the guild."""
-        await ensure_sqlite_db(str(self.db_path))
+    async def delete(self, memory_id: int, guild_id: int) -> bool:
+        """Delete a memory by its stable database ID for the guild."""
         async with aiosqlite.connect(self.db_path) as conn:
             cursor = await conn.execute(
-                "SELECT rowid FROM memories WHERE guild_id = ? ORDER BY rowid ASC",
-                (guild_id,),
+                "DELETE FROM memories WHERE id = ? AND guild_id = ?",
+                (memory_id, guild_id),
             )
-            rows = await cursor.fetchall()
-
-            if not rows:
-                return False
-
-            idx = rowid - 1
-            if idx < 0 or idx >= len(rows):
-                return False
-
-            target_rowid = rows[idx][0]
-
-            await conn.execute("DELETE FROM memories WHERE rowid = ?", (target_rowid,))
             await conn.commit()
-            return True
+            return bool(cursor.rowcount)
 
     async def delete_user_memories(
         self, user_id: int, guild_id: Optional[int] = None
     ) -> int:
         """Delete memories scoped to a specific Discord user ID."""
-        await ensure_sqlite_db(str(self.db_path))
-
-        query = "DELETE FROM memories WHERE user IN (?, ?)"
-        params = [str(user_id), user_id]
+        query = "DELETE FROM memories WHERE user = ?"
+        params = [str(user_id)]
 
         if guild_id is not None:
             query += " AND guild_id = ?"
             params.append(guild_id)
 
         async with aiosqlite.connect(self.db_path) as conn:
-            cursor = await conn.execute(query, tuple(params))
+            cursor = await conn.execute(query, params)
             await conn.commit()
-            return cursor.rowcount or 0
+            return cursor.rowcount
 
     async def search_similar(
         self,
@@ -160,9 +119,7 @@ class VectorStore:
         user: Optional[str] = None,
         channel: Optional[str] = None,
     ) -> List[Tuple[str, str, float]]:
-        """Search for similar memories using BM25 pre-filtering + embedding similarity."""
-        await ensure_sqlite_db(str(self.db_path))
-
+        """Search all in-scope memories using embedding similarity."""
         where_clause = "guild_id = ?"
         params = [guild_id]
 
@@ -175,22 +132,13 @@ class VectorStore:
 
         async with aiosqlite.connect(self.db_path) as conn:
             cursor = await conn.execute(
-                f"SELECT rowid, memory_name, memory_text FROM memories WHERE {where_clause}",
+                f"SELECT memory_name, memory_text, embedding FROM memories WHERE {where_clause}",
                 tuple(params),
             )
-            text_rows = await cursor.fetchall()
-
-            if not text_rows:
-                return []
-
-            candidate_rowids = await _bm25_candidate_rowids(query, text_rows)
-
-            placeholders = ",".join("?" * len(candidate_rowids))
-            cursor = await conn.execute(
-                f"SELECT memory_name, memory_text, embedding FROM memories WHERE rowid IN ({placeholders})",
-                candidate_rowids,
-            )
             candidates = await cursor.fetchall()
+
+        if not candidates:
+            return []
 
         query_embedding = await embed_text(query, str(self.cache_path))
 

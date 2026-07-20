@@ -38,7 +38,7 @@ class AIUser(
     Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
 
-    __version__ = "2.4.1"
+    __version__ = "2.4.2"
 
     def __init__(self, bot: Red):
         super().__init__()
@@ -95,8 +95,7 @@ class AIUser(
 
         await self.services.consent.remove_user_data(user_id)
 
-        if self.services.memories is not None:
-            await self.services.memories.delete_user_memories(user_id)
+        await self.services.memories.delete_user_memories(user_id)
 
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name: str, _):

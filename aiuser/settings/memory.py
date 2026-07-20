@@ -1,5 +1,4 @@
 import logging
-import time
 
 import discord
 from redbot.core import commands
@@ -63,7 +62,7 @@ class MemorySettings(MixinMeta):
         # Single page: no footer, no menu
         if total_pages == 1:
             memory_list = "\n".join(
-                f"**{rowid}.** `{name}`" for rowid, name in memories
+                f"**{memory_id}.** `{name}`" for memory_id, name in memories
             )
             embed = discord.Embed(
                 title="📚 Stored Memories",
@@ -77,7 +76,7 @@ class MemorySettings(MixinMeta):
         for i in range(0, len(memories), memories_per_page):
             page_memories = memories[i : i + memories_per_page]
             memory_list = "\n".join(
-                f"**{rowid}.** `{name}`" for rowid, name in page_memories
+                f"**{memory_id}.** `{name}`" for memory_id, name in page_memories
             )
 
             embed = discord.Embed(
@@ -95,9 +94,7 @@ class MemorySettings(MixinMeta):
         """Shows a memory by ID."""
 
         try:
-            memory = await self.services.memories.fetch_by_rowid(
-                memory_id, ctx.guild.id
-            )
+            memory = await self.services.memories.fetch_by_id(memory_id, ctx.guild.id)
         except Exception:
             logger.exception("Memory fetch did not succeed")
             return await ctx.message.add_reaction("⚠️")
@@ -162,22 +159,17 @@ class MemorySettings(MixinMeta):
             )
             return await ctx.send(embed=embed)
 
-        current_timestamp = int(time.time())
         try:
             memory_id = await self.services.memories.upsert(
                 ctx.guild.id,
                 memory_name,
                 memory_text,
-                current_timestamp,
             )
 
             embed = discord.Embed(
                 title="Memory Added",
                 description=f"Successfully added memory: #`{memory_id}` - `{memory_name}` ",
                 color=await ctx.embed_color(),
-            )
-            embed.set_footer(
-                text="This feature is WIP! Breaking changes could happen! (such as losing all saved memories)"
             )
             return await ctx.send(embed=embed)
         except Exception:
@@ -189,7 +181,7 @@ class MemorySettings(MixinMeta):
         """Removes a memory by ID."""
 
         try:
-            row = await self.services.memories.fetch_by_rowid(memory_id, ctx.guild.id)
+            row = await self.services.memories.fetch_by_id(memory_id, ctx.guild.id)
             if not row:
                 embed = discord.Embed(
                     title="Memory Not Found!",
