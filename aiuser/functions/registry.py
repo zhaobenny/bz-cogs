@@ -47,10 +47,10 @@ TOOLS_BY_NAME = {cls.function_name: cls for cls in ALL_TOOLS}
 
 async def get_enabled_tools(config: Config, ctx: commands.Context) -> List[ToolCall]:
     """Instantiate the tools enabled for this guild."""
-    enabled = await config.guild(ctx.guild).function_calling_functions()
+    enabled = set(await config.guild(ctx.guild).function_calling_functions())
 
     if ctx.interaction:
         # reactions cannot be added to the invoking message of a slash command
-        enabled = [name for name in enabled if name != names.ADD_REACTION]
+        enabled.discard(names.ADD_REACTION)
 
-    return [TOOLS_BY_NAME[name]() for name in enabled if name in TOOLS_BY_NAME]
+    return [tool() for tool in ALL_TOOLS if tool.function_name in enabled]

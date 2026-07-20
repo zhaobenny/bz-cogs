@@ -81,7 +81,10 @@ class ConversationAssembler:
         if include_history:
             memory = await self._fetch_relevant_memory()
             if memory:
-                await conversation.append_system(memory, name=SYSTEM_NAME_MEMORY)
+                entry = await conversation.append_system(
+                    memory, name=SYSTEM_NAME_MEMORY
+                )
+                conversation.turn_context_entries.append(entry)
 
         if include_trigger:
             entries = await self._collect_message_entries(
@@ -250,6 +253,8 @@ class ConversationAssembler:
 
             if message.author.id == self.bot_id:
                 await self._prepend_cached_tool_calls(conversation, message)
+            else:
+                await self._prepend_cached_turn_context(conversation, message)
 
             if not within_gap:
                 break
@@ -294,6 +299,18 @@ class ConversationAssembler:
     ):
         """Re-inject cached tool call entries before an assistant response."""
         cache_key = ("tool_calls", bot_message.channel.id, bot_message.id)
+        cached_entries = self.services.context_cache[cache_key]
+        if not cached_entries:
+            return
+
+        for entry in reversed(cached_entries):
+            await conversation.prepend(entry)
+
+    async def _prepend_cached_turn_context(
+        self, conversation: Conversation, user_message: discord.Message
+    ):
+        """Re-inject hidden context that preceded a prior user turn."""
+        cache_key = ("turn_context", user_message.channel.id, user_message.id)
         cached_entries = self.services.context_cache[cache_key]
         if not cached_entries:
             return

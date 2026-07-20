@@ -61,6 +61,12 @@ async def create_response(
             cache_key = ("tool_calls", ctx.channel.id, sent_message.id)
             services.context_cache[cache_key] = pipeline.tool_call_entries
 
+        # Preserve hidden per-turn context (such as retrieved memory) at the
+        # position where it originally appeared before the triggering message.
+        if sent_message and conversation.turn_context_entries:
+            cache_key = ("turn_context", ctx.channel.id, ctx.message.id)
+            services.context_cache[cache_key] = conversation.turn_context_entries
+
         if sent_message:
             state = services.reply_channel_states[ctx.channel.id]
             state.last_bot_reply_at = sent_message.created_at

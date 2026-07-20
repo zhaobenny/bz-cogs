@@ -298,7 +298,9 @@ async def test_conversation_reply_requires_recorded_aiuser_response(
 
     state = get_or_create_channel_reply_state(mock_services, test_channel.id)
     state.last_bot_reply_at = plain_message.created_at
-    trigger = backend.make_message("after an aiuser response?", test_member, test_channel)
+    trigger = backend.make_message(
+        "after an aiuser response?", test_member, test_channel
+    )
     ctx = await bot.get_context(trigger)
     assert await get_conversation_reply_chance(mock_services, ctx) == 0.9
 

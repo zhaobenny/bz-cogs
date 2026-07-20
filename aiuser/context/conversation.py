@@ -25,6 +25,7 @@ class Conversation:
         self.token_limit = token_limit
         self.tokens = 0
         self.entries: List[MessageEntry] = []
+        self.turn_context_entries: List[MessageEntry] = []
         self.seen_message_ids: Set[int] = set()
         self.can_reply = True
         self._entry_tokens: List[int] = []
