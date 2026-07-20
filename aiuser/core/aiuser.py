@@ -20,7 +20,10 @@ from aiuser.core.random_message_task import RandomMessageTask
 from aiuser.core.reply_queue import cancel_reply_state_tasks
 from aiuser.core.services import AIUserServices
 from aiuser.dashboard.base import DashboardIntegration
-from aiuser.providers.llm.openai_compatible.client import setup_openai_client
+from aiuser.providers.llm.openai_compatible.client import (
+    get_openai_client,
+    invalidate_openai_client,
+)
 from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
 
@@ -65,7 +68,7 @@ class AIUser(
         self.services = await AIUserServices.create(
             self.bot, self.config, cog_data_path(self), cog=self
         )
-        self.services.openai_client = await setup_openai_client(self.bot, self.config)
+        await get_openai_client(self.services)
 
         debug_guild_id = os.environ.get("AIUSER_DEBUG_GUILD")
         if debug_guild_id and debug_guild_id.isdigit():
@@ -80,8 +83,7 @@ class AIUser(
     async def cog_unload(self):
         if self.services:
             cancel_reply_state_tasks(self.services)
-            if self.services.openai_client:
-                await self.services.openai_client.close()
+            await invalidate_openai_client(self.services)
         if self.random_task:
             self.random_task.cancel()
 
@@ -100,9 +102,7 @@ class AIUser(
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name: str, _):
         if service_name in ["openai", "openrouter"]:
-            self.services.openai_client = await setup_openai_client(
-                self.bot, self.config
-            )
+            await invalidate_openai_client(self.services)
 
     @app_commands.command(name="chat")
     @app_commands.describe(text="The prompt you want to send to the AI.")

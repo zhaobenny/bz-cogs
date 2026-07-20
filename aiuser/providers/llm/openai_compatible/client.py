@@ -1,8 +1,7 @@
 import logging
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import httpx
-from discord.ext import commands
 from openai import AsyncOpenAI
 from redbot.core import Config
 from redbot.core.bot import Red
@@ -14,13 +13,30 @@ from aiuser.providers.llm.openai_compatible.endpoints import (
     get_openai_compat_kind,
 )
 
+if TYPE_CHECKING:
+    from aiuser.core.services import AIUserServices
+
 logger = logging.getLogger("red.bz_cogs.aiuser.providers.llm")
+
+
+async def get_openai_client(services: "AIUserServices") -> Optional[AsyncOpenAI]:
+    if services.openai_client is None:
+        services.openai_client = await setup_openai_client(
+            services.bot, services.config
+        )
+    return services.openai_client
+
+
+async def invalidate_openai_client(services: "AIUserServices") -> None:
+    old = services.openai_client
+    services.openai_client = None
+    if old:
+        await old.close()
 
 
 async def setup_openai_client(
     bot: Red,
     config: Config,
-    ctx: Optional[commands.Context] = None,
     base_url: Optional[str] = None,
 ) -> Optional[AsyncOpenAI]:
     if base_url is None and await is_codex_endpoint_mode(config):
@@ -44,14 +60,6 @@ async def setup_openai_client(
         api_key = (await bot.get_shared_api_tokens("openai")).get("api_key")
 
     if not api_key and (not base_url or api_type == "openrouter"):
-        if ctx:
-            error_message = (
-                f"{api_type} API key not set for `aiuser`. "
-                f"Please set it with `{ctx.clean_prefix}set api {api_type} api_key,[API_KEY_HERE]`"
-            )
-            await ctx.send(error_message)
-            return None
-
         logger.error(
             f'{api_type} API key not set for "aiuser" yet! '
             f"Please set it with: [p]set api {api_type} api_key,[API_KEY_HERE]"

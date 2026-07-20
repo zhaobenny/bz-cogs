@@ -20,7 +20,10 @@ from aiuser.providers.llm.codex.oauth import (
     set_codex_oauth,
     start_device_authorization,
 )
-from aiuser.providers.llm.openai_compatible.client import setup_openai_client
+from aiuser.providers.llm.openai_compatible.client import (
+    get_openai_client,
+    invalidate_openai_client,
+)
 from aiuser.providers.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
     get_openai_compat_api_token_name,
@@ -112,7 +115,7 @@ class OwnerSettings(MixinMeta):
             return await ctx.send(":warning: Please enter a positive integer.")
 
         await self.config.openai_endpoint_request_timeout.set(seconds)
-        self.services.openai_client = await setup_openai_client(self.bot, self.config)
+        await invalidate_openai_client(self.services)
 
         return await ctx.send(f"Endpoint request timeout set to `{seconds}` seconds.")
 
@@ -246,16 +249,15 @@ class OwnerSettings(MixinMeta):
         await self.config.custom_openai_endpoint.set(url)
 
         await ctx.message.add_reaction("🔄")
-        self.services.openai_client = await setup_openai_client(self.bot, self.config)
+        await invalidate_openai_client(self.services)
+        client = await get_openai_client(self.services)
 
         try:
-            models = await self.services.openai_client.models.list()
+            models = await client.models.list()
         except AuthenticationError:
             logger.exception("Authentication failed for endpoint.")
             await self.config.custom_openai_endpoint.set(previous_url)
-            self.services.openai_client = await setup_openai_client(
-                self.bot, self.config
-            )
+            await invalidate_openai_client(self.services)
             api_type = get_openai_compat_api_token_name(url)
             return await ctx.send(
                 f":warning: Authentication failed for endpoint. "
@@ -265,9 +267,7 @@ class OwnerSettings(MixinMeta):
         except Exception:
             logger.exception("Invalid endpoint.")
             await self.config.custom_openai_endpoint.set(previous_url)
-            self.services.openai_client = await setup_openai_client(
-                self.bot, self.config
-            )
+            await invalidate_openai_client(self.services)
             return await ctx.send(
                 ":warning: Invalid endpoint. Please check logs for more information."
             )
@@ -367,7 +367,7 @@ class OwnerSettings(MixinMeta):
         oauth = await ensure_valid_codex_oauth(self.config)
         await set_codex_oauth(self.config, oauth)
         await self.config.custom_openai_endpoint.set(CODEX_ENDPOINT_MODE)
-        self.services.openai_client = await setup_openai_client(self.bot, self.config)
+        await invalidate_openai_client(self.services)
         restored_count, guilds_with_parameters = await self._restore_endpoint_models(
             endpoint_url=CODEX_ENDPOINT_MODE,
             chat_model=CODEX_DEFAULT_MODEL,
