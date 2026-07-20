@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Optional
 
 from redbot.core import commands
 
+from aiuser.consent import maybe_send_consent_embed
 from aiuser.context.assembler import ConversationAssembler
 from aiuser.context.conversation import Conversation
 from aiuser.providers.speech.transcripts import cache_audio_transcript
@@ -29,9 +30,18 @@ async def create_response(
 ) -> bool:
     async with ctx.message.channel.typing():
         if conversation is None:
-            conversation = await ConversationAssembler(
+            assembler = ConversationAssembler(
                 services, ctx, history_anchor=history_anchor
-            ).build()
+            )
+            conversation = await assembler.build()
+
+            await maybe_send_consent_embed(
+                services.consent, ctx.channel, assembler.undecided_users
+            )
+            if services.compaction_manager:
+                await services.compaction_manager.check_and_run_compaction(
+                    ctx, assembler.compaction_candidates
+                )
 
         result = await LLMPipeline(services, ctx, conversation).run()
 

@@ -51,6 +51,7 @@ class ConversationAssembler:
         self._seen_ids: Set[int] = set()
         self.summary: Optional[str] = None
         self.undecided_users: Set[discord.Member] = set()
+        self.compaction_candidates: List[discord.Message] = []
 
     async def build(self) -> Conversation:
         guild_conf = self.services.config.guild(self.guild)
@@ -88,10 +89,6 @@ class ConversationAssembler:
 
         await self._switch_to_image_model(conversation)
         await conversation.prune_oldest_if_over_limit()
-
-        await self.services.consent.maybe_send_consent_embed(
-            self.init_message.channel, self.undecided_users
-        )
         return conversation
 
     async def build_prompt_only(self, prompt: str) -> Conversation:
@@ -199,7 +196,9 @@ class ConversationAssembler:
         if not await self.services.config.guild(self.guild).compaction_enabled():
             return window
 
-        candidates = [m for m in window if await self._should_include(m)]
+        self.compaction_candidates = [
+            m for m in window if await self._should_include(m)
+        ]
         last_compacted_id = await store.get_last_compacted_message_id(
             self.guild.id, self.init_message.channel.id
         )
@@ -208,7 +207,6 @@ class ConversationAssembler:
         self.summary = await store.get_summary(
             self.guild.id, self.init_message.channel.id
         )
-        await manager.check_and_run_compaction(self.ctx, candidates)
         return window
 
     async def _append_message(

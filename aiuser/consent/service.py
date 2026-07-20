@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import random
 from typing import Iterable, Set
 
 import discord
@@ -10,8 +9,6 @@ from redbot.core import Config
 from redbot.core.bot import Red
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
-
-CONSENT_EMBED_TITLE = ":information_source: AI User Opt-In / Opt-Out"
 
 
 class ConsentService:
@@ -89,7 +86,7 @@ class ConsentService:
         await self.config.optin.set(list(self._optin))
         await self.config.optout.set(list(self._optout))
 
-    # --- consent embed ---
+    # --- queries for the consent embed (sending lives in consent.view) ---
 
     async def get_undecided_users(
         self, guild: discord.Guild, messages: Iterable[discord.Message]
@@ -103,32 +100,3 @@ class ConsentService:
             for message in messages
             if not message.author.bot and not self.has_decided(message.author.id)
         }
-
-    async def maybe_send_consent_embed(
-        self, channel: discord.abc.Messageable, users: Set[discord.Member]
-    ) -> bool:
-        """Send the opt-in/out embed if warranted. Returns True when sent."""
-        if not users:
-            return False
-        if await self.config.guild(channel.guild).optin_disable_embed():
-            return False
-        # 33% chance, or always when several users still need to decide
-        if not (random.random() <= 0.33 or len(users) > 3):
-            return False
-
-        from aiuser.consent.view import ConsentView
-
-        users_mentions = ", ".join(user.mention for user in users)
-        embed = discord.Embed(
-            title=CONSENT_EMBED_TITLE,
-            color=await self.bot.get_embed_color(channel),
-        )
-        embed.description = (
-            f"{users_mentions}\n"
-            "Please choose whether to allow a subset of your Discord messages from any server with the bot, "
-            "to be sent to OpenAI or an external party.\n"
-            "This will allow the bot to reply to your messages or use your messages.\n"
-            "This message will disappear if all current chatters have made a choice."
-        )
-        await channel.send(embed=embed, view=ConsentView(self))
-        return True
