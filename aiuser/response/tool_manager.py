@@ -4,15 +4,16 @@ import asyncio
 import json
 import logging
 from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from openai.types.chat import ChatCompletionMessageToolCall
+from redbot.core import Config, commands
 
+from aiuser.context.conversation import Conversation
+from aiuser.context.entry import MessageEntry
+from aiuser.functions.context import ToolContext
 from aiuser.functions.registry import get_enabled_tools
 from aiuser.functions.tool_call import ToolCall
-
-if TYPE_CHECKING:
-    from aiuser.response.pipeline import LLMPipeline
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -25,18 +26,26 @@ class PendingToolCall:
 
 
 class ToolManager:
-    def __init__(self, pipeline: "LLMPipeline"):
-        self.pipeline = pipeline
+    """Resolves enabled tools and executes tool calls against the conversation."""
+
+    def __init__(
+        self,
+        config: Config,
+        ctx: commands.Context,
+        conversation: Conversation,
+        tool_context: ToolContext,
+    ):
+        self.config = config
+        self.ctx = ctx
+        self.conversation = conversation
+        self.tool_context = tool_context
         self.enabled_tools: List[ToolCall] = []
         self.enabled_tools_map: Dict[str, ToolCall] = {}
 
     async def setup(self):
-        cfg = self.pipeline.services.config.guild(self.pipeline.ctx.guild)
-        if not (await cfg.function_calling()):
+        if not (await self.config.guild(self.ctx.guild).function_calling()):
             return
-        self.enabled_tools = await get_enabled_tools(
-            self.pipeline.services.config, self.pipeline.ctx
-        )
+        self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
         self.enabled_tools_map = {t.function_name: t for t in self.enabled_tools}
 
     def get_tools_kwargs(self) -> Dict[str, Any]:
@@ -49,34 +58,38 @@ class ToolManager:
         self,
         tool_calls: List[ChatCompletionMessageToolCall],
         assistant_extra_fields: Optional[Dict[str, Any]] = None,
-    ):
-        conversation = self.pipeline.conversation
-        entry = await conversation.append_assistant(
-            tool_calls=tool_calls, assistant_extra_fields=assistant_extra_fields
+    ) -> List[MessageEntry]:
+        """Run the tool calls and return the conversation entries they produced."""
+        entries: List[MessageEntry] = []
+        entries.append(
+            await self.conversation.append_assistant(
+                tool_calls=tool_calls, assistant_extra_fields=assistant_extra_fields
+            )
         )
-        self.pipeline.tool_call_entries.append(entry)
 
         parallel_batch: List[PendingToolCall] = []
 
         for tool_call in tool_calls:
             pending = self._prepare_tool_call(tool_call)
             if pending is None:
-                entry = await conversation.append_tool_result(
-                    f"Invalid tool call {tool_call.function.name!r}; check the tool name and JSON arguments.",
-                    tool_call.id,
+                entries.append(
+                    await self.conversation.append_tool_result(
+                        f"Invalid tool call {tool_call.function.name!r}; check the tool name and JSON arguments.",
+                        tool_call.id,
+                    )
                 )
-                self.pipeline.tool_call_entries.append(entry)
                 continue
 
             if not pending.tool.parallel_safe:
-                await self._run_batch(parallel_batch)
+                entries.extend(await self._run_batch(parallel_batch))
                 parallel_batch = []
-                await self._run_batch([pending])
+                entries.extend(await self._run_batch([pending]))
                 continue
 
             parallel_batch.append(pending)
 
-        await self._run_batch(parallel_batch)
+        entries.extend(await self._run_batch(parallel_batch))
+        return entries
 
     def _prepare_tool_call(
         self, tool_call: ChatCompletionMessageToolCall
@@ -100,20 +113,21 @@ class ToolManager:
         )
         return PendingToolCall(tool_call, tool, dict(arguments))
 
-    async def _run_batch(self, batch: List[PendingToolCall]) -> None:
+    async def _run_batch(self, batch: List[PendingToolCall]) -> List[MessageEntry]:
         if not batch:
-            return
+            return []
 
         if len(batch) > 1:
             logger.debug("Handling %s parallel-safe tool calls", len(batch))
         results = await asyncio.gather(
             *(
-                pending.tool.run(self.pipeline.tool_context, pending.arguments)
+                pending.tool.run(self.tool_context, pending.arguments)
                 for pending in batch
             ),
             return_exceptions=True,
         )
 
+        entries: List[MessageEntry] = []
         for pending, result in zip(batch, results):
             if isinstance(result, BaseException):
                 logger.error(
@@ -121,7 +135,9 @@ class ToolManager:
                 )
                 result = f"Tool {pending.tool.function_name} failed with {result!r}."
             if result is not None:
-                entry = await self.pipeline.conversation.append_tool_result(
-                    result, pending.tool_call.id
+                entries.append(
+                    await self.conversation.append_tool_result(
+                        result, pending.tool_call.id
+                    )
                 )
-                self.pipeline.tool_call_entries.append(entry)
+        return entries
