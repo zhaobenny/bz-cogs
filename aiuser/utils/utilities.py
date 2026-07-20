@@ -3,7 +3,7 @@ import functools
 import logging
 import random
 from datetime import datetime
-from typing import TYPE_CHECKING, Callable, Coroutine
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, TypeVar
 
 import discord
 import tiktoken
@@ -40,10 +40,13 @@ def get_tokenizer_encoding(model: str):
         return tiktoken.get_encoding(FALLBACK_TOKENIZER), FALLBACK_TOKENIZER, True
 
 
-def to_thread(timeout=300):
-    def decorator(func: Callable) -> Coroutine:
+_T = TypeVar("_T")
+
+
+def to_thread(timeout: float = 300):
+    def decorator(func: Callable[..., _T]) -> Callable[..., Coroutine[Any, Any, _T]]:
         @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args, **kwargs) -> _T:
             loop = asyncio.get_event_loop()
             result = await asyncio.wait_for(
                 loop.run_in_executor(None, func, *args, **kwargs), timeout

@@ -15,7 +15,7 @@ from aiuser.core.decision import (
     is_valid_message,
 )
 from aiuser.core.reply_queue import ResponseRequest, get_or_create_channel_reply_state
-from aiuser.response.response import create_response
+from aiuser.response import build_and_respond
 from aiuser.utils.logging_context import with_discord_log_context
 
 if TYPE_CHECKING:
@@ -45,7 +45,7 @@ async def handle_slash_command(
 
     get_or_create_channel_reply_state(services, ctx.channel.id)
     try:
-        await create_response(services, ctx)
+        await build_and_respond(services, ctx)
     except Exception:
         logger.exception("Failed to generate response for slash command")
         await ctx.send(":warning: Error in generating response!", ephemeral=True)

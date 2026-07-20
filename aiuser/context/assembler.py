@@ -16,6 +16,7 @@ from aiuser.context.entry import (
     MessageEntry,
 )
 from aiuser.context.memory import fetch_relevant_memory
+from aiuser.utils.cache import memory_cache_key, tool_calls_cache_key
 from aiuser.utils.utilities import format_variables, mention_to_text
 
 if TYPE_CHECKING:
@@ -220,9 +221,9 @@ class ConversationAssembler:
             return
 
         if message.author.id == self.bot_id:
-            cache_key = ("tool_calls", message.channel.id, message.id)
+            cache_key = tool_calls_cache_key(message.channel.id, message.id)
         else:
-            cache_key = ("memory", message.channel.id, message.id)
+            cache_key = memory_cache_key(message.channel.id, message.id)
         for entry in self.services.context_cache[cache_key] or []:
             await conversation.append(entry)
 

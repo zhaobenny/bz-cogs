@@ -15,7 +15,7 @@ async def test_image_scan_message(
     test_guild,
     test_channel,
     test_member,
-    mock_create_response,
+    mock_generate_and_send,
     fake_llm,
     tmp_path,
 ):
@@ -70,7 +70,7 @@ async def test_image_scan_message(
 
     ctx = await bot.get_context(user_message)
 
-    await mock_create_response(mock_services, ctx, conversation=thread)
+    await mock_generate_and_send(mock_services, ctx, thread)
 
     sent_message = get_message()
     assert sent_message.content == test_message_content

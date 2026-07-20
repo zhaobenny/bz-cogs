@@ -155,7 +155,7 @@ async def test_prune_messages_on_over_limit(
     bot,
     mock_services,
     build_conversation,
-    mock_create_response,
+    mock_generate_and_send,
     test_channel,
     test_member,
     fake_llm,
@@ -200,7 +200,7 @@ async def test_prune_messages_on_over_limit(
         "aiuser.functions.weather.query.get_weather",
         return_value="Sunny, 25°C",
     ):
-        await mock_create_response(mock_services, ctx, conversation=thread)
+        await mock_generate_and_send(mock_services, ctx, thread)
 
     result = thread.to_chat_payload()
 

@@ -22,7 +22,6 @@ class Conversation:
         self.entries: List[MessageEntry] = []
         self.memory_entries: List[MessageEntry] = []
         self.from_message_context = False
-        self.can_reply = True
         self._entry_tokens: List[int] = []
 
     def __len__(self) -> int:

@@ -16,7 +16,7 @@ from aiuser.config.defaults import (
     DEFAULT_MESSAGE_BURST_MAX_SECONDS,
 )
 from aiuser.core.decision import BurstMode, ResponseKind, is_valid_message
-from aiuser.response.response import create_response
+from aiuser.response import build_and_respond
 from aiuser.utils.utilities import wait_for_embed
 
 if TYPE_CHECKING:
@@ -224,10 +224,10 @@ def get_or_create_channel_reply_state(
 
 async def execute_response_request(
     services: "AIUserServices", request: ResponseRequest
-) -> bool:
+) -> None:
     channel = services.bot.get_channel(request.channel_id)
     if channel is None:
-        return False
+        return
 
     # gateway cache is kept up to date on edits/deletes, so prefer it over a REST call
     message = discord.utils.get(services.bot.cached_messages, id=request.message_id)
@@ -235,22 +235,21 @@ async def execute_response_request(
         try:
             message = await channel.fetch_message(request.message_id)
         except (discord.NotFound, discord.Forbidden, discord.HTTPException):
-            return False
+            return
 
     ctx = await services.bot.get_context(message)
     history_anchor = await get_latest_history_anchor(services, channel, request)
 
     try:
         if not (await is_valid_message(services, ctx)):
-            return False
+            return
 
         if not ctx.interaction and URL_PATTERN.search(ctx.message.content):
             ctx = await wait_for_embed(ctx)
 
-        return await create_response(services, ctx, history_anchor=history_anchor)
+        await build_and_respond(services, ctx, history_anchor=history_anchor)
     except Exception:
         logger.exception("Error generating aiuser response")
-        return False
 
 
 async def get_latest_history_anchor(

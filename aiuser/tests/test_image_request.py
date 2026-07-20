@@ -15,7 +15,7 @@ async def test_image_request(
     test_guild,
     test_channel,
     test_member,
-    mock_create_response,
+    mock_generate_and_send,
     fake_llm,
 ):
     from aiuser.tests.conftest import text_step, tool_call_step
@@ -67,7 +67,7 @@ async def test_image_request(
             return_value="mock",
         ),
     ):
-        await mock_create_response(mock_services, ctx, conversation=thread)
+        await mock_generate_and_send(mock_services, ctx, thread)
 
     sent_message = get_message()
     assert sent_message.attachments

@@ -248,33 +248,30 @@ def fake_llm(monkeypatch):
 
 
 @pytest.fixture
-def mock_create_response(monkeypatch):
+def mock_generate_and_send(monkeypatch):
     from contextlib import asynccontextmanager
 
-    import aiuser.response.response as response_module
+    import aiuser.response.orchestrator as response_module
 
-    original_create_response = response_module.create_response
+    original_generate_and_send = response_module.generate_and_send
 
     # Create a no-op async context manager specifically for this patch
     @asynccontextmanager
     async def noop_typing():
         yield
 
-    async def patched_create_response(
-        services, ctx, conversation=None, history_anchor=None
-    ):
-        from aiuser.core.reply_queue import get_or_create_channel_reply_state
+    async def patched_generate_and_send(services, ctx, conversation, can_reply=True):
         from unittest.mock import patch
+
+        from aiuser.core.reply_queue import get_or_create_channel_reply_state
 
         get_or_create_channel_reply_state(services, ctx.channel.id)
         with patch("discord.TextChannel.typing") as mock_typing:
             mock_typing.return_value = noop_typing()
-            return await original_create_response(
-                services, ctx, conversation, history_anchor
-            )
+            return await original_generate_and_send(services, ctx, conversation, can_reply)
 
-    monkeypatch.setattr(response_module, "create_response", patched_create_response)
-    return patched_create_response
+    monkeypatch.setattr(response_module, "generate_and_send", patched_generate_and_send)
+    return patched_generate_and_send
 
 
 def pytest_sessionfinish(session, exitstatus):

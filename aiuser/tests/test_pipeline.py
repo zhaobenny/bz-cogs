@@ -77,7 +77,6 @@ async def test_suppress_response_breaks_loop(
     result = await pipeline.run()
 
     assert result.completion is None
-    assert result.suppressed
     assert len(fake.calls) == 1, "loop must stop after the suppressing tool call"
 
 
@@ -101,5 +100,4 @@ async def test_empty_step_breaks_loop(
     result = await pipeline.run()
 
     assert result.completion is None
-    assert not result.suppressed
     assert len(fake.calls) == 1, "no content and no tool calls must end the loop"

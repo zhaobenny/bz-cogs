@@ -14,7 +14,7 @@ async def test_cached_tool_calls(
     mock_services,
     test_channel,
     test_member,
-    mock_create_response,
+    mock_generate_and_send,
     fake_llm,
 ):
     from openai.types.chat import ChatCompletionMessageToolCall
@@ -122,7 +122,7 @@ async def test_cached_tool_calls(
         "aiuser.functions.weather.query.get_weather",
         return_value="Sunny, 20°C",
     ):
-        await mock_create_response(mock_services, ctx, conversation=thread)
+        await mock_generate_and_send(mock_services, ctx, thread)
 
     from discord.ext.test import get_message
 
