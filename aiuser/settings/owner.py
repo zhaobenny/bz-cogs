@@ -10,7 +10,7 @@ from redbot.core.data_manager import cog_data_path
 
 from aiuser.config.constants import OPENROUTER_API_V1_URL
 from aiuser.config.defaults import DEFAULT_LLM_MODEL
-from aiuser.llm.codex.oauth import (
+from aiuser.providers.llm.codex.oauth import (
     CODEX_DEFAULT_MODEL,
     CODEX_ENDPOINT_MODE,
     ensure_valid_codex_oauth,
@@ -20,8 +20,8 @@ from aiuser.llm.codex.oauth import (
     set_codex_oauth,
     start_device_authorization,
 )
-from aiuser.llm.openai_compatible.client import setup_openai_client
-from aiuser.llm.openai_compatible.endpoints import (
+from aiuser.providers.llm.openai_compatible.client import setup_openai_client
+from aiuser.providers.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
     get_openai_compat_api_token_name,
     get_openai_compat_kind,

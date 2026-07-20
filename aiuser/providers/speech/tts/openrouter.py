@@ -9,7 +9,7 @@ from redbot.core import Config
 from redbot.core.bot import Red
 
 from aiuser.config.constants import OPENROUTER_API_V1_URL
-from aiuser.speech.constants import (
+from aiuser.providers.speech.constants import (
     OPENROUTER_INLINE_TAG_MODELS,
     TTS_PROVIDER_TIMEOUT,
     strip_inline_tags,

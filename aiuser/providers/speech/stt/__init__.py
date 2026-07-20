@@ -9,8 +9,8 @@ from aiuser.config.defaults import (
     DEFAULT_AUDIO_DURATION_LIMIT,
     DEFAULT_STT_PROVIDER,
 )
-from aiuser.speech.constants import OPENAI, OPENROUTER
-from aiuser.speech.stt import openai, openrouter
+from aiuser.providers.speech.constants import OPENAI, OPENROUTER
+from aiuser.providers.speech.stt import openai, openrouter
 
 PROVIDERS = {
     OPENAI: openai.transcribe,

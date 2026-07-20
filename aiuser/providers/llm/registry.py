@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING, Optional
 
-from aiuser.llm.codex.oauth import is_codex_endpoint_mode
-from aiuser.llm.codex.provider import CodexProvider
-from aiuser.llm.openai_compatible.client import setup_openai_client
-from aiuser.llm.openai_compatible.provider import OpenAICompatibleProvider
+from aiuser.providers.llm.codex.oauth import is_codex_endpoint_mode
+from aiuser.providers.llm.codex.provider import CodexProvider
+from aiuser.providers.llm.openai_compatible.client import setup_openai_client
+from aiuser.providers.llm.openai_compatible.provider import OpenAICompatibleProvider
 
 from .base import LLMProvider
 

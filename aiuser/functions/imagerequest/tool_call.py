@@ -8,7 +8,7 @@ from aiuser.functions import names
 from aiuser.functions.context import ToolContext
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
-from aiuser.llm.codex.oauth import CODEX_ENDPOINT_MODE
+from aiuser.providers.llm.codex.oauth import CODEX_ENDPOINT_MODE
 from aiuser.utils.utilities import format_variables
 
 from .providers.factory import PROVIDERS, detect_image_provider

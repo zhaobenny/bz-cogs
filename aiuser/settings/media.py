@@ -5,10 +5,10 @@ from redbot.core import checks, commands
 
 from aiuser.config.defaults import DEFAULT_STT_PROVIDER
 from aiuser.config.model_info import get_model_info
-from aiuser.llm.registry import list_llm_models
+from aiuser.providers.llm.registry import list_llm_models
 from aiuser.settings._groups import aiuser
 from aiuser.settings.functions.utilities import provider_key_error
-from aiuser.speech.stt import DEFAULT_MODELS, PROVIDERS
+from aiuser.providers.speech.stt import DEFAULT_MODELS, PROVIDERS
 from aiuser.types.abc import MixinMeta
 
 

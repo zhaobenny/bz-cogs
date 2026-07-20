@@ -7,7 +7,7 @@ from aiuser.functions.imagerequest.providers import (
     openai,
     openrouter,
 )
-from aiuser.llm.openai_compatible.endpoints import (
+from aiuser.providers.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
     get_openai_compat_kind,
 )

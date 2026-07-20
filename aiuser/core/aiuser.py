@@ -20,7 +20,7 @@ from aiuser.core.random_message_task import RandomMessageTask
 from aiuser.core.reply_queue import cancel_reply_state_tasks
 from aiuser.core.services import AIUserServices
 from aiuser.dashboard.base import DashboardIntegration
-from aiuser.llm.openai_compatible.client import setup_openai_client
+from aiuser.providers.llm.openai_compatible.client import setup_openai_client
 from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
 

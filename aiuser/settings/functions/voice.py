@@ -4,7 +4,7 @@ import discord
 from redbot.core import commands
 
 from aiuser.functions import names
-from aiuser.speech.tts import DEFAULT_MODELS, DEFAULT_VOICES, PROVIDERS
+from aiuser.providers.speech.tts import DEFAULT_MODELS, DEFAULT_VOICES, PROVIDERS
 from aiuser.settings.functions.utilities import (
     FunctionToggleHelperMixin,
     functions,

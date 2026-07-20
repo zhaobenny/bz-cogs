@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Optional, Tuple
 
 from discord import Message
 
-from aiuser.speech.stt import PROVIDERS, transcription_settings
-from aiuser.speech.transcripts import (
+from aiuser.providers.speech.stt import PROVIDERS, transcription_settings
+from aiuser.providers.speech.transcripts import (
     AUDIO_TRANSCRIPT_CACHE_NAMESPACE,
     cached_audio_transcript,
 )

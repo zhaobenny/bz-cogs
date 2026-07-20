@@ -8,7 +8,7 @@ import discord
 from redbot.core import commands
 
 from aiuser.context.converter.converter import MessageConverter
-from aiuser.llm.registry import get_llm_provider
+from aiuser.providers.llm.registry import get_llm_provider
 
 if TYPE_CHECKING:
     from aiuser.core.services import AIUserServices

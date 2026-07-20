@@ -17,9 +17,9 @@ from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
 from aiuser.config.model_info import get_model_info
 from aiuser.context.conversation import Conversation
 from aiuser.functions.context import ToolContext
-from aiuser.llm.base import ChatStepResult, LLMProvider
-from aiuser.llm.openai_compatible.endpoints import is_openrouter_endpoint
-from aiuser.llm.registry import get_llm_provider
+from aiuser.providers.llm.base import ChatStepResult, LLMProvider
+from aiuser.providers.llm.openai_compatible.endpoints import is_openrouter_endpoint
+from aiuser.providers.llm.registry import get_llm_provider
 from aiuser.response.logging import log_chat_request, log_chat_step_result
 from aiuser.response.tool_manager import ToolManager
 

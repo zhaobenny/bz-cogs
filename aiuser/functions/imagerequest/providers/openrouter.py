@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from aiuser.config.constants import GEMINI_IMAGE_MODEL, OPENROUTER_API_V1_URL
 from aiuser.functions.imagerequest.providers.util import fetch_image_bytes
-from aiuser.llm.openai_compatible.client import setup_openai_client
+from aiuser.providers.llm.openai_compatible.client import setup_openai_client
 
 if TYPE_CHECKING:
     from aiuser.functions.context import ToolContext

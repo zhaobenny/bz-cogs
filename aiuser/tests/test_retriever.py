@@ -4,8 +4,8 @@ import pytest
 import pytest_asyncio
 
 from aiuser.context.memory.retriever import MemoryRetriever
-from aiuser.vectorstore import VectorStore
-from aiuser.vectorstore.schema import ensure_sqlite_db
+from aiuser.providers.vectorstore import VectorStore
+from aiuser.providers.vectorstore.schema import ensure_sqlite_db
 
 
 @pytest_asyncio.fixture

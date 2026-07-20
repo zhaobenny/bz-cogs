@@ -14,7 +14,7 @@ from redbot.core import commands
 from aiuser.config.constants import RANDOM_MESSAGE_TASK_RETRY_SECONDS
 from aiuser.context.assembler import ConversationAssembler
 from aiuser.core.reply_queue import get_or_create_channel_reply_state
-from aiuser.llm.registry import get_llm_provider
+from aiuser.providers.llm.registry import get_llm_provider
 from aiuser.response.response import create_response
 from aiuser.utils.adapters import ensure_member_like
 from aiuser.utils.utilities import format_variables

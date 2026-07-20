@@ -7,7 +7,7 @@ import httpx
 from redbot.core import Config
 from redbot.core.bot import Red
 
-from aiuser.speech.constants import TTS_PROVIDER_TIMEOUT
+from aiuser.providers.speech.constants import TTS_PROVIDER_TIMEOUT
 
 FINEVOICE_API_V1_URL = "https://apis.finevoice.ai/v1/"
 TTS_POLL_INTERVAL = 5
