@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from uuid import uuid4
 
@@ -16,6 +17,7 @@ from redbot.core import commands
 from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
 from aiuser.config.model_info import get_model_info
 from aiuser.context.conversation import Conversation
+from aiuser.context.entry import MessageEntry
 from aiuser.functions.context import ToolContext
 from aiuser.providers.llm.base import ChatStepResult, LLMProvider
 from aiuser.providers.llm.openai_compatible.endpoints import is_openrouter_endpoint
@@ -29,12 +31,21 @@ if TYPE_CHECKING:
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
+@dataclass(frozen=True)
+class PipelineResult:
+    completion: Optional[str] = None
+    files_to_send: List[discord.File] = field(default_factory=list)
+    audio_transcripts_to_cache: List[str] = field(default_factory=list)
+    tool_call_entries: List[MessageEntry] = field(default_factory=list)
+    suppressed: bool = False
+    session_id: Optional[str] = None
+
+
 class LLMPipeline:
     """Drives the request/tool-call loop for one response.
 
     Owns the provider round-trips and the :class:`ToolContext` that tools see.
-    Tool side effects (files, suppression) are read back off the ToolContext
-    when the loop finishes.
+    Everything the caller needs comes back in the :class:`PipelineResult`.
     """
 
     def __init__(
@@ -52,8 +63,7 @@ class LLMPipeline:
         self.provider: Optional[LLMProvider] = None
         self.tool_context = ToolContext(services=services, ctx=ctx)
         self.tool_manager = ToolManager(self)
-        self.completion: Optional[str] = None
-        self.tool_call_entries: List = []
+        self.tool_call_entries: List[MessageEntry] = []
         self.session_id: Optional[str] = None
         self.request_id = (
             str(self.ctx.message.id)
@@ -61,15 +71,7 @@ class LLMPipeline:
             else uuid4().hex
         )
 
-    @property
-    def files_to_send(self) -> List[discord.File]:
-        return self.tool_context.files_to_send
-
-    @property
-    def suppress_response(self) -> bool:
-        return self.tool_context.suppress_response
-
-    async def run(self) -> Optional[str]:
+    async def run(self) -> PipelineResult:
         base_kwargs = await self._build_base_parameters()
         self.provider = await get_llm_provider(self.services)
         if self.provider is None:
@@ -82,7 +84,7 @@ class LLMPipeline:
                 await self.ctx.react_quietly(
                     "⚠️", message="`aiuser` has no LLM backend available"
                 )
-            return None
+            return self._build_result(None)
         await self.tool_manager.setup()
         tool_call_rounds = (
             await self.services.config.guild(
@@ -92,21 +94,22 @@ class LLMPipeline:
         )
         tools_kwargs = self.tool_manager.get_tools_kwargs()
         exhausted_tool_call_rounds = False
+        completion: Optional[str] = None
 
         for round_idx in range(tool_call_rounds):
             kwargs = {**base_kwargs, **tools_kwargs}
             step = await self._create_chat_step(kwargs)
             if step is None:
-                return None
+                return self._build_result(None)
 
             if step.content:
-                self.completion = step.content
+                completion = step.content
                 break
             if step.tool_calls:
                 await self.tool_manager.handle_tool_calls(
                     step.tool_calls, step.assistant_extra_fields
                 )
-                if self.suppress_response:
+                if self.tool_context.suppress_response:
                     break
                 continue
 
@@ -127,9 +130,19 @@ class LLMPipeline:
             )
             step = await self._create_chat_step(base_kwargs)
             if step and step.content:
-                self.completion = step.content
+                completion = step.content
 
-        return self.completion
+        return self._build_result(completion)
+
+    def _build_result(self, completion: Optional[str]) -> PipelineResult:
+        return PipelineResult(
+            completion=completion,
+            files_to_send=self.tool_context.files_to_send,
+            audio_transcripts_to_cache=self.tool_context.audio_transcripts_to_cache,
+            tool_call_entries=self.tool_call_entries,
+            suppressed=self.tool_context.suppress_response,
+            session_id=self.session_id,
+        )
 
     async def _create_chat_step(
         self, kwargs: Dict[str, Any]
