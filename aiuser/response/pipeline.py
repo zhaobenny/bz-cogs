@@ -57,7 +57,7 @@ class LLMPipeline:
         self.session_id: Optional[str] = None
         self.request_id = (
             str(self.ctx.message.id)
-            if self.conversation.seen_message_ids
+            if self.conversation.from_message_context
             else uuid4().hex
         )
 
@@ -194,7 +194,7 @@ class LLMPipeline:
     async def _session_id(self) -> str:
         state = self.services.reply_channel_states.get(self.ctx.channel.id)
         if (
-            self.conversation.seen_message_ids
+            self.conversation.from_message_context
             and state
             and state.llm_session_id
             and state.last_bot_reply_at

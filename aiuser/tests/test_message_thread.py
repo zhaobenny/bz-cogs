@@ -266,6 +266,31 @@ async def test_prune_messages_on_over_limit(
 
 
 @pytest.mark.asyncio
+async def test_history_pruned_when_over_token_limit(
+    bot,
+    mock_services,
+    build_conversation,
+    test_channel,
+    test_member,
+):
+    """History over the token budget is pruned oldest-first at build time,
+    keeping the system prompt and trigger."""
+    await mock_services.config.guild(test_member.guild).custom_model_tokens_limit.set(1)
+
+    _ = backend.make_message("ancient history one", test_member, test_channel)
+    _ = backend.make_message("ancient history two", test_member, test_channel)
+    trigger = backend.make_message("the actual trigger", test_member, test_channel)
+
+    thread = await build_conversation(init_message=trigger)
+    result = thread.to_chat_payload()
+
+    assert find_message_index(result, "ancient history one") == -1
+    assert find_message_index(result, "ancient history two") == -1
+    assert find_message_index(result, "the actual trigger") != -1
+    assert find_system_prompt_index(result) != -1
+
+
+@pytest.mark.asyncio
 async def test_messages_backread_limit_respected(
     bot,
     mock_services,

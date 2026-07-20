@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import timedelta
 from typing import Optional
 
 import discord
@@ -73,7 +74,9 @@ class PromptSettings(MixinMeta):
         if not confirmed:
             return
 
-        self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
+        self.services.override_prompt_start_time[ctx.guild.id] = (
+            ctx.message.created_at - timedelta(seconds=1)
+        )
         await self.config.guild(ctx.guild).custom_text_prompt.set(None)
         for member in ctx.guild.members:
             await self.config.member(member).custom_text_prompt.set(None)
@@ -324,7 +327,9 @@ class PromptSettings(MixinMeta):
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
 
         await config_attr.custom_text_prompt.set(prompt)
-        self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
+        self.services.override_prompt_start_time[ctx.guild.id] = (
+            ctx.message.created_at - timedelta(seconds=1)
+        )
 
         embed = discord.Embed(
             title=f"The {mention_type.name.lower()} will use the custom prompt:",
@@ -343,7 +348,9 @@ class PromptSettings(MixinMeta):
         """Clear a custom prompt so broader prompt settings can apply"""
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.custom_text_prompt.set(None)
-        self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
+        self.services.override_prompt_start_time[ctx.guild.id] = (
+            ctx.message.created_at - timedelta(seconds=1)
+        )
         return await ctx.send(
             f"Custom prompt cleared for this {mention_type.name.lower()}."
         )

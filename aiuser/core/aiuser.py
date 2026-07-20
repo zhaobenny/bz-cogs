@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Optional
 
 import discord
@@ -38,7 +38,7 @@ class AIUser(
     Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
 
-    __version__ = "2.4.2"
+    __version__ = "2.4.3"
 
     def __init__(self, bot: Red):
         super().__init__()
@@ -71,7 +71,7 @@ class AIUser(
         if debug_guild_id and debug_guild_id.isdigit():
             # for development: reset prompt start time for a test guild
             self.services.override_prompt_start_time[int(debug_guild_id)] = (
-                datetime.now()
+                datetime.now() - timedelta(seconds=1)
             )
 
         self.random_task = RandomMessageTask(self.services)

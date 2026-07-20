@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import timedelta
 from typing import Optional, Union
 
 import discord
@@ -65,7 +66,9 @@ class Settings(
         ):
             return await ctx.react_quietly("❌")
 
-        self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
+        self.services.override_prompt_start_time[ctx.guild.id] = (
+            ctx.message.created_at - timedelta(seconds=1)
+        )
         await ctx.react_quietly("✅")
 
     @aiuser.command(aliases=["config", "settings", "showsettings"])

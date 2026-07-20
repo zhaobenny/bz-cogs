@@ -100,8 +100,7 @@ class MessageConverter:
         else:
             content = format_image_placeholder(message)
 
-        await self.add_entry(content, res, role)
-        content = format_text_content(message)
+        await self.add_entry(format_text_content(message), res, role)
         await self.add_entry(content, res, role)
 
     async def handle_embed(self, message: Message, res: List[MessageEntry], role: str):
@@ -112,8 +111,7 @@ class MessageConverter:
             content = format_text_content(message)
             await self.add_entry(content, res, role)
         else:
-            await self.add_entry(content, res, role)
-            content = format_embed_message_content(message)
+            await self.add_entry(format_embed_message_content(message), res, role)
             await self.add_entry(content, res, role)
 
     async def add_entry(

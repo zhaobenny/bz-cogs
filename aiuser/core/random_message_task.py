@@ -84,8 +84,8 @@ class RandomMessageTask:
             guild=guild, channel=channel
         )
 
-        conversation = await ConversationAssembler(self.services, ctx).build(
-            prompt_override=prompt, include_history=False, include_trigger=False
+        conversation = await ConversationAssembler(self.services, ctx).build_prompt_only(
+            prompt
         )
         topic = await format_variables(ctx, random.choice(topics), self.services)
         await conversation.append_system(

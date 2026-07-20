@@ -189,9 +189,9 @@ async def build_conversation(bot, mock_services, test_channel, test_member):
             ctx = await bot.get_context(message)
 
         assembler = ConversationAssembler(mock_services, ctx)
-        return await assembler.build(
-            prompt_override=prompt, include_trigger=prompt is None
-        )
+        if prompt:
+            return await assembler.build_prompt_only(prompt)
+        return await assembler.build()
 
     return _create
 
