@@ -14,6 +14,9 @@ from discord.ext.test import backend
 from openai import AsyncOpenAI
 from redbot.core import Config
 
+from openai.types.chat import ChatCompletionMessageToolCall
+from openai.types.chat.chat_completion_message_tool_call import Function
+
 from aiuser.config.defaults import (
     DEFAULT_CHANNEL,
     DEFAULT_GLOBAL,
@@ -22,6 +25,7 @@ from aiuser.config.defaults import (
     DEFAULT_ROLE,
 )
 from aiuser.context.conversation import Conversation
+from aiuser.providers.llm.base import ChatStepResult, LLMProvider
 
 
 def get_openrouter_api_key():
@@ -194,6 +198,53 @@ async def build_conversation(bot, mock_services, test_channel, test_member):
         return await assembler.build()
 
     return _create
+
+
+class FakeLLMProvider(LLMProvider):
+    """Scripted LLMProvider adapter: returns the given steps in order."""
+
+    def __init__(self, steps):
+        super().__init__(config=None)
+        self.steps = list(steps)
+        self.calls = []  # (model, messages, kwargs) per create_chat_step
+
+    async def list_models(self):
+        return ["fake-model"]
+
+    async def create_chat_step(self, model, messages, kwargs):
+        self.calls.append((model, list(messages), dict(kwargs)))
+        return self.steps.pop(0)
+
+
+def text_step(content, finish_reason="stop"):
+    return ChatStepResult(content=content, tool_calls=[], finish_reason=finish_reason)
+
+
+def tool_call_step(name, arguments, call_id="call_1"):
+    tool_call = ChatCompletionMessageToolCall(
+        id=call_id,
+        type="function",
+        function=Function(name=name, arguments=arguments),
+    )
+    return ChatStepResult(
+        content=None, tool_calls=[tool_call], finish_reason="tool_calls"
+    )
+
+
+@pytest.fixture
+def fake_llm(monkeypatch):
+    """Install a FakeLLMProvider behind the get_llm_provider seam."""
+
+    def _install(*steps):
+        fake = FakeLLMProvider(steps)
+
+        async def fake_get(services):
+            return fake
+
+        monkeypatch.setattr("aiuser.response.pipeline.get_llm_provider", fake_get)
+        return fake
+
+    return _install
 
 
 @pytest.fixture

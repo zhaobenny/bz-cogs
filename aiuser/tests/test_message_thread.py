@@ -158,17 +158,11 @@ async def test_prune_messages_on_over_limit(
     mock_create_response,
     test_channel,
     test_member,
+    fake_llm,
 ):
-    from unittest.mock import AsyncMock, MagicMock, patch
+    from unittest.mock import patch
 
-    from openai.types.chat import (
-        ChatCompletion,
-        ChatCompletionMessage,
-        ChatCompletionMessageToolCall,
-    )
-    from openai.types.chat.chat_completion import Choice
-    from openai.types.chat.chat_completion_message_tool_call import Function
-
+    from aiuser.tests.conftest import text_step, tool_call_step
     from aiuser.utils.utilities import encode_text_to_tokens
 
     _ = backend.make_message("yo", test_member, test_channel)
@@ -189,50 +183,11 @@ async def test_prune_messages_on_over_limit(
     )
     thread.token_limit = thread.tokens - prunable_tokens_1 - prunable_tokens_2
 
-    mock_services.openai_client = MagicMock()
-
-    tool_call = ChatCompletionMessageToolCall(
-        id="call_prune_test",
-        type="function",
-        function=Function(name="get_weather", arguments='{"location":"NYC"}'),
-    )
-
-    tool_call_response = ChatCompletion(
-        id="chatcmpl-tool",
-        choices=[
-            Choice(
-                index=0,
-                message=ChatCompletionMessage(
-                    role="assistant", tool_calls=[tool_call], content=None
-                ),
-                finish_reason="tool_calls",
-            )
-        ],
-        created=1234567891,
-        model="gpt-4",
-        object="chat.completion",
-    )
-
-    final_response = ChatCompletion(
-        id="chatcmpl-final",
-        choices=[
-            Choice(
-                index=0,
-                message=ChatCompletionMessage(
-                    role="assistant",
-                    content="tool result response",
-                    tool_calls=None,
-                ),
-                finish_reason="stop",
-            )
-        ],
-        created=1234567892,
-        model="gpt-4",
-        object="chat.completion",
-    )
-
-    mock_services.openai_client.chat.completions.create = AsyncMock(
-        side_effect=[tool_call_response, final_response]
+    fake_llm(
+        tool_call_step(
+            "get_weather", '{"location":"NYC"}', call_id="call_prune_test"
+        ),
+        text_step("tool result response"),
     )
 
     await mock_services.config.guild(test_member.guild).function_calling.set(True)

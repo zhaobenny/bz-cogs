@@ -15,6 +15,7 @@ async def test_cached_tool_calls(
     test_channel,
     test_member,
     mock_create_response,
+    fake_llm,
 ):
     from openai.types.chat import ChatCompletionMessageToolCall
     from openai.types.chat.chat_completion_message_tool_call import Function
@@ -100,59 +101,16 @@ async def test_cached_tool_calls(
         f"Messages not in correct order: user_ask@{user_ask_idx}, cached_assistant/tool_call@{tool_call_idx}, tool_result@{tool_result_idx}, bot_reply@{bot_reply_idx}, system@{system_idx}, trigger@{trigger_idx}"
     )
 
-    from unittest.mock import AsyncMock, MagicMock, patch
+    from unittest.mock import patch
 
-    from openai.types.chat import (
-        ChatCompletion,
-        ChatCompletionMessage,
-    )
-    from openai.types.chat.chat_completion import Choice
-
-    mock_services.openai_client = MagicMock()
+    from aiuser.tests.conftest import text_step, tool_call_step
 
     tokyo_tool_call_id = "call_tokyo_weather"
-    tokyo_tool_call = ChatCompletionMessageToolCall(
-        id=tokyo_tool_call_id,
-        type="function",
-        function=Function(name="get_weather", arguments='{"location":"Tokyo"}'),
-    )
-
-    mock_response = ChatCompletion(
-        id="chatcmpl-456",
-        choices=[
-            Choice(
-                index=0,
-                message=ChatCompletionMessage(
-                    role="assistant", tool_calls=[tokyo_tool_call], content=None
-                ),
-                finish_reason="tool_calls",
-            )
-        ],
-        created=1234567892,
-        model="gpt-4",
-        object="chat.completion",
-    )
-
-    final_response = ChatCompletion(
-        id="chatcmpl-457",
-        choices=[
-            Choice(
-                index=0,
-                message=ChatCompletionMessage(
-                    role="assistant",
-                    content="It's sunny in Tokyo, 20°C.",
-                    tool_calls=None,
-                ),
-                finish_reason="stop",
-            )
-        ],
-        created=1234567893,
-        model="gpt-4",
-        object="chat.completion",
-    )
-
-    mock_services.openai_client.chat.completions.create = AsyncMock(
-        side_effect=[mock_response, final_response]
+    fake_llm(
+        tool_call_step(
+            "get_weather", '{"location":"Tokyo"}', call_id=tokyo_tool_call_id
+        ),
+        text_step("It's sunny in Tokyo, 20°C."),
     )
 
     await mock_services.config.guild(ctx.guild).function_calling.set(True)
