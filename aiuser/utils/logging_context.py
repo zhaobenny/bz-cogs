@@ -3,7 +3,9 @@ import functools
 import logging
 import os
 import sys
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Optional, TypeVar
+
+import discord
 
 _AIUSER_LOGGER_PREFIX = "red.bz_cogs.aiuser"
 _ANSI_GRAY = "\x1b[90m"
@@ -26,7 +28,9 @@ def _colorize_gray(text: str) -> str:
     return f"{_ANSI_GRAY}{text}{_ANSI_RESET}"
 
 
-def _build_log_prefix(guild: Any, channel: Any) -> str:
+def _build_log_prefix(
+    guild: Optional[discord.Guild], channel: Optional[discord.abc.GuildChannel]
+) -> str:
     parts = []
 
     guild_name = getattr(guild, "name", None) if guild is not None else None

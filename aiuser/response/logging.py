@@ -3,6 +3,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from openai.types.chat import ChatCompletionMessageToolCall
+from pydantic import BaseModel
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -12,7 +13,7 @@ _DATA_URI_BASE64_MARKER = ";base64,"
 
 
 def _to_debug_value(value: Any) -> Any:
-    if hasattr(value, "model_dump"):
+    if isinstance(value, BaseModel):
         return _to_debug_value(value.model_dump(mode="json"))
 
     if isinstance(value, dict):
@@ -34,7 +35,7 @@ def _truncate_data_uri(url: str) -> str:
     return f"{url[:base64_start]}{preview}..."
 
 
-def _sanitize_content_item(item: Any) -> None:
+def _sanitize_content_item(item: Dict[str, Any]) -> None:
     if not isinstance(item, dict):
         return
     if item.get("type") != "image_url":
@@ -49,7 +50,7 @@ def _sanitize_content_item(item: Any) -> None:
         image_url["url"] = _truncate_data_uri(url)
 
 
-def _sanitize_message(message: Any) -> None:
+def _sanitize_message(message: Dict[str, Any]) -> None:
     if not isinstance(message, dict):
         return
 

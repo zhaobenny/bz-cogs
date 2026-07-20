@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import httpx
 from openai.types.chat import ChatCompletionMessageToolCall
@@ -12,7 +12,9 @@ logger = logging.getLogger("red.bz_cogs.aiuser.llm")
 CODEX_CONTEXT_PREFIX = "Additional system context:\n"
 
 
-def _convert_content_parts(content: Any) -> List[Dict[str, Any]]:
+def _convert_content_parts(
+    content: Union[str, List[Any], None],
+) -> List[Dict[str, Any]]:
     if isinstance(content, str):
         return [{"type": "input_text", "text": content}]
 
@@ -38,7 +40,9 @@ def _convert_content_parts(content: Any) -> List[Dict[str, Any]]:
     return parts
 
 
-def _convert_message_content(content: Any) -> Any:
+def _convert_message_content(
+    content: Union[str, List[Any], None],
+) -> Union[str, List[Dict[str, Any]], None]:
     if isinstance(content, str):
         stripped = content.strip()
         return stripped or None
@@ -53,7 +57,7 @@ def _convert_message_content(content: Any) -> Any:
     return parts
 
 
-def _stringify_content(content: Any) -> str:
+def _stringify_content(content: Union[str, List[Any], None]) -> str:
     if isinstance(content, str):
         return content.strip()
 

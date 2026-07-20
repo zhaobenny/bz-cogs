@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from redbot.core import Config
 from redbot.core.bot import Red
 
@@ -23,7 +21,7 @@ async def transcribe(
         raise ValueError("OpenAI API key is not configured")
 
     try:
-        response: Any = await client.audio.transcriptions.create(
+        response = await client.audio.transcriptions.create(
             file=(f"audio.{audio_format}", audio),
             model=model,
             response_format="json",

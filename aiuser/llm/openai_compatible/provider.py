@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 from openai import AsyncOpenAI
 from openai.types.chat import (
     ChatCompletion,
+    ChatCompletionMessage,
     ChatCompletionMessageParam,
     ChatCompletionMessageToolCall,
 )
@@ -92,7 +93,9 @@ class OpenAICompatibleProvider(LLMProvider):
             finish_reason=choice.finish_reason,
         )
 
-    def _get_assistant_extra_fields(self, message: Any) -> Dict[str, Any]:
+    def _get_assistant_extra_fields(
+        self, message: ChatCompletionMessage
+    ) -> Dict[str, Any]:
         extra_fields: Dict[str, Any] = {}
         for field_name in ASSISTANT_EXTRA_FIELD_NAMES:
             value = getattr(message, field_name, None)
