@@ -13,7 +13,7 @@ from aiuser.config.constants import (
     GROK_PRIMARY_TRIGGERS,
     GROK_SECONDARY_TRIGGERS,
 )
-from aiuser.core.validators import is_bot_mentioned_or_replied
+from aiuser.core.decision.validators import is_bot_mentioned_or_replied
 
 if TYPE_CHECKING:
     from aiuser.core.services import AIUserServices

@@ -5,7 +5,6 @@ import logging
 import random
 from dataclasses import dataclass, replace
 from datetime import datetime
-from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Optional
 
 import discord
@@ -16,7 +15,7 @@ from aiuser.config.defaults import (
     DEFAULT_MESSAGE_BURST_IDLE_SECONDS,
     DEFAULT_MESSAGE_BURST_MAX_SECONDS,
 )
-from aiuser.core.validators import is_valid_message
+from aiuser.core.decision import BurstMode, ResponseKind, is_valid_message
 from aiuser.response.response import create_response
 from aiuser.utils.utilities import wait_for_embed
 
@@ -24,16 +23,6 @@ if TYPE_CHECKING:
     from aiuser.core.services import AIUserServices
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
-
-
-class BurstMode(IntEnum):
-    RANDOM = 0
-    CONVERSATION = 1
-
-
-class ResponseKind(Enum):
-    DIRECT = "direct"
-    BURST = "burst"
 
 
 @dataclass(frozen=True)

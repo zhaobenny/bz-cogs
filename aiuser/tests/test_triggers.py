@@ -4,17 +4,18 @@ import discord
 import pytest
 from discord.ext.test import backend
 
-from aiuser.core.handlers import get_percentage, handle_message
-from aiuser.core.reply_queue import get_or_create_channel_reply_state
-from aiuser.core.triggers import (
+from aiuser.core.decision import get_percentage
+from aiuser.core.decision.triggers import (
     get_conversation_reply_chance,
     is_always_reply_on_words_triggered,
 )
-from aiuser.core.validators import (
+from aiuser.core.decision.validators import (
     check_message_content,
     check_user_status,
     is_bot_mentioned_or_replied,
 )
+from aiuser.core.dispatch import handle_message
+from aiuser.core.reply_queue import get_or_create_channel_reply_state
 
 
 async def _get_conversation_reply_chance(

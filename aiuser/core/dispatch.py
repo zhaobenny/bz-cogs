@@ -1,4 +1,4 @@
-"""Entry points for message / slash-command events."""
+"""Wires message / slash-command events to reply decisions and the reply queue."""
 
 from __future__ import annotations
 
@@ -8,15 +8,13 @@ from typing import TYPE_CHECKING
 import discord
 from redbot.core import commands
 
-from aiuser.config.defaults import DEFAULT_REPLY_PERCENT
-from aiuser.core.reply_queue import (
-    BurstMode,
+from aiuser.core.decision import (
     ResponseKind,
-    ResponseRequest,
-    get_or_create_channel_reply_state,
+    decide_response,
+    get_percentage,
+    is_valid_message,
 )
-from aiuser.core.triggers import check_direct_triggers, get_conversation_reply_chance
-from aiuser.core.validators import is_valid_message
+from aiuser.core.reply_queue import ResponseRequest, get_or_create_channel_reply_state
 from aiuser.response.response import create_response
 from aiuser.utils.logging_context import with_discord_log_context
 
@@ -61,11 +59,12 @@ async def handle_message(services: "AIUserServices", message: discord.Message):
 
     ctx: commands.Context = await services.bot.get_context(message)
 
-    if not (await is_valid_message(services, ctx)):
+    decision = await decide_response(services, ctx, message)
+    if decision is None:
         return
 
-    if await check_direct_triggers(services, ctx, message):
-        state = get_or_create_channel_reply_state(services, ctx.channel.id)
+    state = get_or_create_channel_reply_state(services, ctx.channel.id)
+    if decision.kind is ResponseKind.DIRECT:
         await state.cancel_pending_burst()
         await state.enqueue(
             services,
@@ -75,27 +74,5 @@ async def handle_message(services: "AIUserServices", message: discord.Message):
                 message_id=message.id,
             ),
         )
-        return
-
-    conversation_reply_chance = await get_conversation_reply_chance(services, ctx)
-    if conversation_reply_chance is not None:
-        state = get_or_create_channel_reply_state(services, ctx.channel.id)
-        await state.arm_burst(
-            services, ctx, conversation_reply_chance, BurstMode.CONVERSATION
-        )
-        return
-
-    reply_chance = await get_percentage(services, ctx)
-    if reply_chance <= 0:
-        return
-
-    state = get_or_create_channel_reply_state(services, ctx.channel.id)
-    await state.arm_burst(services, ctx, reply_chance, BurstMode.RANDOM)
-
-
-async def get_percentage(services: "AIUserServices", ctx: commands.Context) -> float:
-    """Get reply percentage based on member/role/channel/guild settings"""
-    percentage = await services.resolver.resolve_for_ctx("reply_percent", ctx)
-    if percentage is None:
-        percentage = DEFAULT_REPLY_PERCENT
-    return percentage
+    else:
+        await state.arm_burst(services, ctx, decision.chance, decision.burst_mode)

@@ -15,7 +15,7 @@ from aiuser.config.defaults import (
     DEFAULT_MEMBER,
     DEFAULT_ROLE,
 )
-from aiuser.core.handlers import handle_message, handle_slash_command
+from aiuser.core.dispatch import handle_message, handle_slash_command
 from aiuser.core.random_message_task import RandomMessageTask
 from aiuser.core.reply_queue import cancel_reply_state_tasks
 from aiuser.core.services import AIUserServices
