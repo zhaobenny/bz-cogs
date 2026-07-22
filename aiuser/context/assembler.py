@@ -10,11 +10,7 @@ from aiuser.config.model_info import get_model_info
 from aiuser.consent import CONSENT_EMBED_TITLE
 from aiuser.context.conversation import Conversation
 from aiuser.context.converter.converter import MessageConverter
-from aiuser.context.entry import (
-    SYSTEM_NAME_MEMORY,
-    SYSTEM_NAME_SUMMARY,
-    MessageEntry,
-)
+from aiuser.context.entry import MessageEntry
 from aiuser.context.memory import fetch_relevant_memory
 from aiuser.utils.cache import memory_cache_key, tool_calls_cache_key
 from aiuser.utils.utilities import format_variables, mention_to_text
@@ -72,13 +68,13 @@ class ConversationAssembler:
         if self.summary:
             await conversation.append_system(
                 f"Summary of conversation before this point:\n{self.summary}",
-                name=SYSTEM_NAME_SUMMARY,
+                protected=True,
             )
         for message in window:
             await self._append_message(conversation, message)
-        await conversation.append_system(formatted_prompt)
+        await conversation.append_system(formatted_prompt, protected=True)
         if memory := await self._fetch_relevant_memory():
-            entry = await conversation.append_system(memory, name=SYSTEM_NAME_MEMORY)
+            entry = await conversation.append_system(memory)
             conversation.memory_entries.append(entry)
 
         reference = self.init_message.reference
@@ -93,10 +89,11 @@ class ConversationAssembler:
         return conversation
 
     async def build_prompt_only(self, prompt: str) -> Conversation:
-        """ System prompt only """
+        """System prompt only"""
         conversation = await self._new_conversation()
         await conversation.append_system(
-            await format_variables(self.ctx, prompt, self.services)
+            await format_variables(self.ctx, prompt, self.services),
+            protected=True,
         )
         return conversation
 
@@ -149,8 +146,7 @@ class ConversationAssembler:
         return await self.converter.convert(message) or []
 
     async def _select_history_window(self) -> List[discord.Message]:
-        """Pick the gap-bounded window of past messages, oldest first.
-        """
+        """Pick the gap-bounded window of past messages, oldest first."""
         guild_conf = self.services.config.guild(self.guild)
         limit = await guild_conf.messages_backread()
         max_seconds_gap = await guild_conf.messages_backread_seconds()
