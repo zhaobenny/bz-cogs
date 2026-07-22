@@ -62,7 +62,7 @@ DEFAULT_GUILD = {
     "optin_by_default": False,
     "optin_disable_embed": False,
     "reply_percent": DEFAULT_REPLY_PERCENT,
-    "messages_backread": 10,
+    "messages_backread": 25,
     "messages_backread_seconds": 60 * 120,
     "messages_min_length": DEFAULT_MIN_MESSAGE_LENGTH,
     "reply_to_mentions_replies": True,

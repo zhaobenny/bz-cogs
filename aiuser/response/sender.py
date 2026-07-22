@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
-DISCORD_MESSAGE_LIMIT = 2000
+DISCORD_MESSAGE_CHARACTERS_LIMIT = 2000
 REPLY_IF_OLDER_THAN_SECONDS = 8
 RANDOM_REPLY_CHANCE = 0.25
 
@@ -35,7 +35,7 @@ async def deliver(
     result: "PipelineResult",
     can_reply: bool,
 ) -> Optional[discord.Message]:
-  
+
     response = ""
     if result.completion:
         response = await _remove_patterns_from_response(
@@ -86,9 +86,7 @@ async def _should_reply(ctx: commands.Context) -> bool:
     if ctx.interaction:
         return False
 
-    age_seconds = (
-        datetime.now(timezone.utc) - ctx.message.created_at
-    ).total_seconds()
+    age_seconds = (datetime.now(timezone.utc) - ctx.message.created_at).total_seconds()
     if age_seconds > REPLY_IF_OLDER_THAN_SECONDS:
         return True
     if random.random() < RANDOM_REPLY_CHANCE:
@@ -108,12 +106,12 @@ def _chunk_message(response: str) -> List[str]:
 
     chunks: List[str] = []
     remaining = response
-    while len(remaining) > DISCORD_MESSAGE_LIMIT:
-        cut = remaining.rfind("\n", 1, DISCORD_MESSAGE_LIMIT)
+    while len(remaining) > DISCORD_MESSAGE_CHARACTERS_LIMIT:
+        cut = remaining.rfind("\n", 1, DISCORD_MESSAGE_CHARACTERS_LIMIT)
         if cut == -1:
-            cut = remaining.rfind(" ", 1, DISCORD_MESSAGE_LIMIT)
+            cut = remaining.rfind(" ", 1, DISCORD_MESSAGE_CHARACTERS_LIMIT)
         if cut == -1:
-            cut = DISCORD_MESSAGE_LIMIT
+            cut = DISCORD_MESSAGE_CHARACTERS_LIMIT
         chunks.append(remaining[:cut])
         remaining = remaining[cut:].lstrip(" \n")
     if remaining:
