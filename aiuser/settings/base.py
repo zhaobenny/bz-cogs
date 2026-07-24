@@ -77,7 +77,12 @@ class Settings(
         config = await self.config.guild(ctx.guild).get_raw()
         glob_config = await self.config.get_raw()
         whitelist = await self.config.guild(ctx.guild).channels_whitelist()
-        channels = [f"<#{channel_id}>" for channel_id in whitelist]
+        channels = [
+            channel.mention
+            if (channel := ctx.guild.get_channel_or_thread(channel_id))
+            else f"Unknown channel (`{channel_id}`)"
+            for channel_id in whitelist
+        ]
         embeds = []
 
         main_embed = discord.Embed(
@@ -339,7 +344,12 @@ class Settings(
         embed = discord.Embed(
             title="Enabled reply channels:", color=await ctx.embed_color()
         )
-        channels = [f"<#{channel_id}>" for channel_id in whitelist]
+        channels = [
+            channel.mention
+            if (channel := ctx.guild.get_channel_or_thread(channel_id))
+            else f"Unknown channel (`{channel_id}`)"
+            for channel_id in whitelist
+        ]
         embed.description = "\n".join(channels) if channels else "None"
         return await ctx.send(embed=embed)
 
