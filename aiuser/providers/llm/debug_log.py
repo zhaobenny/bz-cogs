@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from openai.types.chat import ChatCompletionMessageToolCall
 from pydantic import BaseModel
 
-logger = logging.getLogger("red.bz_cogs.aiuser")
+logger = logging.getLogger("red.bz_cogs.aiuser.providers.llm")
 
 _DEBUG_RESPONSE_PREVIEW_LIMIT = 200
 _DEBUG_IMAGE_DATA_PREVIEW_LIMIT = 20

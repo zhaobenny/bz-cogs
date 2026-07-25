@@ -20,11 +20,11 @@ from aiuser.config.model_info import get_model_info
 from aiuser.context.conversation import Conversation
 from aiuser.context.entry import MessageEntry
 from aiuser.functions.context import ToolContext
+from aiuser.functions.executor import ToolExecutor
 from aiuser.providers.llm.base import ChatStepResult, LLMProvider
+from aiuser.providers.llm.debug_log import log_chat_request, log_chat_step_result
 from aiuser.providers.llm.openai_compatible.endpoints import is_openrouter_endpoint
 from aiuser.providers.llm.registry import get_llm_provider
-from aiuser.response.debug_log import log_chat_request, log_chat_step_result
-from aiuser.response.tool_manager import ToolManager
 
 if TYPE_CHECKING:
     from aiuser.core.services import AIUserServices
@@ -64,9 +64,7 @@ class LLMPipeline:
 
         self.provider: Optional[LLMProvider] = None
         self.tool_context = ToolContext(services=services, ctx=ctx)
-        self.tool_manager = ToolManager(
-            services.config, ctx, conversation, self.tool_context
-        )
+        self.tool_executor = ToolExecutor(services.config, ctx, self.tool_context)
         self.tool_call_entries: List[MessageEntry] = []
         self.session_id: Optional[str] = None
         self.request_id = (
@@ -81,14 +79,14 @@ class LLMPipeline:
         if self.provider is None:
             logger.error("No LLM backend available while starting response pipeline")
             return self._build_result(None, error=PipelineError.NO_PROVIDER)
-        await self.tool_manager.setup()
+        await self.tool_executor.setup()
         tool_call_rounds = (
             await self.services.config.guild(
                 self.ctx.guild
             ).function_calling_tool_call_rounds()
             or DEFAULT_TOOL_CALL_ROUNDS
         )
-        tools_kwargs = self.tool_manager.get_tools_kwargs()
+        tools_kwargs = self.tool_executor.get_tools_kwargs()
         exhausted_tool_call_rounds = False
         completion: Optional[str] = None
 
@@ -102,11 +100,7 @@ class LLMPipeline:
                 completion = step.content
                 break
             if step.tool_calls:
-                self.tool_call_entries.extend(
-                    await self.tool_manager.handle_tool_calls(
-                        step.tool_calls, step.assistant_extra_fields
-                    )
-                )
+                await self._append_tool_round(step)
                 if self.tool_context.suppress_response:
                     break
                 continue
@@ -133,6 +127,21 @@ class LLMPipeline:
                 completion = step.content
 
         return self._build_result(completion)
+
+    async def _append_tool_round(self, step: ChatStepResult) -> None:
+        """Record the assistant's tool calls and everything they returned."""
+        self.tool_call_entries.append(
+            await self.conversation.append_assistant(
+                tool_calls=step.tool_calls,
+                assistant_extra_fields=step.assistant_extra_fields,
+            )
+        )
+        for result in await self.tool_executor.run_tool_calls(step.tool_calls):
+            self.tool_call_entries.append(
+                await self.conversation.append_tool_result(
+                    result.content, result.tool_call_id
+                )
+            )
 
     def _build_result(
         self, completion: Optional[str], error: Optional[PipelineError] = None
