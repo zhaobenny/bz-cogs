@@ -34,13 +34,13 @@ async def opt_consent(self, user: discord.User, **kwargs):
 
     form = Form()
 
-    if self.consent.is_opted_in(user.id):
+    if self.services.consent.is_opted_in(user.id):
         whitelist_text = "opted in"
         consent_choice = "accept"
         form.accept.render_kw["disabled"] = True
         form.accept.render_kw["class"] = "btn btn-outline-secondary px-4 py-2"
         form.reject.render_kw["disabled"] = False
-    elif self.consent.is_opted_out(user.id):
+    elif self.services.consent.is_opted_out(user.id):
         whitelist_text = "opted out"
         consent_choice = "reject"
         form.accept.render_kw["disabled"] = False
@@ -55,9 +55,9 @@ async def opt_consent(self, user: discord.User, **kwargs):
     if form.validate_on_submit():
         try:
             if form.accept.data:
-                await self.consent.opt_in(user.id)
+                await self.services.consent.opt_in(user.id)
             elif form.reject.data:
-                await self.consent.opt_out(user.id)
+                await self.services.consent.opt_out(user.id)
         except Exception:
             return {
                 "status": 1,

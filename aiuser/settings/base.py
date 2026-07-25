@@ -431,7 +431,7 @@ class Settings(
 
         This will allow the bot to reply to your messages or use your messages.
         """
-        if not await self.consent.opt_in(ctx.author.id):
+        if not await self.services.consent.opt_in(ctx.author.id):
             return await ctx.send("You are already opted in.")
         await ctx.send("You are now opted in bot-wide")
 
@@ -441,7 +441,7 @@ class Settings(
 
         This will prevent the bot from replying to your messages or using your messages.
         """
-        if not await self.consent.opt_out(ctx.author.id):
+        if not await self.services.consent.opt_out(ctx.author.id):
             return await ctx.send("You are already opted out.")
         await ctx.send("You are now opted out bot-wide")
 
