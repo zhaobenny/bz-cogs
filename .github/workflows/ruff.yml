@@ -12,14 +12,13 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8
 
       - name: Run Ruff check
-        uses: astral-sh/ruff-action@v3
-        with:
-          args: "check ."
+        run: uvx --from ruff==0.15.7 ruff check .
 
       - name: Run Ruff format check
-        uses: astral-sh/ruff-action@v3
-        with:
-          args: "format --check ."
+        run: uvx --from ruff==0.15.7 ruff format --check .
