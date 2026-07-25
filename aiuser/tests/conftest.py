@@ -268,7 +268,9 @@ def mock_generate_and_send(monkeypatch):
         get_or_create_channel_reply_state(services, ctx.channel.id)
         with patch("discord.TextChannel.typing") as mock_typing:
             mock_typing.return_value = noop_typing()
-            return await original_generate_and_send(services, ctx, conversation, can_reply)
+            return await original_generate_and_send(
+                services, ctx, conversation, can_reply
+            )
 
     monkeypatch.setattr(response_module, "generate_and_send", patched_generate_and_send)
     return patched_generate_and_send

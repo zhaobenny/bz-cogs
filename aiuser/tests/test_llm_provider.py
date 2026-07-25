@@ -14,7 +14,9 @@ from openai.types.chat.chat_completion_message_tool_call import Function
 from aiuser.providers.llm.openai_compatible.provider import OpenAICompatibleProvider
 
 
-def make_completion(message: ChatCompletionMessage, finish_reason: str) -> ChatCompletion:
+def make_completion(
+    message: ChatCompletionMessage, finish_reason: str
+) -> ChatCompletion:
     return ChatCompletion(
         id="chatcmpl-test",
         choices=[Choice(index=0, message=message, finish_reason=finish_reason)],

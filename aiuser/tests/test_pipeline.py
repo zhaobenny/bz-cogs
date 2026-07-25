@@ -11,7 +11,9 @@ RESPOND_ARGS = '{"reason": "still thinking", "respond": true}'
 SUPPRESS_ARGS = '{"reason": "boring conversation", "respond": false}'
 
 
-async def make_pipeline(bot, mock_services, build_conversation, test_member, test_channel):
+async def make_pipeline(
+    bot, mock_services, build_conversation, test_member, test_channel
+):
     message = backend.make_message("hey bot", test_member, test_channel)
     ctx = await bot.get_context(message)
     conversation = await build_conversation(init_message=message)
@@ -37,7 +39,9 @@ async def test_tool_call_rounds_exhaustion(
 ):
     """Exhausting the round limit triggers one final request without tools."""
     await enable_noresponse_tool(mock_services, test_guild)
-    await mock_services.config.guild(test_guild).function_calling_tool_call_rounds.set(2)
+    await mock_services.config.guild(test_guild).function_calling_tool_call_rounds.set(
+        2
+    )
 
     fake = fake_llm(
         tool_call_step(names.DO_NOT_RESPOND, RESPOND_ARGS, call_id="call_r1"),

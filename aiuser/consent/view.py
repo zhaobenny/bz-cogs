@@ -38,7 +38,9 @@ class ConsentView(discord.ui.View):
 
 
 async def maybe_send_consent_embed(
-    consent: "ConsentService", channel: discord.abc.Messageable, users: Set[discord.Member]
+    consent: "ConsentService",
+    channel: discord.abc.Messageable,
+    users: Set[discord.Member],
 ) -> bool:
     """Send the opt-in/out embed if warranted. Returns True when sent."""
     if not users:

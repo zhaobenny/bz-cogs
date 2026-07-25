@@ -184,9 +184,7 @@ async def test_prune_messages_on_over_limit(
     thread.token_limit = thread.tokens - prunable_tokens_1 - prunable_tokens_2
 
     fake_llm(
-        tool_call_step(
-            "get_weather", '{"location":"NYC"}', call_id="call_prune_test"
-        ),
+        tool_call_step("get_weather", '{"location":"NYC"}', call_id="call_prune_test"),
         text_step("tool result response"),
     )
 

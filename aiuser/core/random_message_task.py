@@ -84,9 +84,9 @@ class RandomMessageTask:
             guild=guild, channel=channel
         )
 
-        conversation = await ConversationAssembler(self.services, ctx).build_prompt_only(
-            prompt
-        )
+        conversation = await ConversationAssembler(
+            self.services, ctx
+        ).build_prompt_only(prompt)
         topic = await format_variables(ctx, random.choice(topics), self.services)
         await conversation.append_system(
             f"Using the persona above, follow these instructions: {topic}"
