@@ -33,7 +33,7 @@ class ResponseKind(Enum):
 @dataclass(frozen=True)
 class ReplyDecision:
     kind: ResponseKind
-    burst_mode: Optional[BurstMode] = None
+    burst_mode: BurstMode = BurstMode.RANDOM
     chance: float = 1.0
 
 

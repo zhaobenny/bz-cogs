@@ -40,16 +40,16 @@ async def build_and_respond(
     async with ctx.message.channel.typing():
         conversation = await assembler.build()
 
-    # follow-ups the assembler discovered while reading channel history
-    await maybe_send_consent_embed(
-        services.consent, ctx.channel, assembler.undecided_users
-    )
-    if services.compaction_manager:
-        await services.compaction_manager.check_and_run_compaction(
-            ctx, assembler.compaction_candidates
+        # follow-ups the assembler discovered while reading channel history
+        await maybe_send_consent_embed(
+            services.consent, ctx.channel, assembler.undecided_users
         )
+        if services.compaction_manager:
+            await services.compaction_manager.check_and_run_compaction(
+                ctx, assembler.compaction_candidates
+            )
 
-    await generate_and_send(services, ctx, conversation)
+        await generate_and_send(services, ctx, conversation)
 
 
 async def generate_and_send(
@@ -58,11 +58,10 @@ async def generate_and_send(
     conversation: Conversation,
     can_reply: bool = True,
 ) -> None:
-    async with ctx.message.channel.typing():
-        result = await LLMPipeline(services, ctx, conversation).run()
-        if result.error is not None:
-            await _notify_failure(ctx, result.error)
-        sent_message = await deliver(services, ctx, result, can_reply)
+    result = await LLMPipeline(services, ctx, conversation).run()
+    if result.error is not None:
+        await _notify_failure(ctx, result.error)
+    sent_message = await deliver(services, ctx, result, can_reply)
 
     if sent_message is None:
         return

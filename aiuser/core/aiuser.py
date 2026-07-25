@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Optional
 
 import discord
@@ -74,7 +74,7 @@ class AIUser(
         if debug_guild_id and debug_guild_id.isdigit():
             # for development: reset prompt start time for a test guild
             self.services.override_prompt_start_time[int(debug_guild_id)] = (
-                datetime.now() - timedelta(seconds=1)
+                datetime.now()
             )
 
         self.random_task = RandomMessageTask(self.services)

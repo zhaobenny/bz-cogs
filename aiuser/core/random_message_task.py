@@ -93,7 +93,8 @@ class RandomMessageTask:
         )
         logger.debug(f"Sending random message to #{channel.name} at {guild.name}")
         get_or_create_channel_reply_state(self.services, channel.id)
-        await generate_and_send(self.services, ctx, conversation, can_reply=False)
+        async with channel.typing():
+            await generate_and_send(self.services, ctx, conversation, can_reply=False)
 
     async def _get_discord_context(
         self, guild_id: int, channels: List[int]

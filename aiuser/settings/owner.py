@@ -251,6 +251,15 @@ class OwnerSettings(MixinMeta):
         await ctx.message.add_reaction("🔄")
         await invalidate_openai_client(self.services)
         client = await get_openai_client(self.services)
+        if client is None:
+            await self.config.custom_openai_endpoint.set(previous_url)
+            await ctx.message.remove_reaction("🔄", ctx.me)
+            api_type = get_openai_compat_api_token_name(url)
+            return await ctx.send(
+                f":warning: No API key set for this endpoint. "
+                f"\nPlease set it with "
+                f"`{ctx.clean_prefix}set api {api_type} api_key,INSERT_API_KEY`"
+            )
 
         try:
             models = await client.models.list()

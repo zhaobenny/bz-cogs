@@ -35,7 +35,6 @@ async def deliver(
     result: "PipelineResult",
     can_reply: bool,
 ) -> Optional[discord.Message]:
-
     response = ""
     if result.completion:
         response = await _remove_patterns_from_response(

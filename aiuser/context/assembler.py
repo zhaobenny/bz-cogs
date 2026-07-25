@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from typing import TYPE_CHECKING, List, Optional, Set
 
 import discord
@@ -152,6 +153,8 @@ class ConversationAssembler:
         max_seconds_gap = await guild_conf.messages_backread_seconds()
 
         start_time = self.services.override_prompt_start_time.get(self.guild.id)
+        if start_time:
+            start_time = start_time - timedelta(seconds=1)
 
         # fetch one extra message: the last one only bounds the gap walk
         past_messages = [
@@ -193,9 +196,6 @@ class ConversationAssembler:
         if not await self.services.config.guild(self.guild).compaction_enabled():
             return window
 
-        self.compaction_candidates = [
-            m for m in window if await self._should_include(m)
-        ]
         last_compacted_id = await store.get_last_compacted_message_id(
             self.guild.id, self.init_message.channel.id
         )
@@ -215,6 +215,7 @@ class ConversationAssembler:
         entries = await self._convert_message(message)
         if not entries:
             return
+        self.compaction_candidates.append(message)
 
         if message.author.id == self.bot_id:
             cache_key = tool_calls_cache_key(message.channel.id, message.id)
