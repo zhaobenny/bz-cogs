@@ -38,7 +38,12 @@ class Settings:
         embed = discord.Embed(title="Whitelist", color=await ctx.embed_color())
         embed.add_field(
             name="Channels",
-            value="\n".join([f"<#{channel_id}>" for channel_id in whitelist]),
+            value="\n".join(
+                channel.mention
+                if (channel := ctx.guild.get_channel_or_thread(channel_id))
+                else f"Unknown channel (`{channel_id}`)"
+                for channel_id in whitelist
+            ),
         )
         await ctx.send(embed=embed)
 
