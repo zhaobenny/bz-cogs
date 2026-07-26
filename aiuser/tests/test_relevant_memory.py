@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 import pytest_asyncio
 
-from aiuser.context.memory import fetch_relevant_memory
+from aiuser.context.relevant_memory import fetch_relevant_memory
 from aiuser.providers.vectorstore import VectorStore
 from aiuser.providers.vectorstore.schema import ensure_sqlite_db
 

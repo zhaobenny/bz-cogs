@@ -12,7 +12,7 @@ from aiuser.consent import CONSENT_EMBED_TITLE
 from aiuser.context.conversation import Conversation
 from aiuser.context.converter.converter import MessageConverter
 from aiuser.context.entry import MessageEntry
-from aiuser.context.memory import fetch_relevant_memory
+from aiuser.context.relevant_memory import fetch_relevant_memory
 from aiuser.utils.cache import memory_cache_key, tool_calls_cache_key
 from aiuser.utils.utilities import format_variables, mention_to_text
 
