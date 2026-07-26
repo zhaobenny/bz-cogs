@@ -14,8 +14,8 @@ from redbot.core import commands
 from aiuser.config.constants import RANDOM_MESSAGE_TASK_RETRY_SECONDS
 from aiuser.context.assembler import ConversationAssembler
 from aiuser.core.reply_queue import get_or_create_channel_reply_state
-from aiuser.llm.registry import get_llm_provider
-from aiuser.response.response import create_response
+from aiuser.providers.llm.registry import get_llm_provider
+from aiuser.response import generate_and_send
 from aiuser.utils.adapters import ensure_member_like
 from aiuser.utils.utilities import format_variables
 
@@ -84,18 +84,17 @@ class RandomMessageTask:
             guild=guild, channel=channel
         )
 
-        conversation = await ConversationAssembler(self.services, ctx).build(
-            prompt_override=prompt, include_history=False, include_trigger=False
-        )
+        conversation = await ConversationAssembler(
+            self.services, ctx
+        ).build_prompt_only(prompt)
         topic = await format_variables(ctx, random.choice(topics), self.services)
         await conversation.append_system(
             f"Using the persona above, follow these instructions: {topic}"
         )
-        conversation.can_reply = False
-
         logger.debug(f"Sending random message to #{channel.name} at {guild.name}")
         get_or_create_channel_reply_state(self.services, channel.id)
-        await create_response(self.services, ctx, conversation)
+        async with channel.typing():
+            await generate_and_send(self.services, ctx, conversation, can_reply=False)
 
     async def _get_discord_context(
         self, guild_id: int, channels: List[int]

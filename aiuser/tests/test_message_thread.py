@@ -155,20 +155,14 @@ async def test_prune_messages_on_over_limit(
     bot,
     mock_services,
     build_conversation,
-    mock_create_response,
+    mock_generate_and_send,
     test_channel,
     test_member,
+    fake_llm,
 ):
-    from unittest.mock import AsyncMock, MagicMock, patch
+    from unittest.mock import patch
 
-    from openai.types.chat import (
-        ChatCompletion,
-        ChatCompletionMessage,
-        ChatCompletionMessageToolCall,
-    )
-    from openai.types.chat.chat_completion import Choice
-    from openai.types.chat.chat_completion_message_tool_call import Function
-
+    from aiuser.tests.conftest import text_step, tool_call_step
     from aiuser.utils.utilities import encode_text_to_tokens
 
     _ = backend.make_message("yo", test_member, test_channel)
@@ -189,50 +183,9 @@ async def test_prune_messages_on_over_limit(
     )
     thread.token_limit = thread.tokens - prunable_tokens_1 - prunable_tokens_2
 
-    mock_services.openai_client = MagicMock()
-
-    tool_call = ChatCompletionMessageToolCall(
-        id="call_prune_test",
-        type="function",
-        function=Function(name="get_weather", arguments='{"location":"NYC"}'),
-    )
-
-    tool_call_response = ChatCompletion(
-        id="chatcmpl-tool",
-        choices=[
-            Choice(
-                index=0,
-                message=ChatCompletionMessage(
-                    role="assistant", tool_calls=[tool_call], content=None
-                ),
-                finish_reason="tool_calls",
-            )
-        ],
-        created=1234567891,
-        model="gpt-4",
-        object="chat.completion",
-    )
-
-    final_response = ChatCompletion(
-        id="chatcmpl-final",
-        choices=[
-            Choice(
-                index=0,
-                message=ChatCompletionMessage(
-                    role="assistant",
-                    content="tool result response",
-                    tool_calls=None,
-                ),
-                finish_reason="stop",
-            )
-        ],
-        created=1234567892,
-        model="gpt-4",
-        object="chat.completion",
-    )
-
-    mock_services.openai_client.chat.completions.create = AsyncMock(
-        side_effect=[tool_call_response, final_response]
+    fake_llm(
+        tool_call_step("get_weather", '{"location":"NYC"}', call_id="call_prune_test"),
+        text_step("tool result response"),
     )
 
     await mock_services.config.guild(test_member.guild).function_calling.set(True)
@@ -245,7 +198,7 @@ async def test_prune_messages_on_over_limit(
         "aiuser.functions.weather.query.get_weather",
         return_value="Sunny, 25°C",
     ):
-        await mock_create_response(mock_services, ctx, conversation=thread)
+        await mock_generate_and_send(mock_services, ctx, thread)
 
     result = thread.to_chat_payload()
 
@@ -263,6 +216,31 @@ async def test_prune_messages_on_over_limit(
     assert system_idx != -1, "System prompt should be preserved"
     assert trigger_idx != -1, "Trigger message should be preserved"
     assert tool_result_idx != -1, "Tool result message should be present"
+
+
+@pytest.mark.asyncio
+async def test_history_pruned_when_over_token_limit(
+    bot,
+    mock_services,
+    build_conversation,
+    test_channel,
+    test_member,
+):
+    """History over the token budget is pruned oldest-first at build time,
+    keeping the system prompt and trigger."""
+    await mock_services.config.guild(test_member.guild).custom_model_tokens_limit.set(1)
+
+    _ = backend.make_message("ancient history one", test_member, test_channel)
+    _ = backend.make_message("ancient history two", test_member, test_channel)
+    trigger = backend.make_message("the actual trigger", test_member, test_channel)
+
+    thread = await build_conversation(init_message=trigger)
+    result = thread.to_chat_payload()
+
+    assert find_message_index(result, "ancient history one") == -1
+    assert find_message_index(result, "ancient history two") == -1
+    assert find_message_index(result, "the actual trigger") != -1
+    assert find_system_prompt_index(result) != -1
 
 
 @pytest.mark.asyncio

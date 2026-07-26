@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 from aiuser.context.entry import MessageEntry
 from aiuser.utils.utilities import encode_text_to_tokens
@@ -12,23 +12,17 @@ HIGH_DETAIL_IMAGE_TOKEN_COST = 2500
 
 
 class Conversation:
-    """An ordered list of chat messages (oldest first) plus a token budget.
-
-    This is a dumb container: it knows nothing about Discord, config, or how
-    the conversation is assembled. The only mutators are ``append``/``prepend``
-    (and their role-specific helpers), so message ordering is always explicit
-    at the call site — no index arithmetic.
-    """
+    """An ordered list of chat messages (oldest first) plus a token budget."""
 
     def __init__(self, model: str, token_limit: int):
         self.model = model
         self.token_limit = token_limit
         self.tokens = 0
         self.entries: List[MessageEntry] = []
-        self.turn_context_entries: List[MessageEntry] = []
-        self.seen_message_ids: Set[int] = set()
-        self.can_reply = True
+        self.memory_entries: List[MessageEntry] = []
+        self.from_message_context = False
         self._entry_tokens: List[int] = []
+        self._entry_protected: List[bool] = []
 
     def __len__(self) -> int:
         return len(self.entries)
@@ -36,35 +30,34 @@ class Conversation:
     def __repr__(self) -> str:
         return json.dumps(self.to_chat_payload(), indent=4)
 
-    def is_full(self) -> bool:
-        return self.tokens > self.token_limit
-
     # --- mutators ---
 
-    async def append(self, entry: MessageEntry) -> MessageEntry:
+    async def append(
+        self,
+        entry: MessageEntry,
+        *,
+        protected: bool = False,
+    ) -> MessageEntry:
+        await self.prune_oldest_if_over_limit()
         cost = await self._entry_cost(entry)
         self.entries.append(entry)
         self._entry_tokens.append(cost)
+        self._entry_protected.append(protected)
         self.tokens += cost
-        return entry
-
-    async def prepend(self, entry: MessageEntry) -> MessageEntry:
-        cost = await self._entry_cost(entry)
-        self.entries.insert(0, entry)
-        self._entry_tokens.insert(0, cost)
-        self.tokens += cost
+        if entry.role == "tool":
+            self._drop_orphaned_tool_results()
         return entry
 
     async def append_system(
-        self, content: str, name: Optional[str] = None
+        self,
+        content: str,
+        *,
+        protected: bool = False,
     ) -> MessageEntry:
-        await self.prune_oldest_if_over_limit()
-        return await self.append(MessageEntry("system", content, name=name))
-
-    async def prepend_system(
-        self, content: str, name: Optional[str] = None
-    ) -> MessageEntry:
-        return await self.prepend(MessageEntry("system", content, name=name))
+        return await self.append(
+            MessageEntry("system", content),
+            protected=protected,
+        )
 
     async def append_assistant(
         self,
@@ -72,7 +65,6 @@ class Conversation:
         tool_calls: Optional[list] = None,
         assistant_extra_fields: Optional[Dict[str, Any]] = None,
     ) -> MessageEntry:
-        await self.prune_oldest_if_over_limit()
         return await self.append(
             MessageEntry(
                 "assistant",
@@ -83,16 +75,31 @@ class Conversation:
         )
 
     async def append_tool_result(self, content: str, tool_call_id: str) -> MessageEntry:
-        await self.prune_oldest_if_over_limit()
         return await self.append(
             MessageEntry("tool", content, tool_call_id=tool_call_id)
         )
 
     async def prune_oldest_if_over_limit(self):
-        """Drop oldest entries until back under the token limit (keeps >= 2)."""
+        """Drop the oldest entries until back under the token limit
+        while preserving the active prompt and newest entry (keeps >= 2)."""
+        pruned = False
         while self.tokens > self.token_limit and len(self.entries) > 2:
-            self.entries.pop(0)
-            self.tokens -= self._entry_tokens.pop(0)
+            index = next(
+                (
+                    i
+                    for i in range(len(self.entries) - 1)
+                    if not self._entry_protected[i]
+                ),
+                None,
+            )
+            if index is None:
+                break
+            self.entries.pop(index)
+            self.tokens -= self._entry_tokens.pop(index)
+            self._entry_protected.pop(index)
+            pruned = True
+        if pruned:
+            self._drop_orphaned_tool_results()
 
     # --- output ---
 
@@ -108,14 +115,29 @@ class Conversation:
                 ]
             if entry.tool_call_id:
                 message["tool_call_id"] = entry.tool_call_id
-            if entry.name:
-                message["name"] = entry.name
             if entry.role == "assistant" and entry.assistant_extra_fields:
                 message.update(entry.assistant_extra_fields)
             payload.append(message)
         return payload
 
     # --- internals ---
+
+    def _drop_orphaned_tool_results(self):
+        in_tool_exchange = False
+        orphaned_indexes = []
+        for index, entry in enumerate(self.entries):
+            if entry.role == "assistant" and entry.tool_calls:
+                in_tool_exchange = True
+            elif entry.role == "tool":
+                if not in_tool_exchange:
+                    orphaned_indexes.append(index)
+            else:
+                in_tool_exchange = False
+
+        for index in reversed(orphaned_indexes):
+            self.entries.pop(index)
+            self.tokens -= self._entry_tokens.pop(index)
+            self._entry_protected.pop(index)
 
     @staticmethod
     async def _entry_cost(entry: MessageEntry) -> int:

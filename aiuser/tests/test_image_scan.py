@@ -15,16 +15,14 @@ async def test_image_scan_message(
     test_guild,
     test_channel,
     test_member,
-    mock_create_response,
+    mock_generate_and_send,
+    fake_llm,
     tmp_path,
 ):
     """
     Test that a message with an image attachment can be processed
     """
-    from unittest.mock import AsyncMock, MagicMock
-
-    from openai.types.chat import ChatCompletion, ChatCompletionMessage
-    from openai.types.chat.chat_completion import Choice
+    from aiuser.tests.conftest import text_step
 
     # Create a temporary image file
     second_path = tmp_path / "test_image_2.png"
@@ -67,34 +65,12 @@ async def test_image_scan_message(
     assert len(image_parts) == 2
     assert all(part["image_url"]["detail"] == "low" for part in image_parts)
 
-    mock_services.openai_client = MagicMock()
-
     test_message_content = "holy, that's a massive W"
-    mock_response = ChatCompletion(
-        id="chatcmpl-scan-123",
-        choices=[
-            Choice(
-                index=0,
-                message=ChatCompletionMessage(
-                    role="assistant",
-                    content=test_message_content,
-                    tool_calls=None,
-                ),
-                finish_reason="stop",
-            )
-        ],
-        created=1234567890,
-        model="gpt-4",
-        object="chat.completion",
-    )
-
-    mock_services.openai_client.chat.completions.create = AsyncMock(
-        return_value=mock_response
-    )
+    fake_llm(text_step(test_message_content))
 
     ctx = await bot.get_context(user_message)
 
-    await mock_create_response(mock_services, ctx, conversation=thread)
+    await mock_generate_and_send(mock_services, ctx, thread)
 
     sent_message = get_message()
     assert sent_message.content == test_message_content

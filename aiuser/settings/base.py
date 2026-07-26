@@ -9,11 +9,11 @@ from redbot.core.utils.menus import SimpleMenu
 from aiuser.config.constants import CHANNEL_MENTION_OR_ID_PATTERN
 from aiuser.config.defaults import DEFAULT_STT_PROVIDER
 from aiuser.config.model_info import get_model_info
-from aiuser.llm.openai_compatible.endpoints import (
+from aiuser.providers.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
     get_openai_compat_kind,
 )
-from aiuser.llm.registry import list_llm_models
+from aiuser.providers.llm.registry import list_llm_models
 from aiuser.settings.functions.base import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
 from aiuser.settings.media import MediaSettings
@@ -25,7 +25,7 @@ from aiuser.settings.reply import ReplySettings
 from aiuser.settings.response import ResponseSettings
 from aiuser.settings.triggers import TriggerSettings
 from aiuser.settings.utilities import rank_choices_for_query
-from aiuser.speech.stt import DEFAULT_MODELS as STT_DEFAULT_MODELS
+from aiuser.providers.speech.stt import DEFAULT_MODELS as STT_DEFAULT_MODELS
 from aiuser.types.abc import MixinMeta
 from aiuser.types.types import COMPATIBLE_CHANNELS
 
@@ -438,7 +438,7 @@ class Settings(
 
         This will allow the bot to reply to your messages or use your messages.
         """
-        if not await self.consent.opt_in(ctx.author.id):
+        if not await self.services.consent.opt_in(ctx.author.id):
             return await ctx.send("You are already opted in.")
         await ctx.send("You are now opted in bot-wide")
 
@@ -448,7 +448,7 @@ class Settings(
 
         This will prevent the bot from replying to your messages or using your messages.
         """
-        if not await self.consent.opt_out(ctx.author.id):
+        if not await self.services.consent.opt_out(ctx.author.id):
             return await ctx.send("You are already opted out.")
         await ctx.send("You are now opted out bot-wide")
 

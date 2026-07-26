@@ -10,9 +10,9 @@ from aiuser.functions.context import ToolContext
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.types import Function, Parameters, ToolCallSchema
 from aiuser.functions.voice.native import send_voice_message
-from aiuser.speech.constants import MAX_VOICE_WORDS
-from aiuser.speech.transcripts import cache_audio_transcript
-from aiuser.speech.tts import PROVIDERS, voice_settings
+from aiuser.providers.speech.constants import MAX_VOICE_WORDS
+from aiuser.providers.speech.transcripts import cache_audio_transcript
+from aiuser.providers.speech.tts import PROVIDERS, voice_settings
 
 logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 

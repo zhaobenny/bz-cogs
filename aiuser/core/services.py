@@ -16,8 +16,8 @@ from aiuser.config.resolver import ScopedConfigResolver
 from aiuser.consent import ConsentService
 from aiuser.context.compaction import CompactionManager, CompactionStore
 from aiuser.utils.cache import Cache
-from aiuser.vectorstore import VectorStore
-from aiuser.vectorstore.schema import ensure_sqlite_db
+from aiuser.providers.vectorstore import VectorStore
+from aiuser.providers.vectorstore.schema import ensure_sqlite_db
 
 if TYPE_CHECKING:
     from aiuser.core.reply_queue import ChannelReplyState

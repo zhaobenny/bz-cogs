@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from dataclasses import dataclass, field
+from enum import Enum, auto
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from uuid import uuid4
 
 import discord
@@ -16,12 +18,13 @@ from redbot.core import commands
 from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
 from aiuser.config.model_info import get_model_info
 from aiuser.context.conversation import Conversation
+from aiuser.context.entry import MessageEntry
 from aiuser.functions.context import ToolContext
-from aiuser.llm.base import ChatStepResult, LLMProvider
-from aiuser.llm.openai_compatible.endpoints import is_openrouter_endpoint
-from aiuser.llm.registry import get_llm_provider
-from aiuser.response.logging import log_chat_request, log_chat_step_result
-from aiuser.response.tool_manager import ToolManager
+from aiuser.functions.executor import ToolExecutor
+from aiuser.providers.llm.base import ChatStepResult, LLMProvider
+from aiuser.providers.llm.debug_log import log_chat_request, log_chat_step_result
+from aiuser.providers.llm.openai_compatible.endpoints import is_openrouter_endpoint
+from aiuser.providers.llm.registry import get_llm_provider
 
 if TYPE_CHECKING:
     from aiuser.core.services import AIUserServices
@@ -29,14 +32,24 @@ if TYPE_CHECKING:
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
+class PipelineError(Enum):
+    NO_PROVIDER = auto()
+    TIMED_OUT = auto()
+    RATE_LIMITED = auto()
+    REQUEST_FAILED = auto()
+
+
+@dataclass(frozen=True)
+class PipelineResult:
+    completion: Optional[str] = None
+    files_to_send: List[discord.File] = field(default_factory=list)
+    audio_transcripts_to_cache: List[str] = field(default_factory=list)
+    tool_call_entries: List[MessageEntry] = field(default_factory=list)
+    error: Optional[PipelineError] = None
+    session_id: Optional[str] = None
+
+
 class LLMPipeline:
-    """Drives the request/tool-call loop for one response.
-
-    Owns the provider round-trips and the :class:`ToolContext` that tools see.
-    Tool side effects (files, suppression) are read back off the ToolContext
-    when the loop finishes.
-    """
-
     def __init__(
         self,
         services: "AIUserServices",
@@ -51,62 +64,44 @@ class LLMPipeline:
 
         self.provider: Optional[LLMProvider] = None
         self.tool_context = ToolContext(services=services, ctx=ctx)
-        self.tool_manager = ToolManager(self)
-        self.completion: Optional[str] = None
-        self.tool_call_entries: List = []
+        self.tool_executor = ToolExecutor(services.config, ctx, self.tool_context)
+        self.tool_call_entries: List[MessageEntry] = []
         self.session_id: Optional[str] = None
         self.request_id = (
             str(self.ctx.message.id)
-            if self.conversation.seen_message_ids
+            if self.conversation.from_message_context
             else uuid4().hex
         )
 
-    @property
-    def files_to_send(self) -> List[discord.File]:
-        return self.tool_context.files_to_send
-
-    @property
-    def suppress_response(self) -> bool:
-        return self.tool_context.suppress_response
-
-    async def run(self) -> Optional[str]:
+    async def run(self) -> PipelineResult:
         base_kwargs = await self._build_base_parameters()
         self.provider = await get_llm_provider(self.services)
         if self.provider is None:
             logger.error("No LLM backend available while starting response pipeline")
-            if self.ctx.interaction:
-                await self.ctx.send(
-                    ":warning: No LLM backend available.", ephemeral=True
-                )
-            else:
-                await self.ctx.react_quietly(
-                    "⚠️", message="`aiuser` has no LLM backend available"
-                )
-            return None
-        await self.tool_manager.setup()
+            return self._build_result(None, error=PipelineError.NO_PROVIDER)
+        await self.tool_executor.setup()
         tool_call_rounds = (
             await self.services.config.guild(
                 self.ctx.guild
             ).function_calling_tool_call_rounds()
             or DEFAULT_TOOL_CALL_ROUNDS
         )
-        tools_kwargs = self.tool_manager.get_tools_kwargs()
+        tools_kwargs = self.tool_executor.get_tools_kwargs()
         exhausted_tool_call_rounds = False
+        completion: Optional[str] = None
 
         for round_idx in range(tool_call_rounds):
             kwargs = {**base_kwargs, **tools_kwargs}
             step = await self._create_chat_step(kwargs)
-            if step is None:
-                return None
+            if isinstance(step, PipelineError):
+                return self._build_result(None, error=step)
 
             if step.content:
-                self.completion = step.content
+                completion = step.content
                 break
             if step.tool_calls:
-                await self.tool_manager.handle_tool_calls(
-                    step.tool_calls, step.assistant_extra_fields
-                )
-                if self.suppress_response:
+                await self._append_tool_round(step)
+                if self.tool_context.suppress_response:
                     break
                 continue
 
@@ -126,14 +121,43 @@ class LLMPipeline:
                 f"Tool call round limit reached for message {self.ctx.message.id}; requesting final response without tools"
             )
             step = await self._create_chat_step(base_kwargs)
-            if step and step.content:
-                self.completion = step.content
+            if isinstance(step, PipelineError):
+                return self._build_result(None, error=step)
+            if step.content:
+                completion = step.content
 
-        return self.completion
+        return self._build_result(completion)
+
+    async def _append_tool_round(self, step: ChatStepResult) -> None:
+        """Record the assistant's tool calls and everything they returned."""
+        self.tool_call_entries.append(
+            await self.conversation.append_assistant(
+                tool_calls=step.tool_calls,
+                assistant_extra_fields=step.assistant_extra_fields,
+            )
+        )
+        for result in await self.tool_executor.run_tool_calls(step.tool_calls):
+            self.tool_call_entries.append(
+                await self.conversation.append_tool_result(
+                    result.content, result.tool_call_id
+                )
+            )
+
+    def _build_result(
+        self, completion: Optional[str], error: Optional[PipelineError] = None
+    ) -> PipelineResult:
+        return PipelineResult(
+            completion=completion,
+            files_to_send=self.tool_context.files_to_send,
+            audio_transcripts_to_cache=self.tool_context.audio_transcripts_to_cache,
+            tool_call_entries=self.tool_call_entries,
+            error=error,
+            session_id=self.session_id,
+        )
 
     async def _create_chat_step(
         self, kwargs: Dict[str, Any]
-    ) -> Optional[ChatStepResult]:
+    ) -> Union[ChatStepResult, PipelineError]:
         try:
             context: List[ChatCompletionMessageParam] = (
                 self.conversation.to_chat_payload()
@@ -147,16 +171,15 @@ class LLMPipeline:
             return step
         except httpx.ReadTimeout:
             logger.error("Failed request to LLM endpoint. Timed out.")
-            await self.ctx.react_quietly("💤", message="`aiuser` request timed out")
+            return PipelineError.TIMED_OUT
         except openai.RateLimitError:
-            await self.ctx.react_quietly("💤", message="`aiuser` request ratelimited")
+            return PipelineError.RATE_LIMITED
         except httpx.HTTPStatusError:
             logger.exception("Failed HTTP request(s) to LLM endpoint")
-            await self.ctx.react_quietly("⚠️", message="`aiuser` request failed")
+            return PipelineError.REQUEST_FAILED
         except Exception:
             logger.exception("Failed request(s) to LLM endpoint")
-            await self.ctx.react_quietly("⚠️", message="`aiuser` request failed")
-        return None
+            return PipelineError.REQUEST_FAILED
 
     async def _build_base_parameters(self) -> Dict[str, Any]:
         """
@@ -194,7 +217,7 @@ class LLMPipeline:
     async def _session_id(self) -> str:
         state = self.services.reply_channel_states.get(self.ctx.channel.id)
         if (
-            self.conversation.seen_message_ids
+            self.conversation.from_message_context
             and state
             and state.llm_session_id
             and state.last_bot_reply_at
