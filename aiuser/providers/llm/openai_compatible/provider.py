@@ -79,7 +79,26 @@ class OpenAICompatibleProvider(LLMProvider):
             **request_kwargs,
         )
 
-        choice = response.choices[0]
+        choices = response.choices or []
+        if not choices:
+            response_error = getattr(response, "error", None)
+            if response_error is None:
+                response_error = (getattr(response, "model_extra", None) or {}).get(
+                    "error"
+                )
+            raise RuntimeError(
+                "LLM response contained no choices"
+                + (f": {response_error!r}" if response_error is not None else "")
+            )
+
+        choice = choices[0]
+        if endpoint_kind is CompatEndpointKind.OPENROUTER:
+            choice_error = getattr(choice, "error", None)
+            if choice_error is not None:
+                raise RuntimeError(
+                    f"OpenRouter provider returned an error: {choice_error!r}"
+                )
+
         message = choice.message
         tool_calls_raw = message.tool_calls
         tool_calls: List[ChatCompletionMessageToolCall] = (
