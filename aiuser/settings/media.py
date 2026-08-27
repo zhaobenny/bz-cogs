@@ -6,9 +6,10 @@ from redbot.core import checks, commands
 from aiuser.config.defaults import DEFAULT_STT_PROVIDER
 from aiuser.config.model_info import get_model_info
 from aiuser.providers.llm.registry import list_llm_models
+from aiuser.providers.speech.stt import DEFAULT_MODELS, PROVIDERS
 from aiuser.settings._groups import aiuser
 from aiuser.settings.functions.utilities import provider_key_error
-from aiuser.providers.speech.stt import DEFAULT_MODELS, PROVIDERS
+from aiuser.settings.utilities import confirm_pending
 from aiuser.types.abc import MixinMeta
 
 
@@ -135,11 +136,37 @@ class MediaSettings(MixinMeta):
     async def media_images_model_set(self, ctx: commands.Context, *, model: str):
         """Set the model used to process images"""
         models = await list_llm_models(self.services)
-        models = [name for name in models if get_model_info(name).supports_vision]
         if model not in models:
             await ctx.send("⚠️ Not a valid image model!")
-            return await self._paginate_models(ctx, models, query=model)
+            vision_models = [
+                name for name in models if get_model_info(name).supports_vision
+            ]
+            return await self._paginate_models(ctx, vision_models, query=model)
+
+        confirm = None
+        if not get_model_info(model).supports_vision:
+            embed = discord.Embed(
+                title="Are you sure?",
+                description=(
+                    f"`{model}` isn't recognized as vision-capable. Image "
+                    "processing may fail with this model."
+                ),
+                color=await ctx.embed_color(),
+            )
+            confirmed, confirm = await confirm_pending(ctx, embed)
+            if not confirmed:
+                return
+
         await self.config.guild(ctx.guild).scan_images_model.set(model)
+        if confirm:
+            return await confirm.edit(
+                embed=discord.Embed(
+                    title="Image model set.",
+                    description=f"Image model set to `{model}`.",
+                    color=await ctx.embed_color(),
+                ),
+                view=None,
+            )
         return await ctx.send(f"Image model set to `{model}`.")
 
     @media_images_model.command(name="clear")
