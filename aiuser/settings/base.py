@@ -16,6 +16,7 @@ from aiuser.providers.llm.openai_compatible.endpoints import (
 from aiuser.providers.llm.registry import list_llm_models
 from aiuser.settings.functions.base import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
+from aiuser.settings.mcp import MCPSettings
 from aiuser.settings.media import MediaSettings
 from aiuser.settings.memory import MemorySettings
 from aiuser.settings.owner import OwnerSettings
@@ -40,6 +41,7 @@ class Settings(
     ResponseSettings,
     TriggerSettings,
     OwnerSettings,
+    MCPSettings,
     RandomMessageSettings,
     FunctionCallingSettings,
     MemorySettings,

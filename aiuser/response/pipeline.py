@@ -64,7 +64,9 @@ class LLMPipeline:
 
         self.provider: Optional[LLMProvider] = None
         self.tool_context = ToolContext(services=services, ctx=ctx)
-        self.tool_executor = ToolExecutor(services.config, ctx, self.tool_context)
+        self.tool_executor = ToolExecutor(
+            services.config, ctx, self.tool_context, services.mcp
+        )
         self.tool_call_entries: List[MessageEntry] = []
         self.session_id: Optional[str] = None
         self.request_id = (

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 
 
@@ -12,7 +14,7 @@ class Parameters:
 class Function:
     name: str
     description: str
-    parameters: Parameters
+    parameters: Parameters | dict
 
 
 @dataclass(frozen=True)

@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from openai.types.chat import ChatCompletionMessageToolCall
 from redbot.core import Config, commands
@@ -14,6 +14,9 @@ from aiuser.functions.registry import get_enabled_tools
 from aiuser.functions.tool_call import ToolCall
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
+
+if TYPE_CHECKING:
+    from aiuser.mcp import MCPManager
 
 
 @dataclass(frozen=True)
@@ -37,10 +40,12 @@ class ToolExecutor:
         config: Config,
         ctx: commands.Context,
         tool_context: ToolContext,
+        mcp: Optional["MCPManager"] = None,
     ):
         self.config = config
         self.ctx = ctx
         self.tool_context = tool_context
+        self.mcp = mcp
         self.enabled_tools: List[ToolCall] = []
         self.enabled_tools_map: Dict[str, ToolCall] = {}
 
@@ -48,6 +53,8 @@ class ToolExecutor:
         if not (await self.config.guild(self.ctx.guild).function_calling()):
             return
         self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
+        if self.mcp:
+            self.enabled_tools.extend(await self.mcp.tools_for_guild(self.ctx.guild))
         self.enabled_tools_map = {t.function_name: t for t in self.enabled_tools}
 
     def get_tools_kwargs(self) -> Dict[str, Any]:

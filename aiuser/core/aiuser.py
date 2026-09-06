@@ -41,7 +41,7 @@ class AIUser(
     Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
 
-    __version__ = "2.4.8"
+    __version__ = "2.5.0"
 
     def __init__(self, bot: Red):
         super().__init__()
@@ -83,6 +83,8 @@ class AIUser(
     async def cog_unload(self):
         if self.services:
             cancel_reply_state_tasks(self.services)
+            if self.services.mcp:
+                await self.services.mcp.close()
             await invalidate_openai_client(self.services)
         if self.random_task:
             self.random_task.cancel()
@@ -104,6 +106,9 @@ class AIUser(
         if service_name in ["openai", "openrouter"]:
             await invalidate_openai_client(self.services)
 
+        if self.services and self.services.mcp:
+
+            await self.services.mcp.tokens_updated(service_name)
     @app_commands.command(name="chat")
     @app_commands.describe(text="The prompt you want to send to the AI.")
     @app_commands.checks.cooldown(1, 30)

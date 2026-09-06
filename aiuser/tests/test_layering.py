@@ -17,6 +17,7 @@ LAYERS = {
     "consent": 2,
     "providers": 2,  # llm/speech/vectorstore backend clients
     "functions": 3,
+    "mcp": 3,
     "context": 4,
     "response": 5,
     "settings": 6,

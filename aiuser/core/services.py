@@ -16,6 +16,7 @@ from aiuser.config.resolver import ScopedConfigResolver
 from aiuser.consent import ConsentService
 from aiuser.context.compaction import CompactionManager, CompactionStore
 from aiuser.utils.cache import Cache
+from aiuser.mcp import MCPManager
 from aiuser.providers.vectorstore import VectorStore
 from aiuser.providers.vectorstore.schema import ensure_sqlite_db
 
@@ -75,6 +76,7 @@ class AIUserServices:
     reply_channel_states: Dict[int, "ChannelReplyState"] = field(default_factory=dict)
     override_prompt_start_time: Dict[int, datetime] = field(default_factory=dict)
     openai_client: Optional[AsyncOpenAI] = None
+    mcp: Optional[MCPManager] = None
     # only for Red APIs that require the cog instance (eg. cog_disabled_in_guild)
     cog: Optional[commands.Cog] = None
 
@@ -104,4 +106,5 @@ class AIUserServices:
             cog=cog,
         )
         services.compaction_manager = CompactionManager(services)
+        services.mcp = MCPManager(bot, config, cog.__version__)
         return services
