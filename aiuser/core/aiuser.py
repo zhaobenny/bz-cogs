@@ -107,8 +107,8 @@ class AIUser(
             await invalidate_openai_client(self.services)
 
         if self.services and self.services.mcp:
-
             await self.services.mcp.tokens_updated(service_name)
+
     @app_commands.command(name="chat")
     @app_commands.describe(text="The prompt you want to send to the AI.")
     @app_commands.checks.cooldown(1, 30)

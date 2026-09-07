@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import re
 from typing import Any
@@ -18,6 +19,7 @@ from aiuser.mcp.client import (
 )
 
 logger = logging.getLogger("red.bz_cogs.aiuser.mcp")
+MAX_RESULT_CHARS = 64 * 1024
 
 
 def model_tool_name(server_alias: str, native_name: str) -> str:
@@ -47,16 +49,25 @@ class MCPToolCall(ToolCall):
     ) -> str:
         label = f"{self.server_alias}.{self.native_name}"
         try:
-            return await self.client.call_tool(self.native_name, arguments)
+            result = await self.client.call_tool(self.native_name, arguments)
+            if result.get("resultType", "complete") != "complete":
+                return "This MCP tool requires an interaction aiuser does not support."
+            rendered = self._render_result(result)
+            if result.get("isError"):
+                rendered = f"MCP tool reported an error:\n{rendered}"
+            if len(rendered) > MAX_RESULT_CHARS:
+                return rendered[: MAX_RESULT_CHARS - 18] + "...\n[MCP result cut]"
+            return rendered
         except MCPTimeoutError:
             return f'MCP tool "{label}" timed out; it may or may not have completed.'
         except MCPOAuthRequired:
             logger.warning(
-                "MCP server %s requires unsupported OAuth authorization",
+                "MCP server %s requires OAuth sign-in",
                 self.server_alias,
             )
             return (
-                f'MCP server "{self.server_alias}" rejected its configured credentials.'
+                f'MCP server "{self.server_alias}" needs sign-in. '
+                "An owner must remove and add the server again to authenticate."
             )
         except MCPAuthError:
             return (
@@ -69,3 +80,20 @@ class MCPToolCall(ToolCall):
                 f'MCP tool "{label}" failed because the server returned an invalid '
                 "response."
             )
+
+    @staticmethod
+    def _render_result(result: dict[str, Any]) -> str:
+        chunks: list[str] = []
+        for item in result.get("content") or []:
+            if not isinstance(item, dict):
+                continue
+            if item.get("type") == "text" and isinstance(item.get("text"), str):
+                chunks.append(item["text"])
+            elif item.get("type"):
+                chunks.append(f"[MCP {item['type']} content omitted]")
+        structured = result.get("structuredContent")
+        if structured is not None:
+            chunks.append(
+                json.dumps(structured, ensure_ascii=False, separators=(",", ":"))
+            )
+        return "\n".join(chunks) or "MCP tool completed without textual output."

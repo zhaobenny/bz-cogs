@@ -10,6 +10,7 @@ from redbot.core import Config
 from redbot.core.bot import Red
 
 from aiuser.mcp.client import MCPClient
+from aiuser.mcp.oauth import MCPOAuth
 from aiuser.mcp.tool_call import MCPToolCall
 
 logger = logging.getLogger("red.bz_cogs.aiuser.mcp")
@@ -20,6 +21,7 @@ class MCPManager:
         self.bot = bot
         self.config = config
         self.version = version
+        self.oauth = MCPOAuth(bot)
         self._clients: dict[tuple[int, str], tuple[str, MCPClient]] = {}
         self._lock = asyncio.Lock()
 
@@ -31,10 +33,8 @@ class MCPManager:
             for server_alias, server in configured.items()
             if server_alias in enabled and isinstance(server, dict)
         ]
-        if not active:
-            return []
         results = await asyncio.gather(
-            *(self.tools_for_server(guild.id, *item) for item in active),
+            *(self.tools_for_mcp_server(guild.id, *item) for item in active),
             return_exceptions=True,
         )
         tools: list[MCPToolCall] = []
@@ -49,7 +49,7 @@ class MCPManager:
                 tools.extend(result)
         return tools
 
-    async def tools_for_server(
+    async def tools_for_mcp_server(
         self,
         guild_id: int,
         server_alias: str,
@@ -65,15 +65,13 @@ class MCPManager:
     ) -> MCPClient:
         cache_key = (guild_id, server_alias)
         fingerprint = json.dumps(server, sort_keys=True, separators=(",", ":"))
-        cached = self._clients.get(cache_key)
-        if cached and cached[0] == fingerprint:
-            return cached[1]
         async with self._lock:
             cached = self._clients.get(cache_key)
             if cached and cached[0] == fingerprint:
                 return cached[1]
             headers = await self._resolve_headers(server_alias)
             client = MCPClient(server_alias, server["url"], headers, self.version)
+            client.oauth = self.oauth
             old = self._clients.pop(cache_key, None)
             self._clients[cache_key] = (fingerprint, client)
             if old:
@@ -106,6 +104,7 @@ class MCPManager:
             await self.invalidate_server(service[4:])
 
     async def close(self) -> None:
+        self.oauth.pending.clear()
         clients = [client for _, client in self._clients.values()]
         self._clients.clear()
         await asyncio.gather(

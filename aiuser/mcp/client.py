@@ -16,8 +16,8 @@ MODERN_VERSION = "2026-07-28"
 LEGACY_VERSION = "2025-11-25"
 LEGACY_VERSIONS = {LEGACY_VERSION, "2025-06-18", "2025-03-26"}
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
-MAX_RESULT_CHARS = 64 * 1024
-CATALOG_TTL = 300
+CATALOG_TTL = 3600
+HEADER_TOKEN = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$")
 
 
 class MCPError(Exception):
@@ -29,7 +29,10 @@ class MCPAuthError(MCPError):
 
 
 class MCPOAuthRequired(MCPAuthError):
-    pass
+    # Preserve the server challenge needed to begin OAuth authorization.
+    def __init__(self, message="MCP authorization is required.", challenge=""):
+        super().__init__(message)
+        self.challenge = challenge
 
 
 class MCPTimeoutError(MCPError):
@@ -49,12 +52,14 @@ class MCPFallback(MCPError):
 
 
 class MCPClient:
+    # Initialize connection, concurrency, catalog, and HTTP client state.
     def __init__(
         self, server_alias: str, url: str, headers: dict[str, str], version: str
     ):
         self.server_alias = server_alias
         self.url = url
         self.headers = headers
+        self.oauth = None
         self.client_info = {"name": "aiuser", "version": version}
         self.protocol_version: str | None = None
         self.server_info: dict[str, Any] = {}
@@ -65,30 +70,28 @@ class MCPClient:
         self._catalog_lock = asyncio.Lock()
         self._call_limit = asyncio.Semaphore(4)
         self._catalog: list[dict[str, Any]] | None = None
-        self._tool_headers: dict[str, list[tuple[tuple[str, ...], str, str]]] = {}
+        self._tool_headers: dict[str, list[tuple[tuple[str, ...], str]]] = {}
         self._catalog_time = 0.0
         self._http = httpx.AsyncClient(
             timeout=httpx.Timeout(60, connect=10, write=10, pool=10),
             follow_redirects=False,
         )
 
+    # Negotiate the modern protocol or fall back to legacy initialization.
     async def connect(self) -> None:
-        if self.protocol_version:
-            return
         async with self._connect_lock:
             if self.protocol_version:
                 return
+
             try:
-                result = await self._request(
-                    "server/discover", {}, version=MODERN_VERSION
-                )
+                result = await self._rpc("server/discover", {}, version=MODERN_VERSION)
                 if MODERN_VERSION in result.get("supportedVersions", []):
-                    self._set_server_details(result, MODERN_VERSION)
+                    self._set_server(result, MODERN_VERSION)
                     return
             except MCPFallback:
                 pass
 
-            result = await self._request(
+            result = await self._rpc(
                 "initialize",
                 {
                     "protocolVersion": LEGACY_VERSION,
@@ -99,10 +102,11 @@ class MCPClient:
             protocol_version = result.get("protocolVersion")
             if protocol_version not in LEGACY_VERSIONS:
                 raise MCPError("The server negotiated an unsupported MCP version.")
-            self._set_server_details(result, protocol_version)
+            self._set_server(result, protocol_version)
             await self._notify("notifications/initialized")
 
-    def _set_server_details(self, result: dict[str, Any], version: str) -> None:
+    # Store the negotiated protocol, capabilities, and server identity.
+    def _set_server(self, result: dict[str, Any], version: str) -> None:
         capabilities = result.get("capabilities")
         if not isinstance(capabilities, dict) or "tools" not in capabilities:
             raise MCPError("The MCP server does not advertise tool support.")
@@ -116,15 +120,9 @@ class MCPClient:
         if isinstance(server_info, dict):
             self.server_info = server_info
 
+    # Return the cached tool catalog or fetch a fresh copy.
     async def list_tools(self, refresh: bool = False) -> list[dict[str, Any]]:
         await self.connect()
-        if (
-            not refresh
-            and self._catalog is not None
-            and time.monotonic() - self._catalog_time < CATALOG_TTL
-        ):
-            return self._catalog
-
         async with self._catalog_lock:
             if (
                 not refresh
@@ -133,43 +131,40 @@ class MCPClient:
             ):
                 return self._catalog
             try:
-                tools = await self._list_all_tools()
+                tools = await self._fetch_tools()
             except MCPSessionExpired:
-                self._reset_session()
+                self._reset()
                 await self.connect()
-                tools = await self._list_all_tools()
+                tools = await self._fetch_tools()
             self._catalog = tools
             self._catalog_time = time.monotonic()
             return tools
 
-    async def _list_all_tools(self) -> list[dict[str, Any]]:
+    # Fetch and validate every page of the server's tool catalog.
+    async def _fetch_tools(self) -> list[dict[str, Any]]:
         tools: list[dict[str, Any]] = []
         cursor: str | None = None
         cursors = set()
-        names = set()
         while True:
             params = {"cursor": cursor} if cursor else {}
-            result = await self._request("tools/list", params)
+            result = await self._rpc("tools/list", params)
             page = result.get("tools")
             if not isinstance(page, list):
                 raise MCPError("The MCP server returned an invalid tool catalog.")
             for tool in page:
-                header_fields = self._header_fields(tool)
-                if header_fields is None:
+                if (
+                    not isinstance(tool, dict)
+                    or not isinstance(tool.get("name"), str)
+                    or not tool["name"]
+                    or not isinstance(tool.get("inputSchema"), dict)
+                ):
                     logger.warning(
                         "Skipping malformed tool from MCP server %s", self.server_alias
                     )
                     continue
-                if tool["name"] in names:
-                    logger.warning(
-                        "Skipping duplicate tool %s from MCP server %s",
-                        tool["name"],
-                        self.server_alias,
-                    )
-                    continue
+                name = tool["name"]
                 tools.append(tool)
-                names.add(tool["name"])
-                self._tool_headers[tool["name"]] = header_fields
+                self._tool_headers[name] = self._find_headers(tool)
             cursor = result.get("nextCursor")
             if not cursor:
                 return tools
@@ -177,18 +172,16 @@ class MCPClient:
                 raise MCPError("The MCP server returned invalid tool pagination.")
             cursors.add(cursor)
 
+    # Find tool arguments that must also be sent as HTTP headers.
     @staticmethod
-    def _header_fields(tool: Any) -> list[tuple[tuple[str, ...], str, str]] | None:
-        if not (
-            isinstance(tool, dict)
-            and isinstance(tool.get("name"), str)
-            and tool["name"]
-            and isinstance(tool.get("inputSchema"), dict)
-            and tool["inputSchema"].get("type") == "object"
-        ):
-            return None
-        found: list[tuple[tuple[str, ...], str, str]] = []
+    def _find_headers(tool: dict[str, Any]) -> list[tuple[tuple[str, ...], str]]:
+        schema = tool.get("inputSchema")
+        if not isinstance(schema, dict):
+            return []
 
+        found: list[tuple[tuple[str, ...], str]] = []
+
+        # Recursively inspect nested object properties for header annotations.
         def walk_properties(schema: dict[str, Any], path: tuple[str, ...]) -> None:
             properties = schema.get("properties") or {}
             if not isinstance(properties, dict):
@@ -198,58 +191,32 @@ class MCPClient:
                     continue
                 header = value.get("x-mcp-header")
                 if header is not None:
-                    found.append((path + (key,), header, value.get("type")))
+                    found.append((path + (key,), header))
                 walk_properties(value, path + (key,))
 
-        walk_properties(tool["inputSchema"], ())
+        walk_properties(schema, ())
 
-        def annotation_count(value: Any) -> int:
-            if isinstance(value, dict):
-                return ("x-mcp-header" in value) + sum(
-                    annotation_count(item) for item in value.values()
-                )
-            if isinstance(value, list):
-                return sum(annotation_count(item) for item in value)
-            return 0
+        return [
+            (path, header)
+            for path, header in found
+            if isinstance(header, str) and HEADER_TOKEN.fullmatch(header)
+        ]
 
-        token = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$")
-        headers = [field[1] for field in found]
-        if (
-            annotation_count(tool["inputSchema"]) != len(found)
-            or any(
-                not isinstance(header, str)
-                or not token.fullmatch(header)
-                or field_type not in ("string", "integer", "boolean")
-                for _, header, field_type in found
-            )
-            or len({header.lower() for header in headers}) != len(headers)
-        ):
-            return None
-        return found
-
-    async def call_tool(self, name: str, arguments: dict[str, Any]) -> str:
+    # Call one server tool while enforcing the concurrency limit.
+    async def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         await self.connect()
-        request_headers = self._tool_call_headers(name, arguments)
+        request_headers = self._call_headers(name, arguments)
         async with self._call_limit:
-            result = await self._request(
+            return await self._rpc(
                 "tools/call",
                 {"name": name, "arguments": arguments},
                 headers=request_headers,
             )
-        if result.get("resultType", "complete") != "complete":
-            return "This MCP tool requires an interaction aiuser does not support."
-        rendered = self._render_result(result)
-        if result.get("isError"):
-            rendered = f"MCP tool reported an error:\n{rendered}"
-        if len(rendered) > MAX_RESULT_CHARS:
-            return rendered[: MAX_RESULT_CHARS - 18] + "\n[MCP result cut]"
-        return rendered
 
-    def _tool_call_headers(
-        self, name: str, arguments: dict[str, Any]
-    ) -> dict[str, str]:
+    # Build HTTP headers from annotated tool argument values.
+    def _call_headers(self, name: str, arguments: dict[str, Any]) -> dict[str, str]:
         headers = {}
-        for path, header, field_type in self._tool_headers.get(name, []):
+        for path, header in self._tool_headers.get(name, []):
             value: Any = arguments
             for key in path:
                 if not isinstance(value, dict) or key not in value:
@@ -258,24 +225,13 @@ class MCPClient:
                 value = value[key]
             if value is None:
                 continue
-            valid = (
-                (field_type == "string" and isinstance(value, str))
-                or (
-                    field_type == "integer"
-                    and isinstance(value, int)
-                    and not isinstance(value, bool)
-                    and -(2**53) < value < 2**53
-                )
-                or (field_type == "boolean" and isinstance(value, bool))
-            )
-            if not valid:
-                raise MCPError("MCP tool arguments do not match its header schema.")
             text = str(value).lower() if isinstance(value, bool) else str(value)
-            headers[f"Mcp-Param-{header}"] = self._header_value(text)
+            headers[f"Mcp-Param-{header}"] = self._encode_header(text)
         return headers
 
+    # Encode values that cannot be placed directly in an HTTP header.
     @staticmethod
-    def _header_value(value: str) -> str:
+    def _encode_header(value: str) -> str:
         safe = (
             value == value.strip()
             and all(char == "\t" or 0x20 <= ord(char) <= 0x7E for char in value)
@@ -286,24 +242,8 @@ class MCPClient:
         encoded = base64.b64encode(value.encode("utf-8")).decode("ascii")
         return f"=?base64?{encoded}?="
 
-    @staticmethod
-    def _render_result(result: dict[str, Any]) -> str:
-        chunks: list[str] = []
-        for item in result.get("content") or []:
-            if not isinstance(item, dict):
-                continue
-            if item.get("type") == "text" and isinstance(item.get("text"), str):
-                chunks.append(item["text"])
-            elif item.get("type"):
-                chunks.append(f"[MCP {item['type']} content omitted]")
-        structured = result.get("structuredContent")
-        if structured is not None:
-            chunks.append(
-                json.dumps(structured, ensure_ascii=False, separators=(",", ":"))
-            )
-        return "\n".join(chunks) or "MCP tool completed without textual output."
-
-    async def _request(
+    # Send a JSON-RPC request and validate its matching result.
+    async def _rpc(
         self,
         method: str,
         params: dict[str, Any],
@@ -326,7 +266,7 @@ class MCPClient:
             "method": method,
             "params": params,
         }
-        response = await self._post(payload, request_id, protocol_version, headers)
+        response = await self._request(payload, request_id, protocol_version, headers)
         if not isinstance(response, dict) or response.get("jsonrpc") != "2.0":
             raise MCPError("The MCP server returned an invalid JSON-RPC response.")
         if response.get("id") != request_id:
@@ -350,11 +290,13 @@ class MCPClient:
             raise MCPError("The MCP server returned an invalid result.")
         return result
 
+    # Send a JSON-RPC notification that has no response.
     async def _notify(self, method: str) -> None:
         payload = {"jsonrpc": "2.0", "method": method}
-        await self._post(payload, None, self.protocol_version)
+        await self._request(payload, None, self.protocol_version)
 
-    async def _post(
+    # Apply headers, authentication, retries, timeouts, and network errors.
+    async def _request(
         self,
         payload: dict[str, Any],
         request_id: int | None,
@@ -370,24 +312,44 @@ class MCPClient:
         method = payload.get("method")
         if protocol_version and protocol_version != "2025-03-26":
             headers["MCP-Protocol-Version"] = protocol_version
+
         if protocol_version == MODERN_VERSION:
             headers["Mcp-Method"] = method
             name = (payload.get("params") or {}).get("name")
             if name:
-                headers["Mcp-Name"] = self._header_value(name)
+                headers["Mcp-Name"] = self._encode_header(name)
         elif self.session_id:
             headers["Mcp-Session-Id"] = self.session_id
 
+        access = None
+        if self.oauth:
+            access = await self.oauth.access_token(self.server_alias, self.url)
+            if access:
+                headers["Authorization"] = f"Bearer {access}"
         try:
-            return await asyncio.wait_for(
-                self._read_post(payload, headers, request_id), timeout=60
-            )
+            try:
+                return await asyncio.wait_for(
+                    self._post(payload, headers, request_id), timeout=60
+                )
+            except MCPOAuthRequired:
+                if not access:
+                    raise
+                access = await self.oauth.access_token(
+                    self.server_alias, self.url, rejected=access
+                )
+                if not access:
+                    raise
+                headers["Authorization"] = f"Bearer {access}"
+                return await asyncio.wait_for(
+                    self._post(payload, headers, request_id), timeout=60
+                )
         except (asyncio.TimeoutError, httpx.TimeoutException) as exc:
             raise MCPTimeoutError("The MCP request timed out.") from exc
         except httpx.RequestError as exc:
             raise MCPUnavailableError("The MCP server is unavailable.") from exc
 
-    async def _read_post(
+    # Perform one HTTP POST and parse its JSON or SSE response.
+    async def _post(
         self,
         payload: dict[str, Any],
         headers: dict[str, str],
@@ -396,31 +358,7 @@ class MCPClient:
         async with self._http.stream(
             "POST", self.url, headers=headers, json=payload
         ) as response:
-            if response.status_code in (401, 403):
-                challenge = response.headers.get("WWW-Authenticate", "")
-                if re.search(
-                    r'\bbearer\b[^\r\n]*\bresource_metadata\s*=',
-                    challenge,
-                    re.IGNORECASE,
-                ):
-                    raise MCPOAuthRequired(
-                        "This server requires OAuth authorization, which aiuser "
-                        "does not support yet."
-                    )
-                raise MCPAuthError(
-                    "The MCP server rejected its configured credentials."
-                )
-            if response.status_code == 404 and self.session_id:
-                raise MCPSessionExpired("The MCP session expired.")
-            if response.status_code >= 400:
-                legacy_response = payload.get(
-                    "method"
-                ) == "server/discover" and response.status_code in (400, 404, 405)
-                if legacy_response:
-                    raise MCPFallback("The server uses legacy MCP.")
-                if response.status_code >= 500:
-                    raise MCPUnavailableError("The MCP server is unavailable.")
-                raise MCPError(f"The MCP server returned HTTP {response.status_code}.")
+            self._check_status(response, payload)
             if payload.get("method") == "initialize":
                 session_id = response.headers.get("Mcp-Session-Id")
                 if session_id and all(0x21 <= ord(char) <= 0x7E for char in session_id):
@@ -439,6 +377,31 @@ class MCPClient:
                 return await self._read_sse(response, request_id)
             raise MCPError("The MCP server returned an unsupported content type.")
 
+    # Convert HTTP failures into specific MCP exceptions.
+    def _check_status(self, response: httpx.Response, payload: dict[str, Any]) -> None:
+        if response.status_code in (401, 403):
+            challenge = response.headers.get("WWW-Authenticate", "")
+            if response.status_code == 401 or "resource_metadata" in challenge:
+                raise MCPOAuthRequired(challenge=challenge)
+            raise MCPAuthError("The MCP server rejected its configured credentials.")
+        if response.status_code == 404 and self.session_id:
+            raise MCPSessionExpired("The MCP session expired.")
+        if response.status_code < 400:
+            return
+        legacy_response = payload.get(
+            "method"
+        ) == "server/discover" and response.status_code in (
+            400,
+            404,
+            405,
+        )
+        if legacy_response:
+            raise MCPFallback("The server uses legacy MCP.")
+        if response.status_code >= 500:
+            raise MCPUnavailableError("The MCP server is unavailable.")
+        raise MCPError(f"The MCP server returned HTTP {response.status_code}.")
+
+    # Read a response body while enforcing the size limit.
     @staticmethod
     async def _read_bytes(response: httpx.Response) -> bytes:
         body = bytearray()
@@ -448,6 +411,7 @@ class MCPClient:
                 raise MCPError("The MCP response exceeded the size limit.")
         return bytes(body)
 
+    # Read SSE events until the matching JSON-RPC response arrives.
     @staticmethod
     async def _read_sse(response: httpx.Response, request_id: int) -> dict[str, Any]:
         data: list[str] = []
@@ -462,27 +426,28 @@ class MCPClient:
                     data = []
                     if not raw:
                         continue
-                    try:
-                        message = json.loads(raw)
-                    except json.JSONDecodeError as exc:
-                        raise MCPError(
-                            "The MCP server returned invalid SSE data."
-                        ) from exc
-                    if isinstance(message, dict) and message.get("id") == request_id:
+                    message = MCPClient._parse_sse(raw, request_id)
+                    if message is not None:
                         return message
                 continue
             if line.startswith("data:"):
                 data.append(line[6:] if line.startswith("data: ") else line[5:])
-        if data:
-            try:
-                message = json.loads("\n".join(data))
-            except json.JSONDecodeError as exc:
-                raise MCPError("The MCP server returned invalid SSE data.") from exc
-            if isinstance(message, dict) and message.get("id") == request_id:
-                return message
+        # An incomplete event at EOF is discarded by the SSE stream format.
         raise MCPError("The MCP stream ended before returning a response.")
 
-    def _reset_session(self) -> None:
+    # Parse one SSE event and return it only when its request ID matches.
+    @staticmethod
+    def _parse_sse(raw: str, request_id: int) -> dict[str, Any] | None:
+        try:
+            message = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise MCPError("The MCP server returned invalid SSE data.") from exc
+        if isinstance(message, dict) and message.get("id") == request_id:
+            return message
+        return None
+
+    # Clear negotiated state so the next operation reconnects.
+    def _reset(self) -> None:
         self.protocol_version = None
         self.session_id = None
         self.server_info = {}
@@ -490,6 +455,7 @@ class MCPClient:
         self._catalog = None
         self._tool_headers.clear()
 
+    # Close any legacy session and release the HTTP client.
     async def close(self) -> None:
         if self.session_id:
             headers = {**self.headers, "Mcp-Session-Id": self.session_id}

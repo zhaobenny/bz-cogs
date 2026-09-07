@@ -39,16 +39,17 @@ See other settings using:
 
 ## Remote MCP tools
 
-Bot owners can add remote MCP servers to the bot-wide catalog:
-OAuth support has not been added yet.
+Bot owners can add remote MCP servers for the bot to use:
 
 ```
-[p]aiuser tools mcp add <name> <https-url>
+[p]aiuser tools mcp add <NAME> <MCP_URL>
 ```
 
 Once added, you can enable the MCP server with:
 `[p]aiuser tools mcp enable <name>`
 or `[p]aiuser tools mcp disable <name>` to disable.
+
+When enabled, all of the MCP tools will be available for the bot to use by any user.
 
 ### Have fun. 🎉
 ![repetition](https://user-images.githubusercontent.com/46238123/227853613-1a524915-ed46-45f7-a154-94e90daf0cd7.jpg)
