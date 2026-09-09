@@ -102,6 +102,23 @@ class MCPSettings(MixinMeta):
             )
             view.message = await ctx.send(embed=embed, view=view)
             return
+        except MCPAuthError as exc:
+            embed.add_field(
+                name="Connection",
+                value=f"{exc}\nSet a Bearer token below to authenticate this server.",
+                inline=False,
+            )
+            view = MCPAuthView(
+                self.services.mcp,
+                name,
+                ctx.author.id,
+                ctx.guild.id,
+                url,
+                None,
+                oauth_available=False,
+            )
+            view.message = await ctx.send(embed=embed, view=view)
+            return
         except MCPError as exc:
             embed.add_field(
                 name="Connection",
@@ -126,6 +143,40 @@ class MCPSettings(MixinMeta):
             color=await ctx.embed_color(),
         )
         embed.add_field(name="URL", value=f"`{url}`", inline=False)
+        try:
+            await self.services.mcp.tools_for_mcp_server(
+                ctx.guild.id, name, servers[name], refresh=True
+            )
+        except MCPOAuthRequired as exc:
+            view = MCPAuthView(
+                self.services.mcp,
+                name,
+                ctx.author.id,
+                ctx.guild.id,
+                url,
+                exc.challenge,
+            )
+            view.message = await ctx.send(embed=embed, view=view)
+            return
+        except MCPAuthError as exc:
+            embed.add_field(
+                name="Connection",
+                value=f"{exc}\nSet a Bearer token below to authenticate this server.",
+                inline=False,
+            )
+            view = MCPAuthView(
+                self.services.mcp,
+                name,
+                ctx.author.id,
+                ctx.guild.id,
+                url,
+                None,
+                oauth_available=False,
+            )
+            view.message = await ctx.send(embed=embed, view=view)
+            return
+        except MCPError as exc:
+            embed.add_field(name="Connection", value=str(exc), inline=False)
         await ctx.send(embed=embed)
 
     @mcp.command(name="remove", aliases=["delete"])
@@ -184,7 +235,10 @@ class MCPSettings(MixinMeta):
             tools = []
             connection = "Sign-in required"
             auth_method = "OAuth"
-            next_step = "Remove and add this server again to authenticate."
+            next_step = (
+                f"Use `{ctx.clean_prefix}aiuser tools mcp url {name} {server['url']}` "
+                "to restart authentication."
+            )
         except MCPAuthError as exc:
             tools = []
             connection = "Authentication rejected"
@@ -201,21 +255,14 @@ class MCPSettings(MixinMeta):
         embed.add_field(name="Enabled", value="✅" if enabled else "❌", inline=True)
         embed.add_field(
             name="Connection",
-            value=(
-                f"🟢 Via {auth_method}"
-                if connection == "Connected"
-                else f"🔴 {connection}"
-            ),
+            value=("🟢 Connected" if connection == "Connected" else f"🔴 {connection}"),
             inline=True,
         )
+        embed.add_field(name="Authentication", value=auth_method, inline=True)
         if connection_detail:
             embed.add_field(name="Details", value=connection_detail, inline=False)
         if next_step:
-            embed.add_field(
-                name="Next step",
-                value=next_step,
-                inline=False,
-            )
+            embed.set_footer(text=f"Troubleshooting: {next_step}")
         embed.add_field(name="URL", value=f"`{server['url']}`", inline=False)
         if tools:
             preview = "\n".join(tool.native_name[:100] for tool in tools[:8])

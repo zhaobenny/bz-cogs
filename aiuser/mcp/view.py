@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import logging
+import time
 
 import discord
 
-from .client import MCPError
+from .client import MCPClient, MCPError
 from .oauth import LOGIN_SECONDS
 
 logger = logging.getLogger("red.bz_cogs.aiuser.mcp")
@@ -36,15 +37,25 @@ class MCPTokenModal(discord.ui.Modal, title="Set MCP Bearer token"):
 
         service = f"mcp_{self.alias}"
         old_token = (await self.manager.bot.get_shared_api_tokens(service)).get("token")
-        await self.manager.bot.set_shared_api_tokens(service, token=self.token.value)
-        await self.manager.invalidate_server(self.alias)
         try:
             server = (await self.manager.config.mcp_servers()).get(self.alias)
             if not server:
                 raise MCPError("The server was removed.")
-            tools = await self.manager.tools_for_mcp_server(
-                self.guild_id, self.alias, server, refresh=True
+            client = MCPClient(
+                self.alias,
+                server["url"],
+                {"Authorization": f"Bearer {self.token.value}"},
+                self.manager.version,
             )
+            try:
+                tools = await client.list_tools(refresh=True)
+            finally:
+                await client.close()
+            await self.manager.bot.set_shared_api_tokens(
+                service, token=self.token.value
+            )
+            await self.manager.invalidate_server(self.alias)
+            await self.manager.oauth.forget(self.alias)
         except Exception as exc:
             if old_token:
                 await self.manager.bot.set_shared_api_tokens(service, token=old_token)
@@ -83,7 +94,9 @@ class MCPTokenModal(discord.ui.Modal, title="Set MCP Bearer token"):
 
 
 class MCPAuthView(discord.ui.View):
-    def __init__(self, manager, alias, owner_id, guild_id, url, challenge):
+    def __init__(
+        self, manager, alias, owner_id, guild_id, url, challenge, oauth_available=True
+    ):
         super().__init__(timeout=LOGIN_SECONDS)
         self.manager = manager
         self.alias = alias
@@ -93,6 +106,8 @@ class MCPAuthView(discord.ui.View):
         self.challenge = challenge
         self.message = None
         self.completed = False
+        if not oauth_available:
+            self.remove_item(self.oauth)
 
     async def interaction_check(self, interaction):
         if interaction.user.id == self.owner_id and await self.manager.bot.is_owner(
@@ -304,7 +319,17 @@ class MCPCallbackModal(discord.ui.Modal, title="Finish MCP sign-in"):
             logger.warning(
                 "MCP onboarding failed for %s (%s)", view.alias, type(exc).__name__
             )
-            await view.auth_view.finish(False)
+            async with view.manager.oauth.lock(view.alias):
+                pending = view.manager.oauth.pending.get(view.alias)
+                retryable = (
+                    pending
+                    and pending.get("state") == view.state
+                    and pending.get("owner_id") == view.owner_id
+                    and not pending.get("consumed")
+                    and time.monotonic() <= pending.get("deadline", 0)
+                )
+            if not retryable:
+                await view.auth_view.finish(False)
             await interaction.followup.send(
                 embed=discord.Embed(
                     title="MCP sign-in failed",

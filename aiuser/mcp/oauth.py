@@ -56,7 +56,7 @@ class MCPOAuth:
                 if response.status_code in (404, 405):
                     continue
                 if not response.is_success:
-                    raise MCPError("OAuth discovery failed. Retry enabling the server.")
+                    raise MCPError("OAuth discovery failed. Retry MCP authentication.")
                 from .client import MCPClient
 
                 data = json.loads(await MCPClient._read_bytes(response))
@@ -81,7 +81,7 @@ class MCPOAuth:
                 ValueError,
             ):
                 raise MCPError(
-                    "OAuth setup failed. Retry enabling the server."
+                    "OAuth setup failed. Retry MCP authentication."
                 ) from None
 
     async def _begin(
@@ -196,7 +196,7 @@ class MCPOAuth:
                 )
                 if not response.is_success:
                     raise MCPError(
-                        "OAuth client registration failed. Retry enabling the server."
+                        "OAuth client registration failed. Retry MCP authentication."
                     )
                 registration = response.json()
                 if not isinstance(registration.get("client_id"), str):

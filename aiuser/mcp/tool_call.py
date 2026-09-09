@@ -67,7 +67,7 @@ class MCPToolCall(ToolCall):
             )
             return (
                 f'MCP server "{self.server_alias}" needs sign-in. '
-                "An owner must remove and add the server again to authenticate."
+                "An owner must restart MCP authentication with the server URL."
             )
         except MCPAuthError:
             return (
