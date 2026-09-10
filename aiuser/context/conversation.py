@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from aiuser.context.entry import MessageEntry
 from aiuser.utils.utilities import encode_text_to_tokens
@@ -18,11 +20,11 @@ class Conversation:
         self.model = model
         self.token_limit = token_limit
         self.tokens = 0
-        self.entries: List[MessageEntry] = []
-        self.memory_entries: List[MessageEntry] = []
+        self.entries: list[MessageEntry] = []
+        self.memory_entries: list[MessageEntry] = []
         self.from_message_context = False
-        self._entry_tokens: List[int] = []
-        self._entry_protected: List[bool] = []
+        self._entry_tokens: list[int] = []
+        self._entry_protected: list[bool] = []
 
     def __len__(self) -> int:
         return len(self.entries)
@@ -62,8 +64,8 @@ class Conversation:
     async def append_assistant(
         self,
         content: str = "",
-        tool_calls: Optional[list] = None,
-        assistant_extra_fields: Optional[Dict[str, Any]] = None,
+        tool_calls: list | None = None,
+        assistant_extra_fields: dict[str, Any] | None = None,
     ) -> MessageEntry:
         return await self.append(
             MessageEntry(
@@ -103,7 +105,7 @@ class Conversation:
 
     # --- output ---
 
-    def to_chat_payload(self) -> List[dict]:
+    def to_chat_payload(self) -> list[dict]:
         """Serialize to the chat-completions wire format."""
         payload = []
         for entry in self.entries:

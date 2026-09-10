@@ -5,7 +5,7 @@ import logging
 import shutil
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING
 
 from discord import Message
 
@@ -56,14 +56,14 @@ def _format_audio_placeholder(message: Message) -> str:
     return f'User "{message.author.display_name}" sent: [Audio: "{filename}"]'
 
 
-async def format_audio(services: "AIUserServices", message: Message) -> str:
+async def format_audio(services: AIUserServices, message: Message) -> str:
     transcript = cached_audio_transcript(services, message.id)
     return transcript or _format_audio_placeholder(message)
 
 
 async def create_audio_transcript(
-    services: "AIUserServices", message: Message
-) -> Optional[str]:
+    services: AIUserServices, message: Message
+) -> str | None:
     attachment = message.attachments[0]
     settings = await transcription_settings(services.config, message.guild)
     cache_key = (AUDIO_TRANSCRIPT_CACHE_NAMESPACE, message.id)
@@ -117,7 +117,7 @@ async def create_audio_transcript(
     return content
 
 
-async def _trim_audio(audio: bytes, max_duration: int) -> Tuple[Optional[bytes], str]:
+async def _trim_audio(audio: bytes, max_duration: int) -> tuple[bytes | None, str]:
     if not shutil.which("ffmpeg"):
         return None, "ogg"
 

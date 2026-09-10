@@ -14,7 +14,6 @@ class SearchFunctionSettings(FunctionToggleHelperMixin):
     @functions.group(name="search")
     async def functions_search(self, ctx: commands.Context):
         """Web search function settings (per server)."""
-        pass
 
     @functions_search.command(name="enable")
     async def search_enable(self, ctx: commands.Context):

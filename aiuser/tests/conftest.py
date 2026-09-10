@@ -2,20 +2,21 @@
 Pytest fixtures for aiuser tests using dpytest.
 """
 
+from __future__ import annotations
+
 import json
 import os
 
 import discord
-import discord.ext.commands as commands
 import discord.ext.test as dpytest
 import pytest
 import pytest_asyncio
+from discord.ext import commands
 from discord.ext.test import backend
 from openai import AsyncOpenAI
-from redbot.core import Config
-
 from openai.types.chat import ChatCompletionMessageToolCall
 from openai.types.chat.chat_completion_message_tool_call import Function
+from redbot.core import Config
 
 from aiuser.config.defaults import (
     DEFAULT_CHANNEL,
@@ -181,7 +182,7 @@ async def build_conversation(bot, mock_services, test_channel, test_member):
 
     async def _create(
         init_message: discord.Message = None,
-        prompt: str = None,
+        prompt: str | None = None,
     ) -> Conversation:
         """
         Prompt should only be provided when init_message is None.
@@ -284,7 +285,7 @@ def pytest_sessionfinish(session, exitstatus):
     for filePath in fileList:
         try:
             os.remove(filePath)
-        except Exception:
+        except OSError:
             print("Error while deleting file:", filePath)
 
 

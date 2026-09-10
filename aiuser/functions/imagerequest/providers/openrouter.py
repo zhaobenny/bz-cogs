@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 
-async def generate(description: str, request: "ToolContext", _: str) -> bytes:
+async def generate(description: str, request: ToolContext, _: str) -> bytes:
     model = (
         await request.services.config.guild(
             request.ctx.guild

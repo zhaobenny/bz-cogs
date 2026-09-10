@@ -1,16 +1,18 @@
+from __future__ import annotations
+
 import logging
 from typing import Optional, Union
 
 import discord
 from redbot.core import checks, commands
 
+from aiuser.settings._groups import aiuser
 from aiuser.settings.scope import (
     get_effective_scoped_setting_for_target,
     get_settings_target_scope,
     parse_target_or_text,
 )
 from aiuser.settings.utilities import get_mention_type
-from aiuser.settings._groups import aiuser
 from aiuser.types.abc import MixinMeta
 from aiuser.types.types import COMPATIBLE_MENTIONS
 
@@ -25,7 +27,6 @@ class TriggerSettings(MixinMeta):
 
         (All subcommands per server)
         """
-        pass
 
     @trigger.group(name="public_forget", invoke_without_command=True)
     async def public_forget(self, ctx: commands.Context):
@@ -67,11 +68,12 @@ class TriggerSettings(MixinMeta):
     @trigger.group(name="webhook")
     async def trigger_webhook(self, _):
         """Configure webhook and application bot reply settings"""
-        pass
 
     @trigger_webhook.command(name="show")
     async def trigger_webhook_show(
-        self, ctx: commands.Context, mention: Optional[COMPATIBLE_MENTIONS] = None
+        self,
+        ctx: commands.Context,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Show whether webhook and application messages can trigger replies"""
         mention_type, _ = get_settings_target_scope(self, ctx, mention)
@@ -84,14 +86,18 @@ class TriggerSettings(MixinMeta):
 
     @trigger_webhook.command(name="enable")
     async def trigger_webhook_enable(
-        self, ctx: commands.Context, mention: Optional[COMPATIBLE_MENTIONS] = None
+        self,
+        ctx: commands.Context,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Allow webhook and application messages to trigger replies"""
         return await self._set_webhook_replies(ctx, mention, True)
 
     @trigger_webhook.command(name="disable")
     async def trigger_webhook_disable(
-        self, ctx: commands.Context, mention: Optional[COMPATIBLE_MENTIONS] = None
+        self,
+        ctx: commands.Context,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Prevent webhook and application messages from triggering replies"""
         return await self._set_webhook_replies(ctx, mention, False)
@@ -195,7 +201,9 @@ class TriggerSettings(MixinMeta):
     @trigger.group(name="words", invoke_without_command=True)
     @commands.is_owner()
     async def trigger_words(
-        self, ctx: commands.Context, mention: Optional[COMPATIBLE_MENTIONS] = None
+        self,
+        ctx: commands.Context,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Show the effective trigger words list for a target."""
         mention_type = get_mention_type(mention)
@@ -212,9 +220,9 @@ class TriggerSettings(MixinMeta):
     async def trigger_words_add(
         self,
         ctx: commands.Context,
-        mention_or_word: Union[COMPATIBLE_MENTIONS, str],
+        mention_or_word: Union[COMPATIBLE_MENTIONS, str],  # noqa: UP007 - Red evaluates command converters on Python 3.9
         *,
-        word: Optional[str] = None,
+        word: Optional[str] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Add a word to the trigger words list (server or target override)."""
         mention, word = parse_target_or_text(mention_or_word, word)
@@ -245,9 +253,9 @@ class TriggerSettings(MixinMeta):
     async def trigger_words_remove(
         self,
         ctx: commands.Context,
-        mention_or_word: Union[COMPATIBLE_MENTIONS, str],
+        mention_or_word: Union[COMPATIBLE_MENTIONS, str],  # noqa: UP007 - Red evaluates command converters on Python 3.9
         *,
-        word: Optional[str] = None,
+        word: Optional[str] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Remove a word from the trigger words list (server or target override)."""
         mention, word = parse_target_or_text(mention_or_word, word)
@@ -276,7 +284,9 @@ class TriggerSettings(MixinMeta):
 
     @trigger_words.command(name="clear")
     async def trigger_words_clear(
-        self, ctx: commands.Context, mention: Optional[COMPATIBLE_MENTIONS] = None
+        self,
+        ctx: commands.Context,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Clear a target's trigger-word override so it inherits broader settings."""
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
@@ -289,7 +299,7 @@ class TriggerSettings(MixinMeta):
         self,
         ctx: commands.Context,
         embed: discord.Embed,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         words = await get_effective_scoped_setting_for_target(
             self, ctx, mention, "always_reply_on_words"
@@ -317,7 +327,9 @@ class TriggerSettings(MixinMeta):
 
     @trigger_whitelist.command(name="add")
     async def trigger_whitelist_add(
-        self, ctx: commands.Context, new: Union[discord.Role, discord.Member]
+        self,
+        ctx: commands.Context,
+        new: Union[discord.Role, discord.Member],  # noqa: UP007 - Red evaluates command converters on Python 3.9
     ):
         """Add a role or user to the allowlist"""
         if isinstance(new, discord.Role):
@@ -341,7 +353,9 @@ class TriggerSettings(MixinMeta):
 
     @trigger_whitelist.command(name="remove")
     async def trigger_whitelist_remove(
-        self, ctx: commands.Context, rm: Union[discord.Role, discord.Member]
+        self,
+        ctx: commands.Context,
+        rm: Union[discord.Role, discord.Member],  # noqa: UP007 - Red evaluates command converters on Python 3.9
     ):
         """Remove a role or user from the allowlist"""
         if isinstance(rm, discord.Role):

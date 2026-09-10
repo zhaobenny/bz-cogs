@@ -14,6 +14,7 @@ def get_compare_range() -> str:
         ["git", "rev-parse", "--verify", "@{upstream}"],
         capture_output=True,
         text=True,
+        check=False,
     )
     if upstream.returncode == 0:
         return "@{upstream}..HEAD"
@@ -22,6 +23,7 @@ def get_compare_range() -> str:
         ["git", "rev-parse", "--verify", "HEAD^"],
         capture_output=True,
         text=True,
+        check=False,
     )
     if parent.returncode == 0:
         return "HEAD^..HEAD"
@@ -35,6 +37,7 @@ def get_changed_aiuser_files(diff_range: str):
         ["git", "diff", "--name-only", "--diff-filter=ACM", diff_range],
         capture_output=True,
         text=True,
+        check=False,
     )
     files = [f for f in result.stdout.strip().split("\n") if f]
     return [
@@ -50,6 +53,7 @@ def check_version_in_diff(diff_range: str):
         ["git", "diff", diff_range, "--", "aiuser/core/aiuser.py"],
         capture_output=True,
         text=True,
+        check=False,
     )
 
     diff_output = result.stdout

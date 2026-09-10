@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from abc import ABC
-from typing import Union
 
 import discord
 from aiohttp import ClientSession
@@ -27,10 +28,11 @@ class MixinMeta(ABC):
     async def generate_img2img(self, *args, **kwargs):
         pass
 
-    async def get_api_instance(self, ctx: Union[commands.Context, discord.Interaction]):
+    async def get_api_instance(self, ctx: commands.Context | discord.Interaction):
         pass
 
     async def _update_autocomplete_cache(
-        self, ctx: Union[commands.Context, discord.Interaction]
+        self,
+        ctx: commands.Context | discord.Interaction,
     ):
         pass

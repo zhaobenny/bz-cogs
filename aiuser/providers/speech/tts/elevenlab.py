@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import httpx
 from redbot.core import Config
 from redbot.core.bot import Red
@@ -19,7 +17,7 @@ DEFAULT_OUTPUT_FORMAT = "mp3_44100_128"
 
 
 async def generate(
-    bot: Red, config: Config, text: str, model: Optional[str], voice: Optional[str]
+    bot: Red, config: Config, text: str, model: str | None, voice: str | None
 ) -> bytes:
     tokens = await bot.get_shared_api_tokens("elevenlab")
     api_key = tokens.get("api_key")

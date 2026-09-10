@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import logging
-from typing import Optional
 
 from discord import Message, MessageType
 
@@ -8,7 +9,7 @@ from aiuser.utils.utilities import mention_to_text
 logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 
-def format_text_content(message: Message) -> Optional[str]:
+def format_text_content(message: Message) -> str | None:
     if message.type == MessageType.new_member:
         return f'User "{message.author.display_name}" has joined the server. Their Discord ID is {message.author.id}'
     if not message.content or message.content == "" or message.content.isspace():
@@ -37,6 +38,6 @@ async def format_sticker_content(message: Message) -> str:
         description = sticker.description or ""
         description_text = f' and description "{description}"' if description else ""
         return f'User "{message.author.display_name}" sent: [Sticker with name "{sticker.name}"{description_text}]'
-    except Exception:
+    except Exception:  # noqa: BLE001 - malformed sticker data should use the fallback formatter
         sticker_name = message.stickers[0].name
         return f'User "{message.author.display_name}" sent: [Sticker with name "{sticker_name}"]'

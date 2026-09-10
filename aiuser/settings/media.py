@@ -18,7 +18,6 @@ class MediaSettings(MixinMeta):
     @checks.is_owner()
     async def media(self, _):
         """Configure image and audio inputs"""
-        pass
 
     @media.command(name="show")
     async def media_show(self, ctx: commands.Context):
@@ -38,7 +37,6 @@ class MediaSettings(MixinMeta):
     @media.group(name="images", aliases=["image"])
     async def media_images(self, _):
         """Configure image processing"""
-        pass
 
     @media_images.command(name="show")
     async def media_images_show(self, ctx: commands.Context):
@@ -178,7 +176,6 @@ class MediaSettings(MixinMeta):
     @media.group(name="audio")
     async def media_audio(self, _):
         """Configure audio transcription"""
-        pass
 
     @media_audio.command(name="show")
     async def media_audio_show(self, ctx: commands.Context):

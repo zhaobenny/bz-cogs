@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from aiuser.functions.context import ToolContext
 
 
-async def generate(description: str, request: "ToolContext", endpoint: str) -> bytes:
+async def generate(description: str, request: ToolContext, endpoint: str) -> bytes:
     tokens = await request.services.bot.get_shared_api_tokens("gemini")
     api_key = tokens.get("apikey") or tokens.get("api_key")
     if not api_key:

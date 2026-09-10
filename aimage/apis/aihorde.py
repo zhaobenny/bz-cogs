@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import random
 import sys
-from typing import Union
 
 import discord
 from redbot.core import commands
@@ -36,7 +37,9 @@ AI_HORDE_SAMPLERS = [
 
 class AIHorde(BaseAPI):
     def __init__(
-        self, cog: MixinMeta, context: Union[commands.Context, discord.Interaction]
+        self,
+        cog: MixinMeta,
+        context: commands.Context | discord.Interaction,
     ):
         super().__init__(cog, context)
         cog.autocomplete_cache[self.guild.id]["samplers"] = AI_HORDE_SAMPLERS
@@ -62,10 +65,14 @@ class AIHorde(BaseAPI):
                 model["name"]
                 for model in sorted(res, key=lambda x: x["count"], reverse=True)
             ]
-        except Exception:
+        except Exception:  # noqa: BLE001, S110 - preserve the existing failure fallback
             pass
 
-    async def generate_image(self, params: ImageGenParams, payload: dict = None):
+    async def generate_image(
+        self,
+        params: ImageGenParams,
+        payload: dict | None = None,
+    ):
         if payload:
             payload["params"]["seed"] = str(
                 random.randint(-sys.maxsize - 1, sys.maxsize)
@@ -102,7 +109,7 @@ class AIHorde(BaseAPI):
 
         if res.status == 400:
             res = await res.json()
-            raise ValueError(f"{res['message']}: `{str(res.get('errors'))}`")
+            raise ValueError(f"{res['message']}: `{res.get('errors')!s}`")
 
         res.raise_for_status()
 

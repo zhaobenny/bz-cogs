@@ -1,5 +1,7 @@
+from __future__ import annotations
+
+import builtins
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
 
 import aiosqlite
 import numpy as np
@@ -9,7 +11,7 @@ from aiuser.providers.vectorstore.embeddings import embed_text
 
 
 class VectorStore:
-    def __init__(self, cog_data_path: Union[str, Path]):
+    def __init__(self, cog_data_path: str | Path):
         data_path = Path(cog_data_path)
         self.db_path = data_path / EMBEDDING_DB_NAME
         self.cache_path = data_path / EMBEDDING_CACHE_DIR_NAME
@@ -19,8 +21,8 @@ class VectorStore:
         guild_id: int,
         memory_name: str,
         memory_text: str,
-        user: Optional[str] = None,
-        channel: Optional[str] = None,
+        user: str | None = None,
+        channel: str | None = None,
     ) -> int:
         """Insert or update a memory and return its stable database ID."""
         for scope_name, scope_id in (("user", user), ("channel", channel)):
@@ -62,7 +64,7 @@ class VectorStore:
             await conn.commit()
             return memory_id
 
-    async def list(self, guild_id: int) -> List[Tuple[int, str]]:
+    async def list(self, guild_id: int) -> builtins.list[tuple[int, str]]:
         """List memory names for a guild."""
         async with aiosqlite.connect(self.db_path) as conn:
             cursor = await conn.execute(
@@ -75,7 +77,7 @@ class VectorStore:
 
     async def fetch_by_id(
         self, memory_id: int, guild_id: int
-    ) -> Optional[Tuple[str, str]]:
+    ) -> tuple[str, str] | None:
         """Fetch a memory by its stable database ID for the guild."""
         async with aiosqlite.connect(self.db_path) as conn:
             cursor = await conn.execute(
@@ -96,7 +98,7 @@ class VectorStore:
             return bool(cursor.rowcount)
 
     async def delete_user_memories(
-        self, user_id: int, guild_id: Optional[int] = None
+        self, user_id: int, guild_id: int | None = None
     ) -> int:
         """Delete memories scoped to a specific Discord user ID."""
         query = "DELETE FROM memories WHERE user = ?"
@@ -116,9 +118,9 @@ class VectorStore:
         query: str,
         guild_id: int,
         k: int = 1,
-        user: Optional[str] = None,
-        channel: Optional[str] = None,
-    ) -> List[Tuple[str, str, float]]:
+        user: str | None = None,
+        channel: str | None = None,
+    ) -> builtins.list[tuple[str, str, float]]:
         """Search all in-scope memories using embedding similarity."""
         where_clause = "guild_id = ?"
         params = [guild_id]

@@ -1,14 +1,16 @@
+from __future__ import annotations
+
 from typing import Optional
 
 import discord
 from redbot.core import commands
 
 from aiuser.functions import names
+from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
 from aiuser.settings.scope import (
     get_effective_scoped_setting_for_target,
     get_settings_target_scope,
 )
-from aiuser.settings.functions.utilities import FunctionToggleHelperMixin, functions
 from aiuser.settings.utilities import add_prompt_metrics_fields, truncate_prompt
 from aiuser.types.types import COMPATIBLE_MENTIONS
 
@@ -17,7 +19,6 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
     @functions.group(name="image", aliases=["imagerequest"])
     async def imagerequest(self, ctx: commands.Context):
         """Image generation function settings (per server)"""
-        pass
 
     @imagerequest.command(name="show")
     async def imagerequest_show(self, ctx: commands.Context):
@@ -95,7 +96,7 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
     async def imagerequest_preprompt(
         self,
         ctx: commands.Context,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Show the effective image preprompt for the server or a target"""
         mention_type, _ = get_settings_target_scope(self, ctx, mention)
@@ -113,7 +114,7 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
     async def imagerequest_preprompt_set(
         self,
         ctx: commands.Context,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
         *,
         preprompt: str,
     ):
@@ -138,7 +139,7 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
     async def imagerequest_preprompt_clear(
         self,
         ctx: commands.Context,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Clear an image preprompt so broader settings can apply"""
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)

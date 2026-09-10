@@ -113,7 +113,7 @@ async def bot_owner_server_config(self: MixinMeta, guild: discord.Guild, **kwarg
             await self.config.guild(guild).scan_images.set(scan_images)
             await self.config.guild(guild).function_calling.set(function_calling)
             await self.config.guild(guild).random_messages_enabled.set(random_messages)
-        except Exception:
+        except Exception:  # noqa: BLE001 - report configuration failures through the dashboard
             return {
                 "status": 1,
                 "notifications": [

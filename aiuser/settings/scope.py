@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple
-
 import discord
 from redbot.core import commands
 
@@ -24,8 +22,8 @@ SCOPED_TARGET_TYPES = (
 def get_settings_target_scope(
     cog: MixinMeta,
     ctx: commands.Context,
-    mention: Optional[COMPATIBLE_MENTIONS],
-) -> Tuple[MentionType, object]:
+    mention: COMPATIBLE_MENTIONS | None,
+) -> tuple[MentionType, object]:
     mention_type = get_mention_type(mention)
     return mention_type, get_config_attribute(cog.config, mention_type, ctx, mention)
 
@@ -36,7 +34,7 @@ def parse_target_or_value(first, second):
     return None, first
 
 
-def parse_target_or_text(first, rest: Optional[str]):
+def parse_target_or_text(first, rest: str | None):
     if isinstance(first, SCOPED_TARGET_TYPES):
         return first, (rest or "").strip()
 
@@ -48,7 +46,7 @@ def parse_target_or_text(first, rest: Optional[str]):
 async def get_broader_scoped_setting_for_target(
     cog: MixinMeta,
     ctx: commands.Context,
-    mention: Optional[COMPATIBLE_MENTIONS],
+    mention: COMPATIBLE_MENTIONS | None,
     attr_name: str,
 ):
     """Get the inherited value a scoped settings target would fall back to."""
@@ -75,7 +73,7 @@ async def get_broader_scoped_setting_for_target(
 async def get_effective_scoped_setting_for_target(
     cog: MixinMeta,
     ctx: commands.Context,
-    mention: Optional[COMPATIBLE_MENTIONS],
+    mention: COMPATIBLE_MENTIONS | None,
     attr_name: str,
 ):
     mention_type, config_attr = get_settings_target_scope(cog, ctx, mention)

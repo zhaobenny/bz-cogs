@@ -15,10 +15,12 @@ async def ask_wolfram_alpha(query: str, app_id: str, ctx: commands.Context):
     headers = {"user-agent": "Red-cog/2.0.0"}
 
     try:
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(url, params=payload) as response:
-                response.raise_for_status()
-                result = await response.text()
+        async with (
+            aiohttp.ClientSession(headers=headers) as session,
+            session.get(url, params=payload) as response,
+        ):
+            response.raise_for_status()
+            result = await response.text()
     except Exception:
         logger.exception("Asking Wolfram Alpha")
         return "An error occured while asking Wolfram Alpha."

@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 from openai import AsyncOpenAI
 from openai.types.chat import (
@@ -57,8 +57,8 @@ class OpenAICompatibleProvider(LLMProvider):
     async def create_chat_step(
         self,
         model: str,
-        messages: List[ChatCompletionMessageParam],
-        kwargs: Dict[str, Any],
+        messages: list[ChatCompletionMessageParam],
+        kwargs: dict[str, Any],
     ) -> ChatStepResult:
         request_kwargs = dict(kwargs)
         endpoint_kind = get_openai_compat_kind(
@@ -103,7 +103,7 @@ class OpenAICompatibleProvider(LLMProvider):
 
         message = choice.message
         tool_calls_raw = message.tool_calls
-        tool_calls: List[ChatCompletionMessageToolCall] = (
+        tool_calls: list[ChatCompletionMessageToolCall] = (
             list(tool_calls_raw) if tool_calls_raw else []
         )
         assistant_extra_fields = self._get_assistant_extra_fields(message)
@@ -116,8 +116,8 @@ class OpenAICompatibleProvider(LLMProvider):
 
     def _get_assistant_extra_fields(
         self, message: ChatCompletionMessage
-    ) -> Dict[str, Any]:
-        extra_fields: Dict[str, Any] = {}
+    ) -> dict[str, Any]:
+        extra_fields: dict[str, Any] = {}
         for field_name in ASSISTANT_EXTRA_FIELD_NAMES:
             value = getattr(message, field_name, None)
             if value is not None:

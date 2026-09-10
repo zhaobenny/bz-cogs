@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING
 
 import discord
 from redbot.core import commands
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
-async def is_valid_message(services: "AIUserServices", ctx: commands.Context) -> bool:
+async def is_valid_message(services: AIUserServices, ctx: commands.Context) -> bool:
     """
     Main validation chain that runs all checks in sequence.
     """
@@ -35,15 +35,15 @@ async def is_valid_message(services: "AIUserServices", ctx: commands.Context) ->
                 logger.debug(f"Validation failed at: {validation_type} - {reason}")
                 return False
         except Exception:
-            logger.error(f"Error in {validation_type} validation", exc_info=True)
+            logger.exception(f"Error in {validation_type} validation")
             return False
 
     return True
 
 
 async def check_guild_permissions(
-    services: "AIUserServices", ctx: commands.Context
-) -> Tuple[bool, str]:
+    services: AIUserServices, ctx: commands.Context
+) -> tuple[bool, str]:
     """Validate guild-level permissions and settings"""
     if not ctx.guild:
         return False, "Not in a guild"
@@ -65,8 +65,8 @@ async def check_guild_permissions(
 
 
 async def check_channel_settings(
-    services: "AIUserServices", ctx: commands.Context
-) -> Tuple[bool, str]:
+    services: AIUserServices, ctx: commands.Context
+) -> tuple[bool, str]:
     """Validate enabled reply channels and thread settings"""
     whitelist = await services.config.guild(ctx.guild).channels_whitelist()
     if not whitelist:
@@ -89,8 +89,8 @@ async def check_channel_settings(
 
 
 async def check_user_status(
-    services: "AIUserServices", ctx: commands.Context
-) -> Tuple[bool, str]:
+    services: AIUserServices, ctx: commands.Context
+) -> tuple[bool, str]:
     """Validate user permissions and opt-in status"""
     if ctx.author.id == services.bot.user.id:
         return False, "Ignoring self-authored bot message"
@@ -141,7 +141,7 @@ async def check_user_status(
         # Webhook messages have User objects instead of Member objects
         if isinstance(ctx.author, discord.Member):
             user_roles = (
-                set(role.id for role in ctx.author.roles) if ctx.author.roles else set()
+                {role.id for role in ctx.author.roles} if ctx.author.roles else set()
             )
         else:
             user_roles = set()
@@ -155,13 +155,14 @@ async def check_user_status(
 
 
 async def check_message_content(
-    services: "AIUserServices", ctx: commands.Context
-) -> Tuple[bool, str]:
+    services: AIUserServices, ctx: commands.Context
+) -> tuple[bool, str]:
     """Validate message content and format"""
     if not ctx.interaction:
-        if SINGULAR_MENTION_PATTERN.match(ctx.message.content):
-            if not await is_bot_mentioned_or_replied(services, ctx.message):
-                return False, "Single mention without bot reference"
+        if SINGULAR_MENTION_PATTERN.match(
+            ctx.message.content
+        ) and not await is_bot_mentioned_or_replied(services, ctx.message):
+            return False, "Single mention without bot reference"
 
         min_length = await services.resolver.resolve_for_ctx("messages_min_length", ctx)
         if 1 <= len(ctx.message.content) < min_length:
@@ -175,7 +176,7 @@ async def check_message_content(
 
 
 async def is_bot_mentioned_or_replied(
-    services: "AIUserServices", message: discord.Message
+    services: AIUserServices, message: discord.Message
 ) -> bool:
     """Check if message mentions or replies to bot"""
     if not await services.resolver.resolve_for_message(

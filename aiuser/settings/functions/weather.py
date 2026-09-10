@@ -9,7 +9,6 @@ class WeatherFunctionSettings(FunctionToggleHelperMixin):
     @functions.group(name="weather")
     async def weather(self, ctx: commands.Context):  # type: ignore[override]
         """Weather function settings (per server)"""
-        pass
 
     @weather.command(name="show")
     async def weather_show(self, ctx: commands.Context):
@@ -45,7 +44,6 @@ class WeatherFunctionSettings(FunctionToggleHelperMixin):
     @weather.group(name="location")
     async def weather_location(self, _):
         """Configure the location forecast tool."""
-        pass
 
     @weather_location.command(name="enable")
     async def weather_location_enable(self, ctx: commands.Context):
@@ -64,7 +62,6 @@ class WeatherFunctionSettings(FunctionToggleHelperMixin):
     @weather.group(name="daytime")
     async def weather_daytime(self, _):
         """Configure the daytime lookup tool."""
-        pass
 
     @weather_daytime.command(name="enable")
     async def weather_daytime_enable(self, ctx: commands.Context):

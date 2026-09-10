@@ -30,12 +30,12 @@ async def firecrawl_scrape(link: str, tool_context, max_chars: int) -> str:
         "removeBase64Images": True,
     }
 
-    async with aiohttp.ClientSession(
-        headers=headers, timeout=FIRECRAWL_TIMEOUT
-    ) as session:
-        async with session.post(FIRECRAWL_SCRAPE_URL, json=payload) as response:
-            response.raise_for_status()
-            data = await response.json()
+    async with (
+        aiohttp.ClientSession(headers=headers, timeout=FIRECRAWL_TIMEOUT) as session,
+        session.post(FIRECRAWL_SCRAPE_URL, json=payload) as response,
+    ):
+        response.raise_for_status()
+        data = await response.json()
 
     if not data.get("success", False):
         logger.debug("Firecrawl scrape failed for %s: %r", link, data)

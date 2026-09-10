@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 from openai.types.chat import ChatCompletionMessageParam
 
@@ -14,8 +14,8 @@ class CodexProvider(LLMProvider):
     async def create_chat_step(
         self,
         model: str,
-        messages: List[ChatCompletionMessageParam],
-        kwargs: Dict[str, Any],
+        messages: list[ChatCompletionMessageParam],
+        kwargs: dict[str, Any],
     ) -> ChatStepResult:
         content, tool_calls = await create_codex_response(
             self.config,

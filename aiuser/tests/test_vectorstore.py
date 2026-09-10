@@ -2,7 +2,6 @@ import pytest
 import pytest_asyncio
 
 # ./.venv/bin/python -m pytest aiuser/tests/test_vectorstore.py -q -s
-
 from aiuser.providers.vectorstore import VectorStore
 from aiuser.providers.vectorstore.schema import ensure_sqlite_db
 

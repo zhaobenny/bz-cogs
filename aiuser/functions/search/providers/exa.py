@@ -38,19 +38,20 @@ async def search(query: str, tool_context: ToolContext) -> str:
     headers = {"x-api-key": api_key, "Content-Type": "application/json"}
 
     try:
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.post(EXA_ENDPOINT, json=payload) as response:
-                logger.debug(
-                    f'Requesting Exa search for "{query}" in '
-                    f"{tool_context.ctx.guild.name}"
-                )
+        async with (
+            aiohttp.ClientSession(headers=headers) as session,
+            session.post(EXA_ENDPOINT, json=payload) as response,
+        ):
+            logger.debug(
+                f'Requesting Exa search for "{query}" in {tool_context.ctx.guild.name}'
+            )
 
-                if response.status >= 400:
-                    logger.debug(f"Exa response: {await response.text()}")
-                response.raise_for_status()
+            if response.status >= 400:
+                logger.debug(f"Exa response: {await response.text()}")
+            response.raise_for_status()
 
-                data = await response.json()
-                return format_results(data, results)
+            data = await response.json()
+            return format_results(data, results)
 
     except Exception:
         logger.exception("Failed request to Exa")

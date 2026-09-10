@@ -1,4 +1,4 @@
-from typing import Union
+from __future__ import annotations
 
 import discord
 from redbot.core import commands
@@ -9,7 +9,9 @@ from aimage.apis.response import ImageResponse
 
 class BaseAPI:
     def __init__(
-        self, cog: MixinMeta, context: Union[commands.Context, discord.Interaction]
+        self,
+        cog: MixinMeta,
+        context: commands.Context | discord.Interaction,
     ):
         self.session = cog.session
         self.config = cog.config

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 from typing import Optional
 
@@ -18,14 +20,13 @@ class ReplySettings(MixinMeta):
     @checks.admin_or_permissions(manage_guild=True)
     async def reply(self, _):
         """Configure when the bot replies"""
-        pass
 
     @reply.group(name="chance", invoke_without_command=True)
     @checks.is_owner()
     async def reply_chance(
         self,
         ctx: commands.Context,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Show the effective reply chance for the server or a target"""
         mention_type, _ = get_settings_target_scope(self, ctx, mention)
@@ -42,7 +43,7 @@ class ReplySettings(MixinMeta):
         self,
         ctx: commands.Context,
         percent: float,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Set the reply chance for the server or a target"""
         if percent < 0 or percent > 100:
@@ -74,7 +75,7 @@ class ReplySettings(MixinMeta):
     async def minimum_length(
         self,
         ctx: commands.Context,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Show the effective minimum message length for a target"""
         mention_type, _ = get_settings_target_scope(self, ctx, mention)
@@ -90,7 +91,7 @@ class ReplySettings(MixinMeta):
         self,
         ctx: commands.Context,
         length: int,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Set the minimum message length for the server or a target"""
         if length < 0:
@@ -140,13 +141,12 @@ class ReplySettings(MixinMeta):
     @checks.is_owner()
     async def followup(self, _):
         """Configure replies that continue a recent conversation"""
-        pass
 
     @followup.group(name="chance", invoke_without_command=True)
     async def followup_chance(
         self,
         ctx: commands.Context,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Show the effective conversation follow-up chance"""
         mention_type, _ = get_settings_target_scope(self, ctx, mention)
@@ -162,7 +162,7 @@ class ReplySettings(MixinMeta):
         self,
         ctx: commands.Context,
         percent: float,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Set the conversation follow-up chance"""
         if percent < 0 or percent > 100:
@@ -189,7 +189,7 @@ class ReplySettings(MixinMeta):
     async def followup_window(
         self,
         ctx: commands.Context,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Show the effective conversation follow-up window"""
         mention_type, _ = get_settings_target_scope(self, ctx, mention)
@@ -205,7 +205,7 @@ class ReplySettings(MixinMeta):
         self,
         ctx: commands.Context,
         seconds: int,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Set the conversation follow-up window"""
         if seconds < 0:
@@ -264,7 +264,7 @@ class ReplySettings(MixinMeta):
     async def mentions(
         self,
         ctx: commands.Context,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Show whether mentions and replies always trigger a response"""
         mention_type, _ = get_settings_target_scope(self, ctx, mention)
@@ -279,7 +279,7 @@ class ReplySettings(MixinMeta):
     async def mentions_enable(
         self,
         ctx: commands.Context,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Always reply to mentions and replies for the server or a target"""
         return await self._set_mentions(ctx, mention, True)
@@ -288,7 +288,7 @@ class ReplySettings(MixinMeta):
     async def mentions_disable(
         self,
         ctx: commands.Context,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Do not force replies to mentions for the server or a target"""
         return await self._set_mentions(ctx, mention, False)

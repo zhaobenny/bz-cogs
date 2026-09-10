@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from aiuser.functions.context import ToolContext
 
 
-async def generate(description: str, request: "ToolContext", endpoint: str) -> bytes:
+async def generate(description: str, request: ToolContext, endpoint: str) -> bytes:
     model = (
         await request.services.config.guild(
             request.ctx.guild

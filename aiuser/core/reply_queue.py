@@ -5,7 +5,7 @@ import logging
 import random
 from dataclasses import dataclass, replace
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import discord
 from redbot.core import commands
@@ -41,7 +41,7 @@ class MessageBurst:
     first_seen: float
     idle_seconds: float
     max_seconds: float
-    task: Optional[asyncio.Task] = None
+    task: asyncio.Task | None = None
 
     def refresh(
         self,
@@ -67,16 +67,16 @@ class MessageBurst:
 class ChannelReplyState:
     def __init__(self):
         self.lock = asyncio.Lock()
-        self.message_burst: Optional[MessageBurst] = None
-        self.pending_request: Optional[ResponseRequest] = None
-        self.drain_task: Optional[asyncio.Task] = None
+        self.message_burst: MessageBurst | None = None
+        self.pending_request: ResponseRequest | None = None
+        self.drain_task: asyncio.Task | None = None
         self.is_executing = False
-        self.last_bot_reply_at: Optional[datetime] = None
-        self.llm_session_id: Optional[str] = None
+        self.last_bot_reply_at: datetime | None = None
+        self.llm_session_id: str | None = None
 
     async def arm_burst(
         self,
-        services: "AIUserServices",
+        services: AIUserServices,
         ctx: commands.Context,
         reply_chance: float,
         mode: BurstMode,
@@ -123,7 +123,7 @@ class ChannelReplyState:
                 burst.cancel_timer()
 
     async def _close_burst_after(
-        self, services: "AIUserServices", channel_id: int, burst: MessageBurst
+        self, services: AIUserServices, channel_id: int, burst: MessageBurst
     ):
         now = asyncio.get_running_loop().time()
         delay = min(
@@ -154,7 +154,7 @@ class ChannelReplyState:
             ),
         )
 
-    async def enqueue(self, services: "AIUserServices", request: ResponseRequest):
+    async def enqueue(self, services: AIUserServices, request: ResponseRequest):
         async with self.lock:
             if self.is_executing:
                 if request.kind != ResponseKind.DIRECT:
@@ -175,7 +175,7 @@ class ChannelReplyState:
                     self._drain(services, request.channel_id)
                 )
 
-    async def _drain(self, services: "AIUserServices", channel_id: int):
+    async def _drain(self, services: AIUserServices, channel_id: int):
         try:
             while True:
                 async with self.lock:
@@ -217,13 +217,13 @@ class ChannelReplyState:
 
 
 def get_or_create_channel_reply_state(
-    services: "AIUserServices", channel_id: int
+    services: AIUserServices, channel_id: int
 ) -> ChannelReplyState:
     return services.reply_channel_states.setdefault(channel_id, ChannelReplyState())
 
 
 async def execute_response_request(
-    services: "AIUserServices", request: ResponseRequest
+    services: AIUserServices, request: ResponseRequest
 ) -> None:
     channel = services.bot.get_channel(request.channel_id)
     if channel is None:
@@ -253,8 +253,8 @@ async def execute_response_request(
 
 
 async def get_latest_history_anchor(
-    services: "AIUserServices", channel, request: ResponseRequest
-) -> Optional[discord.Message]:
+    services: AIUserServices, channel, request: ResponseRequest
+) -> discord.Message | None:
     if not request.include_latest_channel_context:
         return None
 
@@ -272,7 +272,7 @@ async def get_latest_history_anchor(
         return None
 
 
-def cancel_reply_state_tasks(services: "AIUserServices"):
+def cancel_reply_state_tasks(services: AIUserServices):
     for state in services.reply_channel_states.values():
         state.cancel_tasks()
     services.reply_channel_states.clear()

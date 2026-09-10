@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from aiuser.providers.llm.codex.oauth import is_codex_endpoint_mode
 from aiuser.providers.llm.codex.provider import CodexProvider
@@ -11,7 +13,7 @@ if TYPE_CHECKING:
     from aiuser.core.services import AIUserServices
 
 
-async def get_llm_provider(services: "AIUserServices") -> Optional[LLMProvider]:
+async def get_llm_provider(services: AIUserServices) -> LLMProvider | None:
     if await is_codex_endpoint_mode(services.config):
         return CodexProvider(services.config)
 
@@ -22,7 +24,7 @@ async def get_llm_provider(services: "AIUserServices") -> Optional[LLMProvider]:
     return OpenAICompatibleProvider(services.config, client)
 
 
-async def list_llm_models(services: "AIUserServices") -> list:
+async def list_llm_models(services: AIUserServices) -> list:
     provider = await get_llm_provider(services)
     if provider is None:
         return []

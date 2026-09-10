@@ -1,5 +1,5 @@
 import discord
-from redbot.core import commands, Config, checks
+from redbot.core import Config, checks, commands
 
 
 class oneletteronly(commands.Cog):

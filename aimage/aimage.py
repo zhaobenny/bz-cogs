@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import asyncio
 import logging
+import re
 from collections import defaultdict
 from copy import copy
-import re
-from typing import List, Union
+from typing import ClassVar, Optional
 
 import aiohttp
 import discord
@@ -67,7 +69,7 @@ class AImage(Settings, ImageHandler, commands.Cog, metaclass=CompositeMetaClass)
 
     async def object_autocomplete(
         self, interaction: discord.Interaction, current: str, choices: list
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         if not choices:
             await self._update_autocomplete_cache(interaction)
             return []
@@ -80,13 +82,13 @@ class AImage(Settings, ImageHandler, commands.Cog, metaclass=CompositeMetaClass)
 
     async def samplers_autocomplete(
         self, interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         choices = self.autocomplete_cache[interaction.guild_id].get("samplers") or []
         return await self.object_autocomplete(interaction, current, choices)
 
     async def loras_autocomplete(
         self, interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         choices = self.autocomplete_cache[interaction.guild_id].get("loras") or []
 
         if not choices:
@@ -118,7 +120,7 @@ class AImage(Settings, ImageHandler, commands.Cog, metaclass=CompositeMetaClass)
 
     async def style_autocomplete(
         self, interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         choices = self.autocomplete_cache[interaction.guild_id].get("styles") or []
 
         if current:
@@ -136,13 +138,13 @@ class AImage(Settings, ImageHandler, commands.Cog, metaclass=CompositeMetaClass)
 
     async def checkpoint_autocomplete(
         self, interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         choices = self.autocomplete_cache[interaction.guild_id].get("checkpoints") or []
         return await self.object_autocomplete(interaction, current, choices)
 
     async def vae_autocomplete(
         self, interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         choices = self.autocomplete_cache[interaction.guild_id].get("vaes") or []
         return await self.object_autocomplete(interaction, current, choices)
 
@@ -163,7 +165,7 @@ class AImage(Settings, ImageHandler, commands.Cog, metaclass=CompositeMetaClass)
             results.append(item)
         return results
 
-    _parameter_descriptions = {
+    _parameter_descriptions: ClassVar = {
         "prompt": "The prompt to generate an image from.",
         "negative_prompt": "Undesired terms go here.",
         "style": "Style to use",
@@ -178,7 +180,7 @@ class AImage(Settings, ImageHandler, commands.Cog, metaclass=CompositeMetaClass)
         "lora": "Shortcut to insert LoRA into the prompt.",
     }
 
-    _parameter_autocompletes = {
+    _parameter_autocompletes: ClassVar = {
         "sampler": samplers_autocomplete,
         "lora": loras_autocomplete,
         "checkpoint": checkpoint_autocomplete,
@@ -217,18 +219,18 @@ class AImage(Settings, ImageHandler, commands.Cog, metaclass=CompositeMetaClass)
         self,
         interaction: discord.Interaction,
         prompt: str,
-        negative_prompt: str = None,
-        style: str = None,
+        negative_prompt: Optional[str] = None,  # noqa: UP045 - Red evaluates command annotations on Python 3.9
+        style: Optional[str] = None,  # noqa: UP045 - Red evaluates command annotations on Python 3.9
         width: app_commands.Range[int, 256, 1536] = None,
         height: app_commands.Range[int, 256, 1536] = None,
         cfg: app_commands.Range[float, 1, 30] = None,
-        sampler: str = None,
+        sampler: Optional[str] = None,  # noqa: UP045 - Red evaluates command annotations on Python 3.9
         steps: app_commands.Range[int, 1, 150] = None,
         seed: app_commands.Range[int, -1, None] = -1,
         variation: app_commands.Range[float, 0, 1] = 0,
         variation_seed: app_commands.Range[int, -1, None] = -1,
-        checkpoint: str = None,
-        vae: str = None,
+        checkpoint: Optional[str] = None,  # noqa: UP045 - Red evaluates command annotations on Python 3.9
+        vae: Optional[str] = None,  # noqa: UP045 - Red evaluates command annotations on Python 3.9
         lora: str = "",
     ):
         """
@@ -236,7 +238,7 @@ class AImage(Settings, ImageHandler, commands.Cog, metaclass=CompositeMetaClass)
         """
         await interaction.response.defer(thinking=True)
 
-        ctx: commands.Context = await self.bot.get_context(interaction)  # noqa
+        ctx: commands.Context = await self.bot.get_context(interaction)
         if not await self._can_run_command(ctx, "imagine"):
             return await interaction.followup.send(
                 "You do not have permission to do this.", ephemeral=True
@@ -278,17 +280,17 @@ class AImage(Settings, ImageHandler, commands.Cog, metaclass=CompositeMetaClass)
         image: discord.Attachment,
         denoising: app_commands.Range[float, 0, 1],
         prompt: str,
-        negative_prompt: str = None,
-        style: str = None,
+        negative_prompt: Optional[str] = None,  # noqa: UP045 - Red evaluates command annotations on Python 3.9
+        style: Optional[str] = None,  # noqa: UP045 - Red evaluates command annotations on Python 3.9
         scale: app_commands.Range[float, 0.5, 2.0] = 1,
         cfg: app_commands.Range[float, 1, 30] = None,
-        sampler: str = None,
+        sampler: Optional[str] = None,  # noqa: UP045 - Red evaluates command annotations on Python 3.9
         steps: app_commands.Range[int, 1, 150] = None,
         seed: app_commands.Range[int, -1, None] = -1,
         variation: app_commands.Range[float, 0, 1] = 0,
         variation_seed: app_commands.Range[int, -1, None] = -1,
-        checkpoint: str = None,
-        vae: str = None,
+        checkpoint: Optional[str] = None,  # noqa: UP045 - Red evaluates command annotations on Python 3.9
+        vae: Optional[str] = None,  # noqa: UP045 - Red evaluates command annotations on Python 3.9
         lora: str = "",
     ):
         """
@@ -296,7 +298,7 @@ class AImage(Settings, ImageHandler, commands.Cog, metaclass=CompositeMetaClass)
         """
         await interaction.response.defer(thinking=True)
 
-        ctx: commands.Context = await self.bot.get_context(interaction)  # noqa
+        ctx: commands.Context = await self.bot.get_context(interaction)
         if not await self._can_run_command(ctx, "imagine"):
             return await interaction.followup.send(
                 "You do not have permission to do this.", ephemeral=True
@@ -344,7 +346,7 @@ class AImage(Settings, ImageHandler, commands.Cog, metaclass=CompositeMetaClass)
         fake_message = copy(ctx.message)
         fake_message.content = prefix + command_name
         command = ctx.bot.get_command(command_name)
-        fake_context: commands.Context = await ctx.bot.get_context(fake_message)  # noqa
+        fake_context: commands.Context = await ctx.bot.get_context(fake_message)
         try:
             can = await command.can_run(
                 fake_context, check_all_parents=True, change_permission_state=False
@@ -353,7 +355,7 @@ class AImage(Settings, ImageHandler, commands.Cog, metaclass=CompositeMetaClass)
             can = False
         return can
 
-    async def get_api_instance(self, ctx: Union[commands.Context, discord.Interaction]):
+    async def get_api_instance(self, ctx: commands.Context | discord.Interaction):
         api_type = await self.config.guild(ctx.guild).api_type()
         if api_type == API_Type.AUTOMATIC1111.value:
             from aimage.apis.a1111 import A1111
@@ -367,7 +369,8 @@ class AImage(Settings, ImageHandler, commands.Cog, metaclass=CompositeMetaClass)
         return instance
 
     async def _update_autocomplete_cache(
-        self, ctx: Union[commands.Context, discord.Interaction]
+        self,
+        ctx: commands.Context | discord.Interaction,
     ):
         api = await self.get_api_instance(ctx)
         try:
@@ -379,4 +382,3 @@ class AImage(Settings, ImageHandler, commands.Cog, metaclass=CompositeMetaClass)
             logger.debug(
                 f"Autocomplete terms is not supported by the api in server {ctx.guild.id}"
             )
-            pass

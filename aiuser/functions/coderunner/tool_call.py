@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import logging
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any
 
 import modal
 
@@ -36,8 +38,8 @@ class CodeRunnerToolCall(ToolCall):
     function_name = schema.function.name
 
     async def _handle(
-        self, tool_context: ToolContext, arguments: Dict[str, Any]
-    ) -> Optional[str]:
+        self, tool_context: ToolContext, arguments: dict[str, Any]
+    ) -> str | None:
         tokens = await tool_context.services.bot.get_shared_api_tokens("modal")
         token_id = tokens.get("token_id")
         token_secret = tokens.get("token_secret")
@@ -83,4 +85,4 @@ class CodeRunnerToolCall(ToolCall):
 
         except Exception as e:
             logger.warning("Failed to execute code on code runner", exc_info=e)
-            return f"Error executing code: \n {str(e)}"
+            return f"Error executing code: \n {e!s}"

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import re
 from typing import Optional, Union
@@ -26,7 +28,6 @@ class Settings:
         To get started, please add a channel to the whitelist with:
         `[p]aiemote allow <#channel>`
         """
-        pass
 
     @aiemote.command(name="whitelist")
     @checks.admin_or_permissions(manage_guild=True)
@@ -66,7 +67,9 @@ class Settings:
     @aiemote.command(name="remove", aliases=["rm"])
     @checks.admin_or_permissions(manage_guild=True)
     async def whitelist_remove(
-        self, ctx: commands.Context, channel: Union[discord.TextChannel, str]
+        self,
+        ctx: commands.Context,
+        channel: Union[discord.TextChannel, str],  # noqa: UP007 - Red evaluates command annotations on Python 3.9
     ):
         """Remove a channel from the whitelist
 
@@ -166,7 +169,6 @@ class Settings:
     @checks.is_owner()
     async def aiemote_owner(self, _):
         """Owner only commands for aiemote"""
-        pass
 
     async def _paginate_models(self, ctx: commands.Context, models: list):
         if not models:
@@ -196,7 +198,10 @@ class Settings:
     @aiemote_owner.command(name="model")
     @checks.is_owner()
     async def set_llm_model(
-        self, ctx: commands.Context, *, model_name: Optional[str] = None
+        self,
+        ctx: commands.Context,
+        *,
+        model_name: Optional[str] = None,  # noqa: UP045 - Red evaluates command annotations on Python 3.9
     ):
         """Sets the global LLM model for AIEmote reactions.
 
@@ -234,7 +239,7 @@ class Settings:
 
     @aiemote_owner.command()
     @checks.is_owner()
-    async def endpoint(self, ctx: commands.Context, url: Optional[str]):
+    async def endpoint(self, ctx: commands.Context, url: Optional[str]):  # noqa: UP045 - Red evaluates command annotations on Python 3.9
         """Sets the OpenAI endpoint to a custom url (must be OpenAI API compatible)
 
         **Arguments:**
@@ -261,7 +266,7 @@ class Settings:
         # test the endpoint works if not rollback
         try:
             _ = await self.aclient.models.list()
-        except Exception:
+        except Exception:  # noqa: BLE001 - preserve the existing failure fallback
             await self.config.custom_openai_endpoint.set(previous_url)
             return await ctx.send(
                 ":warning: Invalid endpoint. Please check logs for more information."
@@ -286,7 +291,10 @@ class Settings:
     @aiemote_owner.command(name="instruction", aliases=["extra_instruction", "extra"])
     @checks.is_owner()
     async def set_extra_instruction(
-        self, ctx: commands.Context, *, instruction: Optional[str]
+        self,
+        ctx: commands.Context,
+        *,
+        instruction: Optional[str],  # noqa: UP045 - Red evaluates command annotations on Python 3.9
     ):
         """Add additonal (prompting) instruction for the langauge model when picking an emoji
 
@@ -300,7 +308,7 @@ class Settings:
         return await ctx.tick(message="✅ Extra instruction updated")
 
     async def check_valid_emoji(self, ctx: commands.Context, emoji):
-        if emoji in EMOJI_DATA.keys():
+        if emoji in EMOJI_DATA:
             return True
         if not bool(re.fullmatch(self.MATCH_DISCORD_EMOJI_REGEX, emoji)):
             await ctx.send("Invalid emoji!")

@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from redbot.core import commands
 
@@ -12,7 +14,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser.memory")
 
 
 async def _canonical_scope_ids(
-    ctx: commands.Context, user: Optional[str], channel: Optional[str]
+    ctx: commands.Context, user: str | None, channel: str | None
 ):
     user_id = None
     channel_id = None
@@ -66,8 +68,8 @@ class SaveMemoryToolCall(ToolCall):
     )
 
     async def _handle(
-        self, tool_context: ToolContext, arguments: Dict[str, Any]
-    ) -> Optional[str]:
+        self, tool_context: ToolContext, arguments: dict[str, Any]
+    ) -> str | None:
         memory_name = arguments.get("memory_name")
         memory_text = arguments.get("memory_text")
         user = arguments.get("user")
@@ -125,8 +127,8 @@ class ReadMemoryToolCall(ToolCall):
     )
 
     async def _handle(
-        self, tool_context: ToolContext, arguments: Dict[str, Any]
-    ) -> Optional[str]:
+        self, tool_context: ToolContext, arguments: dict[str, Any]
+    ) -> str | None:
         search_query = arguments.get("search_query")
         user = arguments.get("user")
         channel = arguments.get("channel")

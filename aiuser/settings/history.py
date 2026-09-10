@@ -1,4 +1,5 @@
 import logging
+
 import discord
 from redbot.core import checks, commands
 
@@ -13,7 +14,6 @@ class HistorySettings(MixinMeta):
     @checks.is_owner()
     async def history(self, _):
         """Configure conversation context"""
-        pass
 
     @history.group(
         name="messages", aliases=["backread", "size"], invoke_without_command=True
@@ -76,7 +76,6 @@ class HistorySettings(MixinMeta):
     @history.group(name="compaction", aliases=["compact"])
     async def history_compaction(self, ctx: commands.Context):
         """Settings for dynamically squashing older messages to save tokens"""
-        pass
 
     @history_compaction.command(name="show")
     async def history_compaction_show(self, ctx: commands.Context):

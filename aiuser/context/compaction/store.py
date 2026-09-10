@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Optional, Union
 
 import aiosqlite
 
@@ -8,11 +9,11 @@ from aiuser.context.compaction.schema import ensure_compaction_db
 
 
 class CompactionStore:
-    def __init__(self, cog_data_path: Union[str, Path]):
+    def __init__(self, cog_data_path: str | Path):
         self.cog_data_path = Path(cog_data_path)
         self.db_path = self.cog_data_path / COMPACTION_DB_NAME
 
-    async def get_summary(self, guild_id: int, channel_id: int) -> Optional[str]:
+    async def get_summary(self, guild_id: int, channel_id: int) -> str | None:
         """Fetch the current compacted summary for a channel."""
         await ensure_compaction_db(str(self.db_path))
 
@@ -26,7 +27,7 @@ class CompactionStore:
 
     async def get_last_compacted_message_id(
         self, guild_id: int, channel_id: int
-    ) -> Optional[int]:
+    ) -> int | None:
         """Fetch the last compacted message ID for a channel."""
         await ensure_compaction_db(str(self.db_path))
 
@@ -43,7 +44,7 @@ class CompactionStore:
         guild_id: int,
         channel_id: int,
         summary: str,
-        last_compacted_message_id: Optional[int] = None,
+        last_compacted_message_id: int | None = None,
     ):
         """Update or insert the compacted summary for a channel."""
         await ensure_compaction_db(str(self.db_path))

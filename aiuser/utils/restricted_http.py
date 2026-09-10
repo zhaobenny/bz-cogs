@@ -1,7 +1,7 @@
 import asyncio
 import ipaddress
 import json
-from typing import Any
+from typing import Any, ClassVar
 from urllib.parse import urlsplit
 
 import aiohttp
@@ -26,7 +26,7 @@ class RestrictedHTTP:
     )
     BODY_READ_TIMEOUT = 5
     MAX_BODY_BYTES = 8 * 1024 * 1024
-    SCRAPE_HEADERS = {
+    SCRAPE_HEADERS: ClassVar[dict[str, str]] = {
         "Cache-Control": "no-cache",
         "Referer": "https://www.google.com/",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",

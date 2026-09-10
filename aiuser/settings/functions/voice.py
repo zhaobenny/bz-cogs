@@ -1,4 +1,4 @@
-from typing import Optional
+from __future__ import annotations
 
 import discord
 from redbot.core import commands
@@ -23,7 +23,7 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
 
     async def _restore_voice_provider_settings(
         self, guild_conf, provider: str
-    ) -> tuple[Optional[str], Optional[str], bool]:
+    ) -> tuple[str | None, str | None, bool]:
         history = await guild_conf.function_calling_voice_provider_history()
         saved_settings = history.get(provider)
         restored = saved_settings is not None
@@ -42,7 +42,6 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
     @functions.group(name="voice")
     async def functions_voice(self, ctx: commands.Context):
         """Voice generation function settings (per server)."""
-        pass
 
     @functions_voice.command(name="show")
     async def show_voice_function(self, ctx: commands.Context):

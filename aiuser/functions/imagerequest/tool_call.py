@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import io
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import discord
 
@@ -35,8 +37,8 @@ class ImageRequestToolCall(ToolCall):
     function_name = schema.function.name
 
     async def _handle(
-        self, tool_context: ToolContext, arguments: Dict[str, Any]
-    ) -> Optional[str]:
+        self, tool_context: ToolContext, arguments: dict[str, Any]
+    ) -> str | None:
         ctx = tool_context.ctx
         config = tool_context.services.config
 
@@ -71,7 +73,7 @@ class ImageRequestToolCall(ToolCall):
         return "The requested image was generated and was sent."
 
 
-async def _pick_image_preprompt(tool_context: ToolContext) -> Optional[str]:
+async def _pick_image_preprompt(tool_context: ToolContext) -> str | None:
     """Select the image preprompt via member > role > channel > guild"""
     ctx = tool_context.ctx
     return await tool_context.services.resolver.resolve(

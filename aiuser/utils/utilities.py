@@ -2,8 +2,9 @@ import asyncio
 import functools
 import logging
 import random
+from collections.abc import Coroutine
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 import discord
 import tiktoken
@@ -133,9 +134,9 @@ async def format_variables(
 
     servername = ctx.guild.name
     channelname = ctx.message.channel.name
-    currentdate = datetime.today().strftime("%Y/%m/%d")
-    currentweekday = datetime.today().strftime("%A")
-    currenttime = datetime.today().strftime("%H:%M")
+    currentdate = datetime.now().astimezone().strftime("%Y/%m/%d")
+    currentweekday = datetime.now().astimezone().strftime("%A")
+    currenttime = datetime.now().astimezone().strftime("%H:%M")
 
     randomnumber = random.randint(0, 100)
 
@@ -173,7 +174,7 @@ async def format_variables(
         res = text.format(**format_values)
         return res
     except (KeyError, ValueError, IndexError):
-        logger.exception("Invalid format string in message", exc_info=True)
+        logger.exception("Invalid format string in message")
         return text
 
 
@@ -199,13 +200,11 @@ def mention_to_text(message: Message) -> str:
 
 
 def is_embed_valid(message: Message):
-    if (
-        (len(message.embeds) == 0)
-        or (not message.embeds[0].title)
-        or (not message.embeds[0].description)
-    ):
-        return False
-    return True
+    return not (
+        len(message.embeds) == 0
+        or not message.embeds[0].title
+        or not message.embeds[0].description
+    )
 
 
 async def wait_for_embed(ctx: commands.Context) -> commands.Context:

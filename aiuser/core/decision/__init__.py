@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, IntEnum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import discord
 from redbot.core import commands
@@ -38,8 +38,8 @@ class ReplyDecision:
 
 
 async def decide_response(
-    services: "AIUserServices", ctx: commands.Context, message: discord.Message
-) -> Optional[ReplyDecision]:
+    services: AIUserServices, ctx: commands.Context, message: discord.Message
+) -> ReplyDecision | None:
     """Will the bot reply to this message, and how?"""
     if not await is_valid_message(services, ctx):
         return None
@@ -58,7 +58,7 @@ async def decide_response(
     return None
 
 
-async def get_percentage(services: "AIUserServices", ctx: commands.Context) -> float:
+async def get_percentage(services: AIUserServices, ctx: commands.Context) -> float:
     """Get reply percentage based on member/role/channel/guild settings"""
     percentage = await services.resolver.resolve_for_ctx("reply_percent", ctx)
     if percentage is None:

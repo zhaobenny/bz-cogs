@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import timedelta
-from typing import TYPE_CHECKING, List, Optional, Set
+from typing import TYPE_CHECKING
 
 import discord
 from redbot.core import commands
@@ -34,9 +34,9 @@ class ConversationAssembler:
 
     def __init__(
         self,
-        services: "AIUserServices",
+        services: AIUserServices,
         ctx: commands.Context,
-        history_anchor: Optional[discord.Message] = None,
+        history_anchor: discord.Message | None = None,
     ):
         self.services = services
         self.bot_id: int = self.services.bot.user.id
@@ -46,10 +46,10 @@ class ConversationAssembler:
         self.history_anchor: discord.Message = history_anchor or ctx.message
         self.converter = MessageConverter(services, ctx)
         self._optin_by_default = False
-        self._seen_ids: Set[int] = set()
-        self.summary: Optional[str] = None
-        self.undecided_users: Set[discord.Member] = set()
-        self.compaction_candidates: List[discord.Message] = []
+        self._seen_ids: set[int] = set()
+        self.summary: str | None = None
+        self.undecided_users: set[discord.Member] = set()
+        self.compaction_candidates: list[discord.Message] = []
 
     async def build(self) -> Conversation:
         guild_conf = self.services.config.guild(self.guild)
@@ -109,7 +109,7 @@ class ConversationAssembler:
 
     # --- memory ---
 
-    async def _fetch_relevant_memory(self) -> Optional[str]:
+    async def _fetch_relevant_memory(self) -> str | None:
         if not await self.services.config.guild(self.guild).query_memories():
             return None
         return await fetch_relevant_memory(
@@ -130,23 +130,23 @@ class ConversationAssembler:
             return False
         if not await self.services.bot.allowed_by_whitelist_blacklist(message.author):
             return False
-        if message.author.id != self.bot_id and not self.services.consent.allows(
-            message.author.id, optin_by_default=self._optin_by_default
-        ):
-            return False
-
-        return True
+        return not (
+            message.author.id != self.bot_id
+            and not self.services.consent.allows(
+                message.author.id, optin_by_default=self._optin_by_default
+            )
+        )
 
     async def _convert_message(
         self, message: discord.Message
-    ) -> Optional[List[MessageEntry]]:
+    ) -> list[MessageEntry] | None:
         if not await self._should_include(message):
             return None
 
         self._seen_ids.add(message.id)
         return await self.converter.convert(message) or []
 
-    async def _select_history_window(self) -> List[discord.Message]:
+    async def _select_history_window(self) -> list[discord.Message]:
         """Pick the gap-bounded window of past messages, oldest first."""
         guild_conf = self.services.config.guild(self.guild)
         limit = await guild_conf.messages_backread()
@@ -177,7 +177,7 @@ class ConversationAssembler:
             self.guild, past_messages[:10]
         )
 
-        window: List[discord.Message] = []
+        window: list[discord.Message] = []
         for message, older_message in zip(past_messages, past_messages[1:]):
             window.append(message)
             if not self._within_gap(message, older_message, max_seconds_gap):
@@ -187,8 +187,8 @@ class ConversationAssembler:
         return await self._drop_compacted(window)
 
     async def _drop_compacted(
-        self, window: List[discord.Message]
-    ) -> List[discord.Message]:
+        self, window: list[discord.Message]
+    ) -> list[discord.Message]:
         store = self.services.compaction_store
         manager = self.services.compaction_manager
         if not store or not manager:

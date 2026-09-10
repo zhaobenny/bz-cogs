@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING
 
 from discord import Message
 from redbot.core import commands
@@ -32,14 +32,14 @@ logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 
 class MessageConverter:
-    def __init__(self, services: "AIUserServices", ctx: commands.Context):
+    def __init__(self, services: AIUserServices, ctx: commands.Context):
         self.services = services
         self.bot_id: int = services.bot.user.id
         self.ctx = ctx
 
-    async def convert(self, message: Message) -> Optional[List[MessageEntry]]:
+    async def convert(self, message: Message) -> list[MessageEntry] | None:
         """Converts a Discord message to ChatML format message(s)"""
-        res: List[MessageEntry] = []
+        res: list[MessageEntry] = []
         role = "user" if message.author.id != self.bot_id else "assistant"
         if message.attachments:
             await self.handle_attachment(message, res, role)
@@ -57,7 +57,7 @@ class MessageConverter:
         return res or None
 
     async def handle_attachment(
-        self, message: Message, res: List[MessageEntry], role: str
+        self, message: Message, res: list[MessageEntry], role: str
     ):
         attachment = message.attachments[0]
         image_attachments = [
@@ -103,7 +103,7 @@ class MessageConverter:
         await self.add_entry(format_text_content(message), res, role)
         await self.add_entry(content, res, role)
 
-    async def handle_embed(self, message: Message, res: List[MessageEntry], role: str):
+    async def handle_embed(self, message: Message, res: list[MessageEntry], role: str):
         content = await format_embed_content(
             self.services.config, self.services.bot, message
         )
@@ -115,7 +115,7 @@ class MessageConverter:
             await self.add_entry(content, res, role)
 
     async def add_entry(
-        self, content: Optional[Union[str, list]], res: List[MessageEntry], role: str
+        self, content: str | list | None, res: list[MessageEntry], role: str
     ):
         if not content:
             return

@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import io
 import logging
 import random
-from typing import Union
 
 import aiohttp
 import discord
@@ -20,8 +21,8 @@ logger = logging.getLogger("red.bz_cogs.aimage")
 class ImageHandler(MixinMeta):
     async def _execute_image_generation(
         self,
-        context: Union[commands.Context, discord.Interaction],
-        payload: dict = None,
+        context: commands.Context | discord.Interaction,
+        payload: dict | None = None,
         params: ImageGenParams = None,
         generate_method: str = "generate_image",
     ):
@@ -106,18 +107,21 @@ class ImageHandler(MixinMeta):
             asyncio.create_task(self._update_autocomplete_cache(context))
 
         imagescanner = self.bot.get_cog("ImageScanner")
-        if imagescanner and response.extension == "png":
-            if context.channel.id in imagescanner.scan_channels:
-                imagescanner.image_cache[msg.id] = (
-                    {0: response.info_string},
-                    {0: response.data},
-                )
-                await msg.add_reaction("🔎")
+        if (
+            imagescanner
+            and response.extension == "png"
+            and context.channel.id in imagescanner.scan_channels
+        ):
+            imagescanner.image_cache[msg.id] = (
+                {0: response.info_string},
+                {0: response.data},
+            )
+            await msg.add_reaction("🔎")
 
     async def generate_image(
         self,
-        context: Union[commands.Context, discord.Interaction],
-        payload: dict = None,
+        context: commands.Context | discord.Interaction,
+        payload: dict | None = None,
         params: ImageGenParams = None,
     ):
         await self._execute_image_generation(context, payload, params, "generate_image")
@@ -125,7 +129,7 @@ class ImageHandler(MixinMeta):
     async def generate_img2img(
         self,
         context: discord.Interaction,
-        payload: dict = None,
+        payload: dict | None = None,
         params: ImageGenParams = None,
     ):
         await self._execute_image_generation(

@@ -6,7 +6,7 @@ back when building conversation context.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from aiuser.core.services import AIUserServices
@@ -15,14 +15,12 @@ AUDIO_TRANSCRIPT_CACHE_NAMESPACE = "audio_transcript"
 
 
 def cache_audio_transcript(
-    services: "AIUserServices", message_id: int, transcript: str
+    services: AIUserServices, message_id: int, transcript: str
 ) -> None:
     services.context_cache[(AUDIO_TRANSCRIPT_CACHE_NAMESPACE, message_id)] = (
         f'[Voice message: "{transcript}"]'
     )
 
 
-def cached_audio_transcript(
-    services: "AIUserServices", message_id: int
-) -> Optional[str]:
+def cached_audio_transcript(services: AIUserServices, message_id: int) -> str | None:
     return services.context_cache[(AUDIO_TRANSCRIPT_CACHE_NAMESPACE, message_id)]

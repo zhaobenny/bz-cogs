@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import asyncio
 from collections import OrderedDict
-from typing import Optional
 
 import discord
 from redbot.core.bot import Red
@@ -89,7 +90,7 @@ class ImageActions(discord.ui.View):
         if not self.is_finished():
             try:
                 await interaction.message.edit(view=self)
-            except Exception:
+            except Exception:  # noqa: BLE001, S110 - preserve the existing failure fallback
                 pass
 
     async def variation_image(self, interaction: discord.Interaction):
@@ -128,7 +129,7 @@ class ImageActions(discord.ui.View):
 
         self.stop()
 
-    def get_params_dict(self) -> Optional[dict]:
+    def get_params_dict(self) -> dict | None:
         if "Steps: " not in self.info_string:
             return None
         output_dict = OrderedDict()
@@ -137,7 +138,7 @@ class ImageActions(discord.ui.View):
             output_dict["Prompt"], output_dict["Negative Prompt"] = prompts.rsplit(
                 "Negative prompt: ", 1
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 - preserve the existing failure fallback
             output_dict["Prompt"] = prompts
         params = f"Steps: {params},"
         params = PARAM_GROUP_REGEX.sub("", params)
@@ -153,7 +154,7 @@ class ImageActions(discord.ui.View):
                 output_dict[key] = output_dict[key][:1000] + "..."
         return output_dict
 
-    async def _get_params_embed(self) -> Optional[discord.Embed]:
+    async def _get_params_embed(self) -> discord.Embed | None:
         params = self.get_params_dict()
         if not params:
             return None

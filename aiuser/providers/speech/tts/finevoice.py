@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional
 
 import httpx
 from redbot.core import Config
@@ -15,7 +14,7 @@ DEFAULT_VOICE = "james"
 
 
 async def generate(
-    bot: Red, config: Config, text: str, model: Optional[str], voice: Optional[str]
+    bot: Red, config: Config, text: str, model: str | None, voice: str | None
 ) -> bytes:
     tokens = await bot.get_shared_api_tokens("finevoice")
     api_key = tokens.get("api_key")
