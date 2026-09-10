@@ -58,7 +58,7 @@ async def opt_consent(self, user: discord.User, **kwargs):
                 await self.services.consent.opt_in(user.id)
             elif form.reject.data:
                 await self.services.consent.opt_out(user.id)
-        except Exception:
+        except Exception:  # noqa: BLE001 - report configuration failures through the dashboard
             return {
                 "status": 1,
                 "notifications": [

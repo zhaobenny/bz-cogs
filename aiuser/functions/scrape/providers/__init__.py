@@ -1,6 +1,7 @@
 """Scrape provider registry."""
 
-from typing import Awaitable, Callable
+from collections.abc import Awaitable
+from typing import Callable
 
 from aiuser.functions.context import ToolContext
 from aiuser.functions.scrape.providers import firecrawl, local

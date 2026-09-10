@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import httpx
 from openai import AsyncOpenAI
@@ -19,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("red.bz_cogs.aiuser.providers.llm")
 
 
-async def get_openai_client(services: "AIUserServices") -> Optional[AsyncOpenAI]:
+async def get_openai_client(services: AIUserServices) -> AsyncOpenAI | None:
     if services.openai_client is None:
         services.openai_client = await setup_openai_client(
             services.bot, services.config
@@ -27,7 +29,7 @@ async def get_openai_client(services: "AIUserServices") -> Optional[AsyncOpenAI]
     return services.openai_client
 
 
-async def invalidate_openai_client(services: "AIUserServices") -> None:
+async def invalidate_openai_client(services: AIUserServices) -> None:
     old = services.openai_client
     services.openai_client = None
     if old:
@@ -37,8 +39,8 @@ async def invalidate_openai_client(services: "AIUserServices") -> None:
 async def setup_openai_client(
     bot: Red,
     config: Config,
-    base_url: Optional[str] = None,
-) -> Optional[AsyncOpenAI]:
+    base_url: str | None = None,
+) -> AsyncOpenAI | None:
     if base_url is None and await is_codex_endpoint_mode(config):
         return None
 

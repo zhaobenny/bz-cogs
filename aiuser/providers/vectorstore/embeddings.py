@@ -1,7 +1,6 @@
 import shutil
 import threading
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 import tiktoken
@@ -16,7 +15,7 @@ from aiuser.config.constants import (
 from aiuser.utils.utilities import encode_text_to_tokens, to_thread
 
 # loading the ONNX model takes seconds, so keep one instance per cache folder
-_models: Dict[str, TextEmbedding] = {}
+_models: dict[str, TextEmbedding] = {}
 _models_lock = threading.Lock()
 
 

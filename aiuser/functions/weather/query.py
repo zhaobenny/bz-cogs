@@ -40,10 +40,12 @@ WMO_DESCRIPTIONS = {
 
 
 async def get_endpoint_data(url, params):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, params=params) as response:
-            response.raise_for_status()
-            return await response.json()
+    async with (
+        aiohttp.ClientSession() as session,
+        session.get(url, params=params) as response,
+    ):
+        response.raise_for_status()
+        return await response.json()
 
 
 async def get_weather(location: str, days=1):
@@ -145,7 +147,7 @@ async def find_lat_lon(location: str):
     response = await get_endpoint_data(METEO_GEOCODE_URL, params)
 
     if not (response.get("results", False)):
-        raise Exception("Location not found")
+        raise Exception("Location not found")  # noqa: TRY002 - surfaced as provider failure
 
     location = response["results"][0]
     if qualifier:

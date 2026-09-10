@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 import logging
 import random
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING
 
 import discord
 from discord.ext import tasks
@@ -28,7 +28,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 class RandomMessageTask:
     """Owned by the cog (constructed in cog_load, cancelled in cog_unload)."""
 
-    def __init__(self, services: "AIUserServices"):
+    def __init__(self, services: AIUserServices):
         self.services = services
 
     def start(self):
@@ -59,10 +59,10 @@ class RandomMessageTask:
                     f"Failed random message processing for guild {guild_id}, continuing"
                 )
 
-    async def _maybe_send_random_message(self, guild_id: int, channels: List[int]):
+    async def _maybe_send_random_message(self, guild_id: int, channels: list[int]):
         try:
             last, ctx = await self._get_discord_context(guild_id, channels)
-        except Exception:
+        except Exception:  # noqa: BLE001 - skip this guild when context or eligibility checks fail
             return
 
         guild = last.guild
@@ -97,8 +97,8 @@ class RandomMessageTask:
             await generate_and_send(self.services, ctx, conversation, can_reply=False)
 
     async def _get_discord_context(
-        self, guild_id: int, channels: List[int]
-    ) -> Tuple[discord.Message, commands.Context]:
+        self, guild_id: int, channels: list[int]
+    ) -> tuple[discord.Message, commands.Context]:
         guild = self.services.bot.get_guild(guild_id)
 
         if not channels:
@@ -124,7 +124,7 @@ class RandomMessageTask:
         try:
             if not (await self.services.bot.ignored_channel_or_guild(last)):
                 return False
-        except Exception:
+        except Exception:  # noqa: BLE001 - skip this guild when context or eligibility checks fail
             return False
 
         if not await self.services.config.guild(guild).random_messages_enabled():
@@ -146,8 +146,5 @@ class RandomMessageTask:
                 datetime.datetime.now(datetime.timezone.utc) - last_created
             ).total_seconds()
         )
-        if seconds_since_last < 3600:
-            # only sent to channels with 1 hour since last message
-            return False
-
-        return True
+        # Only send to channels with at least 1 hour since the last message.
+        return seconds_since_last >= 3600

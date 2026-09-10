@@ -2,9 +2,9 @@ import discord
 from redbot.core import commands
 
 from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
+from aiuser.config.model_info import get_model_info
 from aiuser.functions import names
 from aiuser.providers.speech.tts import DEFAULT_MODELS, DEFAULT_VOICES
-from aiuser.config.model_info import get_model_info
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
 from aiuser.settings.functions.memory import MemoryFunctionSettings
 from aiuser.settings.functions.scrape import ScrapeFunctionSettings
@@ -160,12 +160,10 @@ class FunctionCallingSettings(
 
         for em in embeds:
             await ctx.send(embed=em)
-        return
 
     @functions.group(name="discord")
     async def functions_discord(self, ctx: commands.Context):
         """Configure native Discord tools."""
-        pass
 
     @functions_discord.command(name="show")
     async def show_discord_functions(self, ctx: commands.Context):
@@ -189,7 +187,6 @@ class FunctionCallingSettings(
     @functions_discord.group(name="reactions", aliases=["react", "reaction"])
     async def functions_discord_reactions(self, _):
         """Configure the Discord reaction tool."""
-        pass
 
     @functions_discord_reactions.command(name="enable")
     async def enable_discord_reaction_function(self, ctx: commands.Context):
@@ -208,7 +205,6 @@ class FunctionCallingSettings(
     @functions_discord.group(name="info")
     async def functions_discord_info(self, _):
         """Configure the Discord information tool."""
-        pass
 
     @functions_discord_info.command(name="enable")
     async def enable_discord_info_function(self, ctx: commands.Context):

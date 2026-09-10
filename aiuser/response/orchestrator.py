@@ -4,7 +4,7 @@ already has one), run the LLM pipeline, deliver the result."""
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Dict, Optional, Tuple
+from typing import TYPE_CHECKING
 
 from redbot.core import commands
 
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
-_FAILURE_FEEDBACK: Dict[PipelineError, Tuple[str, str]] = {
+_FAILURE_FEEDBACK: dict[PipelineError, tuple[str, str]] = {
     PipelineError.NO_PROVIDER: ("⚠️", "`aiuser` has no LLM backend available"),
     PipelineError.TIMED_OUT: ("💤", "`aiuser` request timed out"),
     PipelineError.RATE_LIMITED: ("💤", "`aiuser` request ratelimited"),
@@ -32,9 +32,9 @@ _FAILURE_FEEDBACK: Dict[PipelineError, Tuple[str, str]] = {
 
 
 async def build_and_respond(
-    services: "AIUserServices",
+    services: AIUserServices,
     ctx: commands.Context,
-    history_anchor: Optional["discord.Message"] = None,
+    history_anchor: discord.Message | None = None,
 ) -> None:
     assembler = ConversationAssembler(services, ctx, history_anchor=history_anchor)
     async with ctx.message.channel.typing():
@@ -53,7 +53,7 @@ async def build_and_respond(
 
 
 async def generate_and_send(
-    services: "AIUserServices",
+    services: AIUserServices,
     ctx: commands.Context,
     conversation: Conversation,
     can_reply: bool = True,

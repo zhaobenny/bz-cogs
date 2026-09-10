@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import io
 import logging
 import re
-from typing import Any, Dict, Optional
+from typing import Any
 
 import discord
 
@@ -57,8 +59,8 @@ class VoiceRequestToolCall(ToolCall):
     function_name = schema.function.name
 
     async def _handle(
-        self, tool_context: ToolContext, arguments: Dict[str, Any]
-    ) -> Optional[str]:
+        self, tool_context: ToolContext, arguments: dict[str, Any]
+    ) -> str | None:
         text = str(arguments.get("text") or "").strip()
         if not text:
             return "No text was provided for voice generation."

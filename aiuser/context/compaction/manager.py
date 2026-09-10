@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, List, Set
+from typing import TYPE_CHECKING
 
 import discord
 from redbot.core import commands
@@ -23,13 +23,13 @@ Exclude noise, completely off-topic chitchat, and minor details. Keep the summar
 
 
 class CompactionManager:
-    def __init__(self, services: "AIUserServices"):
+    def __init__(self, services: AIUserServices):
         self.services = services
         self.compaction_store = services.compaction_store
-        self._compaction_locks: Set[int] = set()
+        self._compaction_locks: set[int] = set()
 
     async def check_and_run_compaction(
-        self, ctx: commands.Context, messages: List[discord.Message]
+        self, ctx: commands.Context, messages: list[discord.Message]
     ):
         """Check if compaction should run based on messages_backread threshold.
 
@@ -73,7 +73,7 @@ class CompactionManager:
             asyncio.create_task(self._run_compaction(ctx, to_compact))
 
     async def _run_compaction(
-        self, ctx: commands.Context, past_messages: List[discord.Message]
+        self, ctx: commands.Context, past_messages: list[discord.Message]
     ):
         try:
             guild_id = ctx.guild.id
@@ -84,7 +84,7 @@ class CompactionManager:
             )
 
             converter = MessageConverter(self.services, ctx)
-            new_msgs_text: List[str] = []
+            new_msgs_text: list[str] = []
 
             # Format the messages block chronologically (oldest first)
             for msg in past_messages:

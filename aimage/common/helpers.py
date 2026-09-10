@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import asyncio
-from typing import Union
 
 import aiohttp
 import discord
@@ -9,14 +10,15 @@ from aimage.common.constants import VIEW_TIMEOUT
 
 
 async def send_response(
-    context: Union[commands.Context, discord.Interaction], **kwargs
+    context: commands.Context | discord.Interaction,
+    **kwargs,
 ) -> discord.Message:
     if isinstance(context, discord.Interaction):
         return await context.followup.send(**kwargs)
     else:
         try:
             await context.message.remove_reaction("⏳", context.bot.user)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110 - preserve the existing failure fallback
             pass
         return await context.send(**kwargs)
 
@@ -30,7 +32,7 @@ async def delete_button_after(msg: discord.Message):
     await asyncio.sleep(VIEW_TIMEOUT)
     try:
         await msg.edit(view=None)
-    except Exception:
+    except Exception:  # noqa: BLE001 - preserve the existing failure fallback
         return
 
 

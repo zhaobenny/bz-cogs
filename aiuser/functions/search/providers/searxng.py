@@ -2,7 +2,8 @@ import json
 import logging
 import ssl
 import unicodedata
-from typing import Awaitable, Callable
+from collections.abc import Awaitable
+from typing import Callable
 
 import aiohttp
 
@@ -54,21 +55,21 @@ class SearXNGQuery:
         ssl_context.verify_mode = ssl.CERT_NONE
 
         try:
-            async with aiohttp.ClientSession(headers=headers) as session:
-                async with session.get(
-                    self.endpoint, params=params, ssl=ssl_context
-                ) as response:
-                    response.raise_for_status()
-                    logger.debug(
-                        f'Requesting {response.real_url} from search query "{self.query}" in {self.guild}'
-                    )
+            async with (
+                aiohttp.ClientSession(headers=headers) as session,
+                session.get(self.endpoint, params=params, ssl=ssl_context) as response,
+            ):
+                response.raise_for_status()
+                logger.debug(
+                    f'Requesting {response.real_url} from search query "{self.query}" in {self.guild}'
+                )
 
-                    if response.content_type != "application/json":
-                        logger.debug(f"Reponse: {await response.text()}")
-                        return "An error occured while searching."
-                    else:
-                        data = await response.json()
-                        return await self.process_search_results(data, scrape_url)
+                if response.content_type != "application/json":
+                    logger.debug(f"Reponse: {await response.text()}")
+                    return "An error occured while searching."
+                else:
+                    data = await response.json()
+                    return await self.process_search_results(data, scrape_url)
 
         except Exception:
             logger.exception("Failed request to SearXNG")
@@ -107,7 +108,7 @@ class SearXNGQuery:
                     }
                 )
 
-            except Exception:
+            except Exception:  # noqa: BLE001, S112 - one failed scrape must not abort the batch
                 continue
 
         if not results_json:

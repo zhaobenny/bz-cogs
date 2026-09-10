@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 from typing import Optional
@@ -59,7 +61,6 @@ class PromptSettings(MixinMeta):
 
         (All subcommands are per server)
         """
-        pass
 
     @prompt.command(name="reset_all", aliases=["reset"])
     async def prompt_reset(self, ctx: commands.Context):
@@ -90,7 +91,9 @@ class PromptSettings(MixinMeta):
 
     @prompt.group(name="show", invoke_without_command=True)
     async def prompt_show(
-        self, ctx: commands.Context, mention: Optional[COMPATIBLE_MENTIONS]
+        self,
+        ctx: commands.Context,
+        mention: Optional[COMPATIBLE_MENTIONS],  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Show the prompt for the server (or provided user/channel)
         **Arguments**
@@ -283,9 +286,9 @@ class PromptSettings(MixinMeta):
     async def prompt_custom(
         self,
         ctx: commands.Context,
-        mention: Optional[COMPATIBLE_MENTIONS],
+        mention: Optional[COMPATIBLE_MENTIONS],  # noqa: UP045 - Red evaluates command converters on Python 3.9
         *,
-        prompt: Optional[str],
+        prompt: Optional[str],  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Set a custom prompt or preset for the server or a target
 
@@ -338,7 +341,7 @@ class PromptSettings(MixinMeta):
     async def prompt_clear(
         self,
         ctx: commands.Context,
-        mention: Optional[COMPATIBLE_MENTIONS] = None,
+        mention: Optional[COMPATIBLE_MENTIONS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
     ):
         """Clear a custom prompt so broader prompt settings can apply"""
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)

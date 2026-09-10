@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from aiuser.functions import names
 from aiuser.functions.context import ToolContext
@@ -32,8 +34,8 @@ class NoResponseToolCall(ToolCall):
     function_name = schema.function.name
 
     async def _handle(
-        self, tool_context: ToolContext, arguments: Dict[str, Any]
-    ) -> Optional[str]:
+        self, tool_context: ToolContext, arguments: dict[str, Any]
+    ) -> str | None:
         if arguments["respond"]:
             return "Will respond to the message"
         tool_context.suppress()

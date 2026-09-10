@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import asyncio
 import base64
 import json
 import logging
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 from authlib.integrations.httpx_client import AsyncOAuth2Client
@@ -38,7 +40,7 @@ def utc_now_ms() -> int:
     return int(time.time() * 1000)
 
 
-def parse_jwt_claims(token: str) -> Optional[Dict[str, Any]]:
+def parse_jwt_claims(token: str) -> dict[str, Any] | None:
     parts = token.split(".")
     if len(parts) != 3:
         return None
@@ -48,11 +50,11 @@ def parse_jwt_claims(token: str) -> Optional[Dict[str, Any]]:
         padding = "=" * (-len(payload) % 4)
         decoded = base64.urlsafe_b64decode(payload + padding)
         return json.loads(decoded.decode("utf-8"))
-    except Exception:
+    except Exception:  # noqa: BLE001 - malformed JWT claims are treated as absent
         return None
 
 
-def extract_account_id_from_claims(claims: Dict[str, Any]) -> Optional[str]:
+def extract_account_id_from_claims(claims: dict[str, Any]) -> str | None:
     openai_claims = claims.get("https://api.openai.com/auth", {})
     organizations = claims.get("organizations", [])
     return (
@@ -62,7 +64,7 @@ def extract_account_id_from_claims(claims: Dict[str, Any]) -> Optional[str]:
     )
 
 
-def extract_account_id(tokens: Dict[str, Any]) -> Optional[str]:
+def extract_account_id(tokens: dict[str, Any]) -> str | None:
     id_token = tokens.get("id_token")
     if id_token:
         claims = parse_jwt_claims(id_token)
@@ -80,10 +82,10 @@ def extract_account_id(tokens: Dict[str, Any]) -> Optional[str]:
 
 
 def normalize_codex_tokens(
-    tokens: Dict[str, Any],
-    previous_account_id: Optional[str] = None,
-    previous_refresh_token: Optional[str] = None,
-) -> Dict[str, Any]:
+    tokens: dict[str, Any],
+    previous_account_id: str | None = None,
+    previous_refresh_token: str | None = None,
+) -> dict[str, Any]:
     expires_in = int(tokens.get("expires_in") or 3600)
     return {
         "access": tokens.get("access_token"),
@@ -97,17 +99,17 @@ async def is_codex_endpoint_mode(config: Config) -> bool:
     return await config.custom_openai_endpoint() == CODEX_ENDPOINT_MODE
 
 
-async def get_codex_oauth(config: Config) -> Dict[str, Any]:
+async def get_codex_oauth(config: Config) -> dict[str, Any]:
     return await config.get_raw("codex_oauth", default={})
 
 
-async def set_codex_oauth(config: Config, oauth: Dict[str, Any]):
+async def set_codex_oauth(config: Config, oauth: dict[str, Any]):
     await config.set_raw("codex_oauth", value=oauth)
 
 
 async def start_device_authorization(
-    client: Optional[httpx.AsyncClient] = None,
-) -> Dict[str, Any]:
+    client: httpx.AsyncClient | None = None,
+) -> dict[str, Any]:
     owns_client = client is None
     client = client or httpx.AsyncClient()
     try:
@@ -134,8 +136,8 @@ async def exchange_device_authorization(
     user_code: str,
     interval: int,
     timeout_seconds: int = CODEX_DEVICE_TIMEOUT_SECONDS,
-    client: Optional[httpx.AsyncClient] = None,
-) -> Dict[str, Any]:
+    client: httpx.AsyncClient | None = None,
+) -> dict[str, Any]:
     owns_client = client is None
     client = client or httpx.AsyncClient()
     deadline = time.monotonic() + timeout_seconds
@@ -169,8 +171,8 @@ async def exchange_device_authorization(
 async def exchange_codex_authorization_code(
     code: str,
     code_verifier: str,
-    client: Optional[httpx.AsyncClient] = None,
-) -> Dict[str, Any]:
+    client: httpx.AsyncClient | None = None,
+) -> dict[str, Any]:
     transport = (
         client._transport
         if client
@@ -198,8 +200,8 @@ async def exchange_codex_authorization_code(
 
 
 async def exchange_codex_refresh_token(
-    refresh_token: str, client: Optional[httpx.AsyncClient] = None
-) -> Dict[str, Any]:
+    refresh_token: str, client: httpx.AsyncClient | None = None
+) -> dict[str, Any]:
     transport = (
         client._transport
         if client
@@ -228,8 +230,8 @@ async def ensure_valid_codex_oauth(
     config: Config,
     force_refresh: bool = False,
     refresh_window_ms: int = 60_000,
-    client: Optional[httpx.AsyncClient] = None,
-) -> Dict[str, Any]:
+    client: httpx.AsyncClient | None = None,
+) -> dict[str, Any]:
     oauth = await get_codex_oauth(config)
     if not oauth or not oauth.get("refresh"):
         raise ValueError("Codex OAuth is not configured")

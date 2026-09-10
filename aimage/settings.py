@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from typing import Optional
 
@@ -18,7 +20,6 @@ class Settings(MixinMeta):
     @checks.admin_or_permissions(manage_guild=True)
     async def aimage(self, _: commands.Context):
         """Manage AI Image cog settings for this server"""
-        pass
 
     @aimage.command(name="config")
     async def config(self, ctx: commands.Context):
@@ -118,7 +119,7 @@ class Settings(MixinMeta):
         )
 
     @aimage.command(name="nsfw_sensitivity")
-    async def nsfw_sensitivity(self, ctx: commands.Context, value: Optional[float]):
+    async def nsfw_sensitivity(self, ctx: commands.Context, value: Optional[float]):  # noqa: UP045 - Red evaluates command annotations on Python 3.9
         """
         Views or sets the sensitivity for the nsfw filter (A1111 only)
         Valid values are between -0.2 and 0.2
@@ -153,7 +154,10 @@ class Settings(MixinMeta):
 
     @aimage.command(name="negative_prompt")
     async def negative_prompt(
-        self, ctx: commands.Context, *, negative_prompt: Optional[str]
+        self,
+        ctx: commands.Context,
+        *,
+        negative_prompt: Optional[str],  # noqa: UP045 - Red evaluates command annotations on Python 3.9
     ):
         """
         Set the default negative prompt
@@ -268,10 +272,10 @@ class Settings(MixinMeta):
             vaes = []
 
             remaining_length = 1900
-            for vae in data:
-                if len(vae) + 2 <= remaining_length:
-                    vaes.append(vae)
-                    remaining_length -= len(vae) + 2
+            for available_vae in data:
+                if len(available_vae) + 2 <= remaining_length:
+                    vaes.append(available_vae)
+                    remaining_length -= len(available_vae) + 2
                 else:
                     break
             return await ctx.send(
@@ -288,7 +292,7 @@ class Settings(MixinMeta):
         """
         try:
             await ctx.message.delete()
-        except Exception:
+        except Exception:  # noqa: BLE001, S110 - preserve the existing failure fallback
             pass
         await self.config.guild(ctx.guild).auth.set(auth)
         await ctx.send("✅ Auth set.")
@@ -336,7 +340,6 @@ class Settings(MixinMeta):
         """
         Manage the blacklist of words that will be rejected in prompts
         """
-        pass
 
     @blacklist.command(name="add")
     async def blacklist_add(self, ctx: commands.Context, *words: str):

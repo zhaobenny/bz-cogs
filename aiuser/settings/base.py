@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import json
 import logging
-from typing import Optional, Union
+from typing import Union
 
 import discord
 from redbot.core import checks, commands
@@ -14,8 +16,10 @@ from aiuser.providers.llm.openai_compatible.endpoints import (
     get_openai_compat_kind,
 )
 from aiuser.providers.llm.registry import list_llm_models
+from aiuser.providers.speech.stt import DEFAULT_MODELS as STT_DEFAULT_MODELS
 from aiuser.settings.functions.base import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
+from aiuser.settings.mcp import MCPSettings
 from aiuser.settings.media import MediaSettings
 from aiuser.settings.memory import MemorySettings
 from aiuser.settings.owner import OwnerSettings
@@ -25,7 +29,6 @@ from aiuser.settings.reply import ReplySettings
 from aiuser.settings.response import ResponseSettings
 from aiuser.settings.triggers import TriggerSettings
 from aiuser.settings.utilities import rank_choices_for_query
-from aiuser.providers.speech.stt import DEFAULT_MODELS as STT_DEFAULT_MODELS
 from aiuser.types.abc import MixinMeta
 from aiuser.types.types import COMPATIBLE_CHANNELS
 
@@ -40,6 +43,7 @@ class Settings(
     ResponseSettings,
     TriggerSettings,
     OwnerSettings,
+    MCPSettings,
     RandomMessageSettings,
     FunctionCallingSettings,
     MemorySettings,
@@ -50,7 +54,6 @@ class Settings(
     @commands.guild_only()
     async def aiuser(self, _):
         """Configure replies to messages and images in enabled reply channels"""
-        pass
 
     @aiuser.command(aliases=["lobotomize"])
     async def forget(self, ctx: commands.Context):
@@ -278,13 +281,11 @@ class Settings(
 
         for embed in embeds:
             await ctx.send(embed=embed)
-        return
 
     @aiuser.group()
     @checks.admin_or_permissions(manage_guild=True)
     async def channels(self, _):
         """Manage enabled reply channels"""
-        pass
 
     @channels.command(name="list")
     async def channels_list(self, ctx: commands.Context):
@@ -317,7 +318,7 @@ class Settings(
     async def channels_remove(
         self,
         ctx: commands.Context,
-        channel: Union[COMPATIBLE_CHANNELS, str],
+        channel: Union[COMPATIBLE_CHANNELS, str],  # noqa: UP007 - Red command converter requires typing.Union on Python 3.9
     ):
         """Disable replies in a channel
 
@@ -398,7 +399,7 @@ class Settings(
 
         return await ctx.send(embed=embed)
 
-    async def _paginate_models(self, ctx, models, query: Optional[str] = None):
+    async def _paginate_models(self, ctx, models, query: str | None = None):
         if not models:
             return await ctx.send(":warning: No models are currently available.")
 
@@ -456,7 +457,6 @@ class Settings(
     @checks.admin_or_permissions(manage_guild=True)
     async def consent(self, _):
         """Configure server-wide consent defaults"""
-        pass
 
     @consent.group(name="default", invoke_without_command=True)
     async def consent_default(self, ctx: commands.Context):

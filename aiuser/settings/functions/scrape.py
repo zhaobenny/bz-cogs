@@ -14,7 +14,6 @@ class ScrapeFunctionSettings(FunctionToggleHelperMixin):
     @functions.group(name="scrape")
     async def functions_scrape(self, ctx: commands.Context):
         """Scrape function settings (per server)."""
-        pass
 
     @functions_scrape.command(name="show")
     async def scrape_show(self, ctx: commands.Context):

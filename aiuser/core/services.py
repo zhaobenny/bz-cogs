@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING
 
 import discord
 from openai import AsyncOpenAI
@@ -15,9 +15,10 @@ from redbot.core.bot import Red
 from aiuser.config.resolver import ScopedConfigResolver
 from aiuser.consent import ConsentService
 from aiuser.context.compaction import CompactionManager, CompactionStore
-from aiuser.utils.cache import Cache
+from aiuser.mcp import MCPManager
 from aiuser.providers.vectorstore import VectorStore
 from aiuser.providers.vectorstore.schema import ensure_sqlite_db
+from aiuser.utils.cache import Cache
 
 if TYPE_CHECKING:
     from aiuser.core.reply_queue import ChannelReplyState
@@ -30,7 +31,7 @@ class GuildIgnoreRegexCache:
 
     def __init__(self, config: Config):
         self._config = config
-        self._ignore_regex: Dict[int, Optional[re.Pattern]] = {}
+        self._ignore_regex: dict[int, re.Pattern | None] = {}
 
     async def load_all(self):
         """(Re)load compiled ignore regexes from config."""
@@ -45,10 +46,10 @@ class GuildIgnoreRegexCache:
                 logger.warning(f"Invalid ignore regex configured for guild {guild_id}")
                 self._ignore_regex[guild_id] = None
 
-    def ignore_regex(self, guild_id: int) -> Optional[re.Pattern]:
+    def ignore_regex(self, guild_id: int) -> re.Pattern | None:
         return self._ignore_regex.get(guild_id)
 
-    async def set_ignore_regex(self, guild: discord.Guild, pattern: Optional[str]):
+    async def set_ignore_regex(self, guild: discord.Guild, pattern: str | None):
         """Set (and compile) the ignore regex. Raises ``re.error`` if invalid."""
         compiled = re.compile(pattern) if pattern else None
         await self._config.guild(guild).ignore_regex.set(pattern)
@@ -69,19 +70,20 @@ class AIUserServices:
     resolver: ScopedConfigResolver
     ignore_regex_cache: GuildIgnoreRegexCache
     memories: VectorStore
-    compaction_store: Optional[CompactionStore]
-    compaction_manager: Optional[CompactionManager]
+    compaction_store: CompactionStore | None
+    compaction_manager: CompactionManager | None
     context_cache: Cache
-    reply_channel_states: Dict[int, "ChannelReplyState"] = field(default_factory=dict)
-    override_prompt_start_time: Dict[int, datetime] = field(default_factory=dict)
-    openai_client: Optional[AsyncOpenAI] = None
+    reply_channel_states: dict[int, ChannelReplyState] = field(default_factory=dict)
+    override_prompt_start_time: dict[int, datetime] = field(default_factory=dict)
+    openai_client: AsyncOpenAI | None = None
+    mcp: MCPManager | None = None
     # only for Red APIs that require the cog instance (eg. cog_disabled_in_guild)
-    cog: Optional[commands.Cog] = None
+    cog: commands.Cog | None = None
 
     @classmethod
     async def create(
         cls, bot: Red, config: Config, data_path: Path, cog: commands.Cog
-    ) -> "AIUserServices":
+    ) -> AIUserServices:
         consent = ConsentService(bot, config)
         await consent.load()
 
@@ -104,4 +106,5 @@ class AIUserServices:
             cog=cog,
         )
         services.compaction_manager = CompactionManager(services)
+        services.mcp = MCPManager(bot, config, cog.__version__)
         return services

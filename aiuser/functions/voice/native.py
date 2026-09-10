@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import asyncio
 import base64
 import re
 import shutil
 import struct
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import httpx
 from discord.http import Route
@@ -19,7 +21,7 @@ WAVEFORM_SAMPLE_RATE = 8000
 
 async def send_voice_message(
     ctx: commands.Context, audio: bytes
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     if not ctx.guild or not ctx.channel or not shutil.which("ffmpeg"):
         return None
 
@@ -81,7 +83,7 @@ async def send_voice_message(
     )
 
 
-async def _to_ogg_opus(audio: bytes) -> Tuple[bytes, float]:
+async def _to_ogg_opus(audio: bytes) -> tuple[bytes, float]:
     proc = await asyncio.create_subprocess_exec(
         "ffmpeg",
         "-i",

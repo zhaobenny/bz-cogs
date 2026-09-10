@@ -39,7 +39,7 @@ class VariationView(discord.ui.View):
         if not self.src_view.is_finished():
             try:
                 await self.src_interaction.message.edit(view=self.src_view)
-            except Exception:
+            except Exception:  # noqa: BLE001, S110 - preserve the existing failure fallback
                 pass
 
 

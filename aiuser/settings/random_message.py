@@ -5,8 +5,8 @@ from redbot.core import checks, commands
 from redbot.core.utils.chat_formatting import box, pagify
 from redbot.core.utils.menus import SimpleMenu
 
-from aiuser.settings.utilities import add_prompt_metrics_fields
 from aiuser.settings._groups import aiuser
+from aiuser.settings.utilities import add_prompt_metrics_fields
 from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -17,7 +17,6 @@ class RandomMessageSettings(MixinMeta):
     @checks.admin_or_permissions(manage_guild=True)
     async def randommessage(self, _):
         """Configure messages sent without an immediate user trigger"""
-        pass
 
     @randommessage.command(name="show")
     async def random_show(self, ctx: commands.Context):

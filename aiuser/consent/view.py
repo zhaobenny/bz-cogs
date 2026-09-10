@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING, Set
+from typing import TYPE_CHECKING
 
 import discord
 
@@ -12,7 +12,7 @@ CONSENT_EMBED_TITLE = ":information_source: AI User Opt-In / Opt-Out"
 
 
 class ConsentView(discord.ui.View):
-    def __init__(self, consent: "ConsentService"):
+    def __init__(self, consent: ConsentService):
         super().__init__()
         self.consent = consent
 
@@ -38,9 +38,9 @@ class ConsentView(discord.ui.View):
 
 
 async def maybe_send_consent_embed(
-    consent: "ConsentService",
+    consent: ConsentService,
     channel: discord.abc.Messageable,
-    users: Set[discord.Member],
+    users: set[discord.Member],
 ) -> bool:
     """Send the opt-in/out embed if warranted. Returns True when sent."""
     if not users:

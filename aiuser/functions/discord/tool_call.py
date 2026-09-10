@@ -1,4 +1,6 @@
-from typing import Any, Dict, Optional
+from __future__ import annotations
+
+from typing import Any
 
 from aiuser.functions import names
 from aiuser.functions.context import ToolContext
@@ -32,8 +34,8 @@ class AddReactionToolCall(ToolCall):
     function_name = schema.function.name
 
     async def _handle(
-        self, tool_context: ToolContext, arguments: Dict[str, Any]
-    ) -> Optional[str]:
+        self, tool_context: ToolContext, arguments: dict[str, Any]
+    ) -> str | None:
         return await add_reaction(tool_context, arguments.get("emoji", ""))
 
 
@@ -63,6 +65,6 @@ class GetDiscordInfoToolCall(ToolCall):
     parallel_safe = True
 
     async def _handle(
-        self, tool_context: ToolContext, arguments: Dict[str, Any]
-    ) -> Optional[str]:
+        self, tool_context: ToolContext, arguments: dict[str, Any]
+    ) -> str | None:
         return await get_discord_info(tool_context, arguments.get("info", ""))

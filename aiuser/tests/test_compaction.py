@@ -1,5 +1,6 @@
-import pytest
 from pathlib import Path
+
+import pytest
 
 from aiuser.context.compaction.store import CompactionStore
 

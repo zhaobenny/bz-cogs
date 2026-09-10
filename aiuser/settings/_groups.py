@@ -5,4 +5,3 @@ from redbot.core import commands
 @commands.guild_only()
 async def aiuser(self, _):
     """Configure replies to messages and images in enabled reply channels"""
-    pass

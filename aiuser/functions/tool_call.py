@@ -1,4 +1,6 @@
-from typing import Any, Dict, Optional
+from __future__ import annotations
+
+from typing import Any
 
 from aiuser.functions.context import ToolContext
 from aiuser.functions.types import ToolCallSchema
@@ -17,11 +19,11 @@ class ToolCall:
     parallel_safe: bool = False
 
     async def run(
-        self, tool_context: ToolContext, arguments: Dict[str, Any]
-    ) -> Optional[str]:
+        self, tool_context: ToolContext, arguments: dict[str, Any]
+    ) -> str | None:
         return await self._handle(tool_context, arguments)
 
     async def _handle(
-        self, tool_context: ToolContext, arguments: Dict[str, Any]
-    ) -> Optional[str]:
+        self, tool_context: ToolContext, arguments: dict[str, Any]
+    ) -> str | None:
         raise NotImplementedError

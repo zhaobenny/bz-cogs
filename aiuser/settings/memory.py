@@ -19,7 +19,6 @@ class MemorySettings(MixinMeta):
         Manages memory settings
         (All subcommands are per server)
         """
-        pass
 
     @memory.command(name="status")
     async def memory_status(self, ctx: commands.Context):

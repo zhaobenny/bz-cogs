@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import contextvars
 import functools
 import logging
 import os
 import sys
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Callable, TypeVar
 
 import discord
 
@@ -29,7 +31,7 @@ def _colorize_gray(text: str) -> str:
 
 
 def _build_log_prefix(
-    guild: Optional[discord.Guild], channel: Optional[discord.abc.GuildChannel]
+    guild: discord.Guild | None, channel: discord.abc.GuildChannel | None
 ) -> str:
     parts = []
 

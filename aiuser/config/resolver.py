@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import discord
 from redbot.core import Config, commands
@@ -32,7 +32,7 @@ class ScopedConfigResolver:
 
     async def get_role_override(
         self, member: discord.Member, attr_name: str
-    ) -> Optional[Any]:
+    ) -> Any | None:
         """Return the highest-positioned configured role override, if any."""
         configured_role_ids = set(await self.config.all_roles())
         if not configured_role_ids:
@@ -56,8 +56,8 @@ class ScopedConfigResolver:
         attr_name: str,
         *,
         guild: discord.Guild,
-        channel: Optional[discord.abc.GuildChannel] = None,
-        member: Optional[discord.abc.User] = None,
+        channel: discord.abc.GuildChannel | None = None,
+        member: discord.abc.User | None = None,
     ) -> Any:
         if isinstance(member, discord.Member):
             member_value = await getattr(self.config.member(member), attr_name)()
@@ -79,8 +79,8 @@ class ScopedConfigResolver:
         self,
         *,
         guild: discord.Guild,
-        channel: Optional[discord.abc.GuildChannel] = None,
-        member: Optional[discord.abc.User] = None,
+        channel: discord.abc.GuildChannel | None = None,
+        member: discord.abc.User | None = None,
     ) -> str:
         """Resolve the system prompt: member > role > channel > guild > global > default."""
         scoped = await self.resolve(

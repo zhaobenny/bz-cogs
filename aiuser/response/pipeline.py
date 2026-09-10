@@ -4,7 +4,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import discord
@@ -41,18 +41,18 @@ class PipelineError(Enum):
 
 @dataclass(frozen=True)
 class PipelineResult:
-    completion: Optional[str] = None
-    files_to_send: List[discord.File] = field(default_factory=list)
-    audio_transcripts_to_cache: List[str] = field(default_factory=list)
-    tool_call_entries: List[MessageEntry] = field(default_factory=list)
-    error: Optional[PipelineError] = None
-    session_id: Optional[str] = None
+    completion: str | None = None
+    files_to_send: list[discord.File] = field(default_factory=list)
+    audio_transcripts_to_cache: list[str] = field(default_factory=list)
+    tool_call_entries: list[MessageEntry] = field(default_factory=list)
+    error: PipelineError | None = None
+    session_id: str | None = None
 
 
 class LLMPipeline:
     def __init__(
         self,
-        services: "AIUserServices",
+        services: AIUserServices,
         ctx: commands.Context,
         conversation: Conversation,
     ):
@@ -62,11 +62,13 @@ class LLMPipeline:
         self.conversation = conversation
         self.model: str = conversation.model
 
-        self.provider: Optional[LLMProvider] = None
+        self.provider: LLMProvider | None = None
         self.tool_context = ToolContext(services=services, ctx=ctx)
-        self.tool_executor = ToolExecutor(services.config, ctx, self.tool_context)
-        self.tool_call_entries: List[MessageEntry] = []
-        self.session_id: Optional[str] = None
+        self.tool_executor = ToolExecutor(
+            services.config, ctx, self.tool_context, services.mcp
+        )
+        self.tool_call_entries: list[MessageEntry] = []
+        self.session_id: str | None = None
         self.request_id = (
             str(self.ctx.message.id)
             if self.conversation.from_message_context
@@ -88,7 +90,7 @@ class LLMPipeline:
         )
         tools_kwargs = self.tool_executor.get_tools_kwargs()
         exhausted_tool_call_rounds = False
-        completion: Optional[str] = None
+        completion: str | None = None
 
         for round_idx in range(tool_call_rounds):
             kwargs = {**base_kwargs, **tools_kwargs}
@@ -144,7 +146,7 @@ class LLMPipeline:
             )
 
     def _build_result(
-        self, completion: Optional[str], error: Optional[PipelineError] = None
+        self, completion: str | None, error: PipelineError | None = None
     ) -> PipelineResult:
         return PipelineResult(
             completion=completion,
@@ -156,10 +158,10 @@ class LLMPipeline:
         )
 
     async def _create_chat_step(
-        self, kwargs: Dict[str, Any]
-    ) -> Union[ChatStepResult, PipelineError]:
+        self, kwargs: dict[str, Any]
+    ) -> ChatStepResult | PipelineError:
         try:
-            context: List[ChatCompletionMessageParam] = (
+            context: list[ChatCompletionMessageParam] = (
                 self.conversation.to_chat_payload()
             )
             log_chat_request(context)
@@ -181,12 +183,12 @@ class LLMPipeline:
             logger.exception("Failed request(s) to LLM endpoint")
             return PipelineError.REQUEST_FAILED
 
-    async def _build_base_parameters(self) -> Dict[str, Any]:
+    async def _build_base_parameters(self) -> dict[str, Any]:
         """
         Build a base kwargs dict for the OpenAI call, including logit_bias handling.
         """
         params = await self.services.config.guild(self.ctx.guild).parameters()
-        kwargs: Dict[str, Any] = json.loads(params) if params else {}
+        kwargs: dict[str, Any] = json.loads(params) if params else {}
 
         if "logit_bias" not in kwargs:
             weights = await self.services.config.guild(self.ctx.guild).weights()

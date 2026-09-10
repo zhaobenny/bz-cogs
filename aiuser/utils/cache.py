@@ -1,9 +1,8 @@
 import threading
 from collections import OrderedDict
-from typing import Tuple
 
 
-def tool_calls_cache_key(channel_id: int, message_id: int) -> Tuple[str, int, int]:
+def tool_calls_cache_key(channel_id: int, message_id: int) -> tuple[str, int, int]:
     """Context-cache key linking a sent bot message to its tool-call entries.
 
     Written by response.orchestrator after sending, read back by
@@ -12,7 +11,7 @@ def tool_calls_cache_key(channel_id: int, message_id: int) -> Tuple[str, int, in
     return ("tool_calls", channel_id, message_id)
 
 
-def memory_cache_key(channel_id: int, message_id: int) -> Tuple[str, int, int]:
+def memory_cache_key(channel_id: int, message_id: int) -> tuple[str, int, int]:
     """Context-cache key linking a user message to the memory retrieved for it.
 
     Written by response.orchestrator after sending, read back by

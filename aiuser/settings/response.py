@@ -24,7 +24,6 @@ class ResponseSettings(MixinMeta):
 
         (All subcommands are per server)
         """
-        pass
 
     @response.group(name="filters", aliases=["removelist"], invoke_without_command=True)
     async def filters(self, ctx: commands.Context):
@@ -219,7 +218,7 @@ class ResponseSettings(MixinMeta):
 
         token = encoding.encode(word)
         if len(token) == 1:
-            if str(token[0]) not in weights.keys():
+            if str(token[0]) not in weights:
                 return await ctx.send(":warning: Word not found in weights.")
         else:
             return await ctx.send(
@@ -291,7 +290,7 @@ class ResponseSettings(MixinMeta):
 
         blacklist = ["model", "messages", "stream"]
 
-        invalid_keys = [key for key in data.keys() if key in blacklist]
+        invalid_keys = [key for key in data if key in blacklist]
         if invalid_keys:
             invalid_keys_str = ", ".join([f"`{key}`" for key in invalid_keys])
             return await ctx.send(

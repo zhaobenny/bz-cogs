@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import wave
 from io import BytesIO
-from typing import Optional
 
 import httpx
 from redbot.core import Config
@@ -30,7 +29,7 @@ def _pcm_to_wav(audio: bytes) -> bytes:
 
 
 async def generate(
-    bot: Red, config: Config, text: str, model: Optional[str], voice: Optional[str]
+    bot: Red, config: Config, text: str, model: str | None, voice: str | None
 ) -> bytes:
     tokens = await bot.get_shared_api_tokens("openrouter")
     api_key = tokens.get("api_key")

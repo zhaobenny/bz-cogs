@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import json
 import logging
-from typing import Optional
 
 import aiohttp
 from discord import Message
@@ -25,7 +24,7 @@ YOUTUBE_API_URL = (
 
 async def format_embed_content(
     config: Config, bot: Red, message: Message
-) -> Optional[str]:
+) -> str | None:
     yt_api_key = (await bot.get_shared_api_tokens("youtube")).get("api_key")
     if yt_api_key and contains_youtube_link(message.content):
         return await format_youtube_embed(yt_api_key, message)
@@ -36,7 +35,7 @@ async def format_embed_content(
         return None
     try:
         return f'User "{message.author.display_name}" sent: [Embed with title "{message.embeds[0].title}" and description "{message.embeds[0].description}"]'
-    except Exception:
+    except Exception:  # noqa: BLE001 - malformed Discord embed data should not block conversion
         logger.debug(
             "Failed to format embed content! \n Embeds in the message was: %s",
             json.dumps(message.embeds, indent=4),
@@ -50,7 +49,7 @@ def format_embed_message_content(message: Message) -> str:
     return format_text_content(message_copy)
 
 
-async def format_youtube_embed(api_key: str, message: Message) -> Optional[str]:
+async def format_youtube_embed(api_key: str, message: Message) -> str | None:
     video_id = await get_video_id(message.content)
     author = message.author.display_name
 
@@ -62,13 +61,13 @@ async def format_youtube_embed(api_key: str, message: Message) -> Optional[str]:
             api_key, video_id
         )
     except Exception:
-        logger.error("Failed request to Youtube API", exc_info=True)
+        logger.exception("Failed request to Youtube API")
         return None
 
     return f'User "{author}" sent: [Link to Youtube video with title "{video_title}" and description "{description}" from channel "{channel_title}"]'
 
 
-async def get_video_id(url: str) -> Optional[str]:
+async def get_video_id(url: str) -> str | None:
     match = YOUTUBE_VIDEO_ID_PATTERN.search(url)
 
     if match:
@@ -80,12 +79,11 @@ async def get_video_id(url: str) -> Optional[str]:
 @retry(wait=wait_random(min=1, max=2), stop=(stop_after_attempt(3)), reraise=True)
 async def get_video_details(api_key: str, video_id: str) -> tuple[str, str, str]:
     url = YOUTUBE_API_URL.format(video_id, api_key)
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            response.raise_for_status()
-            video_data = await response.json()
-            snippet = video_data["items"][0]["snippet"]
-            video_title = snippet["title"]
-            channel_title = snippet["channelTitle"]
-            description = snippet["description"]
-            return (video_title, channel_title, description)
+    async with aiohttp.ClientSession() as session, session.get(url) as response:
+        response.raise_for_status()
+        video_data = await response.json()
+        snippet = video_data["items"][0]["snippet"]
+        video_title = snippet["title"]
+        channel_title = snippet["channelTitle"]
+        description = snippet["description"]
+        return (video_title, channel_title, description)

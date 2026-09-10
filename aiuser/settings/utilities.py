@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from difflib import SequenceMatcher
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING
 
 import discord
 from redbot.core import commands
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 async def confirm_pending(
     ctx: commands.Context, embed: discord.Embed, timeout: float = 30.0
-) -> Tuple[bool, discord.Message]:
+) -> tuple[bool, discord.Message]:
     """Ask for confirmation using Red's native button view.
 
     Returns ``(confirmed, prompt_message)``. On timeout or "no" the prompt is

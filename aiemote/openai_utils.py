@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import logging
-from typing import Optional
 
 from discord.ext import commands
 from openai import AsyncOpenAI
@@ -11,8 +12,10 @@ OPENROUTER_URL = "https://openrouter.ai"
 
 
 async def setup_openai_client(
-    bot: Red, config: Config, ctx: Optional[commands.Context] = None
-) -> Optional[AsyncOpenAI]:
+    bot: Red,
+    config: Config,
+    ctx: commands.Context | None = None,
+) -> AsyncOpenAI | None:
     """Initialize the OpenAI client with appropriate configuration."""
     base_url = await config.custom_openai_endpoint()
     api_type = "openai"

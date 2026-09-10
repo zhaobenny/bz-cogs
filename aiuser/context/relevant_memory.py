@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from redbot.core import commands
 
@@ -16,8 +16,8 @@ logger = logging.getLogger("red.bz_cogs.aiuser.memory")
 
 
 async def fetch_relevant_memory(
-    ctx: commands.Context, db: "VectorStore", query: str, threshold: float = 0.75
-) -> Optional[str]:
+    ctx: commands.Context, db: VectorStore, query: str, threshold: float = 0.75
+) -> str | None:
     """Return the most relevant memory above the similarity threshold, prompt-formatted."""
     if not query.strip():
         return None

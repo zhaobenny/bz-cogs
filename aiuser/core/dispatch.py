@@ -26,7 +26,7 @@ logger = logging.getLogger("red.bz_cogs.aiuser")
 
 @with_discord_log_context("slash-command")
 async def handle_slash_command(
-    services: "AIUserServices", inter: discord.Interaction, text: str
+    services: AIUserServices, inter: discord.Interaction, text: str
 ):
     """Handle /chat slash command interactions"""
     await inter.response.defer()
@@ -52,7 +52,7 @@ async def handle_slash_command(
 
 
 @with_discord_log_context("message")
-async def handle_message(services: "AIUserServices", message: discord.Message):
+async def handle_message(services: AIUserServices, message: discord.Message):
     """Handle regular message events"""
     if message.author.id == services.bot.user.id:
         return

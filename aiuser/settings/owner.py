@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 from pathlib import Path
@@ -44,7 +46,6 @@ class OwnerSettings(MixinMeta):
     @checks.is_owner()
     async def aiuserowner(self, _):
         """For some settings that apply bot-wide."""
-        pass
 
     @aiuserowner.group(
         name="max_prompt_length",
@@ -122,7 +123,6 @@ class OwnerSettings(MixinMeta):
     @aiuserowner.group(name="config")
     async def owner_config(self, _):
         """Import or export the complete cog configuration"""
-        pass
 
     @owner_config.command(name="export")
     async def export_config(self, ctx: commands.Context):
@@ -175,7 +175,7 @@ class OwnerSettings(MixinMeta):
         if not confirmed:
             return
 
-        with path.open("w") as f:
+        with path.open("w") as f:  # noqa: ASYNC230 - small local config export
             json.dump(new_config, f, indent=4)
 
         await self._refresh_cached_guild_options()
@@ -205,7 +205,12 @@ class OwnerSettings(MixinMeta):
         return await ctx.send(embed=embed)
 
     @global_prompt.command(name="set")
-    async def global_prompt_set(self, ctx: commands.Context, *, prompt: Optional[str]):
+    async def global_prompt_set(
+        self,
+        ctx: commands.Context,
+        *,
+        prompt: Optional[str],  # noqa: UP045 - Red evaluates command converters on Python 3.9
+    ):
         """Set the global default prompt from text or a text attachment"""
         if not prompt and ctx.message.attachments:
             if not ctx.message.attachments[0].filename.endswith(".txt"):
@@ -233,7 +238,7 @@ class OwnerSettings(MixinMeta):
         await self.config.custom_text_prompt.set(None)
         return await ctx.send("Global prompt reset to the built-in default.")
 
-    async def _set_custom_endpoint(self, ctx: commands.Context, url: Optional[str]):
+    async def _set_custom_endpoint(self, ctx: commands.Context, url: str | None):
         if url == "codex":
             return await self._activate_codex_endpoint(ctx)
 
@@ -397,7 +402,7 @@ class OwnerSettings(MixinMeta):
     async def _build_endpoint_update_embed(
         self,
         ctx: commands.Context,
-        endpoint_url: Optional[str],
+        endpoint_url: str | None,
         chat_model: str,
         image_model: str,
         restored_count: int,
@@ -452,14 +457,14 @@ class OwnerSettings(MixinMeta):
             embed.description = "Endpoint reset back to official OpenAI endpoint."
         return embed
 
-    def _endpoint_history_key(self, endpoint_url: Optional[str]) -> str:
+    def _endpoint_history_key(self, endpoint_url: str | None) -> str:
         if endpoint_url == CODEX_ENDPOINT_MODE:
             return CODEX_ENDPOINT_MODE
         if not endpoint_url:
             return "default"
         return endpoint_url or "default"
 
-    async def _save_current_endpoint_models(self, endpoint_url: Optional[str]):
+    async def _save_current_endpoint_models(self, endpoint_url: str | None):
         history = await self.config.endpoint_model_history()
         key = self._endpoint_history_key(endpoint_url)
         history[key] = {}
@@ -473,7 +478,7 @@ class OwnerSettings(MixinMeta):
 
     async def _restore_endpoint_models(
         self,
-        endpoint_url: Optional[str],
+        endpoint_url: str | None,
         chat_model: str,
         image_model: str,
     ) -> tuple[int, list[str]]:

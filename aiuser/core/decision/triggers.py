@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import discord
 from redbot.core import commands
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 async def get_conversation_reply_settings(
-    services: "AIUserServices", ctx: commands.Context
+    services: AIUserServices, ctx: commands.Context
 ) -> tuple[float, int]:
     """Get conversation reply settings based on member/role/channel/guild settings."""
     reply_percent = await services.resolver.resolve_for_ctx(
@@ -33,8 +33,8 @@ async def get_conversation_reply_settings(
 
 
 async def get_conversation_reply_chance(
-    services: "AIUserServices", ctx: commands.Context
-) -> Optional[float]:
+    services: AIUserServices, ctx: commands.Context
+) -> float | None:
     """Return the follow-up reply chance when this message is in conversation."""
     reply_percent, reply_time_seconds = await get_conversation_reply_settings(
         services, ctx
@@ -54,7 +54,7 @@ async def get_conversation_reply_chance(
     return None
 
 
-async def is_grok_triggered(services: "AIUserServices", ctx: commands.Context) -> bool:
+async def is_grok_triggered(services: AIUserServices, ctx: commands.Context) -> bool:
     if not (await services.config.guild(ctx.guild).grok_trigger()):
         return False
 
@@ -69,7 +69,7 @@ async def is_grok_triggered(services: "AIUserServices", ctx: commands.Context) -
 
 
 async def is_always_reply_on_words_triggered(
-    services: "AIUserServices", ctx: commands.Context
+    services: AIUserServices, ctx: commands.Context
 ) -> bool:
     """Check if any always_reply_on_words appears in the message."""
     trigger_words = await services.resolver.resolve_for_ctx(
@@ -83,7 +83,7 @@ async def is_always_reply_on_words_triggered(
 
 
 async def check_direct_triggers(
-    services: "AIUserServices", ctx: commands.Context, message: discord.Message
+    services: AIUserServices, ctx: commands.Context, message: discord.Message
 ) -> bool:
     trigger_funcs = [
         lambda: is_bot_mentioned_or_replied(services, message),

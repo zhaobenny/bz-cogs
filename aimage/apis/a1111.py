@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import base64
 import json
 import logging
 from enum import Enum
-from typing import Union
 
 import discord
 from redbot.core import commands
@@ -60,7 +61,9 @@ A1111_SAMPLERS = [
 
 class A1111(BaseAPI):
     def __init__(
-        self, cog: MixinMeta, context: Union[commands.Context, discord.Interaction]
+        self,
+        cog: MixinMeta,
+        context: commands.Context | discord.Interaction,
     ):
         super().__init__(cog, context)
         cog.autocomplete_cache[self.guild.id]["samplers"] = A1111_SAMPLERS
@@ -73,7 +76,7 @@ class A1111(BaseAPI):
         for page, cache_key in cache_mapping.items():
             try:
                 data = await self._get_terms(page)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - preserve the existing failure fallback
                 logger.warning(
                     f"Failed to update autocomplete cache for {cache_key} in {self.guild.id}: \n {e}"
                 )
@@ -90,17 +93,27 @@ class A1111(BaseAPI):
 
             cache[self.guild.id][cache_key] = choices
 
-    async def generate_image(self, params: ImageGenParams, payload: dict = None):
+    async def generate_image(
+        self,
+        params: ImageGenParams,
+        payload: dict | None = None,
+    ):
         payload = payload or await self._generate_payload(params)
         return await self._post_image_gen(payload, ImageGenerationType.TXT2IMG)
 
-    async def generate_img2img(self, params: ImageGenParams, payload: dict = None):
+    async def generate_img2img(
+        self,
+        params: ImageGenParams,
+        payload: dict | None = None,
+    ):
         init_image = params.init_image if params.init_image else None
         payload = payload or await self._generate_payload(params, init_image)
         return await self._post_image_gen(payload, ImageGenerationType.IMG2IMG)
 
     async def _generate_payload(
-        self, params: ImageGenParams, init_image: bytes = None
+        self,
+        params: ImageGenParams,
+        init_image: bytes | None = None,
     ) -> dict:
         payload = {
             "prompt": f"{params.prompt} {params.lora}",

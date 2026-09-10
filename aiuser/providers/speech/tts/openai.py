@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from redbot.core import Config
 from redbot.core.bot import Red
 
@@ -17,7 +15,7 @@ DEFAULT_VOICE = "alloy"
 
 
 async def generate(
-    bot: Red, config: Config, text: str, model: Optional[str], voice: Optional[str]
+    bot: Red, config: Config, text: str, model: str | None, voice: str | None
 ) -> bytes:
     text = strip_inline_tags(text)
     if not text:

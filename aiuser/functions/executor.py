@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 from openai.types.chat import ChatCompletionMessageToolCall
 from redbot.core import Config, commands
@@ -14,6 +14,9 @@ from aiuser.functions.registry import get_enabled_tools
 from aiuser.functions.tool_call import ToolCall
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
+
+if TYPE_CHECKING:
+    from aiuser.mcp import MCPManager
 
 
 @dataclass(frozen=True)
@@ -26,7 +29,7 @@ class ToolResult:
 class PendingToolCall:
     tool_call: ChatCompletionMessageToolCall
     tool: ToolCall
-    arguments: Dict[str, Any]
+    arguments: dict[str, Any]
 
 
 class ToolExecutor:
@@ -37,31 +40,35 @@ class ToolExecutor:
         config: Config,
         ctx: commands.Context,
         tool_context: ToolContext,
+        mcp: MCPManager | None = None,
     ):
         self.config = config
         self.ctx = ctx
         self.tool_context = tool_context
-        self.enabled_tools: List[ToolCall] = []
-        self.enabled_tools_map: Dict[str, ToolCall] = {}
+        self.mcp = mcp
+        self.enabled_tools: list[ToolCall] = []
+        self.enabled_tools_map: dict[str, ToolCall] = {}
 
     async def setup(self):
         if not (await self.config.guild(self.ctx.guild).function_calling()):
             return
         self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
+        if self.mcp:
+            self.enabled_tools.extend(await self.mcp.tools_for_guild(self.ctx.guild))
         self.enabled_tools_map = {t.function_name: t for t in self.enabled_tools}
 
-    def get_tools_kwargs(self) -> Dict[str, Any]:
+    def get_tools_kwargs(self) -> dict[str, Any]:
         """Return the tools parameter for the OpenAI API call, or empty dict if none."""
         if self.enabled_tools:
             return {"tools": [asdict(t.schema) for t in self.enabled_tools]}
         return {}
 
     async def run_tool_calls(
-        self, tool_calls: List[ChatCompletionMessageToolCall]
-    ) -> List[ToolResult]:
+        self, tool_calls: list[ChatCompletionMessageToolCall]
+    ) -> list[ToolResult]:
         """Run the tool calls and return what each one produced."""
-        results: List[ToolResult] = []
-        parallel_batch: List[PendingToolCall] = []
+        results: list[ToolResult] = []
+        parallel_batch: list[PendingToolCall] = []
 
         for tool_call in tool_calls:
             pending = self._prepare_tool_call(tool_call)
@@ -87,7 +94,7 @@ class ToolExecutor:
 
     def _prepare_tool_call(
         self, tool_call: ChatCompletionMessageToolCall
-    ) -> Optional[PendingToolCall]:
+    ) -> PendingToolCall | None:
         fn = tool_call.function
         try:
             arguments = json.loads(fn.arguments or "{}")
@@ -107,7 +114,7 @@ class ToolExecutor:
         )
         return PendingToolCall(tool_call, tool, dict(arguments))
 
-    async def _run_batch(self, batch: List[PendingToolCall]) -> List[ToolResult]:
+    async def _run_batch(self, batch: list[PendingToolCall]) -> list[ToolResult]:
         if not batch:
             return []
 
@@ -121,7 +128,7 @@ class ToolExecutor:
             return_exceptions=True,
         )
 
-        tool_results: List[ToolResult] = []
+        tool_results: list[ToolResult] = []
         for pending, result in zip(batch, results):
             if isinstance(result, BaseException):
                 logger.error(

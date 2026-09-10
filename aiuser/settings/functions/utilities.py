@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import discord
 from redbot.core import checks, commands
 from redbot.core.bot import Red
@@ -12,7 +10,7 @@ from aiuser.types.abc import MixinMeta
 
 async def provider_key_error(
     bot: Red, ctx: commands.Context, provider: str, key_name: str = "api_key"
-) -> Optional[str]:
+) -> str | None:
     """Return an error string if *provider* has no *key_name* token set, else None.
 
     Args:
@@ -38,7 +36,6 @@ class FunctionsGroupMixin(MixinMeta):
 
         (All subcommands are per server)
         """
-        pass
 
 
 # Module-level alias of the group stub so sibling settings modules can write

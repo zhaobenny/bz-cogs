@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from aiuser.functions import names
 from aiuser.functions.context import ToolContext
@@ -33,8 +35,8 @@ class ScrapeToolCall(ToolCall):
     parallel_safe = True
 
     async def _handle(
-        self, tool_context: ToolContext, arguments: Dict[str, Any]
-    ) -> Optional[str]:
+        self, tool_context: ToolContext, arguments: dict[str, Any]
+    ) -> str | None:
         logger.info(f"Attempting scrape of {arguments['url']}")
         try:
             scrape_provider = await configured_scrape_provider(tool_context)

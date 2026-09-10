@@ -28,5 +28,5 @@ class ParamsView(discord.ui.View):
         self.stop()
         try:
             await self.src_interaction.edit_original_response(view=None)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110 - preserve the existing failure fallback
             pass

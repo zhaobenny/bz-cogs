@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import logging
 import os
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 import discord
 from redbot.core import Config, app_commands, commands
@@ -41,14 +43,14 @@ class AIUser(
     Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
 
-    __version__ = "2.4.8"
+    __version__ = "2.5.0"
 
     def __init__(self, bot: Red):
         super().__init__()
         self.bot: Red = bot
         self.config = Config.get_conf(self, identifier=754070)
-        self.services: Optional[AIUserServices] = None
-        self.random_task: Optional[RandomMessageTask] = None
+        self.services: AIUserServices | None = None
+        self.random_task: RandomMessageTask | None = None
 
         self.config.register_member(**DEFAULT_MEMBER)
         self.config.register_role(**DEFAULT_ROLE)
@@ -74,7 +76,7 @@ class AIUser(
         if debug_guild_id and debug_guild_id.isdigit():
             # for development: reset prompt start time for a test guild
             self.services.override_prompt_start_time[int(debug_guild_id)] = (
-                datetime.now()
+                datetime.now()  # noqa: DTZ005 - stored as a naive local timestamp by contract
             )
 
         self.random_task = RandomMessageTask(self.services)
@@ -83,6 +85,8 @@ class AIUser(
     async def cog_unload(self):
         if self.services:
             cancel_reply_state_tasks(self.services)
+            if self.services.mcp:
+                await self.services.mcp.close()
             await invalidate_openai_client(self.services)
         if self.random_task:
             self.random_task.cancel()
@@ -103,6 +107,9 @@ class AIUser(
     async def on_red_api_tokens_update(self, service_name: str, _):
         if service_name in ["openai", "openrouter"]:
             await invalidate_openai_client(self.services)
+
+        if self.services and self.services.mcp:
+            await self.services.mcp.tokens_updated(service_name)
 
     @app_commands.command(name="chat")
     @app_commands.describe(text="The prompt you want to send to the AI.")

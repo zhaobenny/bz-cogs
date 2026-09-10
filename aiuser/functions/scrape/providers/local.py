@@ -16,21 +16,20 @@ def truncate_scraped_content(text: str, *, max_chars: int) -> str:
 async def local_scrape(link: str, _tool_context, max_chars: int) -> str:
     logger.info("Requesting %s to scrape with local provider", link)
 
-    async with RestrictedHTTP.session() as session:
-        async with session.get(link) as response:
-            response.raise_for_status()
-            content_type = response.headers.get("Content-Type", "").lower()
-            if "text/html" in content_type:
-                html_content = await RestrictedHTTP.text(response)
-                extracted = extract(html_content) or ""
-                if not extracted:
-                    logger.debug("No content extracted from HTML page: %s", link)
-                    return "Failed to extract content from the HTML page. This may be due to bot anti-scraping measures or the page being mostly non-textual content."
-                res = f"Extracted HTML content:\n {extracted}"
-            else:
-                logger.debug("Non-HTML content type: %s", content_type)
-                raw = await RestrictedHTTP.read(response)
-                text_preview = raw.decode("utf-8", errors="replace")
-                res = f"Content-Type:\n {content_type}. Extracted content:\n {text_preview}"
+    async with RestrictedHTTP.session() as session, session.get(link) as response:
+        response.raise_for_status()
+        content_type = response.headers.get("Content-Type", "").lower()
+        if "text/html" in content_type:
+            html_content = await RestrictedHTTP.text(response)
+            extracted = extract(html_content) or ""
+            if not extracted:
+                logger.debug("No content extracted from HTML page: %s", link)
+                return "Failed to extract content from the HTML page. This may be due to bot anti-scraping measures or the page being mostly non-textual content."
+            res = f"Extracted HTML content:\n {extracted}"
+        else:
+            logger.debug("Non-HTML content type: %s", content_type)
+            raw = await RestrictedHTTP.read(response)
+            text_preview = raw.decode("utf-8", errors="replace")
+            res = f"Content-Type:\n {content_type}. Extracted content:\n {text_preview}"
 
-            return truncate_scraped_content(res, max_chars=max_chars)
+        return truncate_scraped_content(res, max_chars=max_chars)

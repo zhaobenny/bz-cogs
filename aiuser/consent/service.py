@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Iterable, Set
+from collections.abc import Iterable
 
 import discord
 from redbot.core import Config
@@ -25,8 +25,8 @@ class ConsentService:
         self.bot: Red = bot
         self.config = config
         self._lock = asyncio.Lock()
-        self._optin: Set[int] = set()
-        self._optout: Set[int] = set()
+        self._optin: set[int] = set()
+        self._optout: set[int] = set()
 
     async def load(self):
         self._optin = set(await self.config.optin())
@@ -90,7 +90,7 @@ class ConsentService:
 
     async def get_undecided_users(
         self, guild: discord.Guild, messages: Iterable[discord.Message]
-    ) -> Set[discord.Member]:
+    ) -> set[discord.Member]:
         """Authors in `messages` who have not made an opt-in/out choice yet."""
         if await self.config.guild(guild).optin_by_default():
             return set()

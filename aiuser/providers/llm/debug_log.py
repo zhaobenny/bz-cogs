@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from openai.types.chat import ChatCompletionMessageToolCall
 from pydantic import BaseModel
@@ -35,7 +37,7 @@ def _truncate_data_uri(url: str) -> str:
     return f"{url[:base64_start]}{preview}..."
 
 
-def _sanitize_content_item(item: Dict[str, Any]) -> None:
+def _sanitize_content_item(item: dict[str, Any]) -> None:
     if not isinstance(item, dict):
         return
     if item.get("type") != "image_url":
@@ -50,7 +52,7 @@ def _sanitize_content_item(item: Dict[str, Any]) -> None:
         image_url["url"] = _truncate_data_uri(url)
 
 
-def _sanitize_message(message: Dict[str, Any]) -> None:
+def _sanitize_message(message: dict[str, Any]) -> None:
     if not isinstance(message, dict):
         return
 
@@ -62,7 +64,7 @@ def _sanitize_message(message: Dict[str, Any]) -> None:
         _sanitize_content_item(item)
 
 
-def sanitize_messages_for_debug(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def sanitize_messages_for_debug(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     sanitized_messages = _to_debug_value(messages)
 
     for message in sanitized_messages:
@@ -79,12 +81,12 @@ def _format_response_preview(content: str) -> str:
 
 
 def _get_tool_call_names(
-    tool_calls: List[ChatCompletionMessageToolCall],
-) -> List[Optional[str]]:
+    tool_calls: list[ChatCompletionMessageToolCall],
+) -> list[str | None]:
     return [tool_call.function.name for tool_call in tool_calls]
 
 
-def log_chat_request(messages: List[Dict[str, Any]]) -> None:
+def log_chat_request(messages: list[dict[str, Any]]) -> None:
     if not logger.isEnabledFor(logging.DEBUG):
         return
 
@@ -93,13 +95,13 @@ def log_chat_request(messages: List[Dict[str, Any]]) -> None:
         logger.debug(
             "Sending LLM prompt:\n%s", json.dumps(sanitized_messages, indent=4)
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - debug logging must never affect requests
         logger.debug("Error logging LLM prompt: %s", exc)
 
 
 def log_chat_step_result(
-    content: Optional[str],
-    tool_calls: List[ChatCompletionMessageToolCall],
+    content: str | None,
+    tool_calls: list[ChatCompletionMessageToolCall],
 ) -> None:
     if not logger.isEnabledFor(logging.DEBUG):
         return

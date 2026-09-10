@@ -3,8 +3,6 @@
 Adding a tool = write the ToolCall subclass, then list it here, add tool call name constants in aiuser.functions.names
 """
 
-from typing import List
-
 from redbot.core import Config, commands
 
 from aiuser.functions import names
@@ -45,7 +43,7 @@ ALL_TOOLS = [
 TOOLS_BY_NAME = {cls.function_name: cls for cls in ALL_TOOLS}
 
 
-async def get_enabled_tools(config: Config, ctx: commands.Context) -> List[ToolCall]:
+async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolCall]:
     """Instantiate the tools enabled for this guild."""
     enabled = set(await config.guild(ctx.guild).function_calling_functions())
 

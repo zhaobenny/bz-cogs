@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import httpx
 from openai.types.chat import ChatCompletionMessageToolCall
@@ -16,8 +18,8 @@ CODEX_CONTEXT_PREFIX = "Additional system context:\n"
 
 
 def _convert_content_parts(
-    content: Union[str, List[Any], None],
-) -> List[Dict[str, Any]]:
+    content: str | list[Any] | None,
+) -> list[dict[str, Any]]:
     if isinstance(content, str):
         return [{"type": "input_text", "text": content}]
 
@@ -44,8 +46,8 @@ def _convert_content_parts(
 
 
 def _convert_message_content(
-    content: Union[str, List[Any], None],
-) -> Union[str, List[Dict[str, Any]], None]:
+    content: str | list[Any] | None,
+) -> str | list[dict[str, Any]] | None:
     if isinstance(content, str):
         stripped = content.strip()
         return stripped or None
@@ -60,11 +62,11 @@ def _convert_message_content(
     return parts
 
 
-def _stringify_content(content: Union[str, List[Any], None]) -> str:
+def _stringify_content(content: str | list[Any] | None) -> str:
     if isinstance(content, str):
         return content.strip()
 
-    chunks: List[str] = []
+    chunks: list[str] = []
     for item in content or []:
         if not isinstance(item, dict):
             continue
@@ -78,12 +80,12 @@ def _stringify_content(content: Union[str, List[Any], None]) -> str:
 CONTEXT_SYSTEM_NAMES = ("memory", "summary")
 
 
-def _first_system_message_index(messages: List[Dict[str, Any]]) -> Optional[int]:
+def _first_system_message_index(messages: list[dict[str, Any]]) -> int | None:
     """Index of the persona system prompt.
 
     Skipped tagged system messages
     """
-    fallback_index: Optional[int] = None
+    fallback_index: int | None = None
     for index, message in enumerate(messages):
         if message.get("role") != "system":
             continue
@@ -104,9 +106,9 @@ def _tool_function(tool_call: Any) -> Any:
 
 
 def build_codex_instructions(
-    messages: List[Dict[str, Any]], kwargs: Dict[str, Any]
+    messages: list[dict[str, Any]], kwargs: dict[str, Any]
 ) -> str:
-    sections: List[str] = []
+    sections: list[str] = []
     first_system_index = _first_system_message_index(messages)
 
     instructions = kwargs.get("instructions")
@@ -129,8 +131,8 @@ def build_codex_instructions(
     return "\n\n".join(sections).strip()
 
 
-def build_codex_input(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    items: List[Dict[str, Any]] = []
+def build_codex_input(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
     first_system_index = _first_system_message_index(messages)
     for index, message in enumerate(messages):
         role = message.get("role")
@@ -192,7 +194,7 @@ def build_codex_input(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return items
 
 
-def build_codex_tools(tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def build_codex_tools(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
     converted = []
     for tool in tools:
         if tool.get("type") != "function":
@@ -212,13 +214,13 @@ def build_codex_tools(tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 def build_codex_payload(
-    model: str, messages: List[Dict[str, Any]], kwargs: Dict[str, Any]
-) -> Dict[str, Any]:
+    model: str, messages: list[dict[str, Any]], kwargs: dict[str, Any]
+) -> dict[str, Any]:
     instructions = build_codex_instructions(messages, kwargs)
     extra_body = (
         kwargs.get("extra_body") if isinstance(kwargs.get("extra_body"), dict) else {}
     )
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "model": model,
         "instructions": instructions,
         "input": build_codex_input(messages),
@@ -263,10 +265,10 @@ def build_codex_payload(
 
 
 def parse_codex_response(
-    data: Dict[str, Any],
-) -> tuple[Optional[str], List[ChatCompletionMessageToolCall]]:
-    text_chunks: List[str] = []
-    tool_calls: List[ChatCompletionMessageToolCall] = []
+    data: dict[str, Any],
+) -> tuple[str | None, list[ChatCompletionMessageToolCall]]:
+    text_chunks: list[str] = []
+    tool_calls: list[ChatCompletionMessageToolCall] = []
 
     for item in data.get("output", []):
         item_type = item.get("type")
@@ -313,12 +315,12 @@ def parse_codex_response(
 
 async def parse_codex_stream_response(
     response: httpx.Response,
-) -> tuple[Optional[str], List[ChatCompletionMessageToolCall]]:
-    event_name: Optional[str] = None
-    data_lines: List[str] = []
-    completed_payload: Optional[Dict[str, Any]] = None
-    output_items: Dict[int, Dict[str, Any]] = {}
-    output_text: Dict[int, str] = {}
+) -> tuple[str | None, list[ChatCompletionMessageToolCall]]:
+    event_name: str | None = None
+    data_lines: list[str] = []
+    completed_payload: dict[str, Any] | None = None
+    output_items: dict[int, dict[str, Any]] = {}
+    output_text: dict[int, str] = {}
 
     async for line in response.aiter_lines():
         if not line:
@@ -384,9 +386,9 @@ async def parse_codex_stream_response(
 async def create_codex_response(
     config: Config,
     model: str,
-    messages: List[Dict[str, Any]],
-    kwargs: Dict[str, Any],
-) -> tuple[Optional[str], List[ChatCompletionMessageToolCall]]:
+    messages: list[dict[str, Any]],
+    kwargs: dict[str, Any],
+) -> tuple[str | None, list[ChatCompletionMessageToolCall]]:
     timeout = await config.openai_endpoint_request_timeout()
     payload = build_codex_payload(model, messages, kwargs)
     if not payload["input"]:

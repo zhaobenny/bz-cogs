@@ -1,7 +1,7 @@
 import base64
 import logging
 from io import BytesIO
-from typing import Any, Dict, List
+from typing import Any
 
 from discord import Attachment, Message
 from PIL import Image
@@ -13,12 +13,12 @@ logger = logging.getLogger("red.bz_cogs.aiuser.context")
 
 
 async def format_image(
-    config: Config, message: Message, attachments: List[Attachment]
-) -> List[Dict[str, Any]]:
+    config: Config, message: Message, attachments: list[Attachment]
+) -> list[dict[str, Any]]:
     max_size = await config.guild(message.guild).max_image_size()
     detail = await config.guild(message.guild).scan_images_detail()
 
-    content: List[Dict[str, Any]] = []
+    content: list[dict[str, Any]] = []
     if message.content != "":
         content.append({"type": "text", "text": format_text_content(message)})
 

@@ -9,7 +9,7 @@ import logging
 import random
 import re
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, List, Optional, Set
+from typing import TYPE_CHECKING
 
 import discord
 from discord.utils import MISSING
@@ -30,11 +30,11 @@ RANDOM_REPLY_CHANCE = 0.25
 
 
 async def deliver(
-    services: "AIUserServices",
+    services: AIUserServices,
     ctx: commands.Context,
-    result: "PipelineResult",
+    result: PipelineResult,
     can_reply: bool,
-) -> Optional[discord.Message]:
+) -> discord.Message | None:
     response = ""
     if result.completion:
         response = await _remove_patterns_from_response(
@@ -99,11 +99,11 @@ async def _should_reply(ctx: commands.Context) -> bool:
     return False
 
 
-def _chunk_message(response: str) -> List[str]:
+def _chunk_message(response: str) -> list[str]:
     if not response:
         return [""]
 
-    chunks: List[str] = []
+    chunks: list[str] = []
     remaining = response
     while len(remaining) > DISCORD_MESSAGE_CHARACTERS_LIMIT:
         cut = remaining.rfind("\n", 1, DISCORD_MESSAGE_CHARACTERS_LIMIT)
@@ -122,7 +122,7 @@ def _chunk_message(response: str) -> List[str]:
 
 
 async def _remove_patterns_from_response(
-    ctx: commands.Context, services: "AIUserServices", response: str
+    ctx: commands.Context, services: AIUserServices, response: str
 ) -> str:
     """Strip text matching the guild's removelist regexes."""
     cleaned = response.strip(" \n")
@@ -145,8 +145,8 @@ async def _remove_patterns_from_response(
 
 
 async def _expand_authorname_patterns(
-    ctx: commands.Context, patterns: List[str]
-) -> List[str]:
+    ctx: commands.Context, patterns: list[str]
+) -> list[str]:
     """Turn each {authorname} pattern into one pattern per recent chatter.
 
     Author names come from a channel history fetch; only pay for it when
@@ -155,13 +155,13 @@ async def _expand_authorname_patterns(
     if not any("{authorname}" in pattern for pattern in patterns):
         return patterns
 
-    authors: Set[str] = {
+    authors: set[str] = {
         msg.author.display_name
         async for msg in ctx.channel.history(limit=10)
         if msg.author != ctx.guild.me
     }
 
-    expanded: List[str] = []
+    expanded: list[str] = []
     for pattern in patterns:
         if "{authorname}" in pattern:
             expanded.extend(

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import discord
 from redbot.core import Config
@@ -34,8 +33,8 @@ DEFAULT_VOICES = {
 @dataclass(frozen=True)
 class VoiceSettings:
     provider: str
-    model: Optional[str]
-    voice: Optional[str]
+    model: str | None
+    voice: str | None
 
 
 async def voice_settings(config: Config, guild: discord.Guild) -> VoiceSettings:

@@ -76,7 +76,9 @@ class BitTensorImg(commands.Cog):
                 return base64.b64decode(image_data)
             else:
                 error_text = await response.text()
-                raise Exception(f"sn19.ai API error: {response.status} - {error_text}")
+                raise RuntimeError(
+                    f"sn19.ai API error: {response.status} - {error_text}"
+                )
 
     async def _generate_image_chutes(
         self,
@@ -115,7 +117,9 @@ class BitTensorImg(commands.Cog):
                 return await response.read()
             else:
                 error_text = await response.text()
-                raise Exception(f"Chutes API error: {response.status} - {error_text}")
+                raise RuntimeError(
+                    f"Chutes API error: {response.status} - {error_text}"
+                )
 
     @app_commands.command(name="bitgen")
     @app_commands.describe(
@@ -170,7 +174,7 @@ class BitTensorImg(commands.Cog):
                 f"No API key set for {provider}! Use `[p]set api {NINETEEN if provider == NINETEEN else CHUTES} api_key,[YOUR_API_KEY_HERE]`",
                 ephemeral=True,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - preserve the existing failure fallback
             log.error(f"{e}")
             await interaction.followup.send(
                 f"Failed to generate image using `{provider}`.\n`{e}`", ephemeral=True
@@ -207,7 +211,7 @@ class BitTensorImg(commands.Cog):
                 f"No API key set for `{provider}`! Use `[p]set api {api_key_name} api_key,[YOUR_API_KEY_HERE]`"
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - preserve the existing failure fallback
             await ctx.message.remove_reaction(thinking_emoji, ctx.bot.user)
             if "402" in str(e):
                 await ctx.message.add_reaction(credits_emoji)
