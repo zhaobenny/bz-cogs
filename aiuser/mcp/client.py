@@ -337,8 +337,12 @@ class MCPClient:
                 return await asyncio.wait_for(
                     self._post(payload, headers, request_id), timeout=60
                 )
-            except MCPOAuthRequired:
+            except MCPOAuthRequired as exc:
                 if not access:
+                    if headers.get("Authorization"):
+                        raise MCPAuthError(
+                            "The MCP server rejected its configured credentials."
+                        ) from exc
                     raise
                 access = await self.oauth.access_token(
                     self.server_alias, self.url, rejected=access
