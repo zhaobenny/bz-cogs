@@ -463,12 +463,21 @@ class MCPClient:
 
     # Close any legacy session and release the HTTP client.
     async def close(self) -> None:
-        if self.session_id:
-            headers = {**self.headers, "Mcp-Session-Id": self.session_id}
-            if self.protocol_version:
-                headers["MCP-Protocol-Version"] = self.protocol_version
-            try:
-                await self._http.delete(self.url, headers=headers)
-            except httpx.HTTPError:
-                logger.debug("Failed to close MCP session %s", self.server_alias)
-        await self._http.aclose()
+        try:
+            if self.session_id:
+                headers = {**self.headers, "Mcp-Session-Id": self.session_id}
+                if self.protocol_version:
+                    headers["MCP-Protocol-Version"] = self.protocol_version
+                try:
+                    if self.oauth:
+                        access = await self.oauth.access_token(
+                            self.server_alias, self.url
+                        )
+                        if access:
+                            headers["Authorization"] = f"Bearer {access}"
+                    response = await self._http.delete(self.url, headers=headers)
+                    response.raise_for_status()
+                except (MCPError, httpx.HTTPError):
+                    logger.debug("Failed to close MCP session %s", self.server_alias)
+        finally:
+            await self._http.aclose()
