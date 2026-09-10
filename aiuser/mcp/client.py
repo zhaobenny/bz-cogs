@@ -205,13 +205,19 @@ class MCPClient:
     # Call one server tool while enforcing the concurrency limit.
     async def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         await self.connect()
+        if self._catalog is None:
+            await self.list_tools()
         request_headers = self._call_headers(name, arguments)
         async with self._call_limit:
-            return await self._rpc(
-                "tools/call",
-                {"name": name, "arguments": arguments},
-                headers=request_headers,
-            )
+            try:
+                return await self._rpc(
+                    "tools/call",
+                    {"name": name, "arguments": arguments},
+                    headers=request_headers,
+                )
+            except MCPSessionExpired:
+                self._reset()
+                raise
 
     # Build HTTP headers from annotated tool argument values.
     def _call_headers(self, name: str, arguments: dict[str, Any]) -> dict[str, str]:

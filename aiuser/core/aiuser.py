@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import logging
 import os
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 import discord
 from redbot.core import Config, app_commands, commands
@@ -47,8 +49,8 @@ class AIUser(
         super().__init__()
         self.bot: Red = bot
         self.config = Config.get_conf(self, identifier=754070)
-        self.services: Optional[AIUserServices] = None
-        self.random_task: Optional[RandomMessageTask] = None
+        self.services: AIUserServices | None = None
+        self.random_task: RandomMessageTask | None = None
 
         self.config.register_member(**DEFAULT_MEMBER)
         self.config.register_role(**DEFAULT_ROLE)
@@ -74,7 +76,7 @@ class AIUser(
         if debug_guild_id and debug_guild_id.isdigit():
             # for development: reset prompt start time for a test guild
             self.services.override_prompt_start_time[int(debug_guild_id)] = (
-                datetime.now()
+                datetime.now()  # noqa: DTZ005 - stored as a naive local timestamp by contract
             )
 
         self.random_task = RandomMessageTask(self.services)

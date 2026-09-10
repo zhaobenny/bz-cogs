@@ -21,7 +21,7 @@ class MCPSettings(MixinMeta):
 
     @mcp.command(name="servers", aliases=["list"])
     async def mcp_servers(self, ctx: commands.Context):
-        """List configured MCP servers and if they are currenlty enabled for the current Discord server."""
+        """List configured MCP servers and if they are currently enabled for the current Discord server."""
         servers = await self.config.mcp_servers()
         if not servers:
             return await ctx.send("No MCP servers are configured.")
@@ -62,7 +62,7 @@ class MCPSettings(MixinMeta):
 
     @mcp.command(name="add")
     async def mcp_add(self, ctx: commands.Context, name: str, url: str):
-        """Add an MCP server to the catalog of avaiable servers to use."""
+        """Add an MCP server to the catalog of available servers to use."""
         if not re.fullmatch(r"[a-z0-9_-]{1,32}", name):
             return await ctx.send(
                 "Server names must use 1-32 lowercase letters, numbers, `_`, or `-`."
@@ -133,7 +133,10 @@ class MCPSettings(MixinMeta):
         servers = await self.config.mcp_servers()
         if name not in servers:
             return await ctx.send(f"Unknown MCP server `{name}`.")
+        url_changed = servers[name]["url"] != url
         await self.services.mcp.oauth.forget(name)
+        if url_changed:
+            await self.bot.remove_shared_api_tokens(f"mcp_{name}", "token")
         servers[name]["url"] = url
         await self.config.mcp_servers.set(servers)
         await self.services.mcp.invalidate_server(name)
@@ -277,7 +280,10 @@ class MCPSettings(MixinMeta):
 
     @mcp.command(name="enable")
     async def mcp_enable(self, ctx: commands.Context, name: str):
-        """Enable an MCP server for this Discord server."""
+        """Enable an MCP server for this Discord server.
+
+        ** All tools ** from the specified MCP server will be available to **all server users** that can chat with the bot.
+        """
         servers = await self.config.mcp_servers()
         if name not in servers:
             return await ctx.send(f"Unknown MCP server `{name}`.")

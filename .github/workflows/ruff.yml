@@ -18,7 +18,7 @@ jobs:
         uses: astral-sh/setup-uv@v9.0.0
 
       - name: Run Ruff check
-        run: uvx --from ruff==0.15.7 ruff check .
+        run: uvx --from ruff==0.16.6 ruff check . --target-version py39
 
       - name: Run Ruff format check
-        run: uvx --from ruff==0.15.7 ruff format --check .
+        run: uvx --from ruff==0.16.6 ruff format --check .

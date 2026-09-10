@@ -56,7 +56,7 @@ class MCPTokenModal(discord.ui.Modal, title="Set MCP Bearer token"):
             )
             await self.manager.invalidate_server(self.alias)
             await self.manager.oauth.forget(self.alias)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - rollback must protect secret-bearing tracebacks
             if old_token:
                 await self.manager.bot.set_shared_api_tokens(service, token=old_token)
             else:
@@ -166,7 +166,7 @@ class MCPAuthView(discord.ui.View):
                 ),
                 ephemeral=True,
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - onboarding must report failures safely
             logger.warning(
                 "MCP onboarding failed for %s (%s)", self.alias, type(exc).__name__
             )
@@ -338,7 +338,7 @@ class MCPCallbackModal(discord.ui.Modal, title="Finish MCP sign-in"):
                 ),
                 ephemeral=True,
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - onboarding must report failures safely
             logger.warning(
                 "MCP onboarding failed for %s (%s)", view.alias, type(exc).__name__
             )
