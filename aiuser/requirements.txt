@@ -1,2 +1,4 @@
 openai>=2,<2.29
 pydantic>=2.11,<2.12
+# AnyIO 4.15 requires sentinel, absent from Red's pinned typing_extensions.
+anyio<4.15
