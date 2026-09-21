@@ -195,6 +195,22 @@ class Settings:
                 page.set_footer(text=f"Page {i + 1} of {len(menu_pages)}")
             return await SimpleMenu(menu_pages).start(ctx)
 
+    async def _get_decision_models(self):
+        if (
+            self.aclient.base_url.host == "api.typesafe.ai"
+            and self.aclient.base_url.scheme == "https"
+        ):
+            return {"jev-latest", "jev-preview"}
+        if (
+            self.aclient.base_url.host != "openrouter.ai"
+            or self.aclient.base_url.scheme != "https"
+        ):
+            return set()
+        models = await self.aclient.models.list(
+            extra_query={"output_modalities": "decisions"}
+        )
+        return {model.id for model in models.data}
+
     @aiemote_owner.command(name="model")
     @checks.is_owner()
     async def set_llm_model(
@@ -209,9 +225,22 @@ class Settings:
         If no model name is given, lists available models.
         """
         await ctx.message.add_reaction("🔄")
-        res = await self.aclient.models.list()
-        available_models = [model.id for model in res.data]
-        await ctx.message.remove_reaction("🔄", ctx.me)
+        try:
+            decision_models = await self._get_decision_models()
+            if (
+                self.aclient.base_url.host == "api.typesafe.ai"
+                and self.aclient.base_url.scheme == "https"
+            ):
+                available_models = sorted(decision_models)
+                if model_name and re.fullmatch(r"jev-\d+\.\d+\.\d+", model_name):
+                    available_models.append(model_name)
+            else:
+                res = await self.aclient.models.list()
+                available_models = sorted(
+                    {model.id for model in res.data} | decision_models
+                )
+        finally:
+            await ctx.message.remove_reaction("🔄", ctx.me)
 
         if not model_name or model_name.lower() == "list":
             return await self._paginate_models(ctx, available_models)
@@ -240,17 +269,20 @@ class Settings:
     @aiemote_owner.command()
     @checks.is_owner()
     async def endpoint(self, ctx: commands.Context, url: Optional[str]):  # noqa: UP045 - Red evaluates command annotations on Python 3.9
-        """Sets the OpenAI endpoint to a custom url (must be OpenAI API compatible)
+        """Sets a custom OpenAI-compatible endpoint or the TypeSafe decision API.
 
         **Arguments:**
         - `url`: The url to set the endpoint to.
         OR
-        - `openai`, `openrouter`, `ollama`: Shortcuts for the default endpoints. (localhost for ollama)
+        - `openai`, `openrouter`, `ollama`, `typesafe`: Endpoint shortcuts. (localhost for ollama)
+        TypeSafe requires `[p]set api typesafe api_key,KEY`, then select a Jev model.
         """
         from .openai_utils import setup_openai_client
 
         if url == "openrouter":
             url = "https://openrouter.ai/api/v1/"
+        elif url == "typesafe":
+            url = "https://api.typesafe.ai/v1/"
         elif url == "ollama":
             url = "http://localhost:11434/v1/"
         elif url in ["clear", "reset", "openai"]:
@@ -263,11 +295,16 @@ class Settings:
 
         self.aclient = await setup_openai_client(self.bot, self.config)
 
-        # test the endpoint works if not rollback
+        # TypeSafe credentials are validated by the first decision request.
         try:
-            _ = await self.aclient.models.list()
+            if not (
+                self.aclient.base_url.host == "api.typesafe.ai"
+                and self.aclient.base_url.scheme == "https"
+            ):
+                await self.aclient.models.list()
         except Exception:  # noqa: BLE001 - preserve the existing failure fallback
             await self.config.custom_openai_endpoint.set(previous_url)
+            self.aclient = await setup_openai_client(self.bot, self.config)
             return await ctx.send(
                 ":warning: Invalid endpoint. Please check logs for more information."
             )
@@ -280,6 +317,11 @@ class Settings:
 
         if url:
             embed.description = f"Endpoint set to {url}."
+            if url == "https://api.typesafe.ai/v1/":
+                embed.description += (
+                    f" Select a model with `{ctx.clean_prefix}aiemoteowner model jev-latest`."
+                    " Credentials will be checked on the first decision request."
+                )
             embed.set_footer(
                 text="❗ Third party models may have undesirable results with this cog."
             )

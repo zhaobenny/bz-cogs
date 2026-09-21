@@ -2,6 +2,7 @@ import logging
 import random
 
 import discord
+import httpx
 import tiktoken
 from redbot.core import Config, commands
 from redbot.core.bot import Red
@@ -70,7 +71,7 @@ class AIEmote(commands.Cog, Settings):
 
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, api_tokens):
-        if service_name in ["openai", "openrouter"]:
+        if service_name in ["openai", "openrouter", "typesafe"]:
             self.aclient = await setup_openai_client(self.bot, self.config)
 
     @commands.Cog.listener()
@@ -85,7 +86,6 @@ class AIEmote(commands.Cog, Settings):
             await message.add_reaction(emoji)
 
     async def pick_emoji(self, message: discord.Message):
-        options = "\n"
         emojis = await self.config.guild(message.guild).server_emojis() or []
         emojis += await self.config.global_emojis() or []
 
@@ -95,42 +95,29 @@ class AIEmote(commands.Cog, Settings):
             )
             return None
 
-        for index, value in enumerate(emojis):
-            options += f"{index}. {value['description']}\n"
-
-        logit_bias = {}
-        try:
-            if not self.encoding:
-                raise KeyError
-            for i in range(len(emojis)):
-                encoded_value = self.encoding.encode(str(i))
-                if len(encoded_value) == 1:
-                    logit_bias[encoded_value[0]] = 100
-        except (KeyError, AttributeError):
-            logit_bias = {}
-
-        system_prompt = f"You are in a chat room. You will pick an emoji for the following message. {await self.config.extra_instruction()} Here are your options: {options} Your answer will be a int between 0 and {len(emojis) - 1}."
+        instruction = await self.config.extra_instruction()
         content = (
             f"{message.author.display_name} : {self.stringify_any_mentions(message)}"
         )
         try:
-            response = await self.aclient.chat.completions.create(
-                model=self.llm_model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": content},
-                ],
-                max_tokens=1,
-                logit_bias=logit_bias,
-            )
+            if (
+                self.aclient.base_url.host == "api.typesafe.ai"
+                and self.aclient.base_url.scheme == "https"
+            ) or self.llm_model in await self._get_decision_models():
+                response = await self._request_decision_emoji(
+                    content, instruction, emojis, message.guild.name
+                )
+            else:
+                response = await self._request_chat_emoji(content, instruction, emojis)
         except Exception:
             logger.exception(
-                f"Skipping react in {message.guild.name}! Failed to get response from OpenAI"
+                f"Skipping react in {message.guild.name}! Failed to get emoji selection"
             )
             return None
 
-        response = response.choices[0].message.content
-        if response.isnumeric():
+        if response is None:
+            return None
+        if isinstance(response, str) and response.isascii() and response.isdecimal():
             index = int(response)
             if index < 0 or index >= len(emojis):
                 return None
@@ -141,6 +128,70 @@ class AIEmote(commands.Cog, Settings):
                 f"Skipping react in {message.guild.name}! Non-numeric response from OpenAI: {response}. (Please report to dev if this occurs often)"
             )
             return None
+
+    async def _request_decision_emoji(self, content, instruction, emojis, guild_name):
+        endpoint = {
+            "openrouter.ai": "https://openrouter.ai/api/alpha/decisions",
+            "api.typesafe.ai": "https://api.typesafe.ai/v1/systemone",
+        }.get(self.aclient.base_url.host)
+        if self.aclient.base_url.scheme != "https" or endpoint is None:
+            logger.warning(
+                "Decisions mode requires the OpenRouter or TypeSafe endpoint"
+            )
+            return None
+        if len(emojis) > 255:
+            logger.warning(
+                "Skipping react in %s: Decisions supports at most 255 emoji options",
+                guild_name,
+            )
+            return None
+        criteria = {
+            str(index): value["description"] for index, value in enumerate(emojis)
+        }
+        result = await self.aclient.post(
+            endpoint,
+            cast_to=httpx.Response,
+            body={
+                "model": self.llm_model,
+                "state": content,
+                "questions": {
+                    "emoji": {
+                        "type": "choice",
+                        "instructions": f"Pick an emoji to react to this chat message. {instruction}",
+                        "criteria": criteria,
+                    }
+                },
+            },
+        )
+        response = result.json()["answers"]["emoji"]["choice"]
+        if not isinstance(response, str) or response not in criteria:
+            logger.warning("Skipping react: invalid Decisions emoji choice")
+            return None
+        return response
+
+    async def _request_chat_emoji(self, content, instruction, emojis):
+        options = "\n"
+        for index, value in enumerate(emojis):
+            options += f"{index}. {value['description']}\n"
+
+        logit_bias = {}
+        if self.encoding:
+            for i in range(len(emojis)):
+                encoded_value = self.encoding.encode(str(i))
+                if len(encoded_value) == 1:
+                    logit_bias[encoded_value[0]] = 100
+
+        system_prompt = f"You are in a chat room. You will pick an emoji for the following message. {instruction} Here are your options: {options} Your answer will be a int between 0 and {len(emojis) - 1}."
+        result = await self.aclient.chat.completions.create(
+            model=self.llm_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": content},
+            ],
+            max_tokens=1,
+            logit_bias=logit_bias,
+        )
+        return result.choices[0].message.content
 
     async def is_valid_to_react(self, ctx: commands.Context):
         if ctx.guild is None or ctx.author.bot:

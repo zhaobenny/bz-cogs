@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from urllib.parse import urlsplit
 
 from discord.ext import commands
 from openai import AsyncOpenAI
@@ -22,7 +23,10 @@ async def setup_openai_client(
     api_key = None
     headers = None
 
-    if base_url and str(base_url).startswith(OPENROUTER_URL):
+    if base_url and urlsplit(str(base_url))[:2] == ("https", "api.typesafe.ai"):
+        api_type = "typesafe"
+        api_key = (await bot.get_shared_api_tokens(api_type)).get("api_key")
+    elif base_url and str(base_url).startswith(OPENROUTER_URL):
         api_type = "openrouter"
         api_key = (await bot.get_shared_api_tokens(api_type)).get("api_key")
         headers = {
@@ -32,7 +36,7 @@ async def setup_openai_client(
     else:
         api_key = (await bot.get_shared_api_tokens("openai")).get("api_key")
 
-    if not api_key and (not base_url or api_type == "openrouter"):
+    if not api_key and (not base_url or api_type in ("openrouter", "typesafe")):
         if ctx:
             error_message = (
                 f"{api_type} API key not set for `aiemote`. "
