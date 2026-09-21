@@ -6,6 +6,11 @@ from aiuser.providers.llm.codex.oauth import is_codex_endpoint_mode
 from aiuser.providers.llm.codex.provider import CodexProvider
 from aiuser.providers.llm.openai_compatible.client import get_openai_client
 from aiuser.providers.llm.openai_compatible.provider import OpenAICompatibleProvider
+from aiuser.providers.llm.openai_compatible.responses import OpenAIResponsesProvider
+from aiuser.providers.llm.openai_compatible.endpoints import (
+    CompatEndpointKind,
+    get_openai_compat_kind,
+)
 
 from .base import LLMProvider
 
@@ -21,6 +26,9 @@ async def get_llm_provider(services: AIUserServices) -> LLMProvider | None:
     if client is None:
         return None
 
+    endpoint_kind = get_openai_compat_kind(str(client.base_url))
+    if endpoint_kind is CompatEndpointKind.OPENAI:
+        return OpenAIResponsesProvider(services.config, client)
     return OpenAICompatibleProvider(services.config, client)
 
 

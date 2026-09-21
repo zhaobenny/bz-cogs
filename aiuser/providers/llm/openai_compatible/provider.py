@@ -1,4 +1,3 @@
-import re
 from typing import Any
 
 from openai import AsyncOpenAI
@@ -64,17 +63,6 @@ class OpenAICompatibleProvider(LLMProvider):
         endpoint_kind = get_openai_compat_kind(
             await self.config.custom_openai_endpoint()
         )
-        if endpoint_kind is CompatEndpointKind.OPENAI and request_kwargs.get("tools"):
-            if re.match(r"^gpt-6-astra(?:-|$)", model):
-                request_kwargs["reasoning_effort"] = "low"
-
-            version_match = re.match(r"^gpt-(\d+)(?:\.(\d+))?(?:-|$)", model)
-            if version_match and (
-                int(version_match.group(1)),
-                int(version_match.group(2) or 0),
-            ) == (5, 6):
-                request_kwargs["reasoning_effort"] = "none"
-
         response: ChatCompletion = await self.openai_client.chat.completions.create(
             model=model,
             messages=messages,

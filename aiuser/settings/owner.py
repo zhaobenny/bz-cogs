@@ -288,6 +288,9 @@ class OwnerSettings(MixinMeta):
         finally:
             await ctx.message.remove_reaction("🔄", ctx.me)
 
+        if previous_url != url:
+            self.services.context_cache.clear()
+
         endpoint_kind = get_openai_compat_kind(url)
         if endpoint_kind is CompatEndpointKind.OPENROUTER:
             chat_model = f"openai/{DEFAULT_LLM_MODEL}"
@@ -381,6 +384,8 @@ class OwnerSettings(MixinMeta):
         oauth = await ensure_valid_codex_oauth(self.config)
         await set_codex_oauth(self.config, oauth)
         await self.config.custom_openai_endpoint.set(CODEX_ENDPOINT_MODE)
+        if previous_url != CODEX_ENDPOINT_MODE:
+            self.services.context_cache.clear()
         await invalidate_openai_client(self.services)
         restored_count, guilds_with_parameters = await self._restore_endpoint_models(
             endpoint_url=CODEX_ENDPOINT_MODE,
