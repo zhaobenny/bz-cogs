@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
@@ -31,6 +32,7 @@ from aiuser.providers.llm.openai_compatible.endpoints import (
     get_openai_compat_api_token_name,
     get_openai_compat_kind,
 )
+from aiuser.providers.llm.registry import list_llm_models
 from aiuser.settings.utilities import (
     add_prompt_metrics_fields,
     confirm_pending,
@@ -41,11 +43,67 @@ from aiuser.types.abc import MixinMeta
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
+def _remove_codex_oauth(value):
+    if isinstance(value, dict):
+        value.pop("codex_oauth", None)
+        for item in value.values():
+            _remove_codex_oauth(item)
+    elif isinstance(value, list):
+        for item in value:
+            _remove_codex_oauth(item)
+
+
 class OwnerSettings(MixinMeta):
     @commands.group(aliases=["ai_userowner"])
     @checks.is_owner()
     async def aiuserowner(self, _):
         """For some settings that apply bot-wide."""
+
+    @aiuserowner.group(
+        name="default_model", aliases=["defaultmodel"], invoke_without_command=True
+    )
+    async def default_model(self, ctx: commands.Context):
+        """Show the default chat model for servers without their own setting"""
+        model = await self.config.default_model()
+        embed = discord.Embed(
+            title="Default chat model:",
+            description=model,
+            color=await ctx.embed_color(),
+        )
+        embed.set_footer(text="Used by servers without their own model setting")
+        return await ctx.send(embed=embed)
+
+    @default_model.command(name="set")
+    async def default_model_set(self, ctx: commands.Context, model: str):
+        """Set the default chat model for servers without their own setting"""
+        async with ctx.typing():
+            models = await list_llm_models(self.services)
+        if model not in models:
+            await ctx.send(":warning: Not a valid model!")
+            return await self._paginate_models(ctx, models, query=model)
+
+        await self.config.default_model.set(model)
+        self.services.context_cache.clear()
+        embed = discord.Embed(
+            title="Default chat model is now set to:",
+            description=model,
+            color=await ctx.embed_color(),
+        )
+        embed.set_footer(text="Servers with their own model setting are unaffected")
+        return await ctx.send(embed=embed)
+
+    @default_model.command(name="clear", aliases=["reset"])
+    async def default_model_clear(self, ctx: commands.Context):
+        """Restore the built-in default chat model"""
+        await self.config.default_model.clear()
+        self.services.context_cache.clear()
+        model = await self.config.default_model()
+        embed = discord.Embed(
+            title="Default chat model reset to:",
+            description=model,
+            color=await ctx.embed_color(),
+        )
+        return await ctx.send(embed=embed)
 
     @aiuserowner.group(
         name="max_prompt_length",
@@ -137,7 +195,15 @@ class OwnerSettings(MixinMeta):
                 ":warning: Export is only supported for json backends"
             )
 
-        await ctx.send(file=discord.File(path, filename="aiuser_config.json"))
+        try:
+            exported = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            logger.exception("Failed to read AIUser config for export")
+            return await ctx.send(":warning: Failed to read the current config")
+
+        _remove_codex_oauth(exported)
+        payload = BytesIO(json.dumps(exported, indent=4).encode("utf-8"))
+        await ctx.send(file=discord.File(payload, filename="aiuser_config.json"))
         await ctx.tick()
 
     @owner_config.command(name="import")
@@ -156,6 +222,8 @@ class OwnerSettings(MixinMeta):
             new_config = json.loads(await file.read())
         except json.JSONDecodeError:
             return await ctx.send(":warning: Invalid JSON format!")
+
+        _remove_codex_oauth(new_config)
 
         path = Path(cog_data_path(self) / "settings.json")
 
@@ -177,6 +245,7 @@ class OwnerSettings(MixinMeta):
 
         with path.open("w") as f:  # noqa: ASYNC230 - small local config export
             json.dump(new_config, f, indent=4)
+        path.chmod(0o600)
 
         await self._refresh_cached_guild_options()
 
@@ -321,7 +390,7 @@ class OwnerSettings(MixinMeta):
     async def _activate_codex_endpoint(self, ctx: commands.Context):
         if await is_codex_endpoint_mode(self.config):
             try:
-                await ensure_valid_codex_oauth(self.config)
+                await ensure_valid_codex_oauth(self.bot, self.config)
             except Exception:
                 logger.warning("Existing Codex OAuth is not healthy", exc_info=True)
             else:
@@ -380,9 +449,9 @@ class OwnerSettings(MixinMeta):
 
         previous_url = await self.config.custom_openai_endpoint()
         await self._save_current_endpoint_models(previous_url)
-        await set_codex_oauth(self.config, normalize_codex_tokens(tokens))
-        oauth = await ensure_valid_codex_oauth(self.config)
-        await set_codex_oauth(self.config, oauth)
+        await set_codex_oauth(self.bot, normalize_codex_tokens(tokens))
+        oauth = await ensure_valid_codex_oauth(self.bot, self.config)
+        await set_codex_oauth(self.bot, oauth)
         await self.config.custom_openai_endpoint.set(CODEX_ENDPOINT_MODE)
         if previous_url != CODEX_ENDPOINT_MODE:
             self.services.context_cache.clear()
@@ -427,8 +496,9 @@ class OwnerSettings(MixinMeta):
             )
             if restored_count < total_guilds:
                 value += (
-                    f"\nA further {total_guilds - restored_count} servers were set to "
-                    f"`{chat_model}` for chat, and `{image_model}` for scanning images."
+                    f"\nA further {total_guilds - restored_count} servers will use "
+                    f"the default `{chat_model}` for chat and `{image_model}` for "
+                    "scanning images."
                 )
             embed.add_field(
                 name="🔄 Restored",
@@ -438,7 +508,11 @@ class OwnerSettings(MixinMeta):
         else:
             embed.add_field(
                 name="🔄 Reset",
-                value=f"All per-server models have been set to use `{chat_model}` for chat and `{image_model}` for scanning images.",
+                value=(
+                    "Servers without their own model setting will use the default "
+                    f"`{chat_model}` for chat. All servers were set to `{image_model}` "
+                    "for scanning images."
+                ),
                 inline=False,
             )
 
@@ -472,11 +546,11 @@ class OwnerSettings(MixinMeta):
     async def _save_current_endpoint_models(self, endpoint_url: str | None):
         history = await self.config.endpoint_model_history()
         key = self._endpoint_history_key(endpoint_url)
-        history[key] = {}
+        history[key] = {"__default_model__": await self.config.default_model()}
         for guild_id in await self.config.all_guilds():
             guild_config = self.config.guild_from_id(guild_id)
             history[key][str(guild_id)] = {
-                "chat_model": await guild_config.model(),
+                "chat_model": await guild_config.model(default=None),
                 "image_model": await guild_config.scan_images_model(),
             }
         await self.config.endpoint_model_history.set(history)
@@ -489,19 +563,25 @@ class OwnerSettings(MixinMeta):
     ) -> tuple[int, list[str]]:
         history = await self.config.endpoint_model_history()
         saved_models = history.get(self._endpoint_history_key(endpoint_url), {})
+        chat_model = saved_models.get("__default_model__", chat_model)
+        await self.config.default_model.set(chat_model)
 
         restored_count = 0
         guilds_with_parameters = []
         for guild_id in await self.config.all_guilds():
             guild_config = self.config.guild_from_id(guild_id)
             if str(guild_id) in saved_models:
-                await guild_config.model.set(saved_models[str(guild_id)]["chat_model"])
+                saved_chat_model = saved_models[str(guild_id)]["chat_model"]
+                if saved_chat_model is None:
+                    await guild_config.model.clear()
+                else:
+                    await guild_config.model.set(saved_chat_model)
                 await guild_config.scan_images_model.set(
                     saved_models[str(guild_id)]["image_model"]
                 )
                 restored_count += 1
             else:
-                await guild_config.model.set(chat_model)
+                await guild_config.model.clear()
                 await guild_config.scan_images_model.set(image_model)
 
             if await guild_config.parameters():

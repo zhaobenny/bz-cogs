@@ -26,6 +26,7 @@ from aiuser.providers.llm.openai_compatible.client import (
     get_openai_client,
     invalidate_openai_client,
 )
+from aiuser.providers.llm.codex.oauth import secure_token_store_permissions
 from aiuser.settings.base import Settings
 from aiuser.types.abc import CompositeMetaClass
 
@@ -43,7 +44,7 @@ class AIUser(
     Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
 
-    __version__ = "2.6.0"
+    __version__ = "2.7.0"
 
     def __init__(self, bot: Red):
         super().__init__()
@@ -105,6 +106,7 @@ class AIUser(
 
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name: str, _):
+        secure_token_store_permissions()
         if service_name in ["openai", "openrouter"]:
             await invalidate_openai_client(self.services)
 

@@ -69,6 +69,9 @@ async def get_prompt_metrics(text: str, model: str) -> PromptMetrics:
 async def get_prompt_metrics_for_context(
     ctx, services: AIUserServices, text: str
 ) -> PromptMetrics:
-    model = await services.config.guild(ctx.guild).model()
+    model = (
+        await services.config.guild(ctx.guild).model()
+        or await services.config.default_model()
+    )
     formatted = await format_variables(ctx, text, services) if text else text
     return await get_prompt_metrics(formatted, model)

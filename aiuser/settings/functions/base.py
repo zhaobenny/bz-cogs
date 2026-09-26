@@ -45,7 +45,10 @@ class FunctionCallingSettings(
             color=await ctx.embed_color(),
         )
 
-        current_model = await self.config.guild(ctx.guild).model()
+        current_model = (
+            await self.config.guild(ctx.guild).model()
+            or await self.config.default_model()
+        )
         if enabled and not get_model_info(current_model).supports_tools:
             embed.set_footer(text="⚠️ Ensure the selected model supports tools!")
         return await ctx.send(embed=embed)

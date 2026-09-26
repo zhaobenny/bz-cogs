@@ -128,7 +128,10 @@ class CompactionManager:
 {new_messages_block}
 """
 
-            model = await self.services.config.guild(ctx.guild).model()
+            model = (
+                await self.services.config.guild(ctx.guild).model()
+                or await self.services.config.default_model()
+            )
 
             provider = await get_llm_provider(self.services)
             if provider is None:

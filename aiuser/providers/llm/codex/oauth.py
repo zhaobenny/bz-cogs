@@ -4,12 +4,15 @@ import asyncio
 import base64
 import json
 import logging
+import os
 import time
 from typing import Any
 
 import httpx
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from redbot.core import Config
+from redbot.core.bot import Red
+from redbot.core.data_manager import core_data_path
 
 logger = logging.getLogger("red.bz_cogs.aiuser.providers.llm")
 
@@ -34,6 +37,8 @@ CODEX_ALLOWED_MODELS = [
 CODEX_DEFAULT_MODEL = "gpt-5.4"
 CODEX_POLLING_SAFETY_MARGIN_SECONDS = 3
 CODEX_DEVICE_TIMEOUT_SECONDS = 300
+CODEX_TOKEN_SERVICE = "aiuser_codex"
+CODEX_TOKEN_KEY = "oauth"
 
 
 def utc_now_ms() -> int:
@@ -99,12 +104,26 @@ async def is_codex_endpoint_mode(config: Config) -> bool:
     return await config.custom_openai_endpoint() == CODEX_ENDPOINT_MODE
 
 
-async def get_codex_oauth(config: Config) -> dict[str, Any]:
-    return await config.get_raw("codex_oauth", default={})
+async def get_codex_oauth(bot: Red) -> dict[str, Any]:
+    stored = await bot.get_shared_api_tokens(CODEX_TOKEN_SERVICE)
+    value = stored.get(CODEX_TOKEN_KEY)
+    if not value:
+        return {}
+    return json.loads(value)
 
 
-async def set_codex_oauth(config: Config, oauth: dict[str, Any]):
-    await config.set_raw("codex_oauth", value=oauth)
+async def set_codex_oauth(bot: Red, oauth: dict[str, Any]):
+    await bot.set_shared_api_tokens(
+        CODEX_TOKEN_SERVICE,
+        **{CODEX_TOKEN_KEY: json.dumps(oauth)},
+    )
+    secure_token_store_permissions()
+
+
+def secure_token_store_permissions():
+    path = core_data_path() / "settings.json"
+    if path.exists():
+        os.chmod(path, 0o600)
 
 
 async def start_device_authorization(
@@ -227,12 +246,13 @@ async def exchange_codex_refresh_token(
 
 
 async def ensure_valid_codex_oauth(
+    bot: Red,
     config: Config,
     force_refresh: bool = False,
     refresh_window_ms: int = 60_000,
     client: httpx.AsyncClient | None = None,
 ) -> dict[str, Any]:
-    oauth = await get_codex_oauth(config)
+    oauth = await get_codex_oauth(bot)
     if not oauth or not oauth.get("refresh"):
         raise ValueError("Codex OAuth is not configured")
 
@@ -248,5 +268,5 @@ async def ensure_valid_codex_oauth(
         previous_account_id=oauth.get("account_id"),
         previous_refresh_token=oauth.get("refresh"),
     )
-    await set_codex_oauth(config, updated)
+    await set_codex_oauth(bot, updated)
     return updated

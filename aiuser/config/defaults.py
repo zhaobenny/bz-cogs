@@ -48,6 +48,7 @@ DEFAULT_LLM_MODEL = "gpt-5.4-mini"
 DEFAULT_TOOL_CALL_ROUNDS = 10
 
 DEFAULT_GLOBAL = {
+    "default_model": DEFAULT_LLM_MODEL,
     "custom_openai_endpoint": None,
     "openai_endpoint_request_timeout": 60,
     "optout": [],
@@ -76,7 +77,7 @@ DEFAULT_GUILD = {
     "scan_audio_model": None,
     "scan_audio_provider_history": {},
     "max_audio_duration": DEFAULT_AUDIO_DURATION_LIMIT,
-    "model": DEFAULT_LLM_MODEL,
+    "model": None,
     "custom_text_prompt": None,
     "channels_whitelist": [],
     "roles_whitelist": [],

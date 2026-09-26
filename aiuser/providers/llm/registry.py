@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 async def get_llm_provider(services: AIUserServices) -> LLMProvider | None:
     if await is_codex_endpoint_mode(services.config):
-        return CodexProvider(services.config)
+        return CodexProvider(services.config, services.bot)
 
     client = await get_openai_client(services)
     if client is None:

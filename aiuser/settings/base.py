@@ -93,7 +93,8 @@ class Settings(
         )
         main_embed.add_field(name="Version", inline=True, value=f"`{self.__version__}`")
 
-        main_embed.add_field(name="Model", inline=True, value=f"`{config['model']}`")
+        model = config["model"] or await self.config.default_model()
+        main_embed.add_field(name="Model", inline=True, value=f"`{model}`")
         main_embed.add_field(
             name="Server Reply Chance",
             inline=True,
@@ -358,8 +359,16 @@ class Settings(
     @checks.is_owner()
     async def model(self, ctx: commands.Context):
         """Show the current chat completion model"""
-        model = await self.config.guild(ctx.guild).model()
-        return await ctx.maybe_send_embed(f"This server's chat model is: `{model}`")
+        server_model = await self.config.guild(ctx.guild).model()
+        model = server_model or await self.config.default_model()
+        embed = discord.Embed(
+            title="This server's chat model:",
+            description=model,
+            color=await ctx.embed_color(),
+        )
+        if not server_model:
+            embed.set_footer(text="Using the bot-wide default")
+        return await ctx.send(embed=embed)
 
     @model.command(name="list")
     async def model_list(self, ctx: commands.Context):
@@ -397,6 +406,19 @@ class Settings(
                 text="⚠️ Tool use is enabled - ensure the selected model supports tools"
             )
 
+        return await ctx.send(embed=embed)
+
+    @model.command(name="clear", aliases=["reset"])
+    async def model_clear(self, ctx: commands.Context):
+        """Use the bot-wide default chat model"""
+        await self.config.guild(ctx.guild).model.clear()
+        model = await self.config.default_model()
+        embed = discord.Embed(
+            title="This server's chat model is now set to:",
+            description=model,
+            color=await ctx.embed_color(),
+        )
+        embed.set_footer(text="Using the bot-wide default")
         return await ctx.send(embed=embed)
 
     async def _paginate_models(self, ctx, models, query: str | None = None):

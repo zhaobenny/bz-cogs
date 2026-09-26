@@ -126,6 +126,7 @@ class ResponseSettings(MixinMeta):
         try:
             encoding = tiktoken.encoding_for_model(
                 await self.config.guild(ctx.guild).model()
+                or await self.config.default_model()
             )
         except KeyError:
             return await ctx.send(":warning: Unsupported model for tokenization")
@@ -158,7 +159,10 @@ class ResponseSettings(MixinMeta):
                     ":warning: Logit bias already set. Please remove logit bias from custom parameters first."
                 )
 
-        model = await self.config.guild(ctx.guild).model()
+        model = (
+            await self.config.guild(ctx.guild).model()
+            or await self.config.default_model()
+        )
         try:
             encoding = tiktoken.encoding_for_model(model)
         except KeyError:
@@ -210,6 +214,7 @@ class ResponseSettings(MixinMeta):
         try:
             encoding = tiktoken.encoding_for_model(
                 await self.config.guild(ctx.guild).model()
+                or await self.config.default_model()
             )
         except KeyError:
             return await ctx.send(":warning: Unsupported model for tokenization")

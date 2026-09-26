@@ -73,7 +73,11 @@ class MediaSettings(MixinMeta):
             color=await ctx.embed_color(),
         )
         scan_model = await self.config.guild(ctx.guild).scan_images_model()
-        model = scan_model or await self.config.guild(ctx.guild).model()
+        model = (
+            scan_model
+            or await self.config.guild(ctx.guild).model()
+            or await self.config.default_model()
+        )
         if not get_model_info(model).supports_vision:
             embed.set_footer(text="⚠️ Ensure the selected model supports vision")
         return await ctx.send(embed=embed)

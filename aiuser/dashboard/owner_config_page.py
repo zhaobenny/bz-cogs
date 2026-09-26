@@ -79,7 +79,9 @@ async def bot_owner_server_config(self: MixinMeta, guild: discord.Guild, **kwarg
         str(id) for id in await self.config.guild(guild).channels_whitelist()
     ]
     models = await list_llm_models(self.services)
-    form.model.default = await self.config.guild(guild).model()
+    form.model.default = (
+        await self.config.guild(guild).model() or await self.config.default_model()
+    )
     form.model.choices = [(model, model) for model in models]
 
     scan_images_val = await self.config.guild(guild).scan_images()

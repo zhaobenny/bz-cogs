@@ -6,6 +6,7 @@ from typing import Any
 import httpx
 from openai.types.chat import ChatCompletionMessageToolCall
 from redbot.core import Config
+from redbot.core.bot import Red
 
 from aiuser.providers.llm.codex.oauth import (
     CODEX_RESPONSES_URL,
@@ -384,6 +385,7 @@ async def parse_codex_stream_response(
 
 
 async def create_codex_response(
+    bot: Red,
     config: Config,
     model: str,
     messages: list[dict[str, Any]],
@@ -398,7 +400,7 @@ async def create_codex_response(
         return None, []
 
     async with httpx.AsyncClient(timeout=timeout) as client:
-        oauth = await ensure_valid_codex_oauth(config, client=client)
+        oauth = await ensure_valid_codex_oauth(bot, config, client=client)
 
         for attempt in range(2):
             headers = {"Authorization": f"Bearer {oauth['access']}"}
@@ -415,7 +417,7 @@ async def create_codex_response(
                     logger.warning("Codex request unauthorized, forcing token refresh")
                     await response.aread()
                     oauth = await ensure_valid_codex_oauth(
-                        config, force_refresh=True, client=client
+                        bot, config, force_refresh=True, client=client
                     )
                     continue
 

@@ -125,7 +125,7 @@ def _load_presets(raw_presets: str):
     is_owner=True,
 )
 async def prompt_overview(self: MixinMeta, guild: discord.Guild, **kwargs):
-    model = await self.config.guild(guild).model()
+    model = await self.config.guild(guild).model() or await self.config.default_model()
     server_prompt = await self.services.resolver.resolve_prompt(guild=guild)
 
     template_path = TEMPLATES_PATH / "prompt_page.html"

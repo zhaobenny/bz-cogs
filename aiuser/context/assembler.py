@@ -100,7 +100,7 @@ class ConversationAssembler:
 
     async def _new_conversation(self) -> Conversation:
         guild_conf = self.services.config.guild(self.guild)
-        model = await guild_conf.model()
+        model = await guild_conf.model() or await self.services.config.default_model()
         token_limit = (
             await guild_conf.custom_model_tokens_limit()
             or get_model_info(model).token_limit
