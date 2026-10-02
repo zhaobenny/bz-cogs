@@ -2,7 +2,17 @@ import discord
 from redbot.core import commands
 
 from aiuser.functions import names
-from aiuser.functions.search.providers import PROVIDER_KEY_SERVICES, PROVIDERS, SEARXNG
+from aiuser.functions.search.providers import (
+    NATIVE,
+    PROVIDER_KEY_SERVICES,
+    PROVIDERS,
+    SEARXNG,
+)
+from aiuser.providers.llm.openai_compatible.endpoints import (
+    CompatEndpointKind,
+    get_openai_compat_kind,
+)
+from aiuser.providers.llm.codex.oauth import CODEX_ENDPOINT_MODE
 from aiuser.settings.functions.utilities import (
     FunctionToggleHelperMixin,
     functions,
@@ -20,6 +30,17 @@ class SearchFunctionSettings(FunctionToggleHelperMixin):
         """Enable the web search tool"""
         guild_conf = self.config.guild(ctx.guild)
         provider = await guild_conf.function_calling_search_provider()
+        if provider == NATIVE:
+            endpoint = await self.config.custom_openai_endpoint()
+            if endpoint == CODEX_ENDPOINT_MODE or get_openai_compat_kind(
+                endpoint
+            ) not in {
+                CompatEndpointKind.OPENAI,
+                CompatEndpointKind.OPENROUTER,
+            }:
+                return await ctx.send(
+                    "Native search requires an OpenAI or OpenRouter endpoint."
+                )
         key_service = PROVIDER_KEY_SERVICES.get(provider)
         if key_service:
             key_error = await provider_key_error(self.bot, ctx, key_service)
@@ -51,10 +72,23 @@ class SearchFunctionSettings(FunctionToggleHelperMixin):
         """Set the web search provider"""
         provider = provider.strip().lower()
 
-        if provider not in PROVIDERS:
+        if provider not in {*PROVIDERS, NATIVE}:
             return await ctx.send(
-                "Available search providers: " + ", ".join(f"`{p}`" for p in PROVIDERS)
+                "Available search providers: "
+                + ", ".join(f"`{p}`" for p in (*PROVIDERS, NATIVE))
             )
+
+        if provider == NATIVE:
+            endpoint = await self.config.custom_openai_endpoint()
+            if endpoint == CODEX_ENDPOINT_MODE or get_openai_compat_kind(
+                endpoint
+            ) not in {
+                CompatEndpointKind.OPENAI,
+                CompatEndpointKind.OPENROUTER,
+            }:
+                return await ctx.send(
+                    "Native search requires an OpenAI or OpenRouter endpoint."
+                )
 
         key_service = PROVIDER_KEY_SERVICES.get(provider)
         if key_service:

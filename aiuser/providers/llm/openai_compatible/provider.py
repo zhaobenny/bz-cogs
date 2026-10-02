@@ -63,6 +63,22 @@ class OpenAICompatibleProvider(LLMProvider):
         endpoint_kind = get_openai_compat_kind(
             await self.config.custom_openai_endpoint()
         )
+        native_tools = request_kwargs.pop("native_tools", [])
+        if endpoint_kind is CompatEndpointKind.OPENROUTER:
+            tools = list(request_kwargs.get("tools", []))
+            if "web_search" in native_tools:
+                tools.append(
+                    {
+                        "type": "openrouter:web_search",
+                        "parameters": {"engine": "auto"},
+                    }
+                )
+            if "fetch_url" in native_tools:
+                tools.append(
+                    {"type": "openrouter:web_fetch", "parameters": {"engine": "auto"}}
+                )
+            if tools:
+                request_kwargs["tools"] = tools
         response: ChatCompletion = await self.openai_client.chat.completions.create(
             model=model,
             messages=messages,

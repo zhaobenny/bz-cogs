@@ -46,22 +46,28 @@ class ToolExecutor:
         self.ctx = ctx
         self.tool_context = tool_context
         self.mcp = mcp
+        self.native_tools: list[str] = []
         self.enabled_tools: list[ToolCall] = []
         self.enabled_tools_map: dict[str, ToolCall] = {}
 
     async def setup(self):
         if not (await self.config.guild(self.ctx.guild).function_calling()):
             return
-        self.enabled_tools = await get_enabled_tools(self.config, self.ctx)
+        self.enabled_tools, self.native_tools = await get_enabled_tools(
+            self.config, self.ctx
+        )
         if self.mcp:
             self.enabled_tools.extend(await self.mcp.tools_for_guild(self.ctx.guild))
         self.enabled_tools_map = {t.function_name: t for t in self.enabled_tools}
 
     def get_tools_kwargs(self) -> dict[str, Any]:
-        """Return the tools parameter for the OpenAI API call, or empty dict if none."""
+        """Return local function schemas and hosted tool names for the provider."""
+        kwargs = {}
         if self.enabled_tools:
-            return {"tools": [asdict(t.schema) for t in self.enabled_tools]}
-        return {}
+            kwargs["tools"] = [asdict(tool.schema) for tool in self.enabled_tools]
+        if self.native_tools:
+            kwargs["native_tools"] = self.native_tools
+        return kwargs
 
     async def run_tool_calls(
         self, tool_calls: list[ChatCompletionMessageToolCall]

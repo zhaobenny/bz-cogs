@@ -10,6 +10,7 @@ from aiuser.functions.search.providers import exa, searxng
 
 EXA = "exa"
 SEARXNG = "searxng"
+NATIVE = "native"
 
 PROVIDERS = {
     EXA: exa.search,

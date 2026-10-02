@@ -15,6 +15,7 @@ from aiuser.functions.imagerequest.tool_call import ImageRequestToolCall
 from aiuser.functions.memory.tool_call import ReadMemoryToolCall, SaveMemoryToolCall
 from aiuser.functions.noresponse.tool_call import NoResponseToolCall
 from aiuser.functions.scrape.tool_call import ScrapeToolCall
+from aiuser.functions.search.providers import NATIVE
 from aiuser.functions.search.tool_call import SearchToolCall
 from aiuser.functions.tool_call import ToolCall
 from aiuser.functions.voice.tool_call import VoiceRequestToolCall
@@ -43,12 +44,29 @@ ALL_TOOLS = [
 TOOLS_BY_NAME = {cls.function_name: cls for cls in ALL_TOOLS}
 
 
-async def get_enabled_tools(config: Config, ctx: commands.Context) -> list[ToolCall]:
-    """Instantiate the tools enabled for this guild."""
+async def get_enabled_tools(
+    config: Config, ctx: commands.Context
+) -> tuple[list[ToolCall], list[str]]:
+    """Select local tool instances and hosted tool names for this guild."""
     enabled = set(await config.guild(ctx.guild).function_calling_functions())
+
+    native_tools = []
+    if (
+        names.SEARCH_WEB in enabled
+        and await config.guild(ctx.guild).function_calling_search_provider() == NATIVE
+    ):
+        enabled.remove(names.SEARCH_WEB)
+        native_tools.append(names.SEARCH_WEB)
+
+    if (
+        names.OPEN_URL in enabled
+        and await config.guild(ctx.guild).function_calling_scrape_provider() == NATIVE
+    ):
+        enabled.remove(names.OPEN_URL)
+        native_tools.append(names.OPEN_URL)
 
     if ctx.interaction:
         # reactions cannot be added to the invoking message of a slash command
         enabled.discard(names.ADD_REACTION)
 
-    return [tool() for tool in ALL_TOOLS if tool.function_name in enabled]
+    return [tool() for tool in ALL_TOOLS if tool.function_name in enabled], native_tools

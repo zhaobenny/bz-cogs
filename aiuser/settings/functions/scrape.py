@@ -2,7 +2,8 @@ import discord
 from redbot.core import commands
 
 from aiuser.functions import names
-from aiuser.functions.scrape.providers import FIRECRAWL, PROVIDERS
+from aiuser.functions.scrape.providers import FIRECRAWL, NATIVE, PROVIDERS
+from aiuser.providers.llm.openai_compatible.endpoints import is_openrouter_endpoint
 from aiuser.settings.functions.utilities import (
     FunctionToggleHelperMixin,
     functions,
@@ -34,6 +35,10 @@ class ScrapeFunctionSettings(FunctionToggleHelperMixin):
     async def scrape_enable(self, ctx: commands.Context):
         """Enable the web page reading tool."""
         provider = await self.config.guild(ctx.guild).function_calling_scrape_provider()
+        if provider == NATIVE and not is_openrouter_endpoint(
+            await self.config.custom_openai_endpoint()
+        ):
+            return await ctx.send("Native web fetch requires an OpenRouter endpoint.")
         if provider == FIRECRAWL:
             key_error = await provider_key_error(self.bot, ctx, provider)
             if key_error:
@@ -56,11 +61,16 @@ class ScrapeFunctionSettings(FunctionToggleHelperMixin):
         """Set the web page reading provider"""
         provider = provider.strip().lower()
 
-        if provider not in PROVIDERS:
+        if provider not in (*PROVIDERS, NATIVE):
             return await ctx.send(
-                "Available scrape providers: " + ", ".join(f"`{p}`" for p in PROVIDERS)
+                "Available scrape providers: "
+                + ", ".join(f"`{p}`" for p in (*PROVIDERS, NATIVE))
             )
 
+        if provider == NATIVE and not is_openrouter_endpoint(
+            await self.config.custom_openai_endpoint()
+        ):
+            return await ctx.send("Native web fetch requires an OpenRouter endpoint.")
         if provider == FIRECRAWL:
             key_error = await provider_key_error(self.bot, ctx, provider)
             if key_error:

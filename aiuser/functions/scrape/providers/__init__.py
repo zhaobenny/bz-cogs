@@ -8,6 +8,7 @@ from aiuser.functions.scrape.providers import firecrawl, local
 
 LOCAL = "local"
 FIRECRAWL = "firecrawl"
+NATIVE = "native"
 MAX_SCRAPED_CHARS = 12000
 ScrapeProvider = Callable[[str, ToolContext, int], Awaitable[str]]
 

@@ -127,6 +127,7 @@ def _request_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
     reasoning_effort = request.pop("reasoning_effort", None)
     response_format = request.pop("response_format", None)
     provided_tools = request.pop("tools", None)
+    native_tools = request.pop("native_tools", [])
     dropped = _drop_unsupported_kwargs(request)
     for key in ("max_completion_tokens", "max_tokens"):
         value = request.pop(key, None)
@@ -141,6 +142,8 @@ def _request_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
         }
     if provided_tools:
         request["tools"] = build_responses_tools(provided_tools)
+    if "web_search" in native_tools:
+        request.setdefault("tools", []).append({"type": "web_search"})
     choice = request.get("tool_choice")
     if (
         isinstance(choice, dict)
