@@ -63,7 +63,14 @@ class OwnerSettings(MixinMeta):
         name="default_model", aliases=["defaultmodel"], invoke_without_command=True
     )
     async def default_model(self, ctx: commands.Context):
-        """Show the default chat model for servers without their own setting"""
+        """Show the bot-wide default chat model.
+
+        Servers use this default unless they have their own model set.
+
+        - `aiuser model list`: List available models.
+        - `aiuserowner default_model set <model>`: Set the bot-wide default.
+        - `aiuserowner default_model clear`: Restore the built-in default.
+        """
         model = await self.config.default_model()
         embed = discord.Embed(
             title="Default chat model:",

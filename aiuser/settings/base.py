@@ -358,7 +358,13 @@ class Settings(
     @aiuser.group(invoke_without_command=True)
     @checks.is_owner()
     async def model(self, ctx: commands.Context):
-        """Show the current chat completion model"""
+        """Show this server's chat model.
+
+        - `aiuser model list`: List available models.
+        - `aiuser model set <model>`: Set this server's model.
+        - `aiuser model clear`: Use the bot-wide default.
+        - `aiuserowner default_model set <model>`: Change the bot-wide default.
+        """
         server_model = await self.config.guild(ctx.guild).model()
         model = server_model or await self.config.default_model()
         embed = discord.Embed(
