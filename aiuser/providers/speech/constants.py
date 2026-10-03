@@ -13,7 +13,7 @@ MAX_VOICE_WORDS = 75
 
 # tone modifiers like [happy] that only some TTS models understand
 INLINE_TAG_RE = re.compile(r"\s*\[[A-Za-z][A-Za-z0-9_ :,.'-]{0,60}\]\s*")
-ELEVENLAB_INLINE_TAG_MODELS = {"eleven_v3"}
+ELEVENLAB_INLINE_TAG_MODELS = {"eleven_v3", "eleven_v4"}
 OPENROUTER_INLINE_TAG_MODELS = {
     "google/gemini-3.1-flash-tts-preview",
     "x-ai/grok-voice-tts-1.0",
