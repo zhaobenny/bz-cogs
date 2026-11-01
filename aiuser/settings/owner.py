@@ -396,7 +396,13 @@ class OwnerSettings(MixinMeta):
         saved = await load(self.bot)
         if saved.get("client_id") and not new_account:
             account_view = ChatGPTAccountView(self.bot, ctx.author.id)
-            account = saved.get("email") or "a ChatGPT account"
+            email = saved.get("email") or ""
+            local, separator, domain = email.partition("@")
+            account = (
+                f"{local[:1]}***@{domain}"
+                if local and separator and domain
+                else "a ChatGPT account"
+            )
             account_message = await ctx.send(
                 embed=discord.Embed(
                     title="Connect ChatGPT",
