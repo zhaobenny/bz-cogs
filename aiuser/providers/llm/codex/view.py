@@ -62,3 +62,32 @@ class ChatGPTLoginView(discord.ui.View):
     async def on_timeout(self):
         if not self.result.done():
             self.result.cancel()
+
+
+class ChatGPTAccountView(discord.ui.View):
+    def __init__(self, bot, owner_id):
+        super().__init__(timeout=300)
+        self.bot, self.owner_id = bot, owner_id
+        self.choice = None
+
+    async def interaction_check(self, interaction):
+        if interaction.user.id == self.owner_id and await self.bot.is_owner(
+            interaction.user
+        ):
+            return True
+        await interaction.response.send_message(
+            "Only the owner who started setup can use this.", ephemeral=True
+        )
+        return False
+
+    @discord.ui.button(label="Use connected account", style=discord.ButtonStyle.primary)
+    async def use_existing(self, interaction, button):
+        self.choice = False
+        await interaction.response.defer()
+        self.stop()
+
+    @discord.ui.button(label="Switch account", style=discord.ButtonStyle.secondary)
+    async def switch(self, interaction, button):
+        self.choice = True
+        await interaction.response.defer()
+        self.stop()

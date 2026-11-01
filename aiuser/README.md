@@ -66,8 +66,7 @@ Bot owners can globally change the AI backend endpoint using:
   - More details: [OpenRouter Docs](https://openrouter.ai/docs#models)
 * ChatGPT plan access is supported via Sign in with ChatGPT. Start the process with:
   - `[p]aiuserowner endpoint set codex`
-  - To connect a different account, use `[p]aiuserowner endpoint set codex-new`.
-  - Sign in using the link, then paste the full browser callback URL into the private form. The browser may show a connection error. Never post this URL in a channel.
+  - To switch accounts, run the command again and select **Switch account**.
 * Other OpenAI-completions compatible endpoint support may vary and can be setup directly with:
   -`[p]aiuserowner endpoint set <ENDPOINT_URL>`
 
@@ -98,7 +97,7 @@ Bot owners can configure image processing with the following commands:
 ## Memory 🧠
 
 Memory lets the bot recall stored information automatically without stuffing the prompt.
-It works by including r elevant (only manually saved memories currently) details when generating responses.
+It works by including relevant (only manually saved memories currently) details when generating responses.
 
 You can combine this with tools for more advanced behavior.
 For example: a memory could store “when asked for a photo of the [bot], use this description for the image request: [...]”, and the bot will automatically apply that description when generating the image. (dependent on the LLM's intelligence)

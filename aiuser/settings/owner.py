@@ -390,8 +390,26 @@ class OwnerSettings(MixinMeta):
     async def _activate_codex_endpoint(
         self, ctx: commands.Context, new_account: bool = False
     ):
-        from aiuser.providers.llm.codex.chatgpt import finish, start
-        from aiuser.providers.llm.codex.view import ChatGPTLoginView
+        from aiuser.providers.llm.codex.chatgpt import finish, load, start
+        from aiuser.providers.llm.codex.view import ChatGPTAccountView, ChatGPTLoginView
+
+        saved = await load(self.bot)
+        if saved.get("client_id") and not new_account:
+            account_view = ChatGPTAccountView(self.bot, ctx.author.id)
+            account = saved.get("email") or "a ChatGPT account"
+            account_message = await ctx.send(
+                embed=discord.Embed(
+                    title="Connect ChatGPT",
+                    description=f"Connected as **{discord.utils.escape_markdown(account)}**. Choose an account to use.",
+                    color=await ctx.embed_color(),
+                ),
+                view=account_view,
+            )
+            await account_view.wait()
+            await account_message.edit(view=None)
+            if account_view.choice is None:
+                return
+            new_account = account_view.choice
 
         models = None
         if not new_account:
@@ -411,17 +429,25 @@ class OwnerSettings(MixinMeta):
             url, pending = await start(self.bot, new_account=new_account)
             view = ChatGPTLoginView(self.bot, ctx.author.id)
             message = await ctx.send(
-                f"Sign in with ChatGPT: <{url}>\n"
-                "Then copy the full URL from your browser's "
-                "address bar into the private callback form. The browser may report "
-                "that it cannot connect. Never post the URL in a channel.",
+                embed=discord.Embed(
+                    title="Sign in with ChatGPT",
+                    description=(
+                        f"[Open ChatGPT sign-in]({url})\n\n"
+                        "After signing in, copy the full URL from your browser's address bar "
+                        "and select **Paste callback URL** below. "
+                        "Your browser may say it cannot connect; that's expected."
+                    ),
+                    color=await ctx.embed_color(),
+                ).set_footer(
+                    text="Paste the URL only into the private form, never in a channel."
+                ),
                 view=view,
             )
             try:
                 await view.wait()
                 if view.result.cancelled() or not view.result.done():
                     return await message.edit(
-                        content="ChatGPT sign-in timed out.", view=None
+                        content="ChatGPT sign-in timed out.", embed=None, view=None
                     )
                 callback, interaction = view.result.result()
                 try:
@@ -433,12 +459,14 @@ class OwnerSettings(MixinMeta):
                         ephemeral=True,
                     )
                     return await message.edit(
-                        content="ChatGPT sign-in failed.", view=None
+                        content="ChatGPT sign-in failed.", embed=None, view=None
                     )
                 await interaction.followup.send(
                     "ChatGPT sign-in succeeded.", ephemeral=True
                 )
-                await message.edit(content="ChatGPT sign-in completed.", view=None)
+                await message.edit(
+                    content="ChatGPT sign-in completed.", embed=None, view=None
+                )
             finally:
                 view.stop()
         selected_model = models[0]
