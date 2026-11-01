@@ -19,7 +19,7 @@ jobs:
       max-parallel: 1
       matrix:
         python-version: ['3.9', '3.11']
-        os: [ubuntu-latest, ubuntu-24.04-arm]
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
 
     runs-on: ${{ matrix.os }}
     name: Test Cogs (Py ${{ matrix.python-version }} on ${{ matrix.os }})

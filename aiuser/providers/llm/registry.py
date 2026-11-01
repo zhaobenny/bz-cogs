@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from aiuser.providers.llm.codex.oauth import is_codex_endpoint_mode
+from aiuser.providers.llm.codex.chatgpt import is_codex_endpoint_mode
 from aiuser.providers.llm.codex.provider import CodexProvider
 from aiuser.providers.llm.openai_compatible.client import get_openai_client
-from aiuser.providers.llm.openai_compatible.provider import OpenAICompatibleProvider
-from aiuser.providers.llm.openai_compatible.responses import OpenAIResponsesProvider
 from aiuser.providers.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
     get_openai_compat_kind,
 )
+from aiuser.providers.llm.openai_compatible.provider import OpenAICompatibleProvider
+from aiuser.providers.llm.openai_compatible.responses import OpenAIResponsesProvider
 
 from .base import LLMProvider
 

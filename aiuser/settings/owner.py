@@ -13,16 +13,7 @@ from redbot.core.data_manager import cog_data_path
 
 from aiuser.config.constants import OPENROUTER_API_V1_URL
 from aiuser.config.defaults import DEFAULT_LLM_MODEL
-from aiuser.providers.llm.codex.oauth import (
-    CODEX_DEFAULT_MODEL,
-    CODEX_ENDPOINT_MODE,
-    ensure_valid_codex_oauth,
-    exchange_device_authorization,
-    is_codex_endpoint_mode,
-    normalize_codex_tokens,
-    set_codex_oauth,
-    start_device_authorization,
-)
+from aiuser.providers.llm.codex.chatgpt import CODEX_ENDPOINT_MODE
 from aiuser.providers.llm.openai_compatible.client import (
     get_openai_client,
     invalidate_openai_client,
@@ -154,11 +145,16 @@ class OwnerSettings(MixinMeta):
     async def endpoint(self, ctx: commands.Context):
         """Show the configured model endpoint"""
         url = await self.config.custom_openai_endpoint()
-        return await ctx.maybe_send_embed(f"Model endpoint: `{url or 'OpenAI'}`")
+        display_url = "ChatGPT" if url == CODEX_ENDPOINT_MODE else (url or "OpenAI")
+        return await ctx.maybe_send_embed(f"Model endpoint: `{display_url}`")
 
     @endpoint.command(name="set")
     async def endpoint_set(self, ctx: commands.Context, url: str):
-        """Set an endpoint URL or a built-in endpoint name"""
+        """Set an endpoint URL or a built-in endpoint name.
+
+        Use `chatgpt` for a ChatGPT plan, `openrouter` or `ollama` for
+        those providers, or `openai` for the API route.
+        """
         return await self._set_custom_endpoint(ctx, url)
 
     @endpoint.command(name="clear")
@@ -315,8 +311,10 @@ class OwnerSettings(MixinMeta):
         return await ctx.send("Global prompt reset to the built-in default.")
 
     async def _set_custom_endpoint(self, ctx: commands.Context, url: str | None):
-        if url == "codex":
-            return await self._activate_codex_endpoint(ctx)
+        if url in {"chatgpt", "codex", "codex-new"}:
+            return await self._activate_codex_endpoint(
+                ctx, new_account=url == "codex-new"
+            )
 
         if url == "openrouter":
             url = OPENROUTER_API_V1_URL
@@ -394,87 +392,124 @@ class OwnerSettings(MixinMeta):
         )
         await ctx.send(embed=embed)
 
-    async def _activate_codex_endpoint(self, ctx: commands.Context):
-        if await is_codex_endpoint_mode(self.config):
+    async def _activate_codex_endpoint(
+        self, ctx: commands.Context, new_account: bool = False
+    ):
+        from aiuser.providers.llm.codex.chatgpt import finish, load, start
+        from aiuser.providers.llm.codex.view import ChatGPTAccountView, ChatGPTLoginView
+
+        saved = await load(self.bot)
+        if saved.get("client_id") and not new_account:
+            account_view = ChatGPTAccountView(self.bot, ctx.author.id)
+            email = saved.get("email") or ""
+            local, separator, domain = email.partition("@")
+            account = (
+                f"{local[:1]}•••@{domain}"
+                if local and separator and domain
+                else "a ChatGPT account"
+            )
+            account_message = await ctx.send(
+                embed=discord.Embed(
+                    title="Connect ChatGPT",
+                    description=f"Connected as **{discord.utils.escape_markdown(account)}**. Choose an account to use.",
+                    color=await ctx.embed_color(),
+                ),
+                view=account_view,
+            )
+            await account_view.wait()
+            await account_message.edit(view=None)
+            if account_view.choice is None:
+                return
+            new_account = account_view.choice
+
+        models = None
+        if not new_account:
             try:
-                await ensure_valid_codex_oauth(self.bot, self.config)
-            except Exception:
-                logger.warning("Existing Codex OAuth is not healthy", exc_info=True)
-            else:
-                if not await self._confirm_codex_reauth(ctx):
-                    return
-
-        await ctx.message.add_reaction("🔄")
-        try:
-            device_data = await start_device_authorization()
-        except Exception:
-            logger.exception("Failed to start Codex OAuth")
-            await ctx.message.remove_reaction("🔄", ctx.me)
-            return await ctx.send(
-                ":warning: Failed to start Codex authentication. Please check logs."
-            )
-
-        embed = discord.Embed(
-            title="Authenticate Codex endpoint",
-            description=(
-                f"Open {device_data['verification_url']} and enter this code:\n"
-                f"`{device_data['user_code']}`"
-            ),
-            color=await ctx.embed_color(),
-        )
-        embed.add_field(
-            name="",
-            value="A follow-up message will be sent when authentication succeeds.",
-            inline=False,
-        )
-        status_message = await ctx.send(embed=embed)
-
-        try:
-            tokens = await exchange_device_authorization(
-                device_data["device_auth_id"],
-                device_data["user_code"],
-                device_data["interval"],
-            )
-        except TimeoutError:
-            await ctx.message.remove_reaction("🔄", ctx.me)
-            return await status_message.edit(
-                embed=discord.Embed(
-                    title=":warning: Codex authentication timed out",
-                    color=await ctx.embed_color(),
+                models = (
+                    await list_llm_models(self.services)
+                    if await self.config.custom_openai_endpoint() == CODEX_ENDPOINT_MODE
+                    else None
                 )
-            )
-        except Exception:
-            logger.exception("Codex OAuth failed")
-            await ctx.message.remove_reaction("🔄", ctx.me)
-            return await ctx.send(
-                embed=discord.Embed(
-                    title=":warning: Codex authentication failed",
-                    description="Please check logs for more information.",
-                    color=await ctx.embed_color(),
-                )
-            )
+                if models is None:
+                    from aiuser.providers.llm.codex.provider import CodexProvider
 
+                    models = await CodexProvider(self.config, self.bot).list_models()
+            except Exception as exc:  # noqa: BLE001 - do not expose authentication errors
+                logger.info("Saved ChatGPT login unavailable (%s)", type(exc).__name__)
+        if not models:
+            url, pending = await start(self.bot, new_account=new_account)
+            view = ChatGPTLoginView(self.bot, ctx.author.id)
+            message = await ctx.send(
+                embed=discord.Embed(
+                    title="Sign in with ChatGPT",
+                    description=(
+                        f"[Open ChatGPT sign-in]({url})\n\n"
+                        "After signing in, copy the full URL from your browser's address bar "
+                        "and select **Paste callback URL** below. "
+                        "Your browser may say it cannot connect - that's expected."
+                    ),
+                    color=await ctx.embed_color(),
+                ).set_footer(
+                    text="Paste the URL only into the private form, never in a channel."
+                ),
+                view=view,
+            )
+            try:
+                await view.wait()
+                if view.result.cancelled() or not view.result.done():
+                    return await message.edit(
+                        content="ChatGPT sign-in timed out.", embed=None, view=None
+                    )
+                callback, interaction = view.result.result()
+                try:
+                    models = await finish(self.bot, pending, callback)
+                except Exception as exc:  # noqa: BLE001 - callbacks can contain secrets
+                    logger.warning("ChatGPT sign-in failed (%s)", type(exc).__name__)
+                    await interaction.followup.send(
+                        "ChatGPT sign-in failed. Start again and check the bot logs for the error type.",
+                        ephemeral=True,
+                    )
+                    return await message.edit(
+                        content="ChatGPT sign-in failed.", embed=None, view=None
+                    )
+                await interaction.followup.send(
+                    "ChatGPT sign-in succeeded.", ephemeral=True
+                )
+                await message.edit(
+                    content="ChatGPT sign-in completed.", embed=None, view=None
+                )
+            finally:
+                view.stop()
+        selected_model = models[0]
         previous_url = await self.config.custom_openai_endpoint()
         await self._save_current_endpoint_models(previous_url)
-        await set_codex_oauth(self.bot, normalize_codex_tokens(tokens))
-        oauth = await ensure_valid_codex_oauth(self.bot, self.config)
-        await set_codex_oauth(self.bot, oauth)
+        history = await self.config.endpoint_model_history()
+        saved_models = history.get(self._endpoint_history_key(CODEX_ENDPOINT_MODE), {})
+        if saved_models.get("__default_model__") not in models:
+            saved_models.pop("__default_model__", None)
+        for key, value in list(saved_models.items()):
+            if key == "__default_model__":
+                continue
+            if value.get("chat_model") and value["chat_model"] not in models:
+                value["chat_model"] = None
+            if value.get("image_model") and value["image_model"] not in models:
+                value["image_model"] = selected_model
+        await self.config.endpoint_model_history.set(history)
         await self.config.custom_openai_endpoint.set(CODEX_ENDPOINT_MODE)
         if previous_url != CODEX_ENDPOINT_MODE:
             self.services.context_cache.clear()
         await invalidate_openai_client(self.services)
         restored_count, guilds_with_parameters = await self._restore_endpoint_models(
             endpoint_url=CODEX_ENDPOINT_MODE,
-            chat_model=CODEX_DEFAULT_MODEL,
-            image_model=CODEX_DEFAULT_MODEL,
+            chat_model=selected_model,
+            image_model=selected_model,
         )
-        await ctx.message.remove_reaction("🔄", ctx.me)
 
         complete = await self._build_endpoint_update_embed(
             ctx=ctx,
             endpoint_url=CODEX_ENDPOINT_MODE,
-            chat_model=CODEX_DEFAULT_MODEL,
-            image_model=CODEX_DEFAULT_MODEL,
+            chat_model=selected_model,
+            image_model=selected_model,
             restored_count=restored_count,
             guilds_with_parameters=guilds_with_parameters,
         )
@@ -532,7 +567,7 @@ class OwnerSettings(MixinMeta):
 
         if endpoint_url:
             if endpoint_url == CODEX_ENDPOINT_MODE:
-                embed.description = "Endpoint set to official OpenAI Codex endpoint."
+                embed.description = "Endpoint set to ChatGPT plan access."
             else:
                 embed.description = f"Endpoint set to {endpoint_url}."
             if include_third_party_footer:
@@ -597,13 +632,3 @@ class OwnerSettings(MixinMeta):
                     guilds_with_parameters.append(str(guild.name))
 
         return restored_count, guilds_with_parameters
-
-    async def _confirm_codex_reauth(self, ctx: commands.Context) -> bool:
-        embed = discord.Embed(
-            title="Codex is already active",
-            description="Re-authenticate the active Codex endpoint?",
-            color=await ctx.embed_color(),
-        )
-
-        confirmed, _ = await confirm_pending(ctx, embed)
-        return confirmed

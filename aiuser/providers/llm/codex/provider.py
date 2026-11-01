@@ -1,10 +1,11 @@
 from typing import Any
 
+import httpx
 from openai.types.chat import ChatCompletionMessageParam
 from redbot.core.bot import Red
 
 from aiuser.providers.llm.base import ChatStepResult, LLMProvider
-from aiuser.providers.llm.codex.oauth import CODEX_ALLOWED_MODELS
+from aiuser.providers.llm.codex.chatgpt import RESOURCE, valid
 from aiuser.providers.llm.codex.responses import create_codex_response
 
 
@@ -14,7 +15,18 @@ class CodexProvider(LLMProvider):
         self.bot = bot
 
     async def list_models(self) -> list[str]:
-        return list(CODEX_ALLOWED_MODELS)
+        async with httpx.AsyncClient(timeout=30) as client:
+            oauth = await valid(self.bot, client)
+            response = await client.get(
+                RESOURCE + "/models",
+                headers={"Authorization": "Bearer " + oauth["access"]},
+            )
+            response.raise_for_status()
+            return [
+                m["slug"]
+                for m in response.json()["models"]
+                if m.get("visibility") == "list" and m.get("slug")
+            ]
 
     async def create_chat_step(
         self,

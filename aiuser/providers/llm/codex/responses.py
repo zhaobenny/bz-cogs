@@ -8,10 +8,7 @@ from openai.types.chat import ChatCompletionMessageToolCall
 from redbot.core import Config
 from redbot.core.bot import Red
 
-from aiuser.providers.llm.codex.oauth import (
-    CODEX_RESPONSES_URL,
-    ensure_valid_codex_oauth,
-)
+from aiuser.providers.llm.codex.chatgpt import RESOURCE, valid
 
 logger = logging.getLogger("red.bz_cogs.aiuser.providers.llm")
 
@@ -187,6 +184,7 @@ def build_codex_input(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
             items.append(
                 {
                     "type": "function_call",
+                    "namespace": "aiuser",
                     "call_id": _tool_call_id(tool_call, index + offset),
                     "name": name,
                     "arguments": arguments,
@@ -230,16 +228,19 @@ def build_codex_payload(
     }
 
     if kwargs.get("tools"):
-        payload["tools"] = build_codex_tools(kwargs["tools"])
+        tools = build_codex_tools(kwargs["tools"])
+        if tools:
+            payload["tools"] = [
+                {
+                    "type": "namespace",
+                    "name": "aiuser",
+                    "description": "Tools available to aiuser",
+                    "tools": tools,
+                }
+            ]
 
-    if "max_output_tokens" in kwargs:
-        payload["max_output_tokens"] = kwargs["max_output_tokens"]
-    elif "max_tokens" in kwargs:
-        payload["max_output_tokens"] = kwargs["max_tokens"]
-
-    for key in ("temperature", "top_p", "reasoning"):
-        if key in kwargs:
-            payload[key] = kwargs[key]
+    if "reasoning" in kwargs:
+        payload["reasoning"] = kwargs["reasoning"]
 
     if extra_body.get("store") is False:
         payload["store"] = False
@@ -400,25 +401,21 @@ async def create_codex_response(
         return None, []
 
     async with httpx.AsyncClient(timeout=timeout) as client:
-        oauth = await ensure_valid_codex_oauth(bot, config, client=client)
+        oauth = await valid(bot, client)
 
         for attempt in range(2):
             headers = {"Authorization": f"Bearer {oauth['access']}"}
-            if oauth.get("account_id"):
-                headers["ChatGPT-Account-Id"] = oauth["account_id"]
 
             async with client.stream(
                 "POST",
-                CODEX_RESPONSES_URL,
+                RESOURCE + "/responses",
                 json=payload,
                 headers=headers,
             ) as response:
                 if response.status_code == 401 and attempt == 0:
                     logger.warning("Codex request unauthorized, forcing token refresh")
                     await response.aread()
-                    oauth = await ensure_valid_codex_oauth(
-                        bot, config, force_refresh=True, client=client
-                    )
+                    oauth = await valid(bot, client, force=True)
                     continue
 
                 if not response.is_success:
