@@ -145,11 +145,16 @@ class OwnerSettings(MixinMeta):
     async def endpoint(self, ctx: commands.Context):
         """Show the configured model endpoint"""
         url = await self.config.custom_openai_endpoint()
-        return await ctx.maybe_send_embed(f"Model endpoint: `{url or 'OpenAI'}`")
+        display_url = "ChatGPT" if url == CODEX_ENDPOINT_MODE else (url or "OpenAI")
+        return await ctx.maybe_send_embed(f"Model endpoint: `{display_url}`")
 
     @endpoint.command(name="set")
     async def endpoint_set(self, ctx: commands.Context, url: str):
-        """Set an endpoint URL or a built-in endpoint name"""
+        """Set an endpoint URL or a built-in endpoint name.
+
+        Options: `chatgpt` for a ChatGPT plan, `openrouter`, `ollama`,
+        `openai` to reset to the default API, or a compatible endpoint URL.
+        """
         return await self._set_custom_endpoint(ctx, url)
 
     @endpoint.command(name="clear")
@@ -306,7 +311,7 @@ class OwnerSettings(MixinMeta):
         return await ctx.send("Global prompt reset to the built-in default.")
 
     async def _set_custom_endpoint(self, ctx: commands.Context, url: str | None):
-        if url in {"codex", "codex-new"}:
+        if url in {"chatgpt", "codex", "codex-new"}:
             return await self._activate_codex_endpoint(
                 ctx, new_account=url == "codex-new"
             )
