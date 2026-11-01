@@ -8,7 +8,7 @@ from openai import AsyncOpenAI
 from redbot.core import Config
 from redbot.core.bot import Red
 
-from aiuser.providers.llm.codex.oauth import is_codex_endpoint_mode
+from aiuser.providers.llm.codex.chatgpt import is_codex_endpoint_mode
 from aiuser.providers.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
     get_openai_compat_api_token_name,

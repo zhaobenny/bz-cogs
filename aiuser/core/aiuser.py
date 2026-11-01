@@ -22,7 +22,7 @@ from aiuser.core.random_message_task import RandomMessageTask
 from aiuser.core.reply_queue import cancel_reply_state_tasks
 from aiuser.core.services import AIUserServices
 from aiuser.dashboard.base import DashboardIntegration
-from aiuser.providers.llm.codex.oauth import secure_token_store_permissions
+from aiuser.providers.llm.codex.chatgpt import secure_token_store_permissions
 from aiuser.providers.llm.openai_compatible.client import (
     get_openai_client,
     invalidate_openai_client,
@@ -44,7 +44,7 @@ class AIUser(
     Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
 
-    __version__ = "2.8.2"
+    __version__ = "2.9.0"
 
     def __init__(self, bot: Red):
         super().__init__()

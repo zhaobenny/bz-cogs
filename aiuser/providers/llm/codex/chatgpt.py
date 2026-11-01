@@ -4,6 +4,7 @@ import asyncio
 import base64
 import hashlib
 import json
+import os
 import secrets
 import time
 import uuid
@@ -11,8 +12,21 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 
 import httpx
 from authlib.jose import JsonWebToken
+from redbot.core import Config
+from redbot.core.data_manager import core_data_path
 
-from aiuser.providers.llm.codex.oauth import secure_token_store_permissions
+CODEX_ENDPOINT_MODE = "codex"
+
+
+async def is_codex_endpoint_mode(config: Config) -> bool:
+    return await config.custom_openai_endpoint() == CODEX_ENDPOINT_MODE
+
+
+def secure_token_store_permissions():
+    path = core_data_path() / "settings.json"
+    if path.exists():
+        os.chmod(path, 0o600)
+
 
 ISSUER = "https://auth.openai.com"
 RESOURCE = "https://api.openai.com/v1"

@@ -13,7 +13,7 @@ from redbot.core.data_manager import cog_data_path
 
 from aiuser.config.constants import OPENROUTER_API_V1_URL
 from aiuser.config.defaults import DEFAULT_LLM_MODEL
-from aiuser.providers.llm.codex.oauth import CODEX_ENDPOINT_MODE
+from aiuser.providers.llm.codex.chatgpt import CODEX_ENDPOINT_MODE
 from aiuser.providers.llm.openai_compatible.client import (
     get_openai_client,
     invalidate_openai_client,

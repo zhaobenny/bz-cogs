@@ -8,7 +8,7 @@ from aiuser.functions.search.providers import (
     PROVIDERS,
     SEARXNG,
 )
-from aiuser.providers.llm.codex.oauth import CODEX_ENDPOINT_MODE
+from aiuser.providers.llm.codex.chatgpt import CODEX_ENDPOINT_MODE
 from aiuser.providers.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
     get_openai_compat_kind,
