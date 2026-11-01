@@ -152,8 +152,9 @@ class OwnerSettings(MixinMeta):
     async def endpoint_set(self, ctx: commands.Context, url: str):
         """Set an endpoint URL or a built-in endpoint name.
 
-        Options: `chatgpt` for a ChatGPT plan, `openrouter`, `ollama`,
-        `openai` to reset to the default API, or a compatible endpoint URL.
+        Use `chatgpt` for a ChatGPT plan, `openrouter` or `ollama` for
+        those providers, `openai` to restore the default API, or a
+        compatible endpoint URL.
         """
         return await self._set_custom_endpoint(ctx, url)
 
