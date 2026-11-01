@@ -5,6 +5,9 @@ import json
 import re
 import secrets
 import time
+from dataclasses import dataclass
+from enum import Enum, auto
+from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
@@ -17,11 +20,72 @@ REDIRECT_URI = "http://localhost:8765/callback"
 LOGIN_SECONDS = 600
 
 
+class OAuthServicePhase(Enum):
+    OPEN = auto()
+    CLOSING = auto()
+    CLOSED = auto()
+
+
+class CredentialPhase(Enum):
+    UNKNOWN = auto()
+    ABSENT = auto()
+    READY = auto()
+    REFRESHING = auto()
+    REAUTH_REQUIRED = auto()
+    FAILED = auto()
+
+
+class LoginPhase(Enum):
+    AWAITING_CALLBACK = auto()
+    CODE_CONSUMED = auto()
+    AUTHENTICATED = auto()
+    FAILED = auto()
+    CANCELLED = auto()
+    EXPIRED = auto()
+    REPLACED = auto()
+
+
+@dataclass
+class PendingLogin:
+    # Protected by alias lock.
+    data: dict[str, Any]
+    state: str
+    verifier: str
+    owner_id: int
+    guild_id: int
+    deadline: float
+    phase: LoginPhase = LoginPhase.AWAITING_CALLBACK
+
+    def transition(self, phase: LoginPhase) -> None:
+        allowed = {
+            LoginPhase.AWAITING_CALLBACK: {
+                LoginPhase.CODE_CONSUMED,
+                LoginPhase.CANCELLED,
+                LoginPhase.EXPIRED,
+                LoginPhase.REPLACED,
+            },
+            LoginPhase.CODE_CONSUMED: {
+                LoginPhase.AUTHENTICATED,
+                LoginPhase.FAILED,
+                LoginPhase.CANCELLED,
+                LoginPhase.REPLACED,
+            },
+            LoginPhase.AUTHENTICATED: {LoginPhase.CANCELLED, LoginPhase.REPLACED},
+            LoginPhase.FAILED: {LoginPhase.CANCELLED, LoginPhase.REPLACED},
+        }
+        if phase not in allowed.get(self.phase, set()):
+            raise RuntimeError(f"Invalid login transition: {self.phase} -> {phase}")
+        self.phase = phase
+
+
 class MCPOAuth:
     def __init__(self, bot):
         self.bot = bot
-        self.pending = {}
+        self.phase = OAuthServicePhase.OPEN
+        self.pending: dict[str, PendingLogin] = {}
+        self.credential_phases: dict[str, CredentialPhase] = {}
         self.locks = {}
+        self._close_lock = asyncio.Lock()
 
     def lock(self, alias):
         return self.locks.setdefault(alias, asyncio.Lock())
@@ -42,13 +106,21 @@ class MCPOAuth:
             f"aiuser_mcp_oauth_{alias}",
             oauth=json.dumps(data),
         )
+        self.credential_phases[alias] = (
+            CredentialPhase.READY if data.get("token") else CredentialPhase.ABSENT
+        )
 
     async def forget(self, alias):
         async with self.lock(alias):
-            self.pending.pop(alias, None)
+            if self.phase is not OAuthServicePhase.OPEN:
+                raise MCPError("The MCP authentication service is closed.")
+            pending = self.pending.pop(alias, None)
+            if pending:
+                pending.transition(LoginPhase.CANCELLED)
             await self.bot.remove_shared_api_tokens(
                 f"aiuser_mcp_oauth_{alias}", "oauth"
             )
+            self.credential_phases[alias] = CredentialPhase.ABSENT
 
     async def metadata(self, client, urls):
         for url in dict.fromkeys(urls):
@@ -67,7 +139,11 @@ class MCPOAuth:
 
     async def begin(self, alias, url, challenge, owner_id, guild_id):
         async with self.lock(alias):
-            self.pending.pop(alias, None)
+            if self.phase is not OAuthServicePhase.OPEN:
+                raise MCPError("The MCP authentication service is closed.")
+            pending = self.pending.pop(alias, None)
+            if pending:
+                pending.transition(LoginPhase.REPLACED)
             try:
                 return await self._begin(alias, url, challenge, owner_id, guild_id)
             except MCPError:
@@ -237,14 +313,14 @@ class MCPOAuth:
                     code_verifier=verifier,
                     resource=url,
                 )
-            self.pending[alias] = {
-                "data": data,
-                "state": state,
-                "verifier": verifier,
-                "owner_id": owner_id,
-                "guild_id": guild_id,
-                "deadline": time.monotonic() + LOGIN_SECONDS,
-            }
+            self.pending[alias] = PendingLogin(
+                data=data,
+                state=state,
+                verifier=verifier,
+                owner_id=owner_id,
+                guild_id=guild_id,
+                deadline=time.monotonic() + LOGIN_SECONDS,
+            )
             return link, state
 
     @staticmethod
@@ -268,25 +344,33 @@ class MCPOAuth:
 
     async def finish(self, alias, state, owner_id, callback):
         async with self.lock(alias):
+            if self.phase is not OAuthServicePhase.OPEN:
+                raise MCPError("The MCP authentication service is closed.")
             pending = self.pending.get(alias)
             if (
                 not pending
-                or pending.get("consumed")
-                or pending["state"] != state
-                or time.monotonic() > pending["deadline"]
+                or pending.phase is not LoginPhase.AWAITING_CALLBACK
+                or pending.state != state
             ):
                 raise MCPError(
                     "This login expired or was replaced. Remove and add this server again."
                 )
-            if pending["owner_id"] != owner_id:
+            if time.monotonic() > pending.deadline:
+                pending.transition(LoginPhase.EXPIRED)
+                self.pending.pop(alias, None)
+                raise MCPError(
+                    "This login expired or was replaced. Remove and add this server again."
+                )
+            if pending.owner_id != owner_id:
                 raise MCPError("Only the owner who started this login can finish it.")
             try:
-                query = self._parse_callback(callback, state, pending["data"]["issuer"])
+                query = self._parse_callback(callback, state, pending.data["issuer"])
             except (ValueError, TypeError):
                 raise MCPError(
                     "That callback URL is invalid. Copy the full final localhost URL and try again."
                 ) from None
             if "error" in query:
+                pending.transition(LoginPhase.CANCELLED)
                 self.pending.pop(alias, None)
                 raise MCPError(
                     "Sign-in was denied or cancelled. Remove and add this server again to retry."
@@ -297,8 +381,8 @@ class MCPOAuth:
                     "The callback has no authorization code. Copy the full final URL."
                 )
             # Codes are single use, including ambiguous failures.
-            pending["consumed"] = True
-            data = pending["data"]
+            pending.transition(LoginPhase.CODE_CONSUMED)
+            data = pending.data
             try:
                 async with AsyncOAuth2Client(
                     data["registration"]["client_id"],
@@ -311,7 +395,7 @@ class MCPOAuth:
                         data["endpoint"],
                         grant_type="authorization_code",
                         code=code,
-                        code_verifier=pending["verifier"],
+                        code_verifier=pending.verifier,
                         resource=data["url"],
                     )
                 if (
@@ -321,6 +405,10 @@ class MCPOAuth:
                     raise ValueError()
                 data["token"] = dict(token)
                 await self.save(alias, data)
+                pending.transition(LoginPhase.AUTHENTICATED)
+            except asyncio.CancelledError:
+                pending.transition(LoginPhase.FAILED)
+                raise
             except (
                 AuthlibBaseError,
                 httpx.HTTPError,
@@ -329,30 +417,43 @@ class MCPOAuth:
                 TypeError,
                 ValueError,
             ):
+                pending.transition(LoginPhase.FAILED)
                 raise MCPError(
                     "The code could not be exchanged. Remove and add this server again to start over."
                 ) from None
-            return pending["guild_id"], data["url"]
+            except Exception:
+                pending.transition(LoginPhase.FAILED)
+                raise
+            return pending.guild_id, data["url"]
 
     async def access_token(self, alias, url: str, rejected=None):
         async with self.lock(alias):
+            if self.phase is not OAuthServicePhase.OPEN:
+                raise MCPError("The MCP authentication service is closed.")
+            if self.credential_phases.get(alias) is CredentialPhase.REFRESHING:
+                raise RuntimeError("MCP credential refresh did not finish")
             data = await self.load(alias)
             token = data.get("token")
             if not token or data.get("url") != url:
+                self.credential_phases[alias] = CredentialPhase.ABSENT
                 return None
             current_access_token = token.get("access_token")
             if rejected and rejected != current_access_token:
                 # Another request already rotated this token.
+                self.credential_phases[alias] = CredentialPhase.READY
                 return current_access_token
             token_is_fresh = not rejected and (
                 not token.get("expires_at") or token["expires_at"] > time.time() + 60
             )
             if token_is_fresh:
+                self.credential_phases[alias] = CredentialPhase.READY
                 return current_access_token
             if not token.get("refresh_token"):
+                self.credential_phases[alias] = CredentialPhase.REAUTH_REQUIRED
                 raise MCPOAuthRequired(
                     "MCP sign-in expired. Remove and add this server again."
                 )
+            self.credential_phases[alias] = CredentialPhase.REFRESHING
             try:
                 refresh_token = token["refresh_token"]
                 async with AsyncOAuth2Client(
@@ -380,7 +481,10 @@ class MCPOAuth:
                 return updated["access_token"]
             except asyncio.CancelledError:
                 data.pop("token", None)
-                await asyncio.shield(self.save(alias, data))
+                try:
+                    await asyncio.shield(self.save(alias, data))
+                finally:
+                    self.credential_phases[alias] = CredentialPhase.REAUTH_REQUIRED
                 raise
             except (
                 AuthlibBaseError,
@@ -392,7 +496,27 @@ class MCPOAuth:
             ):
                 # Do not replay a refresh token after an ambiguous rotation failure.
                 data.pop("token", None)
-                await self.save(alias, data)
+                try:
+                    await self.save(alias, data)
+                finally:
+                    self.credential_phases[alias] = CredentialPhase.REAUTH_REQUIRED
                 raise MCPOAuthRequired(
                     "MCP sign-in expired. Remove and add this server again."
                 ) from None
+
+            except BaseException:
+                self.credential_phases[alias] = CredentialPhase.FAILED
+                raise
+
+    async def close(self) -> None:
+        async with self._close_lock:
+            if self.phase is OAuthServicePhase.CLOSED:
+                return
+            self.phase = OAuthServicePhase.CLOSING
+            # Wait for active alias operations.
+            for alias in list(self.locks):
+                async with self.lock(alias):
+                    pending = self.pending.pop(alias, None)
+                    if pending:
+                        pending.transition(LoginPhase.CANCELLED)
+            self.phase = OAuthServicePhase.CLOSED
