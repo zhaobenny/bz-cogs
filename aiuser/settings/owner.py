@@ -153,8 +153,7 @@ class OwnerSettings(MixinMeta):
         """Set an endpoint URL or a built-in endpoint name.
 
         Use `chatgpt` for a ChatGPT plan, `openrouter` or `ollama` for
-        those providers, `openai` to restore the default API, or a
-        compatible endpoint URL.
+        those providers, or `openai` for the API route.
         """
         return await self._set_custom_endpoint(ctx, url)
 
@@ -447,7 +446,7 @@ class OwnerSettings(MixinMeta):
                         f"[Open ChatGPT sign-in]({url})\n\n"
                         "After signing in, copy the full URL from your browser's address bar "
                         "and select **Paste callback URL** below. "
-                        "Your browser may say it cannot connect; that's expected."
+                        "Your browser may say it cannot connect - that's expected."
                     ),
                     color=await ctx.embed_color(),
                 ).set_footer(

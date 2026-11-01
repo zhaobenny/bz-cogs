@@ -66,7 +66,6 @@ Bot owners can globally change the AI backend endpoint using:
   - More details: [OpenRouter Docs](https://openrouter.ai/docs#models)
 * ChatGPT plan access is supported via Sign in with ChatGPT. Start the process with:
   - `[p]aiuserowner endpoint set chatgpt`
-  - To switch accounts, run the command again and select **Switch account**.
 * Other OpenAI-completions compatible endpoint support may vary and can be setup directly with:
   -`[p]aiuserowner endpoint set <ENDPOINT_URL>`
 
