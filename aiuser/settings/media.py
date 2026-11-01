@@ -9,7 +9,7 @@ from aiuser.providers.llm.registry import list_llm_models
 from aiuser.providers.speech.stt import DEFAULT_MODELS, PROVIDERS
 from aiuser.settings._groups import aiuser
 from aiuser.settings.functions.utilities import provider_key_error
-from aiuser.settings.utilities import confirm_pending
+from aiuser.settings.utilities import ConfirmationOutcome, confirm_pending
 from aiuser.types.abc import MixinMeta
 
 
@@ -156,7 +156,7 @@ class MediaSettings(MixinMeta):
                 color=await ctx.embed_color(),
             )
             confirmed, confirm = await confirm_pending(ctx, embed)
-            if not confirmed:
+            if confirmed is not ConfirmationOutcome.CONFIRMED:
                 return
 
         await self.config.guild(ctx.guild).scan_images_model.set(model)
