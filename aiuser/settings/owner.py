@@ -405,7 +405,7 @@ class OwnerSettings(MixinMeta):
                     from aiuser.providers.llm.codex.provider import CodexProvider
 
                     models = await CodexProvider(self.config, self.bot).list_models()
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - do not expose authentication errors
                 logger.info("Saved ChatGPT login unavailable (%s)", type(exc).__name__)
         if not models:
             url, pending = await start(self.bot, new_account=new_account)
@@ -426,7 +426,7 @@ class OwnerSettings(MixinMeta):
                 callback, interaction = view.result.result()
                 try:
                     models = await finish(self.bot, pending, callback)
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001 - callbacks can contain secrets
                     logger.warning("ChatGPT sign-in failed (%s)", type(exc).__name__)
                     await interaction.followup.send(
                         "ChatGPT sign-in failed. Start again and check the bot logs for the error type.",

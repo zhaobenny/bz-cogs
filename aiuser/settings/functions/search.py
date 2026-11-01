@@ -8,11 +8,11 @@ from aiuser.functions.search.providers import (
     PROVIDERS,
     SEARXNG,
 )
+from aiuser.providers.llm.codex.oauth import CODEX_ENDPOINT_MODE
 from aiuser.providers.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
     get_openai_compat_kind,
 )
-from aiuser.providers.llm.codex.oauth import CODEX_ENDPOINT_MODE
 from aiuser.settings.functions.utilities import (
     FunctionToggleHelperMixin,
     functions,

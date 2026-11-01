@@ -1,11 +1,10 @@
 from typing import Any
 
+import httpx
 from openai.types.chat import ChatCompletionMessageParam
 from redbot.core.bot import Red
 
 from aiuser.providers.llm.base import ChatStepResult, LLMProvider
-import httpx
-
 from aiuser.providers.llm.codex.chatgpt import RESOURCE, valid
 from aiuser.providers.llm.codex.responses import create_codex_response
 
