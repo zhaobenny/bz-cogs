@@ -399,7 +399,7 @@ class OwnerSettings(MixinMeta):
             email = saved.get("email") or ""
             local, separator, domain = email.partition("@")
             account = (
-                f"{local[:1]}***@{domain}"
+                f"{local[:1]}•••@{domain}"
                 if local and separator and domain
                 else "a ChatGPT account"
             )
