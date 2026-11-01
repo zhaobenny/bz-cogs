@@ -64,8 +64,10 @@ Bot owners can globally change the AI backend endpoint using:
   - `[p]aiuserowner endpoint set openrouter`
   - `[p]set api openrouter api_key,INSERT_API_KEY`
   - More details: [OpenRouter Docs](https://openrouter.ai/docs#models)
-* Codex subscription is supported via device code authentication for setup, start the process with:
+* ChatGPT plan access is supported via Sign in with ChatGPT. Start the process with:
   - `[p]aiuserowner endpoint set codex`
+  - To connect a different account, use `[p]aiuserowner endpoint set codex-new`.
+  - Sign in using the link, then paste the full browser callback URL into the private form. The browser may show a connection error. Never post this URL in a channel.
 * Other OpenAI-completions compatible endpoint support may vary and can be setup directly with:
   -`[p]aiuserowner endpoint set <ENDPOINT_URL>`
 
