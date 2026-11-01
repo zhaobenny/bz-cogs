@@ -97,7 +97,9 @@ Bot owners can configure image processing with the following commands:
 ## Memory 🧠
 
 Memory lets the bot recall stored information automatically without stuffing the prompt.
-It works by including r elevant (only manually saved memories currently) details when generating responses.
+It includes relevant saved details when generating responses. Memories can be added manually, or the model can save them automatically when the memory tools are enabled.
+
+Enable saved-memory retrieval with `[p]aiuser memory enable`, and enable the memory tools with `[p]aiuser tools memory enable`.
 
 You can combine this with tools for more advanced behavior.
 For example: a memory could store “when asked for a photo of the [bot], use this description for the image request: [...]”, and the bot will automatically apply that description when generating the image. (dependent on the LLM's intelligence)
