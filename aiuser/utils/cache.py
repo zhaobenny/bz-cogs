@@ -1,5 +1,6 @@
 import threading
 from collections import OrderedDict
+from enum import Enum, auto
 
 
 def tool_calls_cache_key(channel_id: int, message_id: int) -> tuple[str, int, int]:
@@ -20,18 +21,23 @@ def memory_cache_key(channel_id: int, message_id: int) -> tuple[str, int, int]:
     return ("memory", channel_id, message_id)
 
 
+class CachePhase(Enum):
+    READY = auto()
+    EVICTING = auto()
+
+
 class Cache(OrderedDict):
     def __init__(self, limit: int):
         super().__init__()
         self.limit = limit
         self.lock = threading.RLock()
-        self._popping = False
+        self.phase = CachePhase.READY
 
     def __getitem__(self, key):
         with self.lock:
             if key not in self:
                 return None
-            if not self._popping:
+            if self.phase is CachePhase.READY:
                 self.move_to_end(key)
             return super().__getitem__(key)
 
@@ -44,8 +50,10 @@ class Cache(OrderedDict):
 
     def popitem(self, last=True):
         with self.lock:
-            self._popping = True
+            if self.phase is not CachePhase.READY:
+                raise RuntimeError("Cache eviction is already in progress")
+            self.phase = CachePhase.EVICTING
             try:
                 return super().popitem(last=last)
             finally:
-                self._popping = False
+                self.phase = CachePhase.READY

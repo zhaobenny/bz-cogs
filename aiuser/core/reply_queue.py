@@ -5,6 +5,7 @@ import logging
 import random
 from dataclasses import dataclass, replace
 from datetime import datetime
+from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 import discord
@@ -33,6 +34,12 @@ class ResponseRequest:
     include_latest_channel_context: bool = False
 
 
+class BurstPhase(Enum):
+    COLLECTING = auto()
+    CLOSED = auto()
+    CANCELLED = auto()
+
+
 @dataclass
 class MessageBurst:
     message_id: int
@@ -42,6 +49,15 @@ class MessageBurst:
     idle_seconds: float
     max_seconds: float
     task: asyncio.Task | None = None
+    phase: BurstPhase = BurstPhase.COLLECTING
+
+    def transition(self, phase: BurstPhase):
+        if self.phase is not BurstPhase.COLLECTING or phase not in (
+            BurstPhase.CLOSED,
+            BurstPhase.CANCELLED,
+        ):
+            raise RuntimeError(f"Invalid burst transition: {self.phase} -> {phase}")
+        self.phase = phase
 
     def refresh(
         self,
@@ -51,6 +67,8 @@ class MessageBurst:
         idle_seconds: float,
         max_seconds: float,
     ):
+        if self.phase is not BurstPhase.COLLECTING:
+            raise RuntimeError("Cannot refresh a finished burst")
         self.message_id = message_id
         self.idle_seconds = idle_seconds
         self.max_seconds = max_seconds
@@ -64,15 +82,59 @@ class MessageBurst:
             self.task.cancel()
 
 
+class ReplyPhase(Enum):
+    IDLE = auto()
+    PENDING = auto()
+    EXECUTING = auto()
+    EXECUTING_PENDING = auto()
+    STOPPING = auto()
+    STOPPED = auto()
+
+
+class SessionPhase(Enum):
+    NO_REPLY = auto()
+    REPLY_WITHOUT_SESSION = auto()
+    SESSION_AVAILABLE = auto()
+
+
 class ChannelReplyState:
+    """Coordinate per-channel message bursts and reply drains."""
+
     def __init__(self):
         self.lock = asyncio.Lock()
         self.message_burst: MessageBurst | None = None
         self.pending_request: ResponseRequest | None = None
         self.drain_task: asyncio.Task | None = None
-        self.is_executing = False
+        self.phase = ReplyPhase.IDLE
+        self.session_phase = SessionPhase.NO_REPLY
         self.last_bot_reply_at: datetime | None = None
         self.llm_session_id: str | None = None
+
+    def record_reply(self, sent_at: datetime, session_id: str | None = None):
+        self.last_bot_reply_at = sent_at
+        if session_id:
+            self.llm_session_id = session_id
+        self.session_phase = (
+            SessionPhase.SESSION_AVAILABLE
+            if self.llm_session_id
+            else SessionPhase.REPLY_WITHOUT_SESSION
+        )
+
+    @property
+    def has_session(self) -> bool:
+        return self.session_phase is SessionPhase.SESSION_AVAILABLE
+
+    def session_for(self, message_at: datetime, max_gap: int) -> str | None:
+        if self.session_phase is not SessionPhase.SESSION_AVAILABLE or not max_gap:
+            return None
+        elapsed = abs((message_at - self.last_bot_reply_at).total_seconds())
+        return self.llm_session_id if elapsed <= max_gap else None
+
+    def _transition_reply(self, expected: ReplyPhase, new: ReplyPhase):
+        # Caller holds self.lock.
+        if self.phase is not expected:
+            raise RuntimeError(f"Invalid reply transition: {self.phase} -> {new}")
+        self.phase = new
 
     async def arm_burst(
         self,
@@ -90,6 +152,8 @@ class ChannelReplyState:
 
         now = asyncio.get_running_loop().time()
         async with self.lock:
+            if self.phase in (ReplyPhase.STOPPING, ReplyPhase.STOPPED):
+                return
             burst = self.message_burst
             if burst is None:
                 burst = MessageBurst(
@@ -120,6 +184,7 @@ class ChannelReplyState:
             burst = self.message_burst
             self.message_burst = None
             if burst:
+                burst.transition(BurstPhase.CANCELLED)
                 burst.cancel_timer()
 
     async def _close_burst_after(
@@ -137,8 +202,12 @@ class ChannelReplyState:
             return
 
         async with self.lock:
-            if self.message_burst is not burst:
+            if (
+                self.message_burst is not burst
+                or burst.task is not asyncio.current_task()
+            ):
                 return
+            burst.transition(BurstPhase.CLOSED)
             self.message_burst = None
             burst.task = None
 
@@ -156,7 +225,9 @@ class ChannelReplyState:
 
     async def enqueue(self, services: AIUserServices, request: ResponseRequest):
         async with self.lock:
-            if self.is_executing:
+            if self.phase in (ReplyPhase.STOPPING, ReplyPhase.STOPPED):
+                return
+            if self.phase in (ReplyPhase.EXECUTING, ReplyPhase.EXECUTING_PENDING):
                 if request.kind != ResponseKind.DIRECT:
                     return
                 request = replace(request, include_latest_channel_context=True)
@@ -169,6 +240,12 @@ class ChannelReplyState:
             ):
                 # Burst replies should not displace a pending direct trigger.
                 self.pending_request = request
+                if self.phase is ReplyPhase.IDLE:
+                    self._transition_reply(ReplyPhase.IDLE, ReplyPhase.PENDING)
+                elif self.phase is ReplyPhase.EXECUTING:
+                    self._transition_reply(
+                        ReplyPhase.EXECUTING, ReplyPhase.EXECUTING_PENDING
+                    )
 
             if self.drain_task is None or self.drain_task.done():
                 self.drain_task = asyncio.create_task(
@@ -182,7 +259,7 @@ class ChannelReplyState:
                     request = self.pending_request
                     self.pending_request = None
                     if request is not None:
-                        self.is_executing = True
+                        self._transition_reply(ReplyPhase.PENDING, ReplyPhase.EXECUTING)
 
                 if request is None:
                     return
@@ -191,7 +268,18 @@ class ChannelReplyState:
                     await execute_response_request(services, request)
                 finally:
                     async with self.lock:
-                        self.is_executing = False
+                        if self.phase is ReplyPhase.STOPPING:
+                            self._transition_reply(
+                                ReplyPhase.STOPPING, ReplyPhase.STOPPED
+                            )
+                        elif self.phase is ReplyPhase.EXECUTING_PENDING:
+                            self._transition_reply(
+                                ReplyPhase.EXECUTING_PENDING, ReplyPhase.PENDING
+                            )
+                        else:
+                            self._transition_reply(
+                                ReplyPhase.EXECUTING, ReplyPhase.IDLE
+                            )
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -203,14 +291,25 @@ class ChannelReplyState:
             async with self.lock:
                 if self.drain_task is current_task:
                     self.drain_task = None
-                if self.pending_request is not None:
+                if (
+                    self.pending_request is not None
+                    and self.phase is ReplyPhase.PENDING
+                ):
                     self.drain_task = asyncio.create_task(
                         self._drain(services, channel_id)
                     )
 
     def cancel_tasks(self):
+        # Event-loop only; teardown has no awaits.
+        self.pending_request = None
+        if self.phase in (ReplyPhase.EXECUTING, ReplyPhase.EXECUTING_PENDING):
+            self.phase = ReplyPhase.STOPPING
+        elif self.phase is not ReplyPhase.STOPPING:
+            self.phase = ReplyPhase.STOPPED
         burst = self.message_burst
         if burst:
+            burst.transition(BurstPhase.CANCELLED)
+            self.message_burst = None
             burst.cancel_timer()
         if self.drain_task and not self.drain_task.done():
             self.drain_task.cancel()
