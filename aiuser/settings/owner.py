@@ -395,8 +395,12 @@ class OwnerSettings(MixinMeta):
     async def _activate_codex_endpoint(
         self, ctx: commands.Context, new_account: bool = False
     ):
-        from aiuser.providers.llm.codex.chatgpt import finish, load, start
-        from aiuser.providers.llm.codex.view import ChatGPTAccountView, ChatGPTLoginView
+        from aiuser.providers.llm.codex.chatgpt import SignInPhase, finish, load, start
+        from aiuser.providers.llm.codex.view import (
+            AccountChoice,
+            ChatGPTAccountView,
+            ChatGPTLoginView,
+        )
 
         saved = await load(self.bot)
         if saved.get("client_id") and not new_account:
@@ -418,9 +422,9 @@ class OwnerSettings(MixinMeta):
             )
             await account_view.wait()
             await account_message.edit(view=None)
-            if account_view.choice is None:
+            if account_view.choice in (AccountChoice.WAITING, AccountChoice.EXPIRED):
                 return
-            new_account = account_view.choice
+            new_account = account_view.choice is AccountChoice.SWITCH
 
         models = None
         if not new_account:
@@ -457,6 +461,7 @@ class OwnerSettings(MixinMeta):
             try:
                 await view.wait()
                 if view.result.cancelled() or not view.result.done():
+                    pending.phase = SignInPhase.EXPIRED
                     return await message.edit(
                         content="ChatGPT sign-in timed out.", embed=None, view=None
                     )
@@ -479,6 +484,8 @@ class OwnerSettings(MixinMeta):
                     content="ChatGPT sign-in completed.", embed=None, view=None
                 )
             finally:
+                if pending.phase is SignInPhase.WAITING:
+                    pending.phase = SignInPhase.CANCELLED
                 view.stop()
         selected_model = models[0]
         previous_url = await self.config.custom_openai_endpoint()
