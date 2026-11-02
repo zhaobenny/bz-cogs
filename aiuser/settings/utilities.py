@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from difflib import SequenceMatcher
+from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 import discord
@@ -16,27 +17,40 @@ if TYPE_CHECKING:
     from aiuser.core.services import AIUserServices
 
 
+class ConfirmationOutcome(Enum):
+    CONFIRMED = auto()
+    DECLINED = auto()
+    TIMED_OUT = auto()
+
+    def __bool__(self):
+        return self is ConfirmationOutcome.CONFIRMED
+
+
 async def confirm_pending(
     ctx: commands.Context, embed: discord.Embed, timeout: float = 30.0
-) -> tuple[bool, discord.Message]:
+) -> tuple[ConfirmationOutcome, discord.Message]:
     """Ask for confirmation using Red's native button view.
 
-    Returns ``(confirmed, prompt_message)``. On timeout or "no" the prompt is
-    edited to "Cancelled." and ``confirmed`` is False; on "yes" the caller is
-    expected to edit the returned message with the outcome.
+    Returns the outcome and prompt message. On timeout or "no" the prompt is
+    edited to "Cancelled."; on "yes" the caller edits it with the outcome.
     """
     view = ConfirmView(ctx.author, timeout=timeout, disable_buttons=True)
     confirm = await ctx.send(embed=embed, view=view)
     view.message = confirm
     await view.wait()
 
-    if view.result is not True:
-        await confirm.edit(
-            embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()),
-            view=None,
-        )
-        return False, confirm
-    return True, confirm
+    if view.result is True:
+        return ConfirmationOutcome.CONFIRMED, confirm
+    outcome = (
+        ConfirmationOutcome.DECLINED
+        if view.result is False
+        else ConfirmationOutcome.TIMED_OUT
+    )
+    await confirm.edit(
+        embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()),
+        view=None,
+    )
+    return outcome, confirm
 
 
 def get_mention_type(mention) -> MentionType:

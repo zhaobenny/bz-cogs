@@ -8,6 +8,8 @@ import os
 import secrets
 import time
 import uuid
+from dataclasses import dataclass, field
+from enum import Enum, auto
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 import httpx
@@ -35,6 +37,40 @@ SERVICE = "aiuser_chatgpt"
 _REFRESH_LOCK = asyncio.Lock()
 
 
+class SignInPhase(Enum):
+    WAITING = auto()
+    VALIDATING_CALLBACK = auto()
+    EXCHANGING = auto()
+    VALIDATING_IDENTITY = auto()
+    SAVING = auto()
+    COMPLETED = auto()
+    EXPIRED = auto()
+    CANCELLED = auto()
+    FAILED = auto()
+
+
+class CredentialPhase(Enum):
+    UNKNOWN = auto()
+    MISSING = auto()
+    READY = auto()
+    REFRESHING = auto()
+    FAILED = auto()
+
+
+_credential_phase = CredentialPhase.UNKNOWN
+
+
+@dataclass
+class PendingSignIn:
+    state: str = field(repr=False)
+    nonce: str = field(repr=False)
+    verifier: str = field(repr=False)
+    host: str
+    client_id: str | None
+    subject: str | None
+    phase: SignInPhase = SignInPhase.WAITING
+
+
 async def load(bot):
     return json.loads((await bot.get_shared_api_tokens(SERVICE)).get("oauth", "{}"))
 
@@ -45,10 +81,11 @@ async def save(bot, data):
 
 
 async def start(bot, new_account=False):
-    saved = await load(bot)
-    host = saved.get("host") or "urn:uuid:" + str(uuid.uuid4())
-    if not saved.get("host"):
-        await save(bot, {**saved, "host": host})
+    async with _REFRESH_LOCK:
+        saved = await load(bot)
+        host = saved.get("host") or "urn:uuid:" + str(uuid.uuid4())
+        if not saved.get("host"):
+            await save(bot, {**saved, "host": host})
     verifier = secrets.token_urlsafe(64)
     state, nonce = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
     challenge = (
@@ -72,17 +109,30 @@ async def start(bot, new_account=False):
     if saved.get("client_id") and not new_account:
         params["client_id"] = saved["client_id"]
         params.pop("agent_name_hint")
-    return ISSUER + "/api/accounts/authorize?" + urlencode(params), {
-        "state": state,
-        "nonce": nonce,
-        "verifier": verifier,
-        "host": host,
-        "client_id": None if new_account else saved.get("client_id"),
-        "subject": None if new_account else saved.get("subject"),
-    }
+    return ISSUER + "/api/accounts/authorize?" + urlencode(params), PendingSignIn(
+        state=state,
+        nonce=nonce,
+        verifier=verifier,
+        host=host,
+        client_id=None if new_account else saved.get("client_id"),
+        subject=None if new_account else saved.get("subject"),
+    )
 
 
-async def finish(bot, pending, callback):
+async def finish(bot, pending: PendingSignIn, callback):
+    if pending.phase is not SignInPhase.WAITING:
+        raise ValueError("This sign-in has already been used")
+    pending.phase = SignInPhase.VALIDATING_CALLBACK
+    try:
+        models = await _finish(bot, pending, callback)
+    except BaseException:
+        pending.phase = SignInPhase.FAILED
+        raise
+    pending.phase = SignInPhase.COMPLETED
+    return models
+
+
+async def _finish(bot, pending: PendingSignIn, callback):
     parsed = urlsplit(callback.strip())
     if (parsed.scheme, parsed.netloc, parsed.path, parsed.fragment) != (
         "http",
@@ -93,18 +143,19 @@ async def finish(bot, pending, callback):
         raise ValueError("Invalid callback URL")
     query = parse_qs(parsed.query, keep_blank_values=True)
     if any(len(values) != 1 for values in query.values()) or not secrets.compare_digest(
-        query.get("state", [""])[0], pending["state"]
+        query.get("state", [""])[0], pending.state
     ):
         raise ValueError("Invalid callback state")
-    client_id = query.get("client_id", [pending.get("client_id") or ""])[0]
+    client_id = query.get("client_id", [pending.client_id or ""])[0]
     if (
         query.get("error")
         or not query.get("code", [""])[0]
         or not client_id
         or client_id == "dynamic_agent_client"
-        or (pending.get("client_id") and client_id != pending["client_id"])
+        or (pending.client_id and client_id != pending.client_id)
     ):
         raise ValueError("Authorization was not completed")
+    pending.phase = SignInPhase.EXCHANGING
     async with httpx.AsyncClient(timeout=30) as client:
         response = await client.post(
             ISSUER + "/api/accounts/oauth/token",
@@ -112,13 +163,14 @@ async def finish(bot, pending, callback):
                 "grant_type": "authorization_code",
                 "client_id": client_id,
                 "code": query["code"][0],
-                "code_verifier": pending["verifier"],
+                "code_verifier": pending.verifier,
                 "redirect_uri": REDIRECT,
                 "resource": RESOURCE,
             },
         )
         response.raise_for_status()
         token = response.json()
+        pending.phase = SignInPhase.VALIDATING_IDENTITY
         response = await client.get(ISSUER + "/.well-known/jwks.json")
         response.raise_for_status()
         claims = JsonWebToken(["RS256"]).decode(
@@ -129,11 +181,11 @@ async def finish(bot, pending, callback):
                 "aud": {"essential": True, "value": client_id},
                 "exp": {"essential": True},
                 "sub": {"essential": True},
-                "nonce": {"essential": True, "value": pending["nonce"]},
+                "nonce": {"essential": True, "value": pending.nonce},
             },
         )
         claims.validate()
-        if pending.get("subject") and claims["sub"] != pending["subject"]:
+        if pending.subject and claims["sub"] != pending.subject:
             raise ValueError("ChatGPT account changed")
         if (
             "chatgpt.tokens.use.direct" not in token.get("scope", "").split()
@@ -153,34 +205,49 @@ async def finish(bot, pending, callback):
         ]
         if not models:
             raise ValueError("No ChatGPT models are available")
-    await save(
-        bot,
-        {
-            "host": pending["host"],
-            "client_id": client_id,
-            "subject": claims["sub"],
-            "email": claims.get("email"),
-            "id_token": token["id_token"],
-            "access": token["access_token"],
-            "refresh": token["refresh_token"],
-            "scope": token["scope"],
-            "expires": time.time() + int(token.get("expires_in", 3600)),
-        },
-    )
+    pending.phase = SignInPhase.SAVING
+    async with _REFRESH_LOCK:
+        global _credential_phase
+        await save(
+            bot,
+            {
+                "host": pending.host,
+                "client_id": client_id,
+                "subject": claims["sub"],
+                "email": claims.get("email"),
+                "id_token": token["id_token"],
+                "access": token["access_token"],
+                "refresh": token["refresh_token"],
+                "scope": token["scope"],
+                "expires": time.time() + int(token.get("expires_in", 3600)),
+            },
+        )
+        _credential_phase = CredentialPhase.READY
     return models
 
 
 async def valid(bot, client, force=False):
+    global _credential_phase
     async with _REFRESH_LOCK:
-        return await _valid_locked(bot, client, force)
+        _credential_phase = CredentialPhase.UNKNOWN
+        try:
+            return await _valid_locked(bot, client, force)
+        except BaseException:
+            if _credential_phase is not CredentialPhase.MISSING:
+                _credential_phase = CredentialPhase.FAILED
+            raise
 
 
 async def _valid_locked(bot, client, force=False):
+    global _credential_phase
     data = await load(bot)
     if not data.get("client_id") or not data.get("refresh"):
+        _credential_phase = CredentialPhase.MISSING
         raise ValueError("Sign in with ChatGPT first")
     if not force and data.get("access") and data.get("expires", 0) > time.time() + 60:
+        _credential_phase = CredentialPhase.READY
         return data
+    _credential_phase = CredentialPhase.REFRESHING
     response = await client.post(
         ISSUER + "/api/accounts/oauth/token",
         data={
@@ -204,4 +271,5 @@ async def _valid_locked(bot, client, force=False):
         scope=scope,
     )
     await save(bot, data)
+    _credential_phase = CredentialPhase.READY
     return data

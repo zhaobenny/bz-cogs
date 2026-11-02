@@ -3,27 +3,37 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from enum import Enum, auto
 from typing import Any
 
 import discord
 from redbot.core import Config
 from redbot.core.bot import Red
 
-from aiuser.mcp.client import MCPClient
+from aiuser.mcp.client import MCPClient, MCPError
 from aiuser.mcp.oauth import MCPOAuth
 from aiuser.mcp.tool_call import MCPToolCall
 
 logger = logging.getLogger("red.bz_cogs.aiuser.mcp")
 
 
+class ManagerPhase(Enum):
+    OPEN = auto()
+    CLOSING = auto()
+    CLOSED = auto()
+
+
 class MCPManager:
     def __init__(self, bot: Red, config: Config, version: str):
+        self.phase = ManagerPhase.OPEN
         self.bot = bot
         self.config = config
         self.version = version
         self.oauth = MCPOAuth(bot)
         self._clients: dict[tuple[int, str], tuple[str, MCPClient]] = {}
         self._lock = asyncio.Lock()
+        self._close_lock = asyncio.Lock()
+        self._closing_clients: list[MCPClient] = []
 
     async def tools_for_guild(self, guild: discord.Guild) -> list[MCPToolCall]:
         configured = await self.config.mcp_servers()
@@ -66,6 +76,8 @@ class MCPManager:
         cache_key = (guild_id, server_alias)
         fingerprint = json.dumps(server, sort_keys=True, separators=(",", ":"))
         async with self._lock:
+            if self.phase is not ManagerPhase.OPEN:
+                raise MCPError("The MCP manager is closed.")
             cached = self._clients.get(cache_key)
             if cached and cached[0] == fingerprint:
                 return cached[1]
@@ -74,8 +86,14 @@ class MCPManager:
             client.oauth = self.oauth
             old = self._clients.pop(cache_key, None)
             self._clients[cache_key] = (fingerprint, client)
-            if old:
-                await old[1].close()
+            if old is None:
+                return client
+        await old[1].close()
+        async with self._lock:
+            if self.phase is not ManagerPhase.OPEN:
+                raise MCPError("The MCP manager is closed.")
+            if self._clients.get(cache_key) != (fingerprint, client):
+                raise MCPError("The MCP server changed while connecting. Try again.")
             return client
 
     async def _resolve_headers(self, server_alias: str) -> dict[str, str]:
@@ -87,16 +105,18 @@ class MCPManager:
         return {"Authorization": f"Bearer {secret}"}
 
     async def invalidate(self, guild_id: int, server_alias: str) -> None:
-        cached = self._clients.pop((guild_id, server_alias), None)
+        async with self._lock:
+            cached = self._clients.pop((guild_id, server_alias), None)
         if cached:
             await cached[1].close()
 
     async def invalidate_server(self, server_alias: str) -> None:
-        clients = [
-            self._clients.pop(cache_key)[1]
-            for cache_key in list(self._clients)
-            if cache_key[1] == server_alias
-        ]
+        async with self._lock:
+            clients = [
+                self._clients.pop(cache_key)[1]
+                for cache_key in list(self._clients)
+                if cache_key[1] == server_alias
+            ]
         await asyncio.gather(*(client.close() for client in clients))
 
     async def tokens_updated(self, service: str) -> None:
@@ -104,9 +124,20 @@ class MCPManager:
             await self.invalidate_server(service[4:])
 
     async def close(self) -> None:
-        self.oauth.pending.clear()
-        clients = [client for _, client in self._clients.values()]
-        self._clients.clear()
-        await asyncio.gather(
-            *(client.close() for client in clients), return_exceptions=True
-        )
+        async with self._close_lock:
+            async with self._lock:
+                if self.phase is ManagerPhase.CLOSED:
+                    return
+                self.phase = ManagerPhase.CLOSING
+                self._closing_clients.extend(
+                    client for _, client in self._clients.values()
+                )
+                self._clients.clear()
+            await asyncio.gather(
+                *(client.close() for client in self._closing_clients),
+                return_exceptions=True,
+            )
+            self._closing_clients.clear()
+            await self.oauth.close()
+            async with self._lock:
+                self.phase = ManagerPhase.CLOSED

@@ -24,7 +24,7 @@ async def _get_conversation_reply_chance(
     """Record a recent aiuser response, then evaluate a conversation follow-up."""
     bot_message = backend.make_message("recent bot message", bot.user, test_channel)
     state = get_or_create_channel_reply_state(mock_services, test_channel.id)
-    state.last_bot_reply_at = bot_message.created_at
+    state.record_reply(bot_message.created_at)
     trigger = backend.make_message(text, test_member, test_channel)
     ctx = await bot.get_context(trigger)
     return await get_conversation_reply_chance(mock_services, ctx)
@@ -298,7 +298,7 @@ async def test_conversation_reply_requires_recorded_aiuser_response(
     assert await get_conversation_reply_chance(mock_services, ctx) is None
 
     state = get_or_create_channel_reply_state(mock_services, test_channel.id)
-    state.last_bot_reply_at = plain_message.created_at
+    state.record_reply(plain_message.created_at)
     trigger = backend.make_message(
         "after an aiuser response?", test_member, test_channel
     )

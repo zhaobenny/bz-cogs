@@ -1,6 +1,22 @@
 import asyncio
+from enum import Enum, auto
 
 import discord
+
+
+class LoginPhase(Enum):
+    WAITING = auto()
+    SUBMITTING = auto()
+    SUBMITTED = auto()
+    EXPIRED = auto()
+    FAILED = auto()
+
+
+class AccountChoice(Enum):
+    WAITING = auto()
+    EXISTING = auto()
+    SWITCH = auto()
+    EXPIRED = auto()
 
 
 class CallbackModal(discord.ui.Modal, title="Finish ChatGPT sign-in"):
@@ -22,14 +38,24 @@ class CallbackModal(discord.ui.Modal, title="Finish ChatGPT sign-in"):
             return await interaction.response.send_message(
                 "This sign-in belongs to another owner.", ephemeral=True
             )
-        if self.login.result.done():
+        if self.login.phase is not LoginPhase.WAITING or self.login.result.done():
             return await interaction.response.send_message(
                 "This sign-in has expired.", ephemeral=True
             )
-        await interaction.response.send_message(
-            "Checking your sign-in...", ephemeral=True
-        )
-        self.login.result.set_result((self.callback_url.value, interaction))
+        self.login.phase = LoginPhase.SUBMITTING
+        try:
+            await interaction.response.send_message(
+                "Checking your sign-in...", ephemeral=True
+            )
+        except BaseException:
+            self.login.phase = LoginPhase.FAILED
+            if not self.login.result.done():
+                self.login.result.cancel()
+            self.login.stop()
+            raise
+        if not self.login.result.done():
+            self.login.phase = LoginPhase.SUBMITTED
+            self.login.result.set_result((self.callback_url.value, interaction))
         self.login.stop()
 
     async def on_error(self, interaction, error):
@@ -43,6 +69,7 @@ class ChatGPTLoginView(discord.ui.View):
     def __init__(self, bot, owner_id):
         super().__init__(timeout=300)
         self.bot, self.owner_id = bot, owner_id
+        self.phase = LoginPhase.WAITING
         self.result = asyncio.get_running_loop().create_future()
 
     async def interaction_check(self, interaction):
@@ -61,6 +88,7 @@ class ChatGPTLoginView(discord.ui.View):
 
     async def on_timeout(self):
         if not self.result.done():
+            self.phase = LoginPhase.EXPIRED
             self.result.cancel()
 
 
@@ -68,7 +96,7 @@ class ChatGPTAccountView(discord.ui.View):
     def __init__(self, bot, owner_id):
         super().__init__(timeout=300)
         self.bot, self.owner_id = bot, owner_id
-        self.choice = None
+        self.choice = AccountChoice.WAITING
 
     async def interaction_check(self, interaction):
         if interaction.user.id == self.owner_id and await self.bot.is_owner(
@@ -82,12 +110,24 @@ class ChatGPTAccountView(discord.ui.View):
 
     @discord.ui.button(label="Use connected account", style=discord.ButtonStyle.primary)
     async def use_existing(self, interaction, button):
-        self.choice = False
+        if self.choice is not AccountChoice.WAITING:
+            return await interaction.response.send_message(
+                "This choice is no longer available.", ephemeral=True
+            )
+        self.choice = AccountChoice.EXISTING
         await interaction.response.defer()
         self.stop()
 
     @discord.ui.button(label="Switch account", style=discord.ButtonStyle.secondary)
     async def switch(self, interaction, button):
-        self.choice = True
+        if self.choice is not AccountChoice.WAITING:
+            return await interaction.response.send_message(
+                "This choice is no longer available.", ephemeral=True
+            )
+        self.choice = AccountChoice.SWITCH
         await interaction.response.defer()
         self.stop()
+
+    async def on_timeout(self):
+        if self.choice is AccountChoice.WAITING:
+            self.choice = AccountChoice.EXPIRED

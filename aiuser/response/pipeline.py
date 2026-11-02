@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from dataclasses import dataclass, field
@@ -32,6 +33,19 @@ if TYPE_CHECKING:
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
+class PipelinePhase(Enum):
+    CREATED = auto()
+    PREPARING = auto()
+    REQUESTING = auto()
+    RUNNING_TOOLS = auto()
+    FINAL_REQUEST = auto()
+    COMPLETED = auto()
+    SUPPRESSED = auto()
+    EMPTY = auto()
+    FAILED = auto()
+    CANCELLED = auto()
+
+
 class PipelineError(Enum):
     NO_PROVIDER = auto()
     TIMED_OUT = auto()
@@ -56,6 +70,7 @@ class LLMPipeline:
         ctx: commands.Context,
         conversation: Conversation,
     ):
+        self.phase = PipelinePhase.CREATED
         self.services = services
         self.ctx: commands.Context = ctx
 
@@ -75,11 +90,57 @@ class LLMPipeline:
             else uuid4().hex
         )
 
+    def _transition(self, phase: PipelinePhase) -> None:
+        allowed = {
+            PipelinePhase.CREATED: {PipelinePhase.PREPARING},
+            PipelinePhase.PREPARING: {
+                PipelinePhase.REQUESTING,
+                PipelinePhase.EMPTY,
+                PipelinePhase.FAILED,
+                PipelinePhase.CANCELLED,
+            },
+            PipelinePhase.REQUESTING: {
+                PipelinePhase.RUNNING_TOOLS,
+                PipelinePhase.COMPLETED,
+                PipelinePhase.EMPTY,
+                PipelinePhase.FAILED,
+                PipelinePhase.CANCELLED,
+            },
+            PipelinePhase.RUNNING_TOOLS: {
+                PipelinePhase.REQUESTING,
+                PipelinePhase.FINAL_REQUEST,
+                PipelinePhase.SUPPRESSED,
+                PipelinePhase.FAILED,
+                PipelinePhase.CANCELLED,
+            },
+            PipelinePhase.FINAL_REQUEST: {
+                PipelinePhase.COMPLETED,
+                PipelinePhase.EMPTY,
+                PipelinePhase.FAILED,
+                PipelinePhase.CANCELLED,
+            },
+        }
+        if phase not in allowed.get(self.phase, set()):
+            raise RuntimeError(f"Invalid pipeline transition: {self.phase} -> {phase}")
+        self.phase = phase
+
     async def run(self) -> PipelineResult:
+        self._transition(PipelinePhase.PREPARING)
+        try:
+            return await self._run()
+        except asyncio.CancelledError:
+            self._transition(PipelinePhase.CANCELLED)
+            raise
+        except Exception:
+            self._transition(PipelinePhase.FAILED)
+            raise
+
+    async def _run(self) -> PipelineResult:
         base_kwargs = await self._build_base_parameters()
         self.provider = await get_llm_provider(self.services)
         if self.provider is None:
             logger.error("No LLM backend available while starting response pipeline")
+            self._transition(PipelinePhase.FAILED)
             return self._build_result(None, error=PipelineError.NO_PROVIDER)
         await self.tool_executor.setup()
         tool_call_rounds = (
@@ -93,20 +154,26 @@ class LLMPipeline:
         completion: str | None = None
 
         for round_idx in range(tool_call_rounds):
+            self._transition(PipelinePhase.REQUESTING)
             kwargs = {**base_kwargs, **tools_kwargs}
             step = await self._create_chat_step(kwargs)
             if isinstance(step, PipelineError):
+                self._transition(PipelinePhase.FAILED)
                 return self._build_result(None, error=step)
 
             if step.content:
                 completion = step.content
+                self._transition(PipelinePhase.COMPLETED)
                 break
             if step.tool_calls:
+                self._transition(PipelinePhase.RUNNING_TOOLS)
                 await self._append_tool_round(step)
                 if self.tool_context.suppress_response:
+                    self._transition(PipelinePhase.SUPPRESSED)
                     break
                 continue
 
+            self._transition(PipelinePhase.EMPTY)
             logger.warning(
                 "No content or tool calls received during round %s for message %s "
                 "(finish_reason=%s)",
@@ -122,11 +189,18 @@ class LLMPipeline:
             logger.debug(
                 f"Tool call round limit reached for message {self.ctx.message.id}; requesting final response without tools"
             )
+            self._transition(PipelinePhase.FINAL_REQUEST)
             step = await self._create_chat_step(base_kwargs)
             if isinstance(step, PipelineError):
+                self._transition(PipelinePhase.FAILED)
                 return self._build_result(None, error=step)
             if step.content:
                 completion = step.content
+                self._transition(PipelinePhase.COMPLETED)
+            else:
+                self._transition(PipelinePhase.EMPTY)
+        elif exhausted_tool_call_rounds:
+            self._transition(PipelinePhase.EMPTY)
 
         return self._build_result(completion)
 
@@ -218,19 +292,12 @@ class LLMPipeline:
 
     async def _session_id(self) -> str:
         state = self.services.reply_channel_states.get(self.ctx.channel.id)
-        if (
-            self.conversation.from_message_context
-            and state
-            and state.llm_session_id
-            and state.last_bot_reply_at
-        ):
+        if self.conversation.from_message_context and state and state.has_session:
             max_history_gap = await self.services.config.guild(
                 self.ctx.guild
             ).messages_backread_seconds()
-            elapsed = abs(
-                (self.ctx.message.created_at - state.last_bot_reply_at).total_seconds()
-            )
-            if max_history_gap and elapsed <= max_history_gap:
-                return state.llm_session_id
+            session_id = state.session_for(self.ctx.message.created_at, max_history_gap)
+            if session_id:
+                return session_id
 
         return self.request_id

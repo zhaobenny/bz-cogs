@@ -10,7 +10,7 @@ from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.defaults import DEFAULT_REMOVE_PATTERNS
 from aiuser.settings._groups import aiuser
-from aiuser.settings.utilities import confirm_pending
+from aiuser.settings.utilities import ConfirmationOutcome, confirm_pending
 from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -98,7 +98,7 @@ class ResponseSettings(MixinMeta):
             color=await ctx.embed_color(),
         )
         confirmed, confirm = await confirm_pending(ctx, embed, timeout=10.0)
-        if not confirmed:
+        if confirmed is not ConfirmationOutcome.CONFIRMED:
             return
 
         await self.config.guild(ctx.guild).removelist_regexes.set(
@@ -308,7 +308,7 @@ class ResponseSettings(MixinMeta):
                 description="Wipe existing logit bias (from [p]aiuser response weights)?",
             )
             confirmed, confirm = await confirm_pending(ctx, embed)
-            if not confirmed:
+            if confirmed is not ConfirmationOutcome.CONFIRMED:
                 return
             await confirm.edit(
                 content="Overwritten existing weights.", embed=None, view=None
