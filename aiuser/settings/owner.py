@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from enum import Enum, auto
 from io import BytesIO
 from pathlib import Path
 from typing import Optional
@@ -42,6 +43,14 @@ def _remove_codex_oauth(value):
     elif isinstance(value, list):
         for item in value:
             _remove_codex_oauth(item)
+
+
+class ChatGPTActivationPhase(Enum):
+    IDLE = auto()
+    CHOOSING_ACCOUNT = auto()
+    CHECKING_ACCOUNT = auto()
+    SIGNING_IN = auto()
+    APPLYING = auto()
 
 
 class OwnerSettings(MixinMeta):
@@ -395,6 +404,18 @@ class OwnerSettings(MixinMeta):
     async def _activate_codex_endpoint(
         self, ctx: commands.Context, new_account: bool = False
     ):
+        if (
+            getattr(self, "_chatgpt_activation_phase", ChatGPTActivationPhase.IDLE)
+            is not ChatGPTActivationPhase.IDLE
+        ):
+            return await ctx.send("ChatGPT setup is already in progress.")
+        self._chatgpt_activation_phase = ChatGPTActivationPhase.CHOOSING_ACCOUNT
+        try:
+            return await self._run_codex_activation(ctx, new_account)
+        finally:
+            self._chatgpt_activation_phase = ChatGPTActivationPhase.IDLE
+
+    async def _run_codex_activation(self, ctx: commands.Context, new_account: bool):
         from aiuser.providers.llm.codex.chatgpt import SignInPhase, finish, load, start
         from aiuser.providers.llm.codex.view import (
             AccountChoice,
@@ -426,6 +447,7 @@ class OwnerSettings(MixinMeta):
                 return
             new_account = account_view.choice is AccountChoice.SWITCH
 
+        self._chatgpt_activation_phase = ChatGPTActivationPhase.CHECKING_ACCOUNT
         models = None
         if not new_account:
             try:
@@ -441,6 +463,7 @@ class OwnerSettings(MixinMeta):
             except Exception as exc:  # noqa: BLE001 - do not expose authentication errors
                 logger.info("Saved ChatGPT login unavailable (%s)", type(exc).__name__)
         if not models:
+            self._chatgpt_activation_phase = ChatGPTActivationPhase.SIGNING_IN
             url, pending = await start(self.bot, new_account=new_account)
             view = ChatGPTLoginView(self.bot, ctx.author.id)
             message = await ctx.send(
@@ -487,6 +510,7 @@ class OwnerSettings(MixinMeta):
                 if pending.phase is SignInPhase.WAITING:
                     pending.phase = SignInPhase.CANCELLED
                 view.stop()
+        self._chatgpt_activation_phase = ChatGPTActivationPhase.APPLYING
         selected_model = models[0]
         previous_url = await self.config.custom_openai_endpoint()
         await self._save_current_endpoint_models(previous_url)
