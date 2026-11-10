@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import datetime
 import logging
 import random
+from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 import discord
@@ -25,17 +27,43 @@ if TYPE_CHECKING:
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
+class RandomTaskPhase(Enum):
+    STOPPED = auto()
+    RUNNING = auto()
+    STOPPING = auto()
+
+
 class RandomMessageTask:
     """Owned by the cog (constructed in cog_load, cancelled in cog_unload)."""
 
     def __init__(self, services: AIUserServices):
         self.services = services
+        self.phase = RandomTaskPhase.STOPPED
+        self._loop_task: asyncio.Task | None = None
 
     def start(self):
-        self._random_message_loop.start()
+        if self.phase is not RandomTaskPhase.STOPPED:
+            raise RuntimeError("Random message task is already running or stopping")
+        task = self._random_message_loop.start()
+        self._loop_task = task
+        self.phase = RandomTaskPhase.RUNNING
+        task.add_done_callback(self._on_loop_done)
+
+    def _on_loop_done(self, task: asyncio.Task):
+        if self._loop_task is task:
+            self._loop_task = None
+            self.phase = RandomTaskPhase.STOPPED
 
     def cancel(self):
-        self._random_message_loop.cancel()
+        if self.phase is RandomTaskPhase.RUNNING:
+            self.phase = RandomTaskPhase.STOPPING
+            self._random_message_loop.cancel()
+
+    async def stop(self):
+        task = self._loop_task
+        self.cancel()
+        if task is not None:
+            await asyncio.gather(task, return_exceptions=True)
 
     @tasks.loop(seconds=RANDOM_MESSAGE_TASK_RETRY_SECONDS)
     async def _random_message_loop(self):

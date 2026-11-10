@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from enum import Enum, auto
 from typing import Optional, Union
 
 import discord
@@ -13,6 +14,19 @@ from redbot.core.utils.predicates import ReactionPredicate
 
 DEFAULT_LLM_MODEL = "gpt-4o-mini"
 CHANNEL_MENTION_OR_ID_PATTERN = re.compile(r"(?:<#(\d{15,25})>|(\d{15,25}))")
+
+
+class ClientPhase(Enum):
+    UNAVAILABLE = auto()
+    CONFIGURING = auto()
+    READY = auto()
+    FAILED = auto()
+
+
+class ConsentDecision(Enum):
+    UNDECIDED = auto()
+    OPTED_IN = auto()
+    OPTED_OUT = auto()
 
 
 class Settings:
@@ -119,50 +133,47 @@ class Settings:
 
         This will allow the bot to react to your messages
         """
-        optin = await self.config.optin()
-        optout = await self.config.optout()
-
-        if (
-            ctx.author.id in await self.config.optin()
-            and ctx.author.id not in self.optout_users
-        ):
-            return await ctx.send("You are already opted in bot-wide")
-
-        optin.append(ctx.author.id)
-        self.optin_users.append(ctx.author.id)
-        await self.config.optin.set(optin)
-
-        if ctx.author.id in optout:
-            optout.remove(ctx.author.id)
-            self.optout_users.remove(ctx.author.id)
-            await self.config.optout.set(optout)
-
+        async with self.consent_lock:
+            if self.consent_decisions.get(ctx.author.id) is ConsentDecision.OPTED_IN:
+                return await ctx.send("You are already opted in bot-wide")
+            self.consent_decisions[ctx.author.id] = ConsentDecision.OPTED_IN
+            await self.config.optin.set(
+                [
+                    uid
+                    for uid, decision in self.consent_decisions.items()
+                    if decision is ConsentDecision.OPTED_IN
+                ]
+            )
+            await self.config.optout.set(
+                [
+                    uid
+                    for uid, decision in self.consent_decisions.items()
+                    if decision is ConsentDecision.OPTED_OUT
+                ]
+            )
         await ctx.send("You are now opted in bot-wide")
 
     @aiemote.command(name="optout")
     async def optout_user(self, ctx: commands.Context):
-        """Opt out of sending your chat messages to an external LLM provider (bot-wide)
-
-        The bot will no longer react to your messages
-        """
-        optin = await self.config.optin()
-        optout = await self.config.optout()
-
-        if (
-            ctx.author.id not in await self.config.optin()
-            and ctx.author.id in self.optout_users
-        ):
-            return await ctx.send("You are already opted out")
-
-        if ctx.author.id in optin:
-            optin.remove(ctx.author.id)
-            self.optin_users.remove(ctx.author.id)
-            await self.config.optin.set(optin)
-
-        optout.append(ctx.author.id)
-        self.optout_users.append(ctx.author.id)
-        await self.config.optout.set(optout)
-
+        """Opt out of sending your chat messages to an external LLM provider (bot-wide)."""
+        async with self.consent_lock:
+            if self.consent_decisions.get(ctx.author.id) is ConsentDecision.OPTED_OUT:
+                return await ctx.send("You are already opted out")
+            self.consent_decisions[ctx.author.id] = ConsentDecision.OPTED_OUT
+            await self.config.optin.set(
+                [
+                    uid
+                    for uid, decision in self.consent_decisions.items()
+                    if decision is ConsentDecision.OPTED_IN
+                ]
+            )
+            await self.config.optout.set(
+                [
+                    uid
+                    for uid, decision in self.consent_decisions.items()
+                    if decision is ConsentDecision.OPTED_OUT
+                ]
+            )
         await ctx.send("You are now opted out bot-wide")
 
     @commands.group(name="aiemoteowner", alias=["ai_emote_admin"])
@@ -277,8 +288,6 @@ class Settings:
         - `openai`, `openrouter`, `ollama`, `typesafe`: Endpoint shortcuts. (localhost for ollama)
         TypeSafe requires `[p]set api typesafe api_key,KEY`, then select a Jev model.
         """
-        from .openai_utils import setup_openai_client
-
         if url == "openrouter":
             url = "https://openrouter.ai/api/v1/"
         elif url == "typesafe":
@@ -288,26 +297,32 @@ class Settings:
         elif url in ["clear", "reset", "openai"]:
             url = None
 
-        previous_url = await self.config.custom_openai_endpoint()
-        await self.config.custom_openai_endpoint.set(url)
-
         await ctx.message.add_reaction("🔄")
-
-        self.aclient = await setup_openai_client(self.bot, self.config)
-
-        # TypeSafe credentials are validated by the first decision request.
         try:
-            if not (
-                self.aclient.base_url.host == "api.typesafe.ai"
-                and self.aclient.base_url.scheme == "https"
-            ):
-                await self.aclient.models.list()
-        except Exception:  # noqa: BLE001 - preserve the existing failure fallback
-            await self.config.custom_openai_endpoint.set(previous_url)
-            self.aclient = await setup_openai_client(self.bot, self.config)
-            return await ctx.send(
-                ":warning: Invalid endpoint. Please check logs for more information."
-            )
+            async with self.client_lock:
+                previous_url = await self.config.custom_openai_endpoint()
+                self.client_phase = ClientPhase.CONFIGURING
+                try:
+                    await self.config.custom_openai_endpoint.set(url)
+                    client = await self._configure_client()
+                    self.client_phase = ClientPhase.CONFIGURING
+                    # TypeSafe validates credentials on first request.
+                    if not (
+                        client.base_url.host == "api.typesafe.ai"
+                        and client.base_url.scheme == "https"
+                    ):
+                        await client.models.list()
+                    self.client_phase = ClientPhase.READY
+                except asyncio.CancelledError:
+                    await self.config.custom_openai_endpoint.set(previous_url)
+                    await self._configure_client()
+                    raise
+                except Exception:  # noqa: BLE001
+                    await self.config.custom_openai_endpoint.set(previous_url)
+                    await self._configure_client()
+                    return await ctx.send(
+                        ":warning: Invalid endpoint. Please check logs for more information."
+                    )
         finally:
             await ctx.message.remove_reaction("🔄", ctx.me)
 
@@ -506,11 +521,25 @@ class Settings:
                 embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color())
             )
         else:
-            await self.config.clear_all_guilds()
-            await self.config.clear_all_globals()
-            self.whitelist = {}
-            self.percent = 50
-            self.llm_model = DEFAULT_LLM_MODEL
+            async with self.client_lock:
+                self.client_phase = ClientPhase.CONFIGURING
+                try:
+                    async with self.consent_lock:
+                        await self.config.clear_all_guilds()
+                        await self.config.clear_all_globals()
+                        self.consent_decisions.clear()
+                    self.whitelist = {}
+                    self.percent = 50
+                    self.llm_model = DEFAULT_LLM_MODEL
+                    try:
+                        self.encoding = tiktoken.encoding_for_model(DEFAULT_LLM_MODEL)
+                    except KeyError:
+                        self.encoding = None
+                    await self._configure_client()
+                except BaseException:
+                    self.aclient = None
+                    self.client_phase = ClientPhase.FAILED
+                    raise
             return await confirm.edit(
                 embed=discord.Embed(title="Cleared.", color=await ctx.embed_color())
             )

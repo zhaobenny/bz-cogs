@@ -13,6 +13,7 @@ from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.settings._groups import aiuser
 from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.utilities import (
+    ConfirmationOutcome,
     add_prompt_metrics_fields,
     confirm_pending,
     truncate_prompt,
@@ -71,7 +72,7 @@ class PromptSettings(MixinMeta):
             color=await ctx.embed_color(),
         )
         confirmed, confirm = await confirm_pending(ctx, embed, timeout=10.0)
-        if not confirmed:
+        if confirmed is not ConfirmationOutcome.CONFIRMED:
             return
 
         self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at

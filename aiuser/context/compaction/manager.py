@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 import discord
@@ -22,11 +23,24 @@ Exclude noise, completely off-topic chitchat, and minor details. Keep the summar
 """
 
 
+class CompactionManagerPhase(Enum):
+    OPEN = auto()
+    CLOSING = auto()
+    CLOSED = auto()
+
+
+class CompactionPhase(Enum):
+    CHECKING = auto()
+    RUNNING = auto()
+
+
 class CompactionManager:
     def __init__(self, services: AIUserServices):
         self.services = services
         self.compaction_store = services.compaction_store
-        self._compaction_locks: set[int] = set()
+        self._compaction_phases: dict[int, CompactionPhase] = {}
+        self.phase = CompactionManagerPhase.OPEN
+        self._tasks: dict[int, asyncio.Task] = {}
 
     async def check_and_run_compaction(
         self, ctx: commands.Context, messages: list[discord.Message]
@@ -37,40 +51,75 @@ class CompactionManager:
         80% of the messages_backread limit. It summarizes the oldest 80% of
         those messages.
         """
-        if not self.compaction_store or not messages:
+        if (
+            self.phase is not CompactionManagerPhase.OPEN
+            or not self.compaction_store
+            or not messages
+        ):
             return
 
         compaction_enabled = await self.services.config.guild(
             ctx.guild
         ).compaction_enabled()
-        if not compaction_enabled:
+        if not compaction_enabled or self.phase is not CompactionManagerPhase.OPEN:
             return
 
         channel_id = ctx.channel.id
-        if channel_id in self._compaction_locks:
+        if channel_id in self._compaction_phases:
             return
+        # Claim before eligibility reads yield.
+        self._compaction_phases[channel_id] = CompactionPhase.CHECKING
+        try:
+            messages_backread = await self.services.config.guild(
+                ctx.guild
+            ).messages_backread()
+            last_compacted_id = (
+                await self.compaction_store.get_last_compacted_message_id(
+                    ctx.guild.id, channel_id
+                )
+            )
+            if last_compacted_id:
+                unsummarized = [m for m in messages if m.id > last_compacted_id]
+            else:
+                unsummarized = messages
 
-        messages_backread = await self.services.config.guild(
-            ctx.guild
-        ).messages_backread()
-
-        # Filter out messages that have already been compacted
-        last_compacted_id = await self.compaction_store.get_last_compacted_message_id(
-            ctx.guild.id, channel_id
-        )
-        if last_compacted_id:
-            unsummarized = [m for m in messages if m.id > last_compacted_id]
-        else:
-            unsummarized = messages
-
-        # Trigger when unsummarized messages reach 80% of the backread limit.
-        compaction_threshold = max(1, (messages_backread * 4 + 4) // 5)
-        if len(unsummarized) >= compaction_threshold:
-            # Compact the oldest 80%
+            compaction_threshold = max(1, (messages_backread * 4 + 4) // 5)
+            if len(unsummarized) < compaction_threshold:
+                return
             compact_count = max(1, (len(unsummarized) * 4) // 5)
             to_compact = unsummarized[:compact_count]
-            self._compaction_locks.add(channel_id)
-            asyncio.create_task(self._run_compaction(ctx, to_compact))
+            if self.phase is not CompactionManagerPhase.OPEN:
+                return
+            self._compaction_phases[channel_id] = CompactionPhase.RUNNING
+            try:
+                task = asyncio.create_task(self._run_compaction(ctx, to_compact))
+                self._tasks[channel_id] = task
+                task.add_done_callback(
+                    lambda completed: self._task_done(channel_id, completed)
+                )
+            except BaseException:
+                self._compaction_phases.pop(channel_id, None)
+                raise
+        finally:
+            if self._compaction_phases.get(channel_id) is CompactionPhase.CHECKING:
+                self._compaction_phases.pop(channel_id, None)
+
+    def _task_done(self, channel_id: int, task: asyncio.Task):
+        if self._tasks.get(channel_id) is task:
+            self._tasks.pop(channel_id, None)
+            if self._compaction_phases.get(channel_id) is CompactionPhase.RUNNING:
+                self._compaction_phases.pop(channel_id, None)
+
+    async def close(self):
+        if self.phase is CompactionManagerPhase.CLOSED:
+            return
+        self.phase = CompactionManagerPhase.CLOSING
+        tasks = tuple(self._tasks.values())
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        self.phase = CompactionManagerPhase.CLOSED
 
     async def _run_compaction(
         self, ctx: commands.Context, past_messages: list[discord.Message]
@@ -159,4 +208,4 @@ class CompactionManager:
         except Exception:
             logger.exception(f"Failed to compact messages in channel {ctx.channel.id}")
         finally:
-            self._compaction_locks.discard(ctx.channel.id)
+            self._compaction_phases.pop(ctx.channel.id, None)

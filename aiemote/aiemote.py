@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import random
 
@@ -8,7 +9,7 @@ from redbot.core import Config, commands
 from redbot.core.bot import Red
 
 from .openai_utils import setup_openai_client
-from .settings import DEFAULT_LLM_MODEL, Settings
+from .settings import DEFAULT_LLM_MODEL, ClientPhase, ConsentDecision, Settings
 
 logger = logging.getLogger("red.bz_cogs.aiemote")
 
@@ -21,8 +22,12 @@ class AIEmote(commands.Cog, Settings):
         self.bot: Red = bot
         self.config = Config.get_conf(self, identifier=754069)
         self.aclient = None
+        self.client_phase = ClientPhase.UNAVAILABLE
+        self.client_lock = asyncio.Lock()
         self.llm_model = DEFAULT_LLM_MODEL
         self.encoding = None
+        self.consent_lock = asyncio.Lock()
+        self.consent_decisions = {}
 
         default_global = {
             "percent": 50,
@@ -56,8 +61,15 @@ class AIEmote(commands.Cog, Settings):
         self.whitelist = {}
         all_config = await self.config.all_guilds()
         self.percent = await self.config.percent()
-        self.optin_users = await self.config.optin()
-        self.optout_users = await self.config.optout()
+        self.consent_decisions = {
+            user_id: ConsentDecision.OPTED_IN for user_id in await self.config.optin()
+        }
+        self.consent_decisions.update(
+            {
+                user_id: ConsentDecision.OPTED_OUT
+                for user_id in await self.config.optout()
+            }
+        )
         self.llm_model = await self.config.llm_model()
         try:
             self.encoding = tiktoken.encoding_for_model(self.llm_model)
@@ -67,12 +79,32 @@ class AIEmote(commands.Cog, Settings):
         for guild_id, config in all_config.items():
             self.whitelist[guild_id] = config["whitelist"]
 
-        self.aclient = await setup_openai_client(self.bot, self.config)
+        await self.refresh_client()
+
+    async def _configure_client(self, ctx=None):
+        # Caller holds client_lock.
+        self.client_phase = ClientPhase.CONFIGURING
+        try:
+            self.aclient = await setup_openai_client(self.bot, self.config, ctx)
+        except BaseException:
+            self.aclient = None
+            self.client_phase = ClientPhase.FAILED
+            raise
+        self.client_phase = (
+            ClientPhase.READY if self.aclient else ClientPhase.UNAVAILABLE
+        )
+        return self.aclient
+
+    async def refresh_client(self, ctx=None, *, only_if_unavailable=False):
+        async with self.client_lock:
+            if only_if_unavailable and self.client_phase is ClientPhase.READY:
+                return self.aclient
+            return await self._configure_client(ctx)
 
     @commands.Cog.listener()
     async def on_red_api_tokens_update(self, service_name, api_tokens):
         if service_name in ["openai", "openrouter", "typesafe"]:
-            self.aclient = await setup_openai_client(self.bot, self.config)
+            await self.refresh_client()
 
     @commands.Cog.listener()
     async def on_message_without_command(self, message: discord.Message):
@@ -214,17 +246,18 @@ class AIEmote(commands.Cog, Settings):
             return False
         if not await self.bot.allowed_by_whitelist_blacklist(ctx.author):
             return False
-        if ctx.author.id in self.optout_users:
+        decision = self.consent_decisions.get(ctx.author.id, ConsentDecision.UNDECIDED)
+        if decision is ConsentDecision.OPTED_OUT:
             return False
-        if (ctx.author.id not in self.optin_users) and (
-            not (await self.config.guild(ctx.guild).optin_by_default())
+        if decision is ConsentDecision.UNDECIDED and not (
+            await self.config.guild(ctx.guild).optin_by_default()
         ):
             return False
 
-        if not self.aclient:
-            self.aclient = await setup_openai_client(self.bot, self.config, ctx)
-            if not self.aclient:
-                return False
+        if self.client_phase is not ClientPhase.READY and not await self.refresh_client(
+            ctx, only_if_unavailable=True
+        ):
+            return False
 
         # skipping images / embeds
         if not ctx.message.content or (

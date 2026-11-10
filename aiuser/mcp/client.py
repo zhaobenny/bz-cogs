@@ -6,6 +6,7 @@ import json
 import logging
 import re
 import time
+from enum import Enum, auto
 from typing import Any
 
 import httpx
@@ -51,6 +52,19 @@ class MCPFallback(MCPError):
     pass
 
 
+class ConnectionPhase(Enum):
+    DISCONNECTED = auto()
+    CONNECTING = auto()
+    CONNECTED = auto()
+    CLOSED = auto()
+
+
+class CatalogPhase(Enum):
+    EMPTY = auto()
+    FETCHING = auto()
+    READY = auto()
+
+
 class MCPClient:
     # Initialize connection, concurrency, catalog, and HTTP client state.
     def __init__(
@@ -61,6 +75,8 @@ class MCPClient:
         self.headers = headers
         self.oauth = None
         self.client_info = {"name": "aiuser", "version": version}
+        self.connection_phase = ConnectionPhase.DISCONNECTED
+        self._connection_generation = 0
         self.protocol_version: str | None = None
         self.server_info: dict[str, Any] = {}
         self.capabilities: dict[str, Any] = {}
@@ -69,6 +85,7 @@ class MCPClient:
         self._connect_lock = asyncio.Lock()
         self._catalog_lock = asyncio.Lock()
         self._call_limit = asyncio.Semaphore(4)
+        self.catalog_phase = CatalogPhase.EMPTY
         self._catalog: list[dict[str, Any]] | None = None
         self._tool_headers: dict[str, list[tuple[tuple[str, ...], str]]] = {}
         self._catalog_time = 0.0
@@ -77,33 +94,45 @@ class MCPClient:
             follow_redirects=False,
         )
 
-    # Negotiate the modern protocol or fall back to legacy initialization.
     async def connect(self) -> None:
         async with self._connect_lock:
-            if self.protocol_version:
+            if self.connection_phase is ConnectionPhase.CONNECTED:
                 return
-
+            if self.connection_phase is ConnectionPhase.CLOSED:
+                raise MCPError("The MCP client is closed.")
+            if self.connection_phase is not ConnectionPhase.DISCONNECTED:
+                raise RuntimeError("Invalid MCP connection state")
+            self.connection_phase = ConnectionPhase.CONNECTING
             try:
-                result = await self._rpc("server/discover", {}, version=MODERN_VERSION)
-                if MODERN_VERSION in result.get("supportedVersions", []):
-                    self._set_server(result, MODERN_VERSION)
-                    return
-            except MCPFallback:
-                pass
+                try:
+                    result = await self._rpc(
+                        "server/discover", {}, version=MODERN_VERSION
+                    )
+                    if MODERN_VERSION in result.get("supportedVersions", []):
+                        self._set_server(result, MODERN_VERSION)
+                        self.connection_phase = ConnectionPhase.CONNECTED
+                        return
+                except MCPFallback:
+                    pass
 
-            result = await self._rpc(
-                "initialize",
-                {
-                    "protocolVersion": LEGACY_VERSION,
-                    "capabilities": {},
-                    "clientInfo": self.client_info,
-                },
-            )
-            protocol_version = result.get("protocolVersion")
-            if protocol_version not in LEGACY_VERSIONS:
-                raise MCPError("The server negotiated an unsupported MCP version.")
-            self._set_server(result, protocol_version)
-            await self._notify("notifications/initialized")
+                result = await self._rpc(
+                    "initialize",
+                    {
+                        "protocolVersion": LEGACY_VERSION,
+                        "capabilities": {},
+                        "clientInfo": self.client_info,
+                    },
+                )
+                protocol_version = result.get("protocolVersion")
+                if protocol_version not in LEGACY_VERSIONS:
+                    raise MCPError("The server negotiated an unsupported MCP version.")
+                self._set_server(result, protocol_version)
+                await self._notify("notifications/initialized")
+                self.connection_phase = ConnectionPhase.CONNECTED
+            except BaseException:
+                self._clear_negotiated_state()
+                self.connection_phase = ConnectionPhase.DISCONNECTED
+                raise
 
     # Store the negotiated protocol, capabilities, and server identity.
     def _set_server(self, result: dict[str, Any], version: str) -> None:
@@ -124,21 +153,41 @@ class MCPClient:
     async def list_tools(self, refresh: bool = False) -> list[dict[str, Any]]:
         await self.connect()
         async with self._catalog_lock:
+            # The client may close while awaiting the catalog lock.
+            await self.connect()
             if (
                 not refresh
-                and self._catalog is not None
+                and self.catalog_phase is CatalogPhase.READY
                 and time.monotonic() - self._catalog_time < CATALOG_TTL
             ):
                 return self._catalog
+            self.catalog_phase = CatalogPhase.FETCHING
             try:
-                tools = await self._fetch_tools()
-            except MCPSessionExpired:
-                self._reset()
-                await self.connect()
-                tools = await self._fetch_tools()
-            self._catalog = tools
-            self._catalog_time = time.monotonic()
-            return tools
+                try:
+                    generation = self._connection_generation
+                    tools = await self._fetch_tools()
+                except MCPSessionExpired:
+                    await self._reset(generation)
+                    await self.connect()
+                    self.catalog_phase = CatalogPhase.FETCHING
+                    tools = await self._fetch_tools()
+                if self.catalog_phase is not CatalogPhase.FETCHING:
+                    raise MCPSessionExpired(
+                        "The MCP session changed during catalog refresh."
+                    )
+                self._catalog = tools
+                self._tool_headers = {
+                    tool["name"]: self._find_headers(tool) for tool in tools
+                }
+                self._catalog_time = time.monotonic()
+                self.catalog_phase = CatalogPhase.READY
+                return tools
+            except BaseException:
+                if self.catalog_phase is CatalogPhase.FETCHING:
+                    self._catalog = None
+                    self._tool_headers.clear()
+                    self.catalog_phase = CatalogPhase.EMPTY
+                raise
 
     # Fetch and validate every page of the server's tool catalog.
     async def _fetch_tools(self) -> list[dict[str, Any]]:
@@ -162,9 +211,7 @@ class MCPClient:
                         "Skipping malformed tool from MCP server %s", self.server_alias
                     )
                     continue
-                name = tool["name"]
                 tools.append(tool)
-                self._tool_headers[name] = self._find_headers(tool)
             cursor = result.get("nextCursor")
             if not cursor:
                 return tools
@@ -205,10 +252,11 @@ class MCPClient:
     # Call one server tool while enforcing the concurrency limit.
     async def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         await self.connect()
-        if self._catalog is None:
+        if self.catalog_phase is not CatalogPhase.READY:
             await self.list_tools()
         request_headers = self._call_headers(name, arguments)
         async with self._call_limit:
+            generation = self._connection_generation
             try:
                 return await self._rpc(
                     "tools/call",
@@ -216,7 +264,7 @@ class MCPClient:
                     headers=request_headers,
                 )
             except MCPSessionExpired:
-                self._reset()
+                await self._reset(generation)
                 raise
 
     # Build HTTP headers from annotated tool argument values.
@@ -456,32 +504,52 @@ class MCPClient:
             return message
         return None
 
-    # Clear negotiated state so the next operation reconnects.
-    def _reset(self) -> None:
+    def _clear_negotiated_state(self) -> None:
+        self._connection_generation += 1
         self.protocol_version = None
         self.session_id = None
         self.server_info = {}
         self.capabilities = {}
         self._catalog = None
         self._tool_headers.clear()
+        self.catalog_phase = CatalogPhase.EMPTY
+
+    async def _reset(self, expected_generation: int) -> None:
+        async with self._connect_lock:
+            if (
+                self.connection_phase is ConnectionPhase.CLOSED
+                or self._connection_generation != expected_generation
+            ):
+                return
+            self._clear_negotiated_state()
+            self.connection_phase = ConnectionPhase.DISCONNECTED
 
     # Close any legacy session and release the HTTP client.
     async def close(self) -> None:
-        try:
-            if self.session_id:
-                headers = {**self.headers, "Mcp-Session-Id": self.session_id}
-                if self.protocol_version:
-                    headers["MCP-Protocol-Version"] = self.protocol_version
-                try:
-                    if self.oauth:
-                        access = await self.oauth.access_token(
-                            self.server_alias, self.url
+        async with self._connect_lock:
+            if self.connection_phase is ConnectionPhase.CLOSED:
+                return
+            try:
+                if self.session_id:
+                    headers = {**self.headers, "Mcp-Session-Id": self.session_id}
+                    if self.protocol_version:
+                        headers["MCP-Protocol-Version"] = self.protocol_version
+                    try:
+                        if self.oauth:
+                            access = await self.oauth.access_token(
+                                self.server_alias, self.url
+                            )
+                            if access:
+                                headers["Authorization"] = f"Bearer {access}"
+                        response = await self._http.delete(self.url, headers=headers)
+                        response.raise_for_status()
+                    except (MCPError, httpx.HTTPError):
+                        logger.debug(
+                            "Failed to close MCP session %s", self.server_alias
                         )
-                        if access:
-                            headers["Authorization"] = f"Bearer {access}"
-                    response = await self._http.delete(self.url, headers=headers)
-                    response.raise_for_status()
-                except (MCPError, httpx.HTTPError):
-                    logger.debug("Failed to close MCP session %s", self.server_alias)
-        finally:
-            await self._http.aclose()
+            finally:
+                try:
+                    await self._http.aclose()
+                finally:
+                    self._clear_negotiated_state()
+                    self.connection_phase = ConnectionPhase.CLOSED

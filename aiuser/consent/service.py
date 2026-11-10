@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Iterable
+from enum import Enum, auto
 
 import discord
 from redbot.core import Config
@@ -11,10 +12,16 @@ from redbot.core.bot import Red
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
 
+class ConsentDecision(Enum):
+    UNDECIDED = auto()
+    OPTED_IN = auto()
+    OPTED_OUT = auto()
+
+
 class ConsentService:
     """The single owner of bot-wide opt-in/opt-out state.
 
-    All reads go through in-memory sets (loaded once at cog load), all writes
+    All reads go through in-memory decisions (loaded at cog load), all writes
     are serialized behind a lock and persisted to config, so concurrent
     button presses / commands / dashboard submissions cannot drop each other's
     changes. Every consumer (commands, consent buttons, dashboard, message
@@ -25,66 +32,76 @@ class ConsentService:
         self.bot: Red = bot
         self.config = config
         self._lock = asyncio.Lock()
-        self._optin: set[int] = set()
-        self._optout: set[int] = set()
+        self._decisions: dict[int, ConsentDecision] = {}
 
     async def load(self):
-        self._optin = set(await self.config.optin())
-        self._optout = set(await self.config.optout())
+        async with self._lock:
+            opted_in = await self.config.optin()
+            opted_out = await self.config.optout()
+            self._decisions = {
+                user_id: ConsentDecision.OPTED_IN for user_id in opted_in
+            }
+            # Opt-out takes precedence.
+            self._decisions.update(
+                {user_id: ConsentDecision.OPTED_OUT for user_id in opted_out}
+            )
 
-    # --- queries (sync, hot path) ---
+    def decision(self, user_id: int) -> ConsentDecision:
+        return self._decisions.get(user_id, ConsentDecision.UNDECIDED)
 
     def is_opted_in(self, user_id: int) -> bool:
-        return user_id in self._optin
+        return self.decision(user_id) is ConsentDecision.OPTED_IN
 
     def is_opted_out(self, user_id: int) -> bool:
-        return user_id in self._optout
+        return self.decision(user_id) is ConsentDecision.OPTED_OUT
 
     def has_decided(self, user_id: int) -> bool:
-        return user_id in self._optin or user_id in self._optout
+        return self.decision(user_id) is not ConsentDecision.UNDECIDED
 
     def allows(self, user_id: int, *, optin_by_default: bool) -> bool:
-        """Whether a user's messages may be processed."""
-        if user_id in self._optout:
+        decision = self.decision(user_id)
+        if decision is ConsentDecision.OPTED_OUT:
             return False
-        if user_id in self._optin:
+        if decision is ConsentDecision.OPTED_IN:
             return True
         return optin_by_default
 
-    # --- mutations ---
-
     async def opt_in(self, user_id: int) -> bool:
-        """Opt a user in. Returns False if they already were."""
         async with self._lock:
-            if user_id in self._optin:
+            if self.decision(user_id) is ConsentDecision.OPTED_IN:
                 return False
-            self._optin.add(user_id)
-            self._optout.discard(user_id)
+            self._decisions[user_id] = ConsentDecision.OPTED_IN
             await self._persist()
             return True
 
     async def opt_out(self, user_id: int) -> bool:
-        """Opt a user out. Returns False if they already were."""
         async with self._lock:
-            if user_id in self._optout:
+            if self.decision(user_id) is ConsentDecision.OPTED_OUT:
                 return False
-            self._optout.add(user_id)
-            self._optin.discard(user_id)
+            self._decisions[user_id] = ConsentDecision.OPTED_OUT
             await self._persist()
             return True
 
     async def remove_user_data(self, user_id: int):
-        """GDPR deletion: drop any stored consent decision for the user."""
         async with self._lock:
-            changed = user_id in self._optin or user_id in self._optout
-            self._optin.discard(user_id)
-            self._optout.discard(user_id)
-            if changed:
+            if self._decisions.pop(user_id, None) is not None:
                 await self._persist()
 
     async def _persist(self):
-        await self.config.optin.set(list(self._optin))
-        await self.config.optout.set(list(self._optout))
+        await self.config.optin.set(
+            [
+                user_id
+                for user_id, decision in self._decisions.items()
+                if decision is ConsentDecision.OPTED_IN
+            ]
+        )
+        await self.config.optout.set(
+            [
+                user_id
+                for user_id, decision in self._decisions.items()
+                if decision is ConsentDecision.OPTED_OUT
+            ]
+        )
 
     # --- queries for the consent embed (sending lives in consent.view) ---
 

@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import logging
 import time
+from enum import Enum, auto
 
 import discord
 
 from .client import MCPClient, MCPError
-from .oauth import LOGIN_SECONDS
+from .oauth import LOGIN_SECONDS, LoginPhase
 
 logger = logging.getLogger("red.bz_cogs.aiuser.mcp")
 
@@ -93,6 +94,13 @@ class MCPTokenModal(discord.ui.Modal, title="Set MCP Bearer token"):
             )
 
 
+class OnboardingPhase(Enum):
+    AWAITING_AUTH = auto()
+    SUCCEEDED = auto()
+    FAILED = auto()
+    EXPIRED = auto()
+
+
 class MCPAuthView(discord.ui.View):
     def __init__(
         self, manager, alias, owner_id, guild_id, url, challenge, oauth_available=True
@@ -105,7 +113,7 @@ class MCPAuthView(discord.ui.View):
         self.url = url
         self.challenge = challenge
         self.message = None
-        self.completed = False
+        self.phase = OnboardingPhase.AWAITING_AUTH
         if not oauth_available:
             self.remove_item(self.oauth)
 
@@ -187,9 +195,9 @@ class MCPAuthView(discord.ui.View):
         )
 
     async def finish(self, success):
-        if self.completed:
+        if self.phase is not OnboardingPhase.AWAITING_AUTH:
             return
-        self.completed = True
+        self.phase = OnboardingPhase.SUCCEEDED if success else OnboardingPhase.FAILED
         self.stop()
         if not self.message:
             return
@@ -215,8 +223,9 @@ class MCPAuthView(discord.ui.View):
             pass
 
     async def on_timeout(self):
-        if self.completed:
+        if self.phase is not OnboardingPhase.AWAITING_AUTH:
             return
+        self.phase = OnboardingPhase.EXPIRED
         if self.message:
             try:
                 await self.message.edit(
@@ -283,7 +292,7 @@ class MCPCallbackModal(discord.ui.Modal, title="Finish MCP sign-in"):
             )
             async with view.manager.oauth.lock(view.alias):
                 pending = view.manager.oauth.pending.get(view.alias)
-                if not pending or pending["state"] != view.state:
+                if not pending or pending.state != view.state:
                     raise MCPError(
                         "This login was cancelled or replaced. Remove and add the server again."
                     )
@@ -323,10 +332,10 @@ class MCPCallbackModal(discord.ui.Modal, title="Finish MCP sign-in"):
                 pending = view.manager.oauth.pending.get(view.alias)
                 retryable = (
                     pending
-                    and pending.get("state") == view.state
-                    and pending.get("owner_id") == view.owner_id
-                    and not pending.get("consumed")
-                    and time.monotonic() <= pending.get("deadline", 0)
+                    and pending.state == view.state
+                    and pending.owner_id == view.owner_id
+                    and pending.phase is LoginPhase.AWAITING_CALLBACK
+                    and time.monotonic() <= pending.deadline
                 )
             if not retryable:
                 await view.auth_view.finish(False)
@@ -398,7 +407,8 @@ class MCPLoginView(discord.ui.View):
         await interaction.response.defer()
         async with self.manager.oauth.lock(self.alias):
             pending = self.manager.oauth.pending.get(self.alias)
-            if pending and pending["state"] == self.state:
+            if pending and pending.state == self.state:
+                pending.transition(LoginPhase.CANCELLED)
                 self.manager.oauth.pending.pop(self.alias, None)
         await interaction.edit_original_response(
             embed=discord.Embed(
@@ -414,7 +424,8 @@ class MCPLoginView(discord.ui.View):
     async def on_timeout(self):
         async with self.manager.oauth.lock(self.alias):
             pending = self.manager.oauth.pending.get(self.alias)
-            if pending and pending["state"] == self.state:
+            if pending and pending.state == self.state:
+                pending.transition(LoginPhase.CANCELLED)
                 self.manager.oauth.pending.pop(self.alias, None)
         if self.message:
             try:

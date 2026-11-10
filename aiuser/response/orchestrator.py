@@ -79,9 +79,7 @@ async def generate_and_send(
         services.context_cache[key] = conversation.memory_entries
 
     state = services.reply_channel_states[ctx.channel.id]
-    state.last_bot_reply_at = sent_message.created_at
-    if result.session_id:
-        state.llm_session_id = result.session_id
+    state.record_reply(sent_message.created_at, result.session_id)
 
 
 async def _notify_failure(ctx: commands.Context, error: PipelineError) -> None:
