@@ -190,7 +190,7 @@ class CompactionManager:
             response = await provider.create_chat_step(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
-                kwargs={"max_tokens": 800},
+                kwargs={},
             )
 
             new_summary = response.content
