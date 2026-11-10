@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Fetches model data from OpenRouter API and generates aiuser/config/models.py
 
