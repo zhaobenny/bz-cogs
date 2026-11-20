@@ -8,6 +8,7 @@ from openai.types.chat import ChatCompletionMessageToolCall
 from redbot.core import Config
 
 from aiuser.providers.llm.base import ChatStepResult, LLMProvider
+from aiuser.providers.llm.openai_compatible.provider import list_openai_compat_models
 
 logger = logging.getLogger("red.bz_cogs.aiuser.providers.llm")
 
@@ -253,14 +254,7 @@ class OpenAIResponsesProvider(LLMProvider):
         self.openai_client = openai_client
 
     async def list_models(self) -> list[str]:
-        response = await self.openai_client.models.list()
-        return [
-            model.id
-            for model in response.data
-            if ("gpt" in model.id or "o3" in model.id.lower())
-            and "audio" not in model.id.lower()
-            and "realtime" not in model.id.lower()
-        ]
+        return await list_openai_compat_models(self.openai_client, None)
 
     async def create_chat_step(
         self,
