@@ -102,8 +102,10 @@ class PromptSettings(MixinMeta):
             )
             await ctx.send(embed=embed)
         else:
-            limit = 4000 if await self.bot.is_owner(ctx.author) else min(
-                4000, await self.config.max_prompt_length()
+            limit = (
+                4000
+                if await self.bot.is_owner(ctx.author)
+                else min(4000, await self.config.max_prompt_length())
             )
             view = (
                 PromptEditView(self, ctx, config_attr, prompt, scope_label, title)
@@ -337,12 +339,19 @@ class PromptSettings(MixinMeta):
         self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
 
         title = f"The {mention_type.name.lower()} will use the custom prompt:"
-        limit = 4000 if await self.bot.is_owner(ctx.author) else min(
-            4000, await self.config.max_prompt_length()
+        limit = (
+            4000
+            if await self.bot.is_owner(ctx.author)
+            else min(4000, await self.config.max_prompt_length())
         )
         if len(prompt) <= limit:
             view = PromptEditView(
-                self, ctx, config_attr, prompt, f"{mention_type.name.lower()} prompt", title
+                self,
+                ctx,
+                config_attr,
+                prompt,
+                f"{mention_type.name.lower()} prompt",
+                title,
             )
             await view.update_pages()
             view.message = await ctx.send(embed=view.pages[0], view=view)

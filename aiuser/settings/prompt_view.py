@@ -40,7 +40,9 @@ class PromptEditModal(discord.ui.Modal, title="Edit prompt"):
             interaction.created_at
         )
         await self.view.update_pages()
-        await interaction.response.edit_message(embed=self.view.pages[0], view=self.view)
+        await interaction.response.edit_message(
+            embed=self.view.pages[0], view=self.view
+        )
 
 
 class PromptEditView(discord.ui.View):
@@ -110,7 +112,9 @@ class PromptEditView(discord.ui.View):
                 ephemeral=True,
             )
         is_owner = await self.cog.bot.is_owner(interaction.user)
-        max_length = 4000 if is_owner else min(await self.cog.config.max_prompt_length(), 4000)
+        max_length = (
+            4000 if is_owner else min(await self.cog.config.max_prompt_length(), 4000)
+        )
         if len(self.prompt) > max_length:
             return await interaction.response.send_message(
                 f"This prompt exceeds your {max_length}-character limit. Use the prompt set command to replace it with a shorter prompt.",
