@@ -6,14 +6,16 @@ from typing import Optional
 
 import discord
 from redbot.core import checks, commands
-from redbot.core.utils.chat_formatting import pagify
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.settings._groups import aiuser
 from aiuser.settings.scope import get_settings_target_scope
+from aiuser.settings.prompt_view import PromptEditView
 from aiuser.settings.utilities import (
     ConfirmationOutcome,
+    build_prompt_pages,
+    set_page_footers,
     add_prompt_metrics_fields,
     confirm_pending,
     truncate_prompt,
@@ -23,35 +25,6 @@ from aiuser.types.enums import MentionType
 from aiuser.types.types import COMPATIBLE_MENTIONS
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
-
-
-def _set_page_footers(pages: list[discord.Embed]) -> None:
-    for index, page in enumerate(pages, start=1):
-        footer = page.footer.text or ""
-        suffix = f"Page {index} of {len(pages)}"
-        page.set_footer(text=f"{footer} | {suffix}" if footer else suffix)
-
-
-async def _build_prompt_pages(
-    ctx: commands.Context,
-    services,
-    title: str,
-    prompt: str,
-    *,
-    include_metrics: bool = True,
-) -> list[discord.Embed]:
-    prompt_pages = list(pagify(prompt, page_length=3900)) or [prompt or " "]
-    pages = [
-        discord.Embed(
-            title=title,
-            description=prompt_page,
-            color=await ctx.embed_color(),
-        )
-        for prompt_page in prompt_pages
-    ]
-    if include_metrics:
-        await add_prompt_metrics_fields(pages[0], services, ctx, prompt)
-    return pages
 
 
 class PromptSettings(MixinMeta):
@@ -104,8 +77,15 @@ class PromptSettings(MixinMeta):
             mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
             prompt = await config_attr.custom_text_prompt()
             title = await self._get_embed_title(mention_type, mention)
+            scope_label = f"{mention_type.name.lower()} prompt"
         else:
             channel_prompt = await self.config.channel(ctx.channel).custom_text_prompt()
+            config_attr = (
+                self.config.channel(ctx.channel)
+                if channel_prompt
+                else self.config.guild(ctx.guild)
+            )
+            scope_label = "channel prompt" if channel_prompt else "server prompt"
             prompt = (
                 channel_prompt
                 or await self.config.guild(ctx.guild).custom_text_prompt()
@@ -122,7 +102,15 @@ class PromptSettings(MixinMeta):
             )
             await ctx.send(embed=embed)
         else:
-            await self._send_prompt_pages(ctx, title, prompt)
+            limit = 4000 if await self.bot.is_owner(ctx.author) else min(
+                4000, await self.config.max_prompt_length()
+            )
+            view = (
+                PromptEditView(self, ctx, config_attr, prompt, scope_label, title)
+                if len(prompt) <= limit
+                else None
+            )
+            await self._send_prompt_pages(ctx, title, prompt, view=view)
 
     @prompt_show.command(name="members", aliases=["users"])
     async def show_user_prompts(self, ctx: commands.Context):
@@ -150,15 +138,20 @@ class PromptSettings(MixinMeta):
             return "The prompt for this server is:"
 
     async def _send_prompt_pages(
-        self, ctx: commands.Context, title: str, prompt: str
+        self, ctx: commands.Context, title: str, prompt: str, view=None
     ) -> None:
-        pages = await _build_prompt_pages(ctx, self.services, title, prompt)
+        if view:
+            await view.update_pages()
+            view.message = await ctx.send(embed=view.pages[0], view=view)
+            return
+
+        pages = await build_prompt_pages(ctx, self.services, title, prompt)
 
         if len(pages) == 1:
             await ctx.send(embed=pages[0])
             return
 
-        _set_page_footers(pages)
+        set_page_footers(pages)
         await SimpleMenu(pages).start(ctx)
 
     async def _get_custom_prompt(self, ctx, entity, mention_type: MentionType):
@@ -170,7 +163,7 @@ class PromptSettings(MixinMeta):
         if not custom_prompt:
             return None
 
-        return await _build_prompt_pages(
+        return await build_prompt_pages(
             ctx,
             self.services,
             await self._get_embed_title(mention_type, entity),
@@ -192,7 +185,7 @@ class PromptSettings(MixinMeta):
         if len(pages) == 1:
             return await ctx.send(embed=pages[0])
 
-        _set_page_footers(pages)
+        set_page_footers(pages)
 
         await SimpleMenu(pages).start(ctx)
 
@@ -204,7 +197,20 @@ class PromptSettings(MixinMeta):
             or await self.config.custom_text_prompt()
             or DEFAULT_PROMPT
         )
-        await self._send_prompt_pages(ctx, "The prompt for this server is:", prompt)
+        title = "The prompt for this server is:"
+        limit = (
+            4000
+            if await self.bot.is_owner(ctx.author)
+            else min(4000, await self.config.max_prompt_length())
+        )
+        view = (
+            PromptEditView(
+                self, ctx, self.config.guild(ctx.guild), prompt, "server prompt", title
+            )
+            if len(prompt) <= limit
+            else None
+        )
+        await self._send_prompt_pages(ctx, title, prompt, view=view)
 
     @prompt.group(name="preset", invoke_without_command=True)
     async def prompt_preset(self, ctx: commands.Context):
@@ -215,7 +221,7 @@ class PromptSettings(MixinMeta):
         pages = []
         for preset, prompt in presets.items():
             pages.extend(
-                await _build_prompt_pages(
+                await build_prompt_pages(
                     ctx,
                     self.services,
                     f"Preset `{preset}`",
@@ -224,7 +230,7 @@ class PromptSettings(MixinMeta):
             )
         if len(pages) == 1:
             return await ctx.send(embed=pages[0])
-        _set_page_footers(pages)
+        set_page_footers(pages)
         await SimpleMenu(pages).start(ctx)
 
     @prompt_preset.command(name="add", aliases=["a"])
@@ -330,8 +336,19 @@ class PromptSettings(MixinMeta):
         await config_attr.custom_text_prompt.set(prompt)
         self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
 
+        title = f"The {mention_type.name.lower()} will use the custom prompt:"
+        limit = 4000 if await self.bot.is_owner(ctx.author) else min(
+            4000, await self.config.max_prompt_length()
+        )
+        if len(prompt) <= limit:
+            view = PromptEditView(
+                self, ctx, config_attr, prompt, f"{mention_type.name.lower()} prompt", title
+            )
+            await view.update_pages()
+            view.message = await ctx.send(embed=view.pages[0], view=view)
+            return view.message
         embed = discord.Embed(
-            title=f"The {mention_type.name.lower()} will use the custom prompt:",
+            title=title,
             description=f"{truncate_prompt(prompt)}",
             color=await ctx.embed_color(),
         )

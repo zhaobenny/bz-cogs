@@ -160,6 +160,7 @@ class ProviderKeyModal(discord.ui.Modal, title="Connect provider"):
                     "Connection failed. Check the key and try again."
                 )
             self.wizard.provider_state = ProviderState.FAILED
+            self.wizard.retry_available = False
             self.wizard.update_items()
             try:
                 return await interaction.edit_original_response(**self.wizard.display())
@@ -208,6 +209,8 @@ class ProviderKeyModal(discord.ui.Modal, title="Connect provider"):
         self.wizard.provider_state = (
             ProviderState.VERIFIED if provider_ready else ProviderState.UNCONFIGURED
         )
+        self.wizard.provider_error = None
+        self.wizard.retry_available = False
         self.wizard.models = models
         self.wizard.model = None
         self.wizard.update_items()
@@ -507,28 +510,7 @@ class OnboardingView(discord.ui.View):
             available_models = {
                 item for item in self.models or [] if isinstance(item, str)
             }
-            truncated = bool(
-                available_models
-                and (
-                    len(available_models) > 25
-                    or (
-                        self.provider_choice == "openrouter"
-                        and any(
-                            sum(
-                                1
-                                for item in available_models
-                                if item.lower().startswith(prefix)
-                            )
-                            > 5
-                            for prefix in (
-                                "openai/gpt",
-                                "anthropic/claude",
-                                "google/gemini",
-                            )
-                        )
-                    )
-                )
-            )
+            truncated = len(available_models) > 25
             if self.models is not None and not self.model and model not in self.models:
                 if not self.models:
                     return "Choose a model\nNo models found. Go back and reconnect."
@@ -566,7 +548,7 @@ class OnboardingView(discord.ui.View):
                     channel += "\nRequired permissions missing: {permissions}.".format(
                         permissions=", ".join(missing)
                     )
-            return "Choose a starting channel\n{channel}".format(channel=channel)
+            return "Choose a channel to chat in\n{channel}".format(channel=channel)
         if self.step == SetupStep.FREQUENCY:
             chance = (
                 f"{self.chance:.0%}"
@@ -706,12 +688,24 @@ class OnboardingView(discord.ui.View):
     async def verify_existing_provider(self):
         revision = self.provider_revision
         try:
+            await self.check_provider()
             provider = await get_llm_provider(self.cog.services)
             if provider is None:
                 raise ValueError("Provider unavailable")
             models = await asyncio.wait_for(provider.list_models(), timeout=20)
         except Exception as error:
             if not self.is_finished() and self.provider_revision == revision:
+                endpoint = self.settings.get("endpoint")
+                active = (
+                    "codex"
+                    if endpoint == "codex"
+                    else get_openai_compat_kind(endpoint).value
+                )
+                self.provider_choice = (
+                    active
+                    if active in {"openai", "openrouter", "codex", "custom"}
+                    else "openai"
+                )
                 self.provider_state = ProviderState.FAILED
                 if isinstance(error, AuthenticationError):
                     self.provider_error = "Authentication failed. Check the credentials or enter an API key."
@@ -730,13 +724,25 @@ class OnboardingView(discord.ui.View):
         if not self.is_finished() and self.provider_revision == revision:
             # An existing provider may not publish a model list. Keep its
             # configured model available without asking the owner to retype it.
+            endpoint = self.settings.get("endpoint")
+            active = (
+                "codex"
+                if endpoint == "codex"
+                else get_openai_compat_kind(endpoint).value
+            )
+            self.provider_choice = (
+                active
+                if active in {"openai", "openrouter", "codex", "custom"}
+                else "openai"
+            )
             self.models = models or None
             self.provider_state = ProviderState.VERIFIED
+            self.provider_error = None
             self.retry_available = False
 
     @discord.ui.select(
         cls=discord.ui.ChannelSelect,
-        placeholder="Choose a starting channel",
+        placeholder="Choose a channel to chat in",
         channel_types=[
             discord.ChannelType.text,
             discord.ChannelType.news,
@@ -898,11 +904,7 @@ class OnboardingView(discord.ui.View):
         self.update_items()
         await interaction.response.edit_message(**self.display())
 
-    @discord.ui.button(
-        label="Done",
-        style=discord.ButtonStyle.primary,
-    )
-    async def finish(self, interaction, button):
+    async def _finish(self, interaction, title: str):
         self.stop()
         prefix = self.ctx.clean_prefix
         if self.settings.get("optin_by_default", False):
@@ -923,7 +925,7 @@ class OnboardingView(discord.ui.View):
         ):
             message += " Configure a provider before chatting."
         embed = discord.Embed(
-            title="Setup complete",
+            title=title,
             description=message,
             color=discord.Color.blurple(),
         )
@@ -931,18 +933,18 @@ class OnboardingView(discord.ui.View):
         await interaction.response.edit_message(content=None, embed=embed, view=None)
 
     @discord.ui.button(
+        label="Done",
+        style=discord.ButtonStyle.primary,
+    )
+    async def finish(self, interaction, button):
+        await self._finish(interaction, "Setup complete")
+
+    @discord.ui.button(
         label="Exit",
         style=discord.ButtonStyle.secondary,
     )
     async def skip(self, interaction, button):
-        self.stop()
-        await interaction.response.edit_message(
-            content="Setup closed. Changes are saved. Run `{clean_prefix}aiuser setup` when you're ready. ".format(
-                clean_prefix=self.ctx.clean_prefix
-            ),
-            embed=None,
-            view=None,
-        )
+        await self._finish(interaction, "Setup Saved")
 
     async def on_timeout(self):
         self.timed_out = True

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import discord
 from redbot.core import commands
+from redbot.core.utils.chat_formatting import pagify
 from redbot.core.utils.views import ConfirmView
 
 from aiuser.types.enums import MentionType
@@ -139,3 +140,32 @@ def rank_choices_for_query(choices: list, query: str) -> list:
         return (startswith, contains, token_hits, partial_ratio, ratio)
 
     return sorted(choices, key=score, reverse=True)
+
+
+def set_page_footers(pages: list[discord.Embed]) -> None:
+    for index, page in enumerate(pages, start=1):
+        footer = page.footer.text or ""
+        suffix = f"Page {index} of {len(pages)}"
+        page.set_footer(text=f"{footer} | {suffix}" if footer else suffix)
+
+
+async def build_prompt_pages(
+    ctx: commands.Context,
+    services,
+    title: str,
+    prompt: str,
+    *,
+    include_metrics: bool = True,
+) -> list[discord.Embed]:
+    prompt_pages = list(pagify(prompt, page_length=3900)) or [prompt or " "]
+    pages = [
+        discord.Embed(
+            title=title,
+            description=prompt_page,
+            color=await ctx.embed_color(),
+        )
+        for prompt_page in prompt_pages
+    ]
+    if include_metrics:
+        await add_prompt_metrics_fields(pages[0], services, ctx, prompt)
+    return pages
