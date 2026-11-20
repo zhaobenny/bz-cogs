@@ -27,7 +27,7 @@ class CallbackModal(discord.ui.Modal, title="Finish ChatGPT sign-in"):
     )
 
     def __init__(self, view):
-        super().__init__(timeout=300)
+        super().__init__(timeout=(view.timeout or 300) + 600)
         self.login = view
 
     async def on_submit(self, interaction):
@@ -38,11 +38,17 @@ class CallbackModal(discord.ui.Modal, title="Finish ChatGPT sign-in"):
             return await interaction.response.send_message(
                 "This sign-in belongs to another owner.", ephemeral=True
             )
-        if self.login.phase is not LoginPhase.WAITING or self.login.result.done():
+        if (
+            self.login.is_finished()
+            or self.login.phase is not LoginPhase.WAITING
+            or self.login.result.done()
+        ):
             return await interaction.response.send_message(
                 "This sign-in has expired.", ephemeral=True
             )
         self.login.phase = LoginPhase.SUBMITTING
+        if self.login.timeout is not None:
+            self.login.timeout = self.login.timeout
         try:
             await interaction.response.send_message(
                 "Checking your sign-in...", ephemeral=True

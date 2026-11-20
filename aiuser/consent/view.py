@@ -15,6 +15,7 @@ class ConsentView(discord.ui.View):
     def __init__(self, consent: ConsentService):
         super().__init__()
         self.consent = consent
+        self.message: discord.Message | None = None
 
     @discord.ui.button(label="Opt In", style=discord.ButtonStyle.green)
     async def confirm(self, interaction: discord.Interaction, _: discord.ui.Button):
@@ -35,6 +36,15 @@ class ConsentView(discord.ui.View):
         await interaction.response.send_message(
             "You are now opted out bot-wide", ephemeral=True
         )
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
 
 
 async def maybe_send_consent_embed(
@@ -63,5 +73,6 @@ async def maybe_send_consent_embed(
         "This will allow the bot to reply to your messages or use your messages.\n"
         "This message will disappear if all current chatters have made a choice."
     )
-    await channel.send(embed=embed, view=ConsentView(consent))
+    view = ConsentView(consent)
+    view.message = await channel.send(embed=embed, view=view)
     return True

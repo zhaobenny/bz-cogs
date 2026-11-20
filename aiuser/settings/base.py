@@ -23,6 +23,7 @@ from aiuser.settings.mcp import MCPSettings
 from aiuser.settings.media import MediaSettings
 from aiuser.settings.memory import MemorySettings
 from aiuser.settings.owner import OwnerSettings
+from aiuser.settings.onboarding import OnboardingView, ProviderState
 from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.random_message import RandomMessageSettings
 from aiuser.settings.reply import ReplySettings
@@ -49,11 +50,68 @@ class Settings(
     MemorySettings,
     MixinMeta,
 ):
-    @commands.group(aliases=["ai_user"])
+    @commands.group(
+        help_override="Configure replies to messages and images in enabled reply channels",
+        aliases=["ai_user"],
+    )
     @commands.bot_has_permissions(embed_links=True, add_reactions=True)
     @commands.guild_only()
     async def aiuser(self, _):
-        """Configure replies to messages and images in enabled reply channels"""
+        pass
+
+    @aiuser.command(
+        help="Guide the bot owner through setup for this server.", name="setup"
+    )
+    @checks.is_owner()
+    async def setup_wizard(self, ctx: commands.Context):
+        if self.services is None:
+            return await ctx.send("AI User is still loading. Try again shortly.")
+        settings = await self.config.guild(ctx.guild).all()
+        settings["global_prompt"] = await self.config.custom_text_prompt()
+        settings["default_model"] = await self.config.default_model()
+        dm_prefixes = await self.bot.get_valid_prefixes()
+        settings["dm_prefix"] = dm_prefixes[0] if dm_prefixes else "[p]"
+        view = OnboardingView(self, ctx, settings, False)
+        for channel_id in settings.get("channels_whitelist", []):
+            channel = ctx.guild.get_channel(channel_id)
+            if channel is None or channel.type not in {
+                discord.ChannelType.text,
+                discord.ChannelType.news,
+            }:
+                continue
+            permissions = channel.permissions_for(ctx.guild.me)
+            if (
+                permissions.view_channel
+                and permissions.send_messages
+                and permissions.read_message_history
+            ):
+                view.channel = channel
+                if hasattr(view.choose_channel, "default_values"):
+                    view.choose_channel.default_values = [discord.Object(id=channel.id)]
+                break
+        configured = await view.check_provider()
+        endpoint = view.settings.get("endpoint")
+        active = (
+            "codex" if endpoint == "codex" else get_openai_compat_kind(endpoint).value
+        )
+        view.provider_choice = (
+            active
+            if active in {"openai", "openrouter", "codex", "custom"}
+            else "openai"
+        )
+        view.provider_state = (
+            ProviderState.CHECKING if configured else ProviderState.UNCONFIGURED
+        )
+        view.update_items()
+        view.message = await ctx.send(**view.display())
+        if view.provider_state is ProviderState.CHECKING:
+            await view.verify_existing_provider()
+            if not view.is_finished():
+                view.update_items()
+                try:
+                    await view.message.edit(**view.display())
+                except discord.HTTPException:
+                    view.stop()
 
     @aiuser.command(aliases=["lobotomize"])
     async def forget(self, ctx: commands.Context):

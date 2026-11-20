@@ -441,10 +441,25 @@ class OwnerSettings(MixinMeta):
                 ),
                 view=account_view,
             )
-            await account_view.wait()
-            await account_message.edit(view=None)
-            if account_view.choice in (AccountChoice.WAITING, AccountChoice.EXPIRED):
+            timed_out = await account_view.wait()
+            if timed_out or account_view.choice in (
+                AccountChoice.WAITING,
+                AccountChoice.EXPIRED,
+            ):
+                for item in account_view.children:
+                    item.disabled = True
+                try:
+                    await account_message.edit(
+                        content="ChatGPT sign-in timed out.",
+                        view=account_view,
+                    )
+                except discord.HTTPException:
+                    pass
                 return
+            try:
+                await account_message.edit(view=None)
+            except discord.HTTPException:
+                pass
             new_account = account_view.choice is AccountChoice.SWITCH
 
         self._chatgpt_activation_phase = ChatGPTActivationPhase.CHECKING_ACCOUNT
@@ -485,9 +500,17 @@ class OwnerSettings(MixinMeta):
                 await view.wait()
                 if view.result.cancelled() or not view.result.done():
                     pending.phase = SignInPhase.EXPIRED
-                    return await message.edit(
-                        content="ChatGPT sign-in timed out.", embed=None, view=None
-                    )
+                    for item in view.children:
+                        item.disabled = True
+                    try:
+                        await message.edit(
+                            content="ChatGPT sign-in timed out.",
+                            embed=None,
+                            view=view,
+                        )
+                    except discord.HTTPException:
+                        pass
+                    return
                 callback, interaction = view.result.result()
                 try:
                     models = await finish(self.bot, pending, callback)

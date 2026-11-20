@@ -46,10 +46,16 @@ async def confirm_pending(
         if view.result is False
         else ConfirmationOutcome.TIMED_OUT
     )
-    await confirm.edit(
-        embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()),
-        view=None,
-    )
+    if outcome is ConfirmationOutcome.TIMED_OUT:
+        view.confirm_button.disabled = True
+        view.dismiss_button.disabled = True
+    try:
+        await confirm.edit(
+            embed=discord.Embed(title="Cancelled.", color=await ctx.embed_color()),
+            view=view if outcome is ConfirmationOutcome.TIMED_OUT else None,
+        )
+    except discord.HTTPException:
+        pass
     return outcome, confirm
 
 

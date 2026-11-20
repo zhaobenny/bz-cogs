@@ -20,7 +20,7 @@ class MCPTokenModal(discord.ui.Modal, title="Set MCP Bearer token"):
     )
 
     def __init__(self, manager, alias, owner_id, guild_id, auth_view):
-        super().__init__(timeout=LOGIN_SECONDS)
+        super().__init__(timeout=(auth_view.timeout or LOGIN_SECONDS) + 600)
         self.manager = manager
         self.alias = alias
         self.owner_id = owner_id
@@ -35,6 +35,20 @@ class MCPTokenModal(discord.ui.Modal, title="Set MCP Bearer token"):
             return await interaction.followup.send(
                 "This authentication belongs to another owner.", ephemeral=True
             )
+        if (
+            self.auth_view.is_finished()
+            or self.auth_view.phase is not OnboardingPhase.AWAITING_AUTH
+        ):
+            return await interaction.followup.send(
+                embed=discord.Embed(
+                    title="MCP authentication expired",
+                    description="This authentication session is no longer active. Remove and add the server again.",
+                    color=discord.Color.orange(),
+                ),
+                ephemeral=True,
+            )
+        if self.auth_view.timeout is not None:
+            self.auth_view.timeout = self.auth_view.timeout
 
         service = f"mcp_{self.alias}"
         old_token = (await self.manager.bot.get_shared_api_tokens(service)).get("token")
@@ -52,6 +66,18 @@ class MCPTokenModal(discord.ui.Modal, title="Set MCP Bearer token"):
                 tools = await client.list_tools(refresh=True)
             finally:
                 await client.close()
+            if (
+                self.auth_view.is_finished()
+                or self.auth_view.phase is not OnboardingPhase.AWAITING_AUTH
+            ):
+                return await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="MCP authentication expired",
+                        description="This authentication session is no longer active. Remove and add the server again.",
+                        color=discord.Color.orange(),
+                    ),
+                    ephemeral=True,
+                )
             await self.manager.bot.set_shared_api_tokens(
                 service, token=self.token.value
             )
@@ -226,6 +252,8 @@ class MCPAuthView(discord.ui.View):
         if self.phase is not OnboardingPhase.AWAITING_AUTH:
             return
         self.phase = OnboardingPhase.EXPIRED
+        for item in self.children:
+            item.disabled = True
         if self.message:
             try:
                 await self.message.edit(
@@ -235,7 +263,7 @@ class MCPAuthView(discord.ui.View):
                         color=discord.Color.orange(),
                     ),
                     content=None,
-                    view=None,
+                    view=self,
                 )
             except discord.HTTPException:
                 pass
@@ -260,7 +288,7 @@ class MCPCallbackModal(discord.ui.Modal, title="Finish MCP sign-in"):
     )
 
     def __init__(self, view):
-        super().__init__(timeout=LOGIN_SECONDS)
+        super().__init__(timeout=(view.timeout or LOGIN_SECONDS) + 600)
         self.login = view
 
     async def on_submit(self, interaction):
@@ -277,6 +305,19 @@ class MCPCallbackModal(discord.ui.Modal, title="Finish MCP sign-in"):
                 ),
                 ephemeral=True,
             )
+        if view.is_finished():
+            return await interaction.followup.send(
+                embed=discord.Embed(
+                    title="MCP sign-in expired",
+                    description="This sign-in is no longer active. Remove and add the server again to start over.",
+                    color=discord.Color.orange(),
+                ),
+                ephemeral=True,
+            )
+        if view.timeout is not None:
+            view.timeout = view.timeout
+        if not view.auth_view.is_finished() and view.auth_view.timeout is not None:
+            view.auth_view.timeout = view.auth_view.timeout
         try:
             guild_id, url = await view.manager.oauth.finish(
                 view.alias, view.state, interaction.user.id, self.callback_url.value
@@ -427,6 +468,8 @@ class MCPLoginView(discord.ui.View):
             if pending and pending.state == self.state:
                 pending.transition(LoginPhase.CANCELLED)
                 self.manager.oauth.pending.pop(self.alias, None)
+        for item in self.children:
+            item.disabled = True
         if self.message:
             try:
                 await self.message.edit(
@@ -436,7 +479,7 @@ class MCPLoginView(discord.ui.View):
                         color=discord.Color.orange(),
                     ),
                     content=None,
-                    view=None,
+                    view=self,
                 )
             except discord.HTTPException:
                 pass

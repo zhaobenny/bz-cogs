@@ -3,10 +3,11 @@
         "zhaobenny"
     ],
     "description": "Human-like Discord interactions powered by OpenAI (+ other LLMs) for messages (and images)",
-    "install_msg": "See cog README for additional setup. \nQuick startup guide for OpenAI: \n1. Set (preferably paid) OpenAI key using `[p]set api openai api_key,INSERT_API_KEY` \n2. `[p]aiuser channels add <#CHANNEL_NAME>` \n3. `[p]aiuser optin` to opt yourself into getting messages used (other users will need to do the same)",
+    "install_msg": "Run `[p]aiuser setup` in your server for a setup guide. You will need an AI provider and credentials. See the cog README for details.",
     "short": "Human-like user behavior powered by LLMs.",
     "permissions": [
         "read_messages",
+        "read_message_history",
         "send_messages",
         "embed_links",
         "attach_files",
