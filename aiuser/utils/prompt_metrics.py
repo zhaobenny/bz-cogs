@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from aiuser.config.models import OPENROUTER_MODEL_PROMPT_PRICES
+from aiuser.config.model_info import get_model_info
 from aiuser.utils.utilities import (
     encode_text_to_tokens,
     format_variables,
@@ -36,14 +36,6 @@ def format_cost(cost: Decimal) -> str:
     return f"${cost:.6f}".rstrip("0").rstrip(".")
 
 
-def get_prompt_token_price(model: str) -> Decimal | None:
-    base_name = model.rsplit("/", 1)[-1].split(":", 1)[0]
-    price = OPENROUTER_MODEL_PROMPT_PRICES.get(base_name)
-    if price is None:
-        return None
-    return Decimal(price)
-
-
 def get_tokenizer_status(model: str) -> tuple[str, bool]:
     _, tokenizer_name, is_fallback = get_tokenizer_encoding(model)
     return tokenizer_name, is_fallback
@@ -51,7 +43,7 @@ def get_tokenizer_status(model: str) -> tuple[str, bool]:
 
 async def get_prompt_metrics(text: str, model: str) -> PromptMetrics:
     tokens = await encode_text_to_tokens(text, model)
-    prompt_token_price = get_prompt_token_price(model)
+    prompt_token_price = get_model_info(model).prompt_price
     tokenizer_name, uses_fallback_tokenizer = get_tokenizer_status(model)
     cost_per_1k_label = None
     if prompt_token_price is not None:

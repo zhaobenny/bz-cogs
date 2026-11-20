@@ -17,6 +17,11 @@ from aiuser.config.defaults import (
     DEFAULT_MEMBER,
     DEFAULT_ROLE,
 )
+from aiuser.config.model_info import (
+    cancel_model_catalog_refresh,
+    load_model_catalog_cache,
+    schedule_model_catalog_refresh,
+)
 from aiuser.core.dispatch import handle_message, handle_slash_command
 from aiuser.core.random_message_task import RandomMessageTask
 from aiuser.core.reply_queue import cancel_reply_state_tasks
@@ -44,7 +49,7 @@ class AIUser(
     Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
 
-    __version__ = "3.0.5"
+    __version__ = "3.0.6"
 
     def __init__(self, bot: Red):
         super().__init__()
@@ -68,8 +73,12 @@ class AIUser(
         logging.getLogger("aiosqlite").setLevel(logging.WARNING)
         logging.getLogger("hpack").setLevel(logging.WARNING)
 
+        data_path = cog_data_path(self)
+        if not load_model_catalog_cache(data_path):
+            schedule_model_catalog_refresh()
+
         self.services = await AIUserServices.create(
-            self.bot, self.config, cog_data_path(self), cog=self
+            self.bot, self.config, data_path, cog=self
         )
         await get_openai_client(self.services)
 
@@ -84,6 +93,7 @@ class AIUser(
         self.random_task.start()
 
     async def cog_unload(self):
+        cancel_model_catalog_refresh()
         if self.services:
             cancel_reply_state_tasks(self.services)
             if self.services.mcp:
