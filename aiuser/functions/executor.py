@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 from openai.types.chat import ChatCompletionMessageToolCall
 from redbot.core import Config, commands
 
+from aiuser.functions.config_help import ConfigHelpToolCall
 from aiuser.functions.context import ToolContext
 from aiuser.functions.registry import get_enabled_tools
 from aiuser.functions.tool_call import ToolCall
@@ -50,14 +51,17 @@ class ToolExecutor:
         self.enabled_tools: list[ToolCall] = []
         self.enabled_tools_map: dict[str, ToolCall] = {}
 
-    async def setup(self):
-        if not (await self.config.guild(self.ctx.guild).function_calling()):
-            return
-        self.enabled_tools, self.native_tools = await get_enabled_tools(
-            self.config, self.ctx
-        )
-        if self.mcp:
-            self.enabled_tools.extend(await self.mcp.tools_for_guild(self.ctx.guild))
+    async def setup(self, *, config_help: bool = False):
+        if await self.config.guild(self.ctx.guild).function_calling():
+            self.enabled_tools, self.native_tools = await get_enabled_tools(
+                self.config, self.ctx
+            )
+            if self.mcp:
+                self.enabled_tools.extend(
+                    await self.mcp.tools_for_guild(self.ctx.guild)
+                )
+        if config_help:
+            self.enabled_tools.append(ConfigHelpToolCall())
         self.enabled_tools_map = {t.function_name: t for t in self.enabled_tools}
 
     def get_tools_kwargs(self) -> dict[str, Any]:
@@ -108,6 +112,9 @@ class ToolExecutor:
             logger.exception(
                 f"Could not decode tool call arguments for {fn.name}; arguments: {fn.arguments!r}"
             )
+            return None
+
+        if not isinstance(arguments, dict):
             return None
 
         tool = self.enabled_tools_map.get(fn.name)

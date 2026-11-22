@@ -20,6 +20,7 @@ from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
 from aiuser.config.model_info import get_model_info
 from aiuser.context.conversation import Conversation
 from aiuser.context.entry import MessageEntry
+from aiuser.functions.config_help import ConfigHelpToolCall, can_use_config_help
 from aiuser.functions.context import ToolContext
 from aiuser.functions.executor import ToolExecutor
 from aiuser.providers.llm.base import ChatStepResult, LLMProvider
@@ -83,6 +84,7 @@ class LLMPipeline:
             services.config, ctx, self.tool_context, services.mcp
         )
         self.tool_call_entries: list[MessageEntry] = []
+        self.used_config_help = False
         self.session_id: str | None = None
         self.request_id = (
             str(self.ctx.message.id)
@@ -142,7 +144,12 @@ class LLMPipeline:
             logger.error("No LLM backend available while starting response pipeline")
             self._transition(PipelinePhase.FAILED)
             return self._build_result(None, error=PipelineError.NO_PROVIDER)
-        await self.tool_executor.setup()
+        config_help = (
+            self.conversation.from_message_context
+            and await can_use_config_help(self.ctx)
+            and get_model_info(self.model).supports_tools
+        )
+        await self.tool_executor.setup(config_help=config_help)
         tool_call_rounds = (
             await self.services.config.guild(
                 self.ctx.guild
@@ -206,6 +213,10 @@ class LLMPipeline:
 
     async def _append_tool_round(self, step: ChatStepResult) -> None:
         """Record the assistant's tool calls and everything they returned."""
+        self.used_config_help |= any(
+            call.function.name == ConfigHelpToolCall.function_name
+            for call in step.tool_calls
+        )
         self.tool_call_entries.append(
             await self.conversation.append_assistant(
                 tool_calls=step.tool_calls,
@@ -226,7 +237,8 @@ class LLMPipeline:
             completion=completion,
             files_to_send=self.tool_context.files_to_send,
             audio_transcripts_to_cache=self.tool_context.audio_transcripts_to_cache,
-            tool_call_entries=self.tool_call_entries,
+            # Keep owner-only lookup results out of later channel chat context.
+            tool_call_entries=[] if self.used_config_help else self.tool_call_entries,
             error=error,
             session_id=self.session_id,
         )

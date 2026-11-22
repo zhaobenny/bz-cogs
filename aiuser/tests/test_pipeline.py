@@ -105,3 +105,67 @@ async def test_empty_step_breaks_loop(
 
     assert result.completion is None
     assert len(fake.calls) == 1, "no content and no tool calls must end the loop"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("is_owner", "addresses_bot", "supports_tools"),
+    [(True, True, True), (False, True, True), (True, False, True), (True, True, False)],
+)
+async def test_config_help_is_available_only_in_supported_owner_chat(
+    bot,
+    mock_services,
+    build_conversation,
+    test_guild,
+    test_channel,
+    test_member,
+    fake_llm,
+    monkeypatch,
+    is_owner,
+    addresses_bot,
+    supports_tools,
+):
+    from dataclasses import replace
+
+    from aiuser.config.model_info import get_model_info
+    from aiuser.functions.config_help import ConfigHelpToolCall
+
+    async def check_owner(author):
+        assert author == test_member
+        return is_owner
+
+    monkeypatch.setattr(bot, "is_owner", check_owner)
+    monkeypatch.setattr(
+        "aiuser.response.pipeline.get_model_info",
+        lambda model: replace(get_model_info(model), supports_tools=supports_tools),
+    )
+    message = backend.make_message("Why are you so chatty?", test_member, test_channel)
+    if addresses_bot:
+        message.mentions = [bot.user]
+    ctx = await bot.get_context(message)
+    conversation = await build_conversation(init_message=message)
+
+    config = mock_services.config
+    await config.guild(test_guild).channels_whitelist.set([test_channel.id])
+    await config.guild(test_guild).reply_percent.set(0.1)
+    await config.channel(test_channel).reply_percent.set(0.0)
+    assert not await config.guild(test_guild).function_calling()
+
+    tool_name = ConfigHelpToolCall.function_name
+    fake = fake_llm(
+        tool_call_step(tool_name, '{"topic": "replies"}'),
+        text_step("Here are your reply settings."),
+    )
+    result = await LLMPipeline(mock_services, ctx, conversation).run()
+
+    assert result.completion == "Here are your reply settings."
+    assert result.tool_call_entries == []
+    if is_owner and addresses_bot and supports_tools:
+        assert fake.calls[0][2]["tools"][0]["function"]["name"] == tool_name
+        assert '"reply_percent": {"value": 0.0, "scope": "channel"}' in str(
+            fake.calls[1][1][-1]["content"]
+        )
+        assert '"installed_cog_source"' in str(fake.calls[1][1][-1]["content"])
+    else:
+        assert "tools" not in fake.calls[0][2]
+        assert "Invalid tool call" in str(fake.calls[1][1][-1]["content"])
