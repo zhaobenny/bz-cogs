@@ -40,6 +40,7 @@ _SETUP_COMMANDS = (
     "aiuser prompt",
     "aiuser media images show",
     "aiuser tools status",
+    "aiuser tools confighelp",
     "aiuser memory status",
     "aiuserowner endpoint set",
 )
@@ -49,8 +50,9 @@ _REFERENCE_COMMANDS = {
 }
 
 
-async def can_use_config_help(ctx: commands.Context) -> bool:
+async def can_use_config_help(tool_context: ToolContext) -> bool:
     """Use the actual sender of the request, never an author in chat history."""
+    ctx = tool_context.ctx
     if ctx.guild is None:
         return False
     if ctx.interaction:
@@ -66,7 +68,11 @@ async def can_use_config_help(ctx: commands.Context) -> bool:
         )
         if not addressed_bot:
             return False
-    return not author.bot and await ctx.bot.is_owner(author)
+    return (
+        not author.bot
+        and await ctx.bot.is_owner(author)
+        and await tool_context.services.config.guild(ctx.guild).config_help_enabled()
+    )
 
 
 class ConfigHelpToolCall(ToolCall):
@@ -104,8 +110,8 @@ class ConfigHelpToolCall(ToolCall):
         self, tool_context: ToolContext, arguments: dict[str, Any]
     ) -> str:
         ctx = tool_context.ctx
-        if not await can_use_config_help(ctx):
-            return "AIUser settings are only available to the bot owner."
+        if not await can_use_config_help(tool_context):
+            return "AIUser settings help is unavailable for this request."
 
         topic = arguments.get("topic")
         if topic not in ("replies", "setup"):

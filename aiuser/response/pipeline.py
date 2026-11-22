@@ -146,7 +146,7 @@ class LLMPipeline:
             return self._build_result(None, error=PipelineError.NO_PROVIDER)
         config_help = (
             self.conversation.from_message_context
-            and await can_use_config_help(self.ctx)
+            and await can_use_config_help(self.tool_context)
             and get_model_info(self.model).supports_tools
         )
         await self.tool_executor.setup(config_help=config_help)

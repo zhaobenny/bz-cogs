@@ -43,8 +43,9 @@ Bot owners can mention AIUser or reply to one of its messages and ask about its
 configuration in plain language. For example, "Why are you replying so often in
 #general?" AIUser can explain the current reply settings and suggest the command
 to change them. This uses the configured model's tool-calling support and is
-available even when the server's optional AIUser tools are off. The lookup is
-read-only and the answer appears in the conversation.
+enabled by default, independently of general tool use. Bot owners can manage
+it per server with `[p]aiuser tools confighelp enable` or `disable`. The lookup
+is read-only and the answer appears in the conversation.
 
 ## Remote MCP tools
 

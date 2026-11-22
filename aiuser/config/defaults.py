@@ -92,6 +92,7 @@ DEFAULT_GUILD = {
     "random_messages_prompts": DEFAULT_RANDOM_PROMPTS,
     "presets": json.dumps(DEFAULT_PRESETS),
     "function_calling": False,
+    "config_help_enabled": True,
     "function_calling_functions": ["do_not_respond", "add_reaction"],
     "function_calling_tool_call_rounds": DEFAULT_TOOL_CALL_ROUNDS,
     "mcp_enabled_servers": [],

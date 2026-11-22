@@ -109,8 +109,14 @@ async def test_empty_step_breaks_loop(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("is_owner", "addresses_bot", "supports_tools"),
-    [(True, True, True), (False, True, True), (True, False, True), (True, True, False)],
+    ("is_owner", "addresses_bot", "supports_tools", "disable_config_help"),
+    [
+        (True, True, True, False),
+        (False, True, True, False),
+        (True, False, True, False),
+        (True, True, False, False),
+        (True, True, True, True),
+    ],
 )
 async def test_config_help_is_available_only_in_supported_owner_chat(
     bot,
@@ -124,6 +130,7 @@ async def test_config_help_is_available_only_in_supported_owner_chat(
     is_owner,
     addresses_bot,
     supports_tools,
+    disable_config_help,
 ):
     from dataclasses import replace
 
@@ -150,6 +157,9 @@ async def test_config_help_is_available_only_in_supported_owner_chat(
     await config.guild(test_guild).reply_percent.set(0.1)
     await config.channel(test_channel).reply_percent.set(0.0)
     assert not await config.guild(test_guild).function_calling()
+    assert await config.guild(test_guild).config_help_enabled()
+    if disable_config_help:
+        await config.guild(test_guild).config_help_enabled.set(False)
 
     tool_name = ConfigHelpToolCall.function_name
     fake = fake_llm(
@@ -160,7 +170,7 @@ async def test_config_help_is_available_only_in_supported_owner_chat(
 
     assert result.completion == "Here are your reply settings."
     assert result.tool_call_entries == []
-    if is_owner and addresses_bot and supports_tools:
+    if is_owner and addresses_bot and supports_tools and not disable_config_help:
         assert fake.calls[0][2]["tools"][0]["function"]["name"] == tool_name
         assert '"reply_percent": {"value": 0.0, "scope": "channel"}' in str(
             fake.calls[1][1][-1]["content"]

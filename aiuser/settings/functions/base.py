@@ -29,18 +29,18 @@ class FunctionCallingSettings(
 ):
     @functions.command(name="enable")
     async def enable_function_calling(self, ctx: commands.Context):
-        """Allow the model to use configured tools."""
+        """Allow the model to use general tools."""
         return await self._set_function_calling(ctx, True)
 
     @functions.command(name="disable")
     async def disable_function_calling(self, ctx: commands.Context):
-        """Prevent the model from using tools without changing tool selections."""
+        """Turn off general tools without changing tool selections or owner setup help."""
         return await self._set_function_calling(ctx, False)
 
     async def _set_function_calling(self, ctx: commands.Context, enabled: bool):
         await self.config.guild(ctx.guild).function_calling.set(enabled)
         embed = discord.Embed(
-            title="Tool use is now:",
+            title="General tool use is now:",
             description="Enabled" if enabled else "Disabled",
             color=await ctx.embed_color(),
         )
@@ -87,10 +87,14 @@ class FunctionCallingSettings(
         # Summary / main embed
         colour = await ctx.embed_color()
         main_embed = discord.Embed(title="Tool Settings", color=colour)
-        main_embed.add_field(name="Enabled", value=f"{icon(enabled)}", inline=True)
+        main_embed.add_field(name="General tools", value=icon(enabled), inline=True)
+        main_embed.add_field(
+            name="Setup help (bot owner only)",
+            value=icon(await guild_conf.config_help_enabled()),
+            inline=True,
+        )
 
         # Spacer to keep grid layout consistent
-        main_embed.add_field(name="\u200b", value="\u200b", inline=True)
         main_embed.add_field(name="\u200b", value="\u200b", inline=True)
 
         # Overview of each group (compact)
@@ -104,7 +108,7 @@ class FunctionCallingSettings(
         # Summary line
         main_embed.add_field(
             name="Totals",
-            value=f"Enabled tools: **`{enabled_count}/{total_tools}`**",
+            value=f"General tools selected: **`{enabled_count}/{total_tools}`**",
             inline=False,
         )
         main_embed.add_field(
@@ -163,6 +167,30 @@ class FunctionCallingSettings(
 
         for em in embeds:
             await ctx.send(embed=em)
+
+    @functions.group(name="confighelp", invoke_without_command=True)
+    async def config_help(self, ctx: commands.Context):
+        """Show whether the bot owner can ask about AIUser settings in chat."""
+        await self._manage_config_help(ctx)
+
+    @config_help.command(name="enable")
+    async def enable_config_help(self, ctx: commands.Context):
+        """Let the bot owner ask about AIUser settings in chat."""
+        await self._manage_config_help(ctx, enabled=True)
+
+    @config_help.command(name="disable")
+    async def disable_config_help(self, ctx: commands.Context):
+        """Turn off the bot owner's setup help in this server."""
+        await self._manage_config_help(ctx, enabled=False)
+
+    async def _manage_config_help(self, ctx: commands.Context, *, enabled=None):
+        config_setting = self.config.guild(ctx.guild).config_help_enabled
+        if enabled is None:
+            enabled = await config_setting()
+        else:
+            await config_setting.set(enabled)
+        status = "Enabled" if enabled else "Disabled"
+        await ctx.maybe_send_embed(f"Setup help (bot owner only): `{status}`")
 
     @functions.group(name="discord")
     async def functions_discord(self, ctx: commands.Context):
