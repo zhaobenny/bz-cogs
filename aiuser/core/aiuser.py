@@ -49,7 +49,7 @@ class AIUser(
     Human-like Discord interactions powered by OpenAI (or compatible endpoints) for messages (and images).
     """
 
-    __version__ = "3.0.6"
+    __version__ = "3.0.7"
 
     def __init__(self, bot: Red):
         super().__init__()
