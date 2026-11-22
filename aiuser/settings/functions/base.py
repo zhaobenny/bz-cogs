@@ -1,5 +1,5 @@
 import discord
-from redbot.core import commands
+from redbot.core import checks, commands
 
 from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
 from aiuser.config.model_info import get_model_info
@@ -169,16 +169,19 @@ class FunctionCallingSettings(
             await ctx.send(embed=em)
 
     @functions.group(name="confighelp", invoke_without_command=True)
+    @checks.is_owner()
     async def config_help(self, ctx: commands.Context):
         """Show whether the bot owner can ask about AIUser settings in chat."""
         await self._manage_config_help(ctx)
 
     @config_help.command(name="enable")
+    @checks.is_owner()
     async def enable_config_help(self, ctx: commands.Context):
         """Let the bot owner ask about AIUser settings in chat."""
         await self._manage_config_help(ctx, enabled=True)
 
     @config_help.command(name="disable")
+    @checks.is_owner()
     async def disable_config_help(self, ctx: commands.Context):
         """Turn off the bot owner's setup help in this server."""
         await self._manage_config_help(ctx, enabled=False)
