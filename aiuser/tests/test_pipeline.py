@@ -136,6 +136,7 @@ async def test_config_help_is_available_only_in_supported_owner_chat(
 
     from aiuser.config.model_info import get_model_info
     from aiuser.functions.config_help import ConfigHelpToolCall
+    from aiuser.functions.source_search import SourceSearchToolCall
 
     async def check_owner(author):
         assert author == test_member
@@ -162,8 +163,12 @@ async def test_config_help_is_available_only_in_supported_owner_chat(
         await config.guild(test_guild).config_help_enabled.set(False)
 
     tool_name = ConfigHelpToolCall.function_name
+    source_tool_name = SourceSearchToolCall.function_name
     fake = fake_llm(
         tool_call_step(tool_name, '{"topic": "replies"}'),
+        tool_call_step(
+            source_tool_name, '{"query": "def reply_chance_set"}', call_id="source"
+        ),
         text_step("Here are your reply settings."),
     )
     result = await LLMPipeline(mock_services, ctx, conversation).run()
@@ -171,7 +176,11 @@ async def test_config_help_is_available_only_in_supported_owner_chat(
     assert result.completion == "Here are your reply settings."
     assert result.tool_call_entries == []
     if is_owner and addresses_bot and supports_tools and not disable_config_help:
-        assert fake.calls[0][2]["tools"][0]["function"]["name"] == tool_name
+        assert [tool["function"]["name"] for tool in fake.calls[0][2]["tools"]] == [
+            tool_name,
+            source_tool_name,
+        ]
+        assert "settings/reply.py" in str(fake.calls[2][1][-1]["content"])
         assert '"reply_percent": {"value": 0.0, "scope": "channel"}' in str(
             fake.calls[1][1][-1]["content"]
         )
@@ -179,3 +188,4 @@ async def test_config_help_is_available_only_in_supported_owner_chat(
     else:
         assert "tools" not in fake.calls[0][2]
         assert "Invalid tool call" in str(fake.calls[1][1][-1]["content"])
+        assert "Invalid tool call" in str(fake.calls[2][1][-1]["content"])

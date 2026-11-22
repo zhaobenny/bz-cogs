@@ -12,6 +12,7 @@ from redbot.core import Config, commands
 from aiuser.functions.config_help import ConfigHelpToolCall
 from aiuser.functions.context import ToolContext
 from aiuser.functions.registry import get_enabled_tools
+from aiuser.functions.source_search import SourceSearchToolCall
 from aiuser.functions.tool_call import ToolCall
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -61,7 +62,7 @@ class ToolExecutor:
                     await self.mcp.tools_for_guild(self.ctx.guild)
                 )
         if config_help:
-            self.enabled_tools.append(ConfigHelpToolCall())
+            self.enabled_tools.extend((ConfigHelpToolCall(), SourceSearchToolCall()))
         self.enabled_tools_map = {t.function_name: t for t in self.enabled_tools}
 
     def get_tools_kwargs(self) -> dict[str, Any]:

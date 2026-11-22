@@ -23,6 +23,7 @@ from aiuser.context.entry import MessageEntry
 from aiuser.functions.config_help import ConfigHelpToolCall, can_use_config_help
 from aiuser.functions.context import ToolContext
 from aiuser.functions.executor import ToolExecutor
+from aiuser.functions.source_search import SourceSearchToolCall
 from aiuser.providers.llm.base import ChatStepResult, LLMProvider
 from aiuser.providers.llm.debug_log import log_chat_request, log_chat_step_result
 from aiuser.providers.llm.openai_compatible.endpoints import is_openrouter_endpoint
@@ -214,7 +215,8 @@ class LLMPipeline:
     async def _append_tool_round(self, step: ChatStepResult) -> None:
         """Record the assistant's tool calls and everything they returned."""
         self.used_config_help |= any(
-            call.function.name == ConfigHelpToolCall.function_name
+            call.function.name
+            in (ConfigHelpToolCall.function_name, SourceSearchToolCall.function_name)
             for call in step.tool_calls
         )
         self.tool_call_entries.append(
