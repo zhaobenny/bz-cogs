@@ -10,14 +10,14 @@ from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.defaults import DEFAULT_PROMPT
 from aiuser.settings._groups import aiuser
-from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.prompt_view import PromptEditView
+from aiuser.settings.scope import get_settings_target_scope
 from aiuser.settings.utilities import (
     ConfirmationOutcome,
-    build_prompt_pages,
-    set_page_footers,
     add_prompt_metrics_fields,
+    build_prompt_pages,
     confirm_pending,
+    set_page_footers,
     truncate_prompt,
 )
 from aiuser.types.abc import MixinMeta
