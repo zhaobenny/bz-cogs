@@ -78,11 +78,16 @@ class LLMPipeline:
         self.model: str = conversation.model
 
         self.provider: LLMProvider | None = None
-        self.tool_context = ToolContext(services=services, ctx=ctx)
+        self.tool_context = ToolContext(
+            services=services,
+            ctx=ctx,
+            has_member_request=conversation.from_message_context,
+        )
         self.tool_executor = ToolExecutor(
             services.config, ctx, self.tool_context, services.mcp
         )
         self.tool_call_entries: list[MessageEntry] = []
+        self._called_mcp_tool = False
         self.session_id: str | None = None
         self.request_id = (
             str(self.ctx.message.id)
@@ -206,6 +211,8 @@ class LLMPipeline:
 
     async def _append_tool_round(self, step: ChatStepResult) -> None:
         """Record the assistant's tool calls and everything they returned."""
+        if any(call.function.name.startswith("mcp__") for call in step.tool_calls):
+            self._called_mcp_tool = True
         self.tool_call_entries.append(
             await self.conversation.append_assistant(
                 tool_calls=step.tool_calls,
@@ -226,7 +233,8 @@ class LLMPipeline:
             completion=completion,
             files_to_send=self.tool_context.files_to_send,
             audio_transcripts_to_cache=self.tool_context.audio_transcripts_to_cache,
-            tool_call_entries=self.tool_call_entries,
+            # The channel shares cached tool history across members.
+            tool_call_entries=[] if self._called_mcp_tool else self.tool_call_entries,
             error=error,
             session_id=self.session_id,
         )

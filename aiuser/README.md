@@ -39,17 +39,15 @@ See other settings using:
 
 ## Remote MCP tools
 
-Bot owners can add remote MCP servers for the bot to use:
+Bot owners can run `[p]aiuser tools mcp` and click **Open MCP setup**. The private panel handles adding, selecting, editing, and removing servers. Use **Check connection** for a saved endpoint or **Sign in** if credentials are required. Once connected, **Review and enable** shows the tools and their access before you turn them on for the current Discord server. Use **More actions** to edit or remove the connection. Server URLs and credentials are shared bot-wide.
 
-```
-[p]aiuser tools mcp add <NAME> <MCP_URL>
-```
+Choose **Tool access** to edit the server default or select an individual tool. Access rules apply to the current Discord server.
 
-Once added, you can enable the MCP server with:
-`[p]aiuser tools mcp enable <name>`
-or `[p]aiuser tools mcp disable <name>` to disable.
+Choose **Everyone**, **No one**, or select the members and roles to allow. A match on either list grants access. Changes apply when you click **Save access**. A tool with its own rule can return to **Use server default**. The default is Everyone until you change it.
 
-When enabled, all of the MCP tools will be available for the bot to use by any user.
+Existing text subcommands such as `mcp add`, `mcp info`, and `mcp access` are still available. Run `[p]help aiuser tools mcp` for the full list.
+
+Access rules control who can trigger MCP tools. A reply posted in a channel is visible to everyone who can read that channel.
 
 ### Have fun. 🎉
 ![repetition](https://user-images.githubusercontent.com/46238123/227853613-1a524915-ed46-45f7-a154-94e90daf0cd7.jpg)

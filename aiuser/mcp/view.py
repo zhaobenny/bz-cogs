@@ -42,7 +42,7 @@ class MCPTokenModal(discord.ui.Modal, title="Set MCP Bearer token"):
             return await interaction.followup.send(
                 embed=discord.Embed(
                     title="MCP authentication expired",
-                    description="This authentication session is no longer active. Remove and add the server again.",
+                    description="This authentication session is no longer active. Reopen Connection & sign-in to try again.",
                     color=discord.Color.orange(),
                 ),
                 ephemeral=True,
@@ -51,11 +51,10 @@ class MCPTokenModal(discord.ui.Modal, title="Set MCP Bearer token"):
             self.auth_view.timeout = self.auth_view.timeout
 
         service = f"mcp_{self.alias}"
-        old_token = (await self.manager.bot.get_shared_api_tokens(service)).get("token")
         try:
             server = (await self.manager.config.mcp_servers()).get(self.alias)
-            if not server:
-                raise MCPError("The server was removed.")
+            if not server or server["url"] != self.auth_view.url:
+                raise MCPError("The server changed. Reopen connection settings.")
             client = MCPClient(
                 self.alias,
                 server["url"],
@@ -73,36 +72,48 @@ class MCPTokenModal(discord.ui.Modal, title="Set MCP Bearer token"):
                 return await interaction.followup.send(
                     embed=discord.Embed(
                         title="MCP authentication expired",
-                        description="This authentication session is no longer active. Remove and add the server again.",
+                        description="This authentication session is no longer active. Reopen Connection & sign-in to try again.",
                         color=discord.Color.orange(),
                     ),
                     ephemeral=True,
                 )
-            await self.manager.bot.set_shared_api_tokens(
-                service, token=self.token.value
-            )
+            async with self.manager.config.mcp_servers.get_lock():
+                server = (await self.manager.config.mcp_servers()).get(self.alias)
+                if not server or server["url"] != self.auth_view.url:
+                    raise MCPError("The server changed. Reopen connection settings.")
+                old_token = (await self.manager.bot.get_shared_api_tokens(service)).get(
+                    "token"
+                )
+                await self.manager.bot.set_shared_api_tokens(
+                    service, token=self.token.value
+                )
+                try:
+                    await self.manager.oauth.forget(self.alias)
+                except Exception:
+                    if old_token:
+                        await self.manager.bot.set_shared_api_tokens(
+                            service, token=old_token
+                        )
+                    else:
+                        await self.manager.bot.remove_shared_api_tokens(
+                            service, "token"
+                        )
+                    raise
             await self.manager.invalidate_server(self.alias)
-            await self.manager.oauth.forget(self.alias)
         except Exception as exc:  # noqa: BLE001 - rollback must protect secret-bearing tracebacks
-            if old_token:
-                await self.manager.bot.set_shared_api_tokens(service, token=old_token)
-            else:
-                await self.manager.bot.remove_shared_api_tokens(service, "token")
-            await self.manager.invalidate_server(self.alias)
             logger.warning(
                 "MCP onboarding failed for %s (%s)", self.alias, type(exc).__name__
             )
-            await self.auth_view.finish(False)
             return await interaction.followup.send(
                 embed=discord.Embed(
                     title="MCP authentication failed",
-                    description="That token could not authenticate the MCP server.",
+                    description="Could not connect with that token. Check the token and endpoint, then try again.",
                     color=discord.Color.red(),
                 ),
                 ephemeral=True,
             )
 
-        await self.auth_view.finish(True)
+        await self.auth_view.finish(True, len(tools))
         await interaction.followup.send(
             embed=discord.Embed(
                 title="MCP authentication configured",
@@ -115,7 +126,7 @@ class MCPTokenModal(discord.ui.Modal, title="Set MCP Bearer token"):
     async def on_error(self, interaction, error):
         if not interaction.response.is_done():
             await interaction.response.send_message(
-                "Authentication failed. Remove and add the server again to retry.",
+                "Authentication failed. Reopen Connection & sign-in to try again.",
                 ephemeral=True,
             )
 
@@ -139,6 +150,7 @@ class MCPAuthView(discord.ui.View):
         self.url = url
         self.challenge = challenge
         self.message = None
+        self.on_connected = None
         self.phase = OnboardingPhase.AWAITING_AUTH
         if not oauth_available:
             self.remove_item(self.oauth)
@@ -181,7 +193,7 @@ class MCPAuthView(discord.ui.View):
                     ),
                     color=discord.Color.blurple(),
                 ).set_footer(
-                    text="The authorized account will be used for all servers MCP requests."
+                    text="This account is shared by every Discord server using this MCP connection."
                 ),
                 view=view,
                 ephemeral=True,
@@ -191,7 +203,6 @@ class MCPAuthView(discord.ui.View):
             logger.warning(
                 "MCP onboarding failed for %s (%s)", self.alias, type(exc).__name__
             )
-            await self.finish(False)
             await interaction.followup.send(
                 embed=discord.Embed(
                     title="Could not start OAuth sign-in",
@@ -204,11 +215,10 @@ class MCPAuthView(discord.ui.View):
             logger.warning(
                 "MCP onboarding failed for %s (%s)", self.alias, type(exc).__name__
             )
-            await self.finish(False)
             await interaction.followup.send(
                 embed=discord.Embed(
                     title="Could not start OAuth sign-in",
-                    description="Remove and add the server again to retry.",
+                    description="Reopen Connection & sign-in to try again.",
                     color=discord.Color.red(),
                 ),
                 ephemeral=True,
@@ -220,11 +230,16 @@ class MCPAuthView(discord.ui.View):
             MCPTokenModal(self.manager, self.alias, self.owner_id, self.guild_id, self)
         )
 
-    async def finish(self, success):
+    async def finish(self, success, tool_count=0):
         if self.phase is not OnboardingPhase.AWAITING_AUTH:
             return
         self.phase = OnboardingPhase.SUCCEEDED if success else OnboardingPhase.FAILED
         self.stop()
+        if success and self.on_connected:
+            try:
+                await self.on_connected(tool_count)
+            except discord.HTTPException:
+                pass
         if not self.message:
             return
         try:
@@ -259,7 +274,7 @@ class MCPAuthView(discord.ui.View):
                 await self.message.edit(
                     embed=discord.Embed(
                         title="MCP authentication expired",
-                        description="Remove and add the server again.",
+                        description="Reopen Connection & sign-in to try again.",
                         color=discord.Color.orange(),
                     ),
                     content=None,
@@ -273,7 +288,7 @@ class MCPAuthView(discord.ui.View):
             await interaction.response.send_message(
                 embed=discord.Embed(
                     title="MCP authentication failed",
-                    description="Remove and add the server again to retry.",
+                    description="Reopen Connection & sign-in to try again.",
                     color=discord.Color.red(),
                 ),
                 ephemeral=True,
@@ -309,7 +324,7 @@ class MCPCallbackModal(discord.ui.Modal, title="Finish MCP sign-in"):
             return await interaction.followup.send(
                 embed=discord.Embed(
                     title="MCP sign-in expired",
-                    description="This sign-in is no longer active. Remove and add the server again to start over.",
+                    description="This sign-in is no longer active. Reopen Connection & sign-in to try again.",
                     color=discord.Color.orange(),
                 ),
                 ephemeral=True,
@@ -326,7 +341,7 @@ class MCPCallbackModal(discord.ui.Modal, title="Finish MCP sign-in"):
             server = (await view.manager.config.mcp_servers()).get(view.alias)
             if not server or server["url"] != url:
                 raise MCPError(
-                    "The server changed during sign-in. Remove and add it again."
+                    "The server changed during sign-in. Reopen Connection & sign-in to try again."
                 )
             tools = await view.manager.tools_for_mcp_server(
                 guild_id, view.alias, server, refresh=True
@@ -335,15 +350,15 @@ class MCPCallbackModal(discord.ui.Modal, title="Finish MCP sign-in"):
                 pending = view.manager.oauth.pending.get(view.alias)
                 if not pending or pending.state != view.state:
                     raise MCPError(
-                        "This login was cancelled or replaced. Remove and add the server again."
+                        "This login was cancelled or replaced. Reopen Connection & sign-in to try again."
                     )
                 server = (await view.manager.config.mcp_servers()).get(view.alias)
                 if not server or server["url"] != url:
                     raise MCPError(
-                        "The server changed during sign-in. Remove and add it again."
+                        "The server changed during sign-in. Reopen Connection & sign-in to try again."
                     )
                 view.manager.oauth.pending.pop(view.alias, None)
-            await view.auth_view.finish(True)
+            await view.auth_view.finish(True, len(tools))
             await interaction.followup.send(
                 embed=discord.Embed(
                     title="MCP authentication configured",
@@ -396,7 +411,7 @@ class MCPCallbackModal(discord.ui.Modal, title="Finish MCP sign-in"):
             await interaction.followup.send(
                 embed=discord.Embed(
                     title="MCP sign-in failed",
-                    description="Remove and add the server again to retry.",
+                    description="Reopen Connection & sign-in to try again.",
                     color=discord.Color.red(),
                 ),
                 ephemeral=True,
@@ -406,7 +421,7 @@ class MCPCallbackModal(discord.ui.Modal, title="Finish MCP sign-in"):
         # Discord's default handler logs a traceback, which may contain secrets.
         if not interaction.response.is_done():
             await interaction.response.send_message(
-                "Sign-in failed. Remove and add the server again to retry.",
+                "Sign-in failed. Reopen Connection & sign-in to try again.",
                 ephemeral=True,
             )
 
@@ -454,7 +469,7 @@ class MCPLoginView(discord.ui.View):
         await interaction.edit_original_response(
             embed=discord.Embed(
                 title="MCP sign-in cancelled",
-                description="Remove and add the server again to retry.",
+                description="Reopen Connection & sign-in to try again.",
                 color=discord.Color.orange(),
             ),
             content=None,
@@ -475,7 +490,7 @@ class MCPLoginView(discord.ui.View):
                 await self.message.edit(
                     embed=discord.Embed(
                         title="MCP sign-in expired",
-                        description="Remove and add the server again to start over.",
+                        description="Reopen Connection & sign-in to try again.",
                         color=discord.Color.orange(),
                     ),
                     content=None,
@@ -489,7 +504,7 @@ class MCPLoginView(discord.ui.View):
             await interaction.response.send_message(
                 embed=discord.Embed(
                     title="MCP sign-in failed",
-                    description="Remove and add the server again to retry.",
+                    description="Reopen Connection & sign-in to try again.",
                     color=discord.Color.red(),
                 ),
                 ephemeral=True,

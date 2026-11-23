@@ -34,7 +34,7 @@ class FunctionsGroupMixin(MixinMeta):
     async def functions(self, ctx: commands.Context):
         """Configure tools the model can use
 
-        (All subcommands are per server)
+        Tool settings apply here. MCP endpoints and credentials are shared bot-wide.
         """
 
 

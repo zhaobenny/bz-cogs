@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from enum import Enum, auto
 from typing import Any
 
@@ -10,6 +11,7 @@ import discord
 from redbot.core import Config
 from redbot.core.bot import Red
 
+from aiuser.mcp.access import allows_tool
 from aiuser.mcp.client import MCPClient, MCPError
 from aiuser.mcp.oauth import MCPOAuth
 from aiuser.mcp.tool_call import MCPToolCall
@@ -35,9 +37,71 @@ class MCPManager:
         self._close_lock = asyncio.Lock()
         self._closing_clients: list[MCPClient] = []
 
-    async def tools_for_guild(self, guild: discord.Guild) -> list[MCPToolCall]:
+    async def add_server(self, name: str, url: str):
+        if not re.fullmatch(r"[a-z0-9_-]{1,32}", name):
+            raise MCPError(
+                "Server names must use 1-32 lowercase letters, numbers, `_`, or `-`."
+            )
+        server = {"url": url}
+        async with self.config.mcp_servers() as servers:
+            if name in servers:
+                raise MCPError(f"MCP server `{name}` already exists.")
+            servers[name] = server
+        return server
+
+    async def update_url(self, name: str, url: str):
+        async with self.config.mcp_servers() as servers:
+            if name not in servers:
+                raise MCPError(f"Unknown MCP server `{name}`.")
+            server = servers[name]
+            if server["url"] == url:
+                return server
+            await self.oauth.forget(name)
+            await self.bot.remove_shared_api_tokens(f"mcp_{name}", "token")
+            server["url"] = url
+        await self.invalidate_server(name)
+        return server
+
+    async def remove_server(self, name: str):
+        async with self.config.mcp_servers() as servers:
+            if name not in servers:
+                raise MCPError(f"Unknown MCP server `{name}`.")
+            await self.oauth.forget(name)
+            await self.bot.remove_shared_api_tokens(f"mcp_{name}", "token")
+            for guild_id, data in (await self.config.all_guilds()).items():
+                guild = self.config.guild_from_id(guild_id)
+                if name in data.get("mcp_enabled_servers", []):
+                    async with guild.mcp_enabled_servers() as enabled:
+                        if name in enabled:
+                            enabled.remove(name)
+                if name in data.get("mcp_tool_access", {}):
+                    async with guild.mcp_tool_access() as access:
+                        access.pop(name, None)
+            servers.pop(name)
+        await self.invalidate_server(name)
+
+    async def set_enabled(self, guild_id: int, name: str, enabled: bool):
+        async with self.config.mcp_servers.get_lock():
+            if name not in await self.config.mcp_servers():
+                raise MCPError(f"Unknown MCP server `{name}`.")
+            guild = self.config.guild_from_id(guild_id)
+            async with guild.mcp_enabled_servers() as servers:
+                if enabled and name not in servers:
+                    servers.append(name)
+                elif not enabled and name in servers:
+                    servers.remove(name)
+            if enabled:
+                await guild.function_calling.set(True)
+        if not enabled:
+            await self.invalidate(guild_id, name)
+
+    async def tools_for_guild(
+        self, guild: discord.Guild, member: discord.Member | None = None
+    ) -> list[MCPToolCall]:
         configured = await self.config.mcp_servers()
-        enabled = set(await self.config.guild(guild).mcp_enabled_servers())
+        guild_config = self.config.guild(guild)
+        enabled = set(await guild_config.mcp_enabled_servers())
+        access = await guild_config.mcp_tool_access()
         active = [
             (server_alias, server)
             for server_alias, server in configured.items()
@@ -56,8 +120,30 @@ class MCPManager:
                     type(result).__name__,
                 )
             else:
-                tools.extend(result)
+                tools.extend(
+                    tool
+                    for tool in result
+                    if allows_tool(
+                        access.get(server_alias, {}), tool.native_name, member
+                    )
+                )
         return tools
+
+    async def can_call(
+        self,
+        guild: discord.Guild,
+        member: discord.Member | None,
+        server_alias: str,
+        tool: str,
+    ) -> bool:
+        config = self.config.guild(guild)
+        return (
+            await config.function_calling()
+            and server_alias in await config.mcp_enabled_servers()
+            and allows_tool(
+                (await config.mcp_tool_access()).get(server_alias, {}), tool, member
+            )
+        )
 
     async def tools_for_mcp_server(
         self,

@@ -48,6 +48,14 @@ class MCPToolCall(ToolCall):
         self, tool_context: ToolContext, arguments: dict[str, Any]
     ) -> str:
         label = f"{self.server_alias}.{self.native_name}"
+        manager = tool_context.services.mcp
+        if manager is None or not await manager.can_call(
+            tool_context.ctx.guild,
+            tool_context.mcp_member,
+            self.server_alias,
+            self.native_name,
+        ):
+            return "This MCP tool is unavailable for this request."
         try:
             result = await self.client.call_tool(self.native_name, arguments)
             if result.get("resultType", "complete") != "complete":

@@ -25,6 +25,19 @@ class ToolContext:
     suppress_response: bool = False
     llm_session_id: str | None = None
     llm_trace_id: str | None = None
+    has_member_request: bool = True
+
+    @property
+    def mcp_member(self) -> discord.Member | None:
+        author = self.ctx.author
+        if (
+            self.has_member_request
+            and isinstance(author, discord.Member)
+            and not author.bot
+            and self.ctx.message.webhook_id is None
+        ):
+            return self.ctx.guild.get_member(author.id) or author
+        return None
 
     def attach_file(self, file: discord.File) -> None:
         """Queue a file to be sent with the bot's response."""
