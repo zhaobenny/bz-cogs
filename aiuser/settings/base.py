@@ -22,8 +22,8 @@ from aiuser.settings.history import HistorySettings
 from aiuser.settings.mcp import MCPSettings
 from aiuser.settings.media import MediaSettings
 from aiuser.settings.memory import MemorySettings
-from aiuser.settings.owner import OwnerSettings
 from aiuser.settings.onboarding import OnboardingView, ProviderState
+from aiuser.settings.owner import OwnerSettings
 from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.random_message import RandomMessageSettings
 from aiuser.settings.reply import ReplySettings

@@ -81,10 +81,12 @@ def _parse_decimal(value: Any) -> Decimal | None:
 )
 async def _fetch_openrouter_models() -> Any:
     timeout = aiohttp.ClientTimeout(total=15)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.get(OPENROUTER_MODELS_URL) as response:
-            response.raise_for_status()
-            return await response.json()
+    async with (
+        aiohttp.ClientSession(timeout=timeout) as session,
+        session.get(OPENROUTER_MODELS_URL) as response,
+    ):
+        response.raise_for_status()
+        return await response.json()
 
 
 def load_model_catalog_cache(data_path: Path) -> bool:
