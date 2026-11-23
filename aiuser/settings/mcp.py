@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-import re
+from typing import Optional
 
 import discord
-from redbot.core import commands
+from redbot.core import checks, commands
 from redbot.core.utils.chat_formatting import box, pagify
 from redbot.core.utils.menus import SimpleMenu
 
+from aiuser.mcp.access_view import MCPAccessView, MCPPanelLauncher
 from aiuser.mcp.client import MCPAuthError, MCPError, MCPOAuthRequired
+from aiuser.mcp.setup_view import MCPSetupView
 from aiuser.mcp.view import MCPAuthView
 from aiuser.settings.functions.utilities import functions
 from aiuser.types.abc import MixinMeta
@@ -17,7 +19,13 @@ class MCPSettings(MixinMeta):
     @functions.group(name="mcp", invoke_without_command=True)
     async def mcp(self, ctx: commands.Context):
         """Configure remote MCP tool servers."""
-        await ctx.send_help()
+        if self.services is None or self.services.mcp is None:
+            return await ctx.send("MCP is still loading. Try again shortly.")
+        panel = MCPSetupView(self.services.mcp, ctx.guild, ctx.author.id)
+        await ctx.send(
+            "Open the private panel to manage MCP connections and tool access.",
+            view=MCPPanelLauncher(panel, "Open MCP setup"),
+        )
 
     @mcp.command(name="servers", aliases=["list"])
     async def mcp_servers(self, ctx: commands.Context):
@@ -63,15 +71,10 @@ class MCPSettings(MixinMeta):
     @mcp.command(name="add")
     async def mcp_add(self, ctx: commands.Context, name: str, url: str):
         """Add an MCP server to the catalog of available servers to use."""
-        if not re.fullmatch(r"[a-z0-9_-]{1,32}", name):
-            return await ctx.send(
-                "Server names must use 1-32 lowercase letters, numbers, `_`, or `-`."
-            )
-        servers = await self.config.mcp_servers()
-        if name in servers:
-            return await ctx.send(f"MCP server `{name}` already exists.")
-        servers[name] = {"url": url}
-        await self.config.mcp_servers.set(servers)
+        try:
+            server = await self.services.mcp.add_server(name, url)
+        except MCPError as exc:
+            return await ctx.send(str(exc))
         embed = discord.Embed(
             title="Added MCP server",
             color=await ctx.embed_color(),
@@ -89,7 +92,7 @@ class MCPSettings(MixinMeta):
         embed.set_footer(text="The MCP server will need enabling per Discord server.")
         try:
             await self.services.mcp.tools_for_mcp_server(
-                ctx.guild.id, name, servers[name], refresh=True
+                ctx.guild.id, name, server, refresh=True
             )
         except MCPOAuthRequired as exc:
             view = MCPAuthView(
@@ -122,7 +125,7 @@ class MCPSettings(MixinMeta):
         except MCPError as exc:
             embed.add_field(
                 name="Connection",
-                value=f"{exc}\nRemove and add this server again to retry authentication.",
+                value=f"{exc}\nOpen Connection & sign-in in MCP setup to retry.",
                 inline=False,
             )
         await ctx.send(embed=embed)
@@ -130,16 +133,10 @@ class MCPSettings(MixinMeta):
     @mcp.command(name="url")
     async def mcp_url(self, ctx: commands.Context, name: str, url: str):
         """Reconfigure the URL a MCP server uses."""
-        servers = await self.config.mcp_servers()
-        if name not in servers:
-            return await ctx.send(f"Unknown MCP server `{name}`.")
-        url_changed = servers[name]["url"] != url
-        await self.services.mcp.oauth.forget(name)
-        if url_changed:
-            await self.bot.remove_shared_api_tokens(f"mcp_{name}", "token")
-        servers[name]["url"] = url
-        await self.config.mcp_servers.set(servers)
-        await self.services.mcp.invalidate_server(name)
+        try:
+            server = await self.services.mcp.update_url(name, url)
+        except MCPError as exc:
+            return await ctx.send(str(exc))
         embed = discord.Embed(
             title="MCP server URL updated",
             description=f"`{name}`",
@@ -148,7 +145,7 @@ class MCPSettings(MixinMeta):
         embed.add_field(name="URL", value=f"`{url}`", inline=False)
         try:
             await self.services.mcp.tools_for_mcp_server(
-                ctx.guild.id, name, servers[name], refresh=True
+                ctx.guild.id, name, server, refresh=True
             )
         except MCPOAuthRequired as exc:
             view = MCPAuthView(
@@ -185,20 +182,10 @@ class MCPSettings(MixinMeta):
     @mcp.command(name="remove", aliases=["delete"])
     async def mcp_remove(self, ctx: commands.Context, name: str):
         """Remove an MCP server by name from the available catalog."""
-        servers = await self.config.mcp_servers()
-        if name not in servers:
-            return await ctx.send(f"Unknown MCP server `{name}`.")
-        await self.services.mcp.oauth.forget(name)
-        await self.bot.remove_shared_api_tokens(f"mcp_{name}", "token")
-        servers.pop(name)
-        await self.config.mcp_servers.set(servers)
-        for guild_id, data in (await self.config.all_guilds()).items():
-            enabled = data.get("mcp_enabled_servers", [])
-            if name in enabled:
-                await self.config.guild_from_id(guild_id).mcp_enabled_servers.set(
-                    [server_alias for server_alias in enabled if server_alias != name]
-                )
-        await self.services.mcp.invalidate_server(name)
+        try:
+            await self.services.mcp.remove_server(name)
+        except MCPError as exc:
+            return await ctx.send(str(exc))
         embed = discord.Embed(
             title="MCP server removed",
             description=f"`{name}`",
@@ -238,10 +225,7 @@ class MCPSettings(MixinMeta):
             tools = []
             connection = "Sign-in required"
             auth_method = "OAuth"
-            next_step = (
-                f"Use `{ctx.clean_prefix}aiuser tools mcp url {name} {server['url']}` "
-                "to restart authentication."
-            )
+            next_step = f"Open `{ctx.clean_prefix}aiuser tools mcp`, then choose Connection & sign-in."
         except MCPAuthError as exc:
             tools = []
             connection = "Authentication rejected"
@@ -268,30 +252,29 @@ class MCPSettings(MixinMeta):
             embed.set_footer(text=f"Troubleshooting: {next_step}")
         embed.add_field(name="URL", value=f"`{server['url']}`", inline=False)
         if tools:
-            preview = "\n".join(tool.native_name[:100] for tool in tools[:8])
-            if len(tools) > 8:
-                preview += f"\n... and {len(tools) - 8} more"
-            embed.add_field(
-                name=f"Tools ({len(tools)})", value=box(preview), inline=False
-            )
+            names = "\n".join(sorted(tool.native_name for tool in tools))
+            pages = []
+            for page in pagify(names, page_length=950, shorten_by=10):
+                pages.append(
+                    embed.copy().add_field(
+                        name=f"Tools ({len(tools)})", value=box(page), inline=False
+                    )
+                )
+            if len(pages) > 1:
+                return await SimpleMenu(pages).start(ctx)
+            if pages:
+                embed = pages[0]
         elif connection == "Connected":
             embed.add_field(name="Tools", value="None", inline=False)
         await ctx.send(embed=embed)
 
     @mcp.command(name="enable")
     async def mcp_enable(self, ctx: commands.Context, name: str):
-        """Enable an MCP server for this Discord server.
-
-        ** All tools ** from the specified MCP server will be available to **all server users** that can chat with the bot.
-        """
-        servers = await self.config.mcp_servers()
-        if name not in servers:
-            return await ctx.send(f"Unknown MCP server `{name}`.")
-        enabled = await self.config.guild(ctx.guild).mcp_enabled_servers()
-        if name not in enabled:
-            enabled.append(name)
-            await self.config.guild(ctx.guild).mcp_enabled_servers.set(enabled)
-        await self.config.guild(ctx.guild).function_calling.set(True)
+        """Enable an MCP server. Use the access command to manage who can use its tools."""
+        try:
+            await self.services.mcp.set_enabled(ctx.guild.id, name, True)
+        except MCPError as exc:
+            return await ctx.send(str(exc))
         embed = discord.Embed(
             title="MCP server enabled",
             description=f"`{name}` is enabled for this Discord server.",
@@ -299,17 +282,51 @@ class MCPSettings(MixinMeta):
         )
         await ctx.send(embed=embed)
 
+    @mcp.command(name="access")
+    @checks.is_owner()
+    async def mcp_access(
+        self,
+        ctx: commands.Context,
+        name: str,
+        *,
+        tool: Optional[str] = None,  # noqa: UP045 - Red evaluates converters on Python 3.9
+    ):
+        """Manage the server default or a named tool's access for this Discord server."""
+        if self.services is None or self.services.mcp is None:
+            return await ctx.send("MCP is still loading. Try again shortly.")
+        server = (await self.config.mcp_servers()).get(name)
+        if server is None:
+            return await ctx.send(f"Unknown MCP server `{name}`.")
+        if tool is not None:
+            access = await self.config.guild(ctx.guild).mcp_tool_access()
+            if tool not in access.get(name, {}).get("tools", {}):
+                try:
+                    async with ctx.typing():
+                        tools = await self.services.mcp.tools_for_mcp_server(
+                            ctx.guild.id, name, server
+                        )
+                except MCPError as exc:
+                    return await ctx.send(str(exc))
+                if all(tool != entry.native_name for entry in tools):
+                    return await ctx.send(
+                        f"Unknown tool. Run `{ctx.clean_prefix}aiuser tools mcp info {name}` "
+                        "to see its tool names."
+                    )
+        panel = MCPAccessView(
+            self.services.mcp, ctx.guild, ctx.author.id, name, server["url"], tool
+        )
+        await ctx.send(
+            "Open the private panel to edit this Discord server’s MCP tool access.",
+            view=MCPPanelLauncher(panel),
+        )
+
     @mcp.command(name="disable")
     async def mcp_disable(self, ctx: commands.Context, name: str):
         """Disable an MCP server for this Discord server."""
-        if name not in await self.config.mcp_servers():
-            return await ctx.send(f"Unknown MCP server `{name}`.")
-        enabled = await self.config.guild(ctx.guild).mcp_enabled_servers()
-        if name in enabled:
-            await self.config.guild(ctx.guild).mcp_enabled_servers.set(
-                [server_alias for server_alias in enabled if server_alias != name]
-            )
-        await self.services.mcp.invalidate(ctx.guild.id, name)
+        try:
+            await self.services.mcp.set_enabled(ctx.guild.id, name, False)
+        except MCPError as exc:
+            return await ctx.send(str(exc))
         embed = discord.Embed(
             title=f"{name} MCP server is now:",
             description="Disabled",

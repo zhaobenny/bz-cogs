@@ -98,7 +98,7 @@ class MCPOAuth:
             return json.loads(secret["oauth"])
         except (TypeError, ValueError):
             raise MCPError(
-                "MCP credentials could not be read. Remove and add this server again."
+                "MCP credentials could not be read. Reopen Connection & sign-in to try again."
             ) from None
 
     async def save(self, alias, data):
@@ -353,13 +353,13 @@ class MCPOAuth:
                 or pending.state != state
             ):
                 raise MCPError(
-                    "This login expired or was replaced. Remove and add this server again."
+                    "This login expired or was replaced. Reopen Connection & sign-in to try again."
                 )
             if time.monotonic() > pending.deadline:
                 pending.transition(LoginPhase.EXPIRED)
                 self.pending.pop(alias, None)
                 raise MCPError(
-                    "This login expired or was replaced. Remove and add this server again."
+                    "This login expired or was replaced. Reopen Connection & sign-in to try again."
                 )
             if pending.owner_id != owner_id:
                 raise MCPError("Only the owner who started this login can finish it.")
@@ -373,7 +373,7 @@ class MCPOAuth:
                 pending.transition(LoginPhase.CANCELLED)
                 self.pending.pop(alias, None)
                 raise MCPError(
-                    "Sign-in was denied or cancelled. Remove and add this server again to retry."
+                    "Sign-in was denied or cancelled. Reopen Connection & sign-in to try again."
                 )
             code = query.get("code", [""])[0]
             if not code:
@@ -419,7 +419,7 @@ class MCPOAuth:
             ):
                 pending.transition(LoginPhase.FAILED)
                 raise MCPError(
-                    "The code could not be exchanged. Remove and add this server again to start over."
+                    "The code could not be exchanged. Reopen Connection & sign-in to try again."
                 ) from None
             except Exception:
                 pending.transition(LoginPhase.FAILED)
@@ -451,7 +451,7 @@ class MCPOAuth:
             if not token.get("refresh_token"):
                 self.credential_phases[alias] = CredentialPhase.REAUTH_REQUIRED
                 raise MCPOAuthRequired(
-                    "MCP sign-in expired. Remove and add this server again."
+                    "MCP sign-in expired. Reopen Connection & sign-in to try again."
                 )
             self.credential_phases[alias] = CredentialPhase.REFRESHING
             try:
@@ -501,7 +501,7 @@ class MCPOAuth:
                 finally:
                     self.credential_phases[alias] = CredentialPhase.REAUTH_REQUIRED
                 raise MCPOAuthRequired(
-                    "MCP sign-in expired. Remove and add this server again."
+                    "MCP sign-in expired. Reopen Connection & sign-in to try again."
                 ) from None
 
             except BaseException:

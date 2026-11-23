@@ -57,7 +57,11 @@ class ToolExecutor:
             self.config, self.ctx
         )
         if self.mcp:
-            self.enabled_tools.extend(await self.mcp.tools_for_guild(self.ctx.guild))
+            self.enabled_tools.extend(
+                await self.mcp.tools_for_guild(
+                    self.ctx.guild, self.tool_context.mcp_member
+                )
+            )
         self.enabled_tools_map = {t.function_name: t for t in self.enabled_tools}
 
     def get_tools_kwargs(self) -> dict[str, Any]:
