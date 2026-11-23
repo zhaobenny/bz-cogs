@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import discord
+
 from aiuser.settings.utilities import build_prompt_pages, set_page_footers
 
 
@@ -29,9 +30,7 @@ class PromptEditModal(discord.ui.Modal, title="Edit prompt"):
             interaction.user
         ):
             return await interaction.response.send_message(
-                ":warning: Prompt too long. Max length is {max_prompt_length} characters.".format(
-                    max_prompt_length=await cog.config.max_prompt_length()
-                ),
+                f":warning: Prompt too long. Max length is {await cog.config.max_prompt_length()} characters.",
                 ephemeral=True,
             )
         await self.view.config_attr.custom_text_prompt.set(prompt)

@@ -81,7 +81,7 @@ def _parse_decimal(value: Any) -> Decimal | None:
 )
 async def _fetch_openrouter_models() -> Any:
     timeout = aiohttp.ClientTimeout(total=15)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
+    async with aiohttp.ClientSession(timeout=timeout) as session:  # noqa: SIM117 - preserve Python 3.9 compatibility
         async with session.get(OPENROUTER_MODELS_URL) as response:
             response.raise_for_status()
             return await response.json()
