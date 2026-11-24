@@ -2,7 +2,8 @@ name: "Ruff Lint/Formatting"
 
 on:
   pull_request:
-    types: [opened]
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:

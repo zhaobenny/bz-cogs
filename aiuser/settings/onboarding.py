@@ -1,21 +1,20 @@
 from __future__ import annotations
 
-
 import asyncio
 import re
 from enum import Enum, IntEnum
 
 import discord
-from openai import APIConnectionError, APITimeoutError, AuthenticationError, AsyncOpenAI
+from openai import APIConnectionError, APITimeoutError, AsyncOpenAI, AuthenticationError
 
 from aiuser.config.constants import OPENROUTER_API_V1_URL
 from aiuser.config.defaults import DEFAULT_LLM_MODEL, DEFAULT_PRESETS
 from aiuser.config.model_info import get_model_info
 from aiuser.providers.llm.codex.chatgpt import load as load_chatgpt_credentials
+from aiuser.providers.llm.openai_compatible.client import invalidate_openai_client
 from aiuser.providers.llm.openai_compatible.endpoints import (
     get_openai_compat_kind,
 )
-from aiuser.providers.llm.openai_compatible.client import invalidate_openai_client
 from aiuser.providers.llm.openai_compatible.provider import list_openai_compat_models
 from aiuser.providers.llm.registry import get_llm_provider
 
@@ -135,7 +134,8 @@ class ProviderKeyModal(discord.ui.Modal, title="Connect provider"):
             models = await asyncio.wait_for(
                 list_openai_compat_models(client, endpoint), timeout=20
             )
-        except Exception as error:  # Do not expose provider errors or credentials.
+        # Show a generic setup error for unexpected provider failures.
+        except Exception as error:  # noqa: BLE001
             if self.wizard.is_finished():
                 message = (
                     "Setup timed out. Run `{prefix}aiuser setup` to start again."
@@ -201,9 +201,7 @@ class ProviderKeyModal(discord.ui.Modal, title="Connect provider"):
         provider_ready = await self.wizard.check_provider()
         if self.wizard.is_finished():
             return await interaction.followup.send(
-                "API key saved, but setup has already ended. Run `{prefix}aiuser setup` to continue.".format(
-                    prefix=self.wizard.ctx.clean_prefix
-                ),
+                f"API key saved, but setup has already ended. Run `{self.wizard.ctx.clean_prefix}aiuser setup` to continue.",
                 ephemeral=True,
             )
         self.wizard.provider_state = (
@@ -219,9 +217,7 @@ class ProviderKeyModal(discord.ui.Modal, title="Connect provider"):
         except discord.HTTPException:
             self.wizard.stop()
             await interaction.followup.send(
-                "API key saved, but the setup message could not be updated. Run `{prefix}aiuser setup` to continue.".format(
-                    prefix=self.wizard.ctx.clean_prefix
-                ),
+                f"API key saved, but the setup message could not be updated. Run `{self.wizard.ctx.clean_prefix}aiuser setup` to continue.",
                 ephemeral=True,
             )
 
@@ -448,11 +444,7 @@ class OnboardingView(discord.ui.View):
             f"{self.ctx.clean_prefix}aiuser prompt",
             f"{self.ctx.clean_prefix}aiuser media images / functions",
         ]
-        embed.set_footer(
-            text="Step {step} of 6 • {hint}".format(
-                step=self.step + 1, hint=commands[self.step]
-            )
-        )
+        embed.set_footer(text=f"Step {self.step + 1} of 6 • {commands[self.step]}")
         return {"content": None, "embed": embed, "view": self}
 
     async def interaction_check(self, interaction):
@@ -499,8 +491,8 @@ class OnboardingView(discord.ui.View):
                     or "Connection failed. Check the key and try again."
                 )
             if self.provider_state is ProviderState.VERIFIED and selected == active:
-                return "LLM provider\nConnected to `{active}`. Continue to the next step.".format(
-                    active=active
+                return (
+                    f"LLM provider\nConnected to `{active}`. Continue to the next step."
                 )
             return "LLM provider\n{instructions}".format(
                 instructions="Need a key? [OpenAI](<https://platform.openai.com/api-keys>) · [OpenRouter](<https://openrouter.ai/settings/keys>)"
@@ -518,7 +510,7 @@ class OnboardingView(discord.ui.View):
                 if truncated:
                     message += "\nShowing a selection of models."
                 return message
-            message = "Choose a model\nCurrent model: `{model}`.".format(model=model)
+            message = f"Choose a model\nCurrent model: `{model}`."
             if truncated:
                 message += "\nShowing a selection of models."
             return message
@@ -548,16 +540,14 @@ class OnboardingView(discord.ui.View):
                     channel += "\nRequired permissions missing: {permissions}.".format(
                         permissions=", ".join(missing)
                     )
-            return "Choose a channel to chat in\n{channel}".format(channel=channel)
+            return f"Choose a channel to chat in\n{channel}"
         if self.step == SetupStep.FREQUENCY:
             chance = (
                 f"{self.chance:.0%}"
                 if self.chance is not None
                 else f"{self.settings['reply_percent']:.0%}"
             )
-            return "How often should I reply?\nRandom chance after chat pauses: **{chance}**.\nMentions can also trigger replies.".format(
-                chance=chance
-            )
+            return f"How often should I reply?\nRandom chance after chat pauses: **{chance}**.\nMentions can also trigger replies."
         if self.step == SetupStep.PERSONALITY:
             return "Choose a personality\n"
         info = get_model_info(
@@ -576,9 +566,7 @@ class OnboardingView(discord.ui.View):
             or self.initial_tools_enabled
         ):
             abilities.append(
-                "**Tools:** Enable tool calling. See `{prefix}aiuser tools status`.".format(
-                    prefix=self.ctx.clean_prefix
-                )
+                f"**Tools:** Enable tool calling. See `{self.ctx.clean_prefix}aiuser tools status`."
             )
         return "Extra abilities\n{abilities}".format(
             abilities="\n".join(abilities)
@@ -693,7 +681,8 @@ class OnboardingView(discord.ui.View):
             if provider is None:
                 raise ValueError("Provider unavailable")
             models = await asyncio.wait_for(provider.list_models(), timeout=20)
-        except Exception as error:
+        # Provider plugins can raise arbitrary errors during setup.
+        except Exception as error:  # noqa: BLE001
             if not self.is_finished() and self.provider_revision == revision:
                 endpoint = self.settings.get("endpoint")
                 active = (
@@ -908,13 +897,9 @@ class OnboardingView(discord.ui.View):
         self.stop()
         prefix = self.ctx.clean_prefix
         if self.settings.get("optin_by_default", False):
-            message = "Members are opted in by default on this server. They can opt out with `{prefix}aiuser optout`.".format(
-                prefix=prefix
-            )
+            message = f"Members are opted in by default on this server. They can opt out with `{prefix}aiuser optout`."
         else:
-            message = "Each member must opt in before the bot can reply using their messages: `{prefix}aiuser optin`.".format(
-                prefix=prefix
-            )
+            message = f"Each member must opt in before the bot can reply using their messages: `{prefix}aiuser optin`."
         message += (
             "\n"
             + "Opt-in lets the bot send users messages to the external third-party LLM provider across its servers."
@@ -929,7 +914,7 @@ class OnboardingView(discord.ui.View):
             description=message,
             color=discord.Color.blurple(),
         )
-        embed.set_footer(text="To opt out: {prefix}aiuser optout".format(prefix=prefix))
+        embed.set_footer(text=f"To opt out: {prefix}aiuser optout")
         await interaction.response.edit_message(content=None, embed=embed, view=None)
 
     @discord.ui.button(
@@ -953,9 +938,7 @@ class OnboardingView(discord.ui.View):
         if self.message:
             try:
                 await self.message.edit(
-                    content="Setup timed out. Changes are saved. Run `{prefix}aiuser setup` to try again.".format(
-                        prefix=self.ctx.clean_prefix
-                    ),
+                    content=f"Setup timed out. Changes are saved. Run `{self.ctx.clean_prefix}aiuser setup` to try again.",
                     view=self,
                 )
             except discord.HTTPException:

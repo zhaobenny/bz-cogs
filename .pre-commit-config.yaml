@@ -1,24 +1,30 @@
-# See https://pre-commit.com for more information
-# See https://pre-commit.com/hooks.html for more hooks
+default_install_hook_types: [pre-push]
+
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ruff version.
-    rev: v0.15.7
+    rev: v0.16.6
     hooks:
-      # Run the linter.
-      - id: ruff
-        args: [--fix]
+      - id: ruff-check
+        args: [--target-version, py39]
         stages: [pre-push]
-      # Run the formatter.
       - id: ruff-format
+        args: [--check]
         stages: [pre-push]
 
   - repo: local
     hooks:
       - id: check-aiuser-version
         name: Check aiuser __version__ updated
-        entry: bash -c 'if [ "$(git branch --show-current)" != "main" ]; then exit 0; fi; uv run .githooks/check_version_update.py'
-        language: system
+        entry: bash -c 'if [ "$(git branch --show-current)" = "main" ]; then python .githooks/check_version_update.py; fi'
+        language: python
         files: ^aiuser/
         pass_filenames: false
+        stages: [pre-push]
+
+      - id: check-commit-subject
+        name: Check subjects pushed to main
+        entry: python .githooks/check_commit_subjects.py
+        language: python
+        pass_filenames: false
+        always_run: true
         stages: [pre-push]
