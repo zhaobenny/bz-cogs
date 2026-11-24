@@ -11,9 +11,9 @@ from aiuser.settings.scope import (
     get_effective_scoped_setting_for_target,
     get_settings_target_scope,
 )
-from aiuser.settings.utilities import truncate_inline_value
 from aiuser.types.abc import MixinMeta
 from aiuser.types.types import COMPATIBLE_MENTIONS
+from aiuser.utils.utilities import truncate_text
 
 
 class ReplySettings(MixinMeta):
@@ -121,7 +121,7 @@ class ReplySettings(MixinMeta):
     async def ignore(self, ctx: commands.Context):
         """Show the regex used to ignore messages"""
         pattern = await self.config.guild(ctx.guild).ignore_regex()
-        display_pattern = truncate_inline_value(pattern) if pattern else "None"
+        display_pattern = truncate_text(pattern) if pattern else "None"
         return await ctx.maybe_send_embed(f"Ignore regex: `{display_pattern}`")
 
     @ignore.command(name="set")
@@ -136,7 +136,7 @@ class ReplySettings(MixinMeta):
                 "Sorry, but that regex pattern seems to be invalid."
             )
         return await ctx.maybe_send_embed(
-            f"The ignore regex is now `{truncate_inline_value(regex_pattern)}`."
+            f"The ignore regex is now `{truncate_text(regex_pattern)}`."
         )
 
     @ignore.command(name="clear")

@@ -16,6 +16,7 @@ from aiuser.settings.functions.utilities import (
 )
 from aiuser.settings.functions.voice import VoiceFunctionSettings
 from aiuser.settings.functions.weather import WeatherFunctionSettings
+from aiuser.utils.utilities import truncate_text
 
 
 class FunctionCallingSettings(
@@ -122,9 +123,7 @@ class FunctionCallingSettings(
         )
         image_model = await guild_conf.function_calling_image_model() or "Default"
         image_preprompt = await guild_conf.function_calling_image_preprompt()
-        preprompt_display = image_preprompt or "(None)"
-        if len(preprompt_display) > 500:
-            preprompt_display = preprompt_display[:497] + "..."
+        preprompt_display = truncate_text(image_preprompt or "(None)", 500)
 
         image_embed = discord.Embed(title="Image Tool Settings", color=colour)
         image_embed.add_field(

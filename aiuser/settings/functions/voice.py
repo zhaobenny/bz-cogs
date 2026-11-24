@@ -10,7 +10,7 @@ from aiuser.settings.functions.utilities import (
     functions,
     provider_key_error,
 )
-from aiuser.settings.utilities import truncate_inline_value
+from aiuser.utils.utilities import truncate_text
 
 
 class VoiceFunctionSettings(FunctionToggleHelperMixin):
@@ -136,7 +136,7 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
     async def voice_model(self, ctx: commands.Context):
         """Show the voice generation model"""
         model = await self.config.guild(ctx.guild).function_calling_voice_model()
-        display_model = truncate_inline_value(model) if model else "Default"
+        display_model = truncate_text(model) if model else "Default"
         return await ctx.maybe_send_embed(f"Voice model: `{display_model}`")
 
     @voice_model.command(name="set")
@@ -147,7 +147,7 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
             cleaned_model
         )
         return await ctx.maybe_send_embed(
-            f"Voice model set to `{truncate_inline_value(cleaned_model)}`."
+            f"Voice model set to `{truncate_text(cleaned_model)}`."
         )
 
     @voice_model.command(name="clear")
@@ -160,7 +160,7 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
     async def voice_id(self, ctx: commands.Context):
         """Show the voice name or ID"""
         voice = await self.config.guild(ctx.guild).function_calling_voice()
-        display_voice = truncate_inline_value(voice) if voice else "Default"
+        display_voice = truncate_text(voice) if voice else "Default"
         return await ctx.maybe_send_embed(f"Voice name or ID: `{display_voice}`")
 
     @voice_id.command(name="set")
@@ -169,7 +169,7 @@ class VoiceFunctionSettings(FunctionToggleHelperMixin):
         cleaned_voice = voice.strip()
         await self.config.guild(ctx.guild).function_calling_voice.set(cleaned_voice)
         return await ctx.maybe_send_embed(
-            f"Voice name or ID set to `{truncate_inline_value(cleaned_voice)}`."
+            f"Voice name or ID set to `{truncate_text(cleaned_voice)}`."
         )
 
     @voice_id.command(name="clear")

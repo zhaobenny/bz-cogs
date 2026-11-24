@@ -18,7 +18,7 @@ from aiuser.settings.functions.utilities import (
     functions,
     provider_key_error,
 )
-from aiuser.settings.utilities import truncate_inline_value
+from aiuser.utils.utilities import truncate_text
 
 
 class SearchFunctionSettings(FunctionToggleHelperMixin):
@@ -121,7 +121,7 @@ class SearchFunctionSettings(FunctionToggleHelperMixin):
     async def search_endpoint(self, ctx: commands.Context):
         """Show the SearXNG endpoint"""
         url = await self.config.guild(ctx.guild).function_calling_search_endpoint()
-        display_url = truncate_inline_value(url) if url else "Not set"
+        display_url = truncate_text(url) if url else "Not set"
         return await ctx.maybe_send_embed(f"Search endpoint: `{display_url}`")
 
     @search_endpoint.command(name="set")
@@ -129,7 +129,7 @@ class SearchFunctionSettings(FunctionToggleHelperMixin):
         """Set the SearXNG endpoint"""
         await self.config.guild(ctx.guild).function_calling_search_endpoint.set(url)
         return await ctx.maybe_send_embed(
-            f"Search endpoint set to `{truncate_inline_value(url)}`."
+            f"Search endpoint set to `{truncate_text(url)}`."
         )
 
     @search_endpoint.command(name="clear")

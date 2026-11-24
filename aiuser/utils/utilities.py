@@ -222,6 +222,14 @@ def contains_youtube_link(content):
     return bool(match)
 
 
+def truncate_text(text: str, limit: int = 1800) -> str:
+    if len(text) <= limit:
+        return text
+    if limit <= 3:
+        return text[:limit]
+    return text[: limit - 3] + "..."
+
+
 async def encode_text_to_tokens(text: str, model: str = FALLBACK_TOKENIZER) -> int:
     encoding, _, _ = get_tokenizer_encoding(model)
     return await asyncio.to_thread(

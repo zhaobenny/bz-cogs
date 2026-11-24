@@ -28,10 +28,9 @@ from aiuser.providers.llm.registry import list_llm_models
 from aiuser.settings.utilities import (
     add_prompt_metrics_fields,
     confirm_pending,
-    truncate_inline_value,
-    truncate_prompt,
 )
 from aiuser.types.abc import MixinMeta
+from aiuser.utils.utilities import truncate_text
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -162,7 +161,7 @@ class OwnerSettings(MixinMeta):
         url = await self.config.custom_openai_endpoint()
         display_url = "ChatGPT" if url == CODEX_ENDPOINT_MODE else (url or "OpenAI")
         return await ctx.maybe_send_embed(
-            f"Model endpoint: `{truncate_inline_value(display_url)}`"
+            f"Model endpoint: `{truncate_text(display_url)}`"
         )
 
     @endpoint.command(name="set")
@@ -294,7 +293,7 @@ class OwnerSettings(MixinMeta):
         prompt = await self.config.custom_text_prompt()
         embed = discord.Embed(
             title="Global default prompt",
-            description=truncate_prompt(prompt) if prompt else "Built-in default",
+            description=truncate_text(prompt) if prompt else "Built-in default",
             color=await ctx.embed_color(),
         )
         return await ctx.send(embed=embed)
@@ -323,7 +322,7 @@ class OwnerSettings(MixinMeta):
 
         embed = discord.Embed(
             title="The global prompt is now changed to:",
-            description=f"{truncate_prompt(prompt)}",
+            description=truncate_text(prompt),
             color=await ctx.embed_color(),
         )
         await add_prompt_metrics_fields(embed, self.services, ctx, prompt)

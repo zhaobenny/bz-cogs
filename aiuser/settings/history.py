@@ -5,6 +5,7 @@ from redbot.core import checks, commands
 
 from aiuser.settings._groups import aiuser
 from aiuser.types.abc import MixinMeta
+from aiuser.utils.utilities import truncate_text
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -103,7 +104,7 @@ class HistorySettings(MixinMeta):
         prompt = await self.config.guild(ctx.guild).custom_compaction_prompt()
         embed = discord.Embed(
             title="Context compaction prompt",
-            description=prompt or "Default",
+            description=truncate_text(prompt) if prompt else "Default",
             color=await ctx.embed_color(),
         )
         return await ctx.send(embed=embed)
@@ -116,7 +117,7 @@ class HistorySettings(MixinMeta):
         await self.config.guild(ctx.guild).custom_compaction_prompt.set(prompt)
         embed = discord.Embed(
             title="Custom compaction prompt set",
-            description=prompt[:2000],
+            description=truncate_text(prompt),
             color=await ctx.embed_color(),
         )
         return await ctx.send(embed=embed)

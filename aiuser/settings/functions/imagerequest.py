@@ -11,12 +11,9 @@ from aiuser.settings.scope import (
     get_effective_scoped_setting_for_target,
     get_settings_target_scope,
 )
-from aiuser.settings.utilities import (
-    add_prompt_metrics_fields,
-    truncate_inline_value,
-    truncate_prompt,
-)
+from aiuser.settings.utilities import add_prompt_metrics_fields
 from aiuser.types.types import COMPATIBLE_MENTIONS
+from aiuser.utils.utilities import truncate_text
 
 
 class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
@@ -58,9 +55,7 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
         endpoint = await self.config.guild(
             ctx.guild
         ).function_calling_image_custom_endpoint()
-        display_endpoint = (
-            truncate_inline_value(endpoint) if endpoint else "Autodetected"
-        )
+        display_endpoint = truncate_text(endpoint) if endpoint else "Autodetected"
         return await ctx.maybe_send_embed(f"Image endpoint: `{display_endpoint}`")
 
     @imagerequest_endpoint.command(name="set")
@@ -70,7 +65,7 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
             endpoint
         )
         return await ctx.maybe_send_embed(
-            f"Image endpoint set to `{truncate_inline_value(endpoint)}`."
+            f"Image endpoint set to `{truncate_text(endpoint)}`."
         )
 
     @imagerequest_endpoint.command(name="clear")
@@ -85,7 +80,7 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
     async def imagerequest_model(self, ctx: commands.Context):
         """Show the image generation model"""
         model = await self.config.guild(ctx.guild).function_calling_image_model()
-        display_model = truncate_inline_value(model) if model else "Default"
+        display_model = truncate_text(model) if model else "Default"
         return await ctx.maybe_send_embed(f"Image model: `{display_model}`")
 
     @imagerequest_model.command(name="set")
@@ -93,7 +88,7 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
         """Set the image generation model"""
         await self.config.guild(ctx.guild).function_calling_image_model.set(model)
         return await ctx.maybe_send_embed(
-            f"Image model set to `{truncate_inline_value(model)}`."
+            f"Image model set to `{truncate_text(model)}`."
         )
 
     @imagerequest_model.command(name="clear")
@@ -115,7 +110,7 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
         )
         embed = discord.Embed(
             title=f"Image preprompt on this {mention_type.name.lower()}:",
-            description=truncate_prompt(preprompt) if preprompt else "None",
+            description=truncate_text(preprompt) if preprompt else "None",
             color=await ctx.embed_color(),
         )
         return await ctx.send(embed=embed)
@@ -139,7 +134,7 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
         await config_attr.function_calling_image_preprompt.set(preprompt)
         e = discord.Embed(
             title=f"Image preprompt set for {mention_type.name.lower()}:",
-            description=truncate_prompt(preprompt),
+            description=truncate_text(preprompt),
             color=await ctx.embed_color(),
         )
         await add_prompt_metrics_fields(e, self.services, ctx, preprompt)

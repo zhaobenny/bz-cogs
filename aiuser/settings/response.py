@@ -10,12 +10,9 @@ from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.defaults import DEFAULT_REMOVE_PATTERNS
 from aiuser.settings._groups import aiuser
-from aiuser.settings.utilities import (
-    ConfirmationOutcome,
-    confirm_pending,
-    truncate_inline_value,
-)
+from aiuser.settings.utilities import ConfirmationOutcome, confirm_pending
 from aiuser.types.abc import MixinMeta
+from aiuser.utils.utilities import truncate_text
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -76,11 +73,11 @@ class ResponseSettings(MixinMeta):
                 removelist_regexes
             )
             await ctx.maybe_send_embed(
-                f"The regex pattern `{truncate_inline_value(regex_pattern)}` has been added to the list."
+                f"The regex pattern `{truncate_text(regex_pattern)}` has been added to the list."
             )
         else:
             await ctx.maybe_send_embed(
-                f"The regex pattern `{truncate_inline_value(regex_pattern)}` is already in the list of regex patterns."
+                f"The regex pattern `{truncate_text(regex_pattern)}` is already in the list of regex patterns."
             )
 
     @filters.command(name="remove")
@@ -92,7 +89,7 @@ class ResponseSettings(MixinMeta):
         removed_regex = removelist_regexes.pop(number - 1)
         await self.config.guild(ctx.guild).removelist_regexes.set(removelist_regexes)
         await ctx.maybe_send_embed(
-            f"The regex pattern `{truncate_inline_value(removed_regex)}` has been removed from the list."
+            f"The regex pattern `{truncate_text(removed_regex)}` has been removed from the list."
         )
 
     @filters.command(name="reset")

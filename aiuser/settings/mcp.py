@@ -10,8 +10,8 @@ from redbot.core.utils.menus import SimpleMenu
 from aiuser.mcp.client import MCPAuthError, MCPError, MCPOAuthRequired
 from aiuser.mcp.view import MCPAuthView
 from aiuser.settings.functions.utilities import functions
-from aiuser.settings.utilities import truncate_inline_value
 from aiuser.types.abc import MixinMeta
+from aiuser.utils.utilities import truncate_text
 
 
 class MCPSettings(MixinMeta):
@@ -134,7 +134,7 @@ class MCPSettings(MixinMeta):
         servers = await self.config.mcp_servers()
         if name not in servers:
             return await ctx.maybe_send_embed(
-                f"Unknown MCP server `{truncate_inline_value(name)}`."
+                f"Unknown MCP server `{truncate_text(name)}`."
             )
         url_changed = servers[name]["url"] != url
         await self.services.mcp.oauth.forget(name)
@@ -191,7 +191,7 @@ class MCPSettings(MixinMeta):
         servers = await self.config.mcp_servers()
         if name not in servers:
             return await ctx.maybe_send_embed(
-                f"Unknown MCP server `{truncate_inline_value(name)}`."
+                f"Unknown MCP server `{truncate_text(name)}`."
             )
         await self.services.mcp.oauth.forget(name)
         await self.bot.remove_shared_api_tokens(f"mcp_{name}", "token")
@@ -217,7 +217,7 @@ class MCPSettings(MixinMeta):
         server = (await self.config.mcp_servers()).get(name)
         if not server:
             return await ctx.maybe_send_embed(
-                f"Unknown MCP server `{truncate_inline_value(name)}`."
+                f"Unknown MCP server `{truncate_text(name)}`."
             )
         bearer_token = (await self.bot.get_shared_api_tokens(f"mcp_{name}")).get(
             "token"
@@ -294,7 +294,7 @@ class MCPSettings(MixinMeta):
         servers = await self.config.mcp_servers()
         if name not in servers:
             return await ctx.maybe_send_embed(
-                f"Unknown MCP server `{truncate_inline_value(name)}`."
+                f"Unknown MCP server `{truncate_text(name)}`."
             )
         enabled = await self.config.guild(ctx.guild).mcp_enabled_servers()
         if name not in enabled:
@@ -313,7 +313,7 @@ class MCPSettings(MixinMeta):
         """Disable an MCP server for this Discord server."""
         if name not in await self.config.mcp_servers():
             return await ctx.maybe_send_embed(
-                f"Unknown MCP server `{truncate_inline_value(name)}`."
+                f"Unknown MCP server `{truncate_text(name)}`."
             )
         enabled = await self.config.guild(ctx.guild).mcp_enabled_servers()
         if name in enabled:

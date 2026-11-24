@@ -9,12 +9,9 @@ from aiuser.providers.llm.registry import list_llm_models
 from aiuser.providers.speech.stt import DEFAULT_MODELS, PROVIDERS
 from aiuser.settings._groups import aiuser
 from aiuser.settings.functions.utilities import provider_key_error
-from aiuser.settings.utilities import (
-    ConfirmationOutcome,
-    confirm_pending,
-    truncate_inline_value,
-)
+from aiuser.settings.utilities import ConfirmationOutcome, confirm_pending
 from aiuser.types.abc import MixinMeta
+from aiuser.utils.utilities import truncate_text
 
 
 class MediaSettings(MixinMeta):
@@ -134,7 +131,7 @@ class MediaSettings(MixinMeta):
         """Show the model used to process images"""
         model = await self.config.guild(ctx.guild).scan_images_model()
         return await ctx.maybe_send_embed(
-            f"Image model: `{truncate_inline_value(model) if model else 'Chat model'}`"
+            f"Image model: `{truncate_text(model) if model else 'Chat model'}`"
         )
 
     @media_images_model.command(name="list")
@@ -180,7 +177,7 @@ class MediaSettings(MixinMeta):
                 view=None,
             )
         return await ctx.maybe_send_embed(
-            f"Image model set to `{truncate_inline_value(model)}`."
+            f"Image model set to `{truncate_text(model)}`."
         )
 
     @media_images_model.command(name="clear")
@@ -303,7 +300,7 @@ class MediaSettings(MixinMeta):
             await guild_conf.scan_audio_provider() or DEFAULT_STT_PROVIDER
         ).lower()
         model = await guild_conf.scan_audio_model() or DEFAULT_MODELS.get(provider)
-        display_model = truncate_inline_value(model) if model else model
+        display_model = truncate_text(model) if model else model
         return await ctx.maybe_send_embed(f"Audio model: `{display_model}`")
 
     @media_audio_model.command(name="set")
@@ -312,7 +309,7 @@ class MediaSettings(MixinMeta):
         cleaned_model = model.strip()
         await self.config.guild(ctx.guild).scan_audio_model.set(cleaned_model)
         return await ctx.maybe_send_embed(
-            f"Audio model set to `{truncate_inline_value(cleaned_model)}`."
+            f"Audio model set to `{truncate_text(cleaned_model)}`."
         )
 
     @media_audio_model.command(name="clear")
