@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 from enum import Enum, IntEnum
 
@@ -17,6 +18,8 @@ from aiuser.providers.llm.openai_compatible.endpoints import (
 )
 from aiuser.providers.llm.openai_compatible.provider import list_openai_compat_models
 from aiuser.providers.llm.registry import get_llm_provider
+
+log = logging.getLogger("red.bz_cogs.aiuser.setup")
 
 
 class SetupStep(IntEnum):
@@ -136,6 +139,7 @@ class ProviderKeyModal(discord.ui.Modal, title="Connect provider"):
             )
         # Show a generic setup error for unexpected provider failures.
         except Exception as error:  # noqa: BLE001
+            log.warning("API key verification failed (%s).", type(error).__name__)
             if self.wizard.is_finished():
                 message = (
                     "Setup timed out. Run `{prefix}aiuser setup` to start again."
@@ -148,16 +152,14 @@ class ProviderKeyModal(discord.ui.Modal, title="Connect provider"):
                     "This form is out of date. Open it again.", ephemeral=True
                 )
             if isinstance(error, AuthenticationError):
-                self.wizard.provider_error = (
-                    "The provider rejected this key. Check it and try again."
-                )
+                self.wizard.provider_error = "The provider rejected this key. Check the key and try again. See Red's logs for details."
             elif isinstance(
                 error, (APIConnectionError, APITimeoutError, asyncio.TimeoutError)
             ):
-                self.wizard.provider_error = "Couldn't reach the provider. Try again."
+                self.wizard.provider_error = "Couldn't reach the provider. Check your network and Red's logs, then retry."
             else:
                 self.wizard.provider_error = (
-                    "Connection failed. Check the key and try again."
+                    "Couldn't verify the provider. Check Red's logs for details."
                 )
             self.wizard.provider_state = ProviderState.FAILED
             self.wizard.retry_available = False
@@ -214,18 +216,23 @@ class ProviderKeyModal(discord.ui.Modal, title="Connect provider"):
         self.wizard.update_items()
         try:
             await interaction.edit_original_response(**self.wizard.display())
-        except discord.HTTPException:
+        except discord.HTTPException as error:
+            log.warning(
+                "Could not update the setup message (%s).", type(error).__name__
+            )
             self.wizard.stop()
             await interaction.followup.send(
-                f"API key saved, but the setup message could not be updated. Run `{self.wizard.ctx.clean_prefix}aiuser setup` to continue.",
+                f"API key saved, but the setup message couldn't be updated. Check Red's logs or run `{self.wizard.ctx.clean_prefix}aiuser setup` to continue.",
                 ephemeral=True,
             )
 
     async def on_error(self, interaction, error):
-        if not interaction.response.is_done():
-            await interaction.response.send_message(
-                "Connection failed. Try again.", ephemeral=True
-            )
+        log.warning("API key setup failed (%s).", type(error).__name__)
+        message = "Couldn't complete provider setup. Check Red's logs and try again."
+        if interaction.response.is_done():
+            await interaction.followup.send(message, ephemeral=True)
+        else:
+            await interaction.response.send_message(message, ephemeral=True)
 
 
 class OnboardingView(discord.ui.View):
@@ -484,11 +491,12 @@ class OnboardingView(discord.ui.View):
                 if self.retry_available:
                     return "LLM provider\nCouldn't check `{provider}`. {reason}".format(
                         provider=active,
-                        reason=self.provider_error or "Retry or enter an API key.",
+                        reason=self.provider_error
+                        or "Check Red's logs, then retry or enter an API key.",
                     )
                 return "LLM provider\n{provider_error}\nTap Enter API key to try again.".format(
                     provider_error=self.provider_error
-                    or "Connection failed. Check the key and try again."
+                    or "Couldn't verify the provider. Check Red's logs for details."
                 )
             if self.provider_state is ProviderState.VERIFIED and selected == active:
                 return (
@@ -683,6 +691,9 @@ class OnboardingView(discord.ui.View):
             models = await asyncio.wait_for(provider.list_models(), timeout=20)
         # Provider plugins can raise arbitrary errors during setup.
         except Exception as error:  # noqa: BLE001
+            log.warning(
+                "Configured provider verification failed (%s).", type(error).__name__
+            )
             if not self.is_finished() and self.provider_revision == revision:
                 endpoint = self.settings.get("endpoint")
                 active = (
@@ -697,16 +708,14 @@ class OnboardingView(discord.ui.View):
                 )
                 self.provider_state = ProviderState.FAILED
                 if isinstance(error, AuthenticationError):
-                    self.provider_error = "Authentication failed. Check the credentials or enter an API key."
+                    self.provider_error = "Authentication failed. Check your credentials and Red's logs, or enter an API key."
                 elif isinstance(
                     error, (APIConnectionError, APITimeoutError, asyncio.TimeoutError)
                 ):
-                    self.provider_error = (
-                        "Connection timed out or failed. Check the endpoint and retry."
-                    )
+                    self.provider_error = "Couldn't reach the provider. Check the endpoint and Red's logs, then retry."
                 else:
                     self.provider_error = (
-                        "The provider check failed. Retry or enter an API key."
+                        "Check Red's logs, then retry or enter an API key."
                     )
                 self.retry_available = True
             return
