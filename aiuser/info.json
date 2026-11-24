@@ -14,7 +14,10 @@
         "add_reactions"
     ],
     "requirements": [
-        "-rhttps://raw.githubusercontent.com/zhaobenny/bz-cogs/1cdde9e3d6f059c6f34d7f836a344fc92c109e73/aiuser/requirements.txt"
+        "-rhttps://raw.githubusercontent.com/zhaobenny/bz-cogs/3dc9969934fcf9b359c0a7b36942d744b0be32ad/aiuser/requirements.txt",
+        "emoji",
+        "tenacity",
+        "aiosqlite"
     ],
     "end_user_data_statement": "In the default configuration, this cog does not autonomously store data or metadata concerning users. With user consent, chat messages/images may be forwarded to OpenAI or third parties to produce LLM responses. For further details, please consult: https://openai.com/policies/privacy-policy, https://openrouter.ai/privacy, and relevant third-party privacy policies.",
     "tags": [

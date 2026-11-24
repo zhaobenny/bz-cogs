@@ -32,6 +32,8 @@ jobs:
           set -euo pipefail
           pip install Red-DiscordBot pytest pytest-asyncio dpytest
           pip install -r aiuser/requirements.txt
+          mapfile -t standalone < <(python -c 'import json; print("\n".join(req for req in json.load(open("aiuser/info.json"))["requirements"] if not req.startswith("-r")))')
+          pip install "${standalone[@]}"
 
       - name: Run tests
         run: python -m pytest aiuser/tests/ -v
