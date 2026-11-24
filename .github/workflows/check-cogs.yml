@@ -31,16 +31,29 @@ jobs:
 
       - name: Detect Changed Cogs
         id: changed-cogs
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_REF: ${{ github.base_ref }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          FIRST_COMMIT: ${{ github.event.commits[0].id }}
         run: |
+          set -euo pipefail
+
+          EMPTY_TREE="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+          NULL_SHA="0000000000000000000000000000000000000000"
+
           # Determine the diff range
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            BASE_REF="origin/${{ github.base_ref }}"
+          if [[ "$EVENT_NAME" == "pull_request" && -n "$PR_BASE_REF" ]] && git cat-file -e "origin/${PR_BASE_REF}^{commit}" 2>/dev/null; then
+            BASE_REF="origin/$PR_BASE_REF"
+          elif [[ -n "$EVENT_BEFORE" && "$EVENT_BEFORE" != "$NULL_SHA" ]] && git merge-base --is-ancestor "$EVENT_BEFORE" HEAD 2>/dev/null; then
+            BASE_REF="$EVENT_BEFORE"
+          elif [[ -n "$FIRST_COMMIT" ]] && git rev-parse --verify "${FIRST_COMMIT}^" >/dev/null 2>&1; then
+            # Force pushes may reference a rewritten 'before' SHA not present in the clone
+            BASE_REF="${FIRST_COMMIT}^"
+          elif git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+            BASE_REF="HEAD~1"
           else
-            BASE_REF="${{ github.event.before }}"
-            # Handle force pushes or first commits where 'before' might be all zeros
-            if [[ "$BASE_REF" == "0000000000000000000000000000000000000000" ]]; then
-              BASE_REF="HEAD~1"
-            fi
+            BASE_REF="$EMPTY_TREE"
           fi
 
           echo "🔍 Diffing against $BASE_REF"
@@ -48,20 +61,17 @@ jobs:
           # Get list of changed files
           CHANGED_FILES=$(git diff --name-only "$BASE_REF" HEAD)
 
-          # Extract top-level directories
-          CHANGED_DIRS=$(echo "$CHANGED_FILES" | cut -d/ -f1 | sort | uniq)
-
-          # Filter for directories that likely contain cogs
-          # Excluding hidden dirs, file artifacts, and known non-cog directories
+          # Extract top-level directories and filter for cog packages
           COG_LIST=""
-          for dir in $CHANGED_DIRS; do
-            if [[ -d "$dir" && "$dir" != .* && "$dir" != "tests" ]]; then
-              # Check if it looks like a python package (has __init__.py) or we just assume folders are cogs
-              if [[ -f "$dir/__init__.py" ]]; then
-                 COG_LIST+="$dir,"
+          if [[ -n "$CHANGED_FILES" ]]; then
+            CHANGED_DIRS=$(printf '%s\n' "$CHANGED_FILES" | cut -d/ -f1 | sort -u)
+
+            while IFS= read -r dir; do
+              if [[ -n "$dir" && -d "$dir" && "$dir" != .* && "$dir" != "tests" && -f "$dir/__init__.py" ]]; then
+                COG_LIST+="$dir,"
               fi
-            fi
-          done
+            done <<< "$CHANGED_DIRS"
+          fi
 
           # Remove trailing comma
           COG_LIST=${COG_LIST%,}

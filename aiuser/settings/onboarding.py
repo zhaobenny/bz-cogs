@@ -134,7 +134,8 @@ class ProviderKeyModal(discord.ui.Modal, title="Connect provider"):
             models = await asyncio.wait_for(
                 list_openai_compat_models(client, endpoint), timeout=20
             )
-        except Exception as error:  # noqa: BLE001 - Provider errors may contain credentials.
+        # Show a generic setup error for unexpected provider failures.
+        except Exception as error:  # noqa: BLE001
             if self.wizard.is_finished():
                 message = (
                     "Setup timed out. Run `{prefix}aiuser setup` to start again."
@@ -680,7 +681,8 @@ class OnboardingView(discord.ui.View):
             if provider is None:
                 raise ValueError("Provider unavailable")
             models = await asyncio.wait_for(provider.list_models(), timeout=20)
-        except Exception as error:  # noqa: BLE001 - Handle errors from any provider.
+        # Provider plugins can raise arbitrary errors during setup.
+        except Exception as error:  # noqa: BLE001
             if not self.is_finished() and self.provider_revision == revision:
                 endpoint = self.settings.get("endpoint")
                 active = (
