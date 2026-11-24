@@ -24,19 +24,21 @@ class MemorySettings(MixinMeta):
     async def memory_status(self, ctx: commands.Context):
         """Show whether saved memories are included in responses"""
         enabled = await self.config.guild(ctx.guild).query_memories()
-        return await ctx.send(f"Saved memory retrieval enabled: `{enabled}`")
+        return await ctx.maybe_send_embed(
+            f"Saved memory retrieval enabled: `{enabled}`"
+        )
 
     @memory.command(name="enable")
     async def memory_enable(self, ctx: commands.Context):
         """Include relevant saved memories in responses"""
         await self.config.guild(ctx.guild).query_memories.set(True)
-        return await ctx.send("Saved memory retrieval enabled.")
+        return await ctx.maybe_send_embed("Saved memory retrieval enabled.")
 
     @memory.command(name="disable")
     async def memory_disable(self, ctx: commands.Context):
         """Stop including saved memories in responses"""
         await self.config.guild(ctx.guild).query_memories.set(False)
-        return await ctx.send("Saved memory retrieval disabled.")
+        return await ctx.maybe_send_embed("Saved memory retrieval disabled.")
 
     @memory.command(name="list")
     async def list_memory(self, ctx: commands.Context):

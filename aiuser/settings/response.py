@@ -10,7 +10,11 @@ from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.defaults import DEFAULT_REMOVE_PATTERNS
 from aiuser.settings._groups import aiuser
-from aiuser.settings.utilities import ConfirmationOutcome, confirm_pending
+from aiuser.settings.utilities import (
+    ConfirmationOutcome,
+    confirm_pending,
+    truncate_inline_value,
+)
 from aiuser.types.abc import MixinMeta
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -30,7 +34,7 @@ class ResponseSettings(MixinMeta):
         """Show the current regex patterns of strings to removed from responses"""
         removelist_regexes = await self.config.guild(ctx.guild).removelist_regexes()
         if not removelist_regexes:
-            return await ctx.send("The list of regex patterns is empty.")
+            return await ctx.maybe_send_embed("The list of regex patterns is empty.")
 
         pages = []
 
@@ -60,7 +64,9 @@ class ResponseSettings(MixinMeta):
         try:
             re.compile(regex_pattern)
         except re.error:
-            return await ctx.send("Sorry, but that regex pattern seems to be invalid.")
+            return await ctx.maybe_send_embed(
+                "Sorry, but that regex pattern seems to be invalid."
+            )
 
         removelist_regexes = await self.config.guild(ctx.guild).removelist_regexes()
 
@@ -69,12 +75,12 @@ class ResponseSettings(MixinMeta):
             await self.config.guild(ctx.guild).removelist_regexes.set(
                 removelist_regexes
             )
-            await ctx.send(
-                f"The regex pattern `{regex_pattern}` has been added to the list."
+            await ctx.maybe_send_embed(
+                f"The regex pattern `{truncate_inline_value(regex_pattern)}` has been added to the list."
             )
         else:
-            await ctx.send(
-                f"The regex pattern `{regex_pattern}` is already in the list of regex patterns."
+            await ctx.maybe_send_embed(
+                f"The regex pattern `{truncate_inline_value(regex_pattern)}` is already in the list of regex patterns."
             )
 
     @filters.command(name="remove")
@@ -82,11 +88,11 @@ class ResponseSettings(MixinMeta):
         """Remove a regex pattern (by number) from the list"""
         removelist_regexes = await self.config.guild(ctx.guild).removelist_regexes()
         if not (1 <= number <= len(removelist_regexes)):
-            return await ctx.send("Invalid number.")
+            return await ctx.maybe_send_embed("Invalid number.")
         removed_regex = removelist_regexes.pop(number - 1)
         await self.config.guild(ctx.guild).removelist_regexes.set(removelist_regexes)
-        await ctx.send(
-            f"The regex pattern `{removed_regex}` has been removed from the list."
+        await ctx.maybe_send_embed(
+            f"The regex pattern `{truncate_inline_value(removed_regex)}` has been removed from the list."
         )
 
     @filters.command(name="reset")
@@ -121,7 +127,7 @@ class ResponseSettings(MixinMeta):
         weights = await self.config.guild(ctx.guild).weights()
         weights = {} if weights is None else json.loads(weights)
         if not weights:
-            return await ctx.send(":warning: No weights set.")
+            return await ctx.maybe_send_embed(":warning: No weights set.")
         embed = discord.Embed(title="Weights Used", color=await ctx.embed_color())
         try:
             encoding = tiktoken.encoding_for_model(
@@ -129,7 +135,9 @@ class ResponseSettings(MixinMeta):
                 or await self.config.default_model()
             )
         except KeyError:
-            return await ctx.send(":warning: Unsupported model for tokenization")
+            return await ctx.maybe_send_embed(
+                ":warning: Unsupported model for tokenization"
+            )
         weights = {
             encoding.decode([int(token)]): weight for token, weight in weights.items()
         }
@@ -155,7 +163,7 @@ class ResponseSettings(MixinMeta):
         if custom_parameters:
             custom_parameters = json.loads(custom_parameters)
             if custom_parameters.get("logit_bias"):
-                return await ctx.send(
+                return await ctx.maybe_send_embed(
                     ":warning: Logit bias already set. Please remove logit bias from custom parameters first."
                 )
 
@@ -166,12 +174,14 @@ class ResponseSettings(MixinMeta):
         try:
             encoding = tiktoken.encoding_for_model(model)
         except KeyError:
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 ":warning: Unsupported model, please use custom parameters instead."
             )
 
         if weight < -100 or weight > 100:
-            return await ctx.send(":warning: Weight must be between -100 and 100")
+            return await ctx.maybe_send_embed(
+                ":warning: Weight must be between -100 and 100"
+            )
 
         tokens = encoding.encode(word)
         if len(tokens) > 1:
@@ -217,16 +227,20 @@ class ResponseSettings(MixinMeta):
                 or await self.config.default_model()
             )
         except KeyError:
-            return await ctx.send(":warning: Unsupported model for tokenization")
+            return await ctx.maybe_send_embed(
+                ":warning: Unsupported model for tokenization"
+            )
         weights = await self.config.guild(ctx.guild).weights()
         weights = {} if weights is None else json.loads(weights)
 
         token = encoding.encode(word)
         if len(token) == 1:
             if str(token[0]) not in weights:
-                return await ctx.send(":warning: Word not found in weights.")
+                return await ctx.maybe_send_embed(
+                    ":warning: Word not found in weights."
+                )
         else:
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 ":warning: Word is multiple tokens? Please check [p]aiuser response weights list"
             )
 
@@ -280,7 +294,7 @@ class ResponseSettings(MixinMeta):
     async def set_custom_parameters(self, ctx: commands.Context, *, json_block: str):
         """Set custom endpoint parameters using a JSON code block"""
         if not json_block.startswith("```"):
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 ":warning: Please provide the parameters in a JSON code block."
             )
 
@@ -289,16 +303,18 @@ class ResponseSettings(MixinMeta):
         try:
             data = json.loads(json_block)
         except json.JSONDecodeError:
-            return await ctx.channel.send(":warning: Invalid JSON format!")
+            return await ctx.maybe_send_embed(":warning: Invalid JSON format!")
         if not isinstance(data, dict):
-            return await ctx.send(":warning: Parameters must be a JSON object.")
+            return await ctx.maybe_send_embed(
+                ":warning: Parameters must be a JSON object."
+            )
 
         blacklist = ["model", "messages", "stream"]
 
         invalid_keys = [key for key in data if key in blacklist]
         if invalid_keys:
             invalid_keys_str = ", ".join([f"`{key}`" for key in invalid_keys])
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 f':warning: Invalid JSON! Please remove "{invalid_keys_str}" key from your JSON.'
             )
 
@@ -316,10 +332,10 @@ class ResponseSettings(MixinMeta):
             await self.config.guild(ctx.guild).weights.set(None)
 
         await self.config.guild(ctx.guild).parameters.set(json.dumps(data))
-        return await ctx.send("Custom endpoint parameters updated.")
+        return await ctx.maybe_send_embed("Custom endpoint parameters updated.")
 
     @custom_parameters.command(name="clear")
     async def custom_parameters_clear(self, ctx: commands.Context):
         """Clear custom endpoint parameters"""
         await self.config.guild(ctx.guild).parameters.set(None)
-        return await ctx.send("Custom endpoint parameters cleared.")
+        return await ctx.maybe_send_embed("Custom endpoint parameters cleared.")

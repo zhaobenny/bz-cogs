@@ -113,6 +113,12 @@ def truncate_prompt(prompt: str, limit: int = 1900) -> str:
     return prompt
 
 
+def truncate_inline_value(value: str, limit: int = 1800) -> str:
+    if len(value) > limit:
+        return value[: limit - 3] + "..."
+    return value
+
+
 def rank_choices_for_query(choices: list, query: str) -> list:
     query = (query or "").casefold().strip()
     if not query:

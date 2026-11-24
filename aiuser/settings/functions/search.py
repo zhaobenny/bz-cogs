@@ -18,6 +18,7 @@ from aiuser.settings.functions.utilities import (
     functions,
     provider_key_error,
 )
+from aiuser.settings.utilities import truncate_inline_value
 
 
 class SearchFunctionSettings(FunctionToggleHelperMixin):
@@ -38,19 +39,19 @@ class SearchFunctionSettings(FunctionToggleHelperMixin):
                 CompatEndpointKind.OPENAI,
                 CompatEndpointKind.OPENROUTER,
             }:
-                return await ctx.send(
+                return await ctx.maybe_send_embed(
                     "Native search requires an OpenAI or OpenRouter endpoint."
                 )
         key_service = PROVIDER_KEY_SERVICES.get(provider)
         if key_service:
             key_error = await provider_key_error(self.bot, ctx, key_service)
             if key_error:
-                return await ctx.send(key_error)
+                return await ctx.maybe_send_embed(key_error)
         if (
             provider == SEARXNG
             and not await guild_conf.function_calling_search_endpoint()
         ):
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 f"SearXNG endpoint not set! Set it using `{ctx.clean_prefix}aiuser tools search endpoint set <url>`."
             )
 
@@ -73,7 +74,7 @@ class SearchFunctionSettings(FunctionToggleHelperMixin):
         provider = provider.strip().lower()
 
         if provider not in {*PROVIDERS, NATIVE}:
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 "Available search providers: "
                 + ", ".join(f"`{p}`" for p in (*PROVIDERS, NATIVE))
             )
@@ -86,7 +87,7 @@ class SearchFunctionSettings(FunctionToggleHelperMixin):
                 CompatEndpointKind.OPENAI,
                 CompatEndpointKind.OPENROUTER,
             }:
-                return await ctx.send(
+                return await ctx.maybe_send_embed(
                     "Native search requires an OpenAI or OpenRouter endpoint."
                 )
 
@@ -94,7 +95,7 @@ class SearchFunctionSettings(FunctionToggleHelperMixin):
         if key_service:
             key_error = await provider_key_error(self.bot, ctx, key_service)
             if key_error:
-                return await ctx.send(key_error)
+                return await ctx.maybe_send_embed(key_error)
 
         await self.config.guild(ctx.guild).function_calling_search_provider.set(
             provider
@@ -120,19 +121,22 @@ class SearchFunctionSettings(FunctionToggleHelperMixin):
     async def search_endpoint(self, ctx: commands.Context):
         """Show the SearXNG endpoint"""
         url = await self.config.guild(ctx.guild).function_calling_search_endpoint()
-        return await ctx.maybe_send_embed(f"Search endpoint: `{url or 'Not set'}`")
+        display_url = truncate_inline_value(url) if url else "Not set"
+        return await ctx.maybe_send_embed(f"Search endpoint: `{display_url}`")
 
     @search_endpoint.command(name="set")
     async def search_endpoint_set(self, ctx: commands.Context, url: str):
         """Set the SearXNG endpoint"""
         await self.config.guild(ctx.guild).function_calling_search_endpoint.set(url)
-        return await ctx.send(f"Search endpoint set to `{url}`.")
+        return await ctx.maybe_send_embed(
+            f"Search endpoint set to `{truncate_inline_value(url)}`."
+        )
 
     @search_endpoint.command(name="clear")
     async def search_endpoint_clear(self, ctx: commands.Context):
         """Clear the SearXNG endpoint"""
         await self.config.guild(ctx.guild).function_calling_search_endpoint.set(None)
-        return await ctx.send("Search endpoint cleared.")
+        return await ctx.maybe_send_embed("Search endpoint cleared.")
 
     @functions_search.group(name="results", invoke_without_command=True)
     async def search_max_results(self, ctx: commands.Context):
@@ -146,13 +150,15 @@ class SearchFunctionSettings(FunctionToggleHelperMixin):
     async def search_max_results_set(self, ctx: commands.Context, results: int):
         """Set the maximum search results"""
         if results < 1:
-            return await ctx.send(":warning: Please enter a positive integer.")
+            return await ctx.maybe_send_embed(
+                ":warning: Please enter a positive integer."
+            )
 
         await self.config.guild(ctx.guild).function_calling_search_max_results.set(
             results
         )
 
-        return await ctx.send(f"Maximum search results set to `{results}`.")
+        return await ctx.maybe_send_embed(f"Maximum search results set to `{results}`.")
 
     @functions_search.command(name="show")
     async def search_show_config(self, ctx: commands.Context):

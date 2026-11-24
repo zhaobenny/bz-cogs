@@ -28,6 +28,7 @@ from aiuser.providers.llm.registry import list_llm_models
 from aiuser.settings.utilities import (
     add_prompt_metrics_fields,
     confirm_pending,
+    truncate_inline_value,
     truncate_prompt,
 )
 from aiuser.types.abc import MixinMeta
@@ -56,6 +57,7 @@ class ChatGPTActivationPhase(Enum):
 class OwnerSettings(MixinMeta):
     @commands.group(aliases=["ai_userowner"])
     @checks.is_owner()
+    @commands.bot_has_permissions(embed_links=True)
     async def aiuserowner(self, _):
         """For some settings that apply bot-wide."""
 
@@ -86,7 +88,7 @@ class OwnerSettings(MixinMeta):
         async with ctx.typing():
             models = await list_llm_models(self.services)
         if model not in models:
-            await ctx.send(":warning: Not a valid model!")
+            await ctx.maybe_send_embed(":warning: Not a valid model!")
             return await self._paginate_models(ctx, models, query=model)
 
         await self.config.default_model.set(model)
@@ -128,9 +130,11 @@ class OwnerSettings(MixinMeta):
     async def max_prompt_length_set(self, ctx: commands.Context, length: int):
         """Set the maximum server prompt length"""
         if length < 1:
-            return await ctx.send("Please enter a positive integer.")
+            return await ctx.maybe_send_embed("Please enter a positive integer.")
         await self.config.max_prompt_length.set(length)
-        return await ctx.send(f"Maximum prompt length set to `{length}` characters.")
+        return await ctx.maybe_send_embed(
+            f"Maximum prompt length set to `{length}` characters."
+        )
 
     @aiuserowner.group(
         name="max_topic_length", aliases=["maxtopiclength"], invoke_without_command=True
@@ -146,16 +150,20 @@ class OwnerSettings(MixinMeta):
     async def max_random_prompt_length_set(self, ctx: commands.Context, length: int):
         """Set the maximum random-message topic length"""
         if length < 1:
-            return await ctx.send("Please enter a positive integer.")
+            return await ctx.maybe_send_embed("Please enter a positive integer.")
         await self.config.max_random_prompt_length.set(length)
-        return await ctx.send(f"Maximum topic length set to `{length}` characters.")
+        return await ctx.maybe_send_embed(
+            f"Maximum topic length set to `{length}` characters."
+        )
 
     @aiuserowner.group(name="endpoint", invoke_without_command=True)
     async def endpoint(self, ctx: commands.Context):
         """Show the configured model endpoint"""
         url = await self.config.custom_openai_endpoint()
         display_url = "ChatGPT" if url == CODEX_ENDPOINT_MODE else (url or "OpenAI")
-        return await ctx.maybe_send_embed(f"Model endpoint: `{display_url}`")
+        return await ctx.maybe_send_embed(
+            f"Model endpoint: `{truncate_inline_value(display_url)}`"
+        )
 
     @endpoint.command(name="set")
     async def endpoint_set(self, ctx: commands.Context, url: str):
@@ -183,12 +191,16 @@ class OwnerSettings(MixinMeta):
     async def timeout_set(self, ctx: commands.Context, seconds: int):
         """Set the model endpoint request timeout"""
         if seconds < 1:
-            return await ctx.send(":warning: Please enter a positive integer.")
+            return await ctx.maybe_send_embed(
+                ":warning: Please enter a positive integer."
+            )
 
         await self.config.openai_endpoint_request_timeout.set(seconds)
         await invalidate_openai_client(self.services)
 
-        return await ctx.send(f"Endpoint request timeout set to `{seconds}` seconds.")
+        return await ctx.maybe_send_embed(
+            f"Endpoint request timeout set to `{seconds}` seconds."
+        )
 
     @aiuserowner.group(name="config")
     async def owner_config(self, _):
@@ -203,7 +215,7 @@ class OwnerSettings(MixinMeta):
         path = Path(cog_data_path(self) / "settings.json")
 
         if not path.exists():
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 ":warning: Export is only supported for json backends"
             )
 
@@ -211,7 +223,9 @@ class OwnerSettings(MixinMeta):
             exported = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             logger.exception("Failed to read AIUser config for export")
-            return await ctx.send(":warning: Failed to read the current config")
+            return await ctx.maybe_send_embed(
+                ":warning: Failed to read the current config"
+            )
 
         _remove_codex_oauth(exported)
         payload = BytesIO(json.dumps(exported, indent=4).encode("utf-8"))
@@ -227,20 +241,20 @@ class OwnerSettings(MixinMeta):
         :warning: JSON backend only
         """
         if not ctx.message.attachments:
-            return await ctx.send(":warning: No file was attached.")
+            return await ctx.maybe_send_embed(":warning: No file was attached.")
 
         file = ctx.message.attachments[0]
         try:
             new_config = json.loads(await file.read())
         except json.JSONDecodeError:
-            return await ctx.send(":warning: Invalid JSON format!")
+            return await ctx.maybe_send_embed(":warning: Invalid JSON format!")
 
         _remove_codex_oauth(new_config)
 
         path = Path(cog_data_path(self) / "settings.json")
 
         if not path.exists():
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 ":warning: Import is only supported for json backends"
             )
 
@@ -295,13 +309,15 @@ class OwnerSettings(MixinMeta):
         """Set the global default prompt from text or a text attachment"""
         if not prompt and ctx.message.attachments:
             if not ctx.message.attachments[0].filename.endswith(".txt"):
-                return await ctx.send(
+                return await ctx.maybe_send_embed(
                     ":warning: Invalid attachment. Must be a `.txt` file."
                 )
             prompt = (await ctx.message.attachments[0].read()).decode("utf-8")
 
         if not prompt:
-            return await ctx.send("Provide a prompt or attach a `.txt` file.")
+            return await ctx.maybe_send_embed(
+                "Provide a prompt or attach a `.txt` file."
+            )
 
         await self.config.custom_text_prompt.set(prompt)
 
@@ -317,7 +333,9 @@ class OwnerSettings(MixinMeta):
     async def global_prompt_clear(self, ctx: commands.Context):
         """Use the built-in global default prompt"""
         await self.config.custom_text_prompt.set(None)
-        return await ctx.send("Global prompt reset to the built-in default.")
+        return await ctx.maybe_send_embed(
+            "Global prompt reset to the built-in default."
+        )
 
     async def _set_custom_endpoint(self, ctx: commands.Context, url: str | None):
         if url in {"chatgpt", "codex", "codex-new"}:
@@ -343,7 +361,7 @@ class OwnerSettings(MixinMeta):
             await self.config.custom_openai_endpoint.set(previous_url)
             await ctx.message.remove_reaction("🔄", ctx.me)
             api_type = get_openai_compat_api_token_name(url)
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 f":warning: No API key set for this endpoint. "
                 f"\nPlease set it with "
                 f"`{ctx.clean_prefix}set api {api_type} api_key,INSERT_API_KEY`"
@@ -356,7 +374,7 @@ class OwnerSettings(MixinMeta):
             await self.config.custom_openai_endpoint.set(previous_url)
             await invalidate_openai_client(self.services)
             api_type = get_openai_compat_api_token_name(url)
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 f":warning: Authentication failed for endpoint. "
                 f"\nIf this endpoint requires an API key, please set it with "
                 f"`{ctx.clean_prefix}set api {api_type} api_key,INSERT_API_KEY`"
@@ -365,7 +383,7 @@ class OwnerSettings(MixinMeta):
             logger.exception("Invalid endpoint.")
             await self.config.custom_openai_endpoint.set(previous_url)
             await invalidate_openai_client(self.services)
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 ":warning: Invalid endpoint. Please check logs for more information."
             )
         finally:
@@ -408,7 +426,7 @@ class OwnerSettings(MixinMeta):
             getattr(self, "_chatgpt_activation_phase", ChatGPTActivationPhase.IDLE)
             is not ChatGPTActivationPhase.IDLE
         ):
-            return await ctx.send("ChatGPT setup is already in progress.")
+            return await ctx.maybe_send_embed("ChatGPT setup is already in progress.")
         self._chatgpt_activation_phase = ChatGPTActivationPhase.CHOOSING_ACCOUNT
         try:
             return await self._run_codex_activation(ctx, new_account)

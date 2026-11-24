@@ -38,11 +38,13 @@ class ScrapeFunctionSettings(FunctionToggleHelperMixin):
         if provider == NATIVE and not is_openrouter_endpoint(
             await self.config.custom_openai_endpoint()
         ):
-            return await ctx.send("Native web fetch requires an OpenRouter endpoint.")
+            return await ctx.maybe_send_embed(
+                "Native web fetch requires an OpenRouter endpoint."
+            )
         if provider == FIRECRAWL:
             key_error = await provider_key_error(self.bot, ctx, provider)
             if key_error:
-                return await ctx.send(key_error)
+                return await ctx.maybe_send_embed(key_error)
         return await self.set_function_group(ctx, [names.OPEN_URL], "Scrape", True)
 
     @functions_scrape.command(name="disable")
@@ -62,7 +64,7 @@ class ScrapeFunctionSettings(FunctionToggleHelperMixin):
         provider = provider.strip().lower()
 
         if provider not in (*PROVIDERS, NATIVE):
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 "Available scrape providers: "
                 + ", ".join(f"`{p}`" for p in (*PROVIDERS, NATIVE))
             )
@@ -70,11 +72,13 @@ class ScrapeFunctionSettings(FunctionToggleHelperMixin):
         if provider == NATIVE and not is_openrouter_endpoint(
             await self.config.custom_openai_endpoint()
         ):
-            return await ctx.send("Native web fetch requires an OpenRouter endpoint.")
+            return await ctx.maybe_send_embed(
+                "Native web fetch requires an OpenRouter endpoint."
+            )
         if provider == FIRECRAWL:
             key_error = await provider_key_error(self.bot, ctx, provider)
             if key_error:
-                return await ctx.send(key_error)
+                return await ctx.maybe_send_embed(key_error)
 
         await self.config.guild(ctx.guild).function_calling_scrape_provider.set(
             provider

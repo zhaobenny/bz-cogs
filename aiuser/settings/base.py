@@ -65,7 +65,9 @@ class Settings(
     @checks.is_owner()
     async def setup_wizard(self, ctx: commands.Context):
         if self.services is None:
-            return await ctx.send("AI User is still loading. Try again shortly.")
+            return await ctx.maybe_send_embed(
+                "AI User is still loading. Try again shortly."
+            )
         settings = await self.config.guild(ctx.guild).all()
         settings["global_prompt"] = await self.config.custom_text_prompt()
         settings["default_model"] = await self.config.default_model()
@@ -365,10 +367,12 @@ class Settings(
             - `channel` A mention of the channel
         """
         if not channel:
-            return await ctx.send("Invalid channel")
+            return await ctx.maybe_send_embed("Invalid channel")
         new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         if channel.id in new_whitelist:
-            return await ctx.send("Replies are already enabled in that channel.")
+            return await ctx.maybe_send_embed(
+                "Replies are already enabled in that channel."
+            )
         new_whitelist.append(channel.id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         return await self._send_channel_whitelist(ctx, new_whitelist)
@@ -387,7 +391,7 @@ class Settings(
         if isinstance(channel, str):
             match = CHANNEL_MENTION_OR_ID_PATTERN.fullmatch(channel.strip())
             if not match:
-                return await ctx.send(
+                return await ctx.maybe_send_embed(
                     "Invalid channel. Provide a channel mention or ID."
                 )
             channel_id = int(match.group(1) or match.group(2))
@@ -395,7 +399,9 @@ class Settings(
             channel_id = channel.id
         new_whitelist = await self.config.guild(ctx.guild).channels_whitelist()
         if channel_id not in new_whitelist:
-            return await ctx.send("Replies are not enabled in that channel.")
+            return await ctx.maybe_send_embed(
+                "Replies are not enabled in that channel."
+            )
         new_whitelist.remove(channel_id)
         await self.config.guild(ctx.guild).channels_whitelist.set(new_whitelist)
         return await self._send_channel_whitelist(ctx, new_whitelist)
@@ -452,7 +458,7 @@ class Settings(
             models = await list_llm_models(self.services)
 
         if model not in models:
-            await ctx.send(":warning: Not a valid model!")
+            await ctx.maybe_send_embed(":warning: Not a valid model!")
             return await self._paginate_models(ctx, models, query=model)
 
         await self.config.guild(ctx.guild).model.set(model)
@@ -487,7 +493,9 @@ class Settings(
 
     async def _paginate_models(self, ctx, models, query: str | None = None):
         if not models:
-            return await ctx.send(":warning: No models are currently available.")
+            return await ctx.maybe_send_embed(
+                ":warning: No models are currently available."
+            )
 
         if query:
             models = rank_choices_for_query(models, query)
@@ -526,8 +534,8 @@ class Settings(
         This will allow the bot to reply to your messages or use your messages.
         """
         if not await self.services.consent.opt_in(ctx.author.id):
-            return await ctx.send("You are already opted in.")
-        await ctx.send("You are now opted in bot-wide")
+            return await ctx.maybe_send_embed("You are already opted in.")
+        await ctx.maybe_send_embed("You are now opted in bot-wide")
 
     @aiuser.command()
     async def optout(self, ctx: commands.Context):
@@ -536,8 +544,8 @@ class Settings(
         This will prevent the bot from replying to your messages or using your messages.
         """
         if not await self.services.consent.opt_out(ctx.author.id):
-            return await ctx.send("You are already opted out.")
-        await ctx.send("You are now opted out bot-wide")
+            return await ctx.maybe_send_embed("You are already opted out.")
+        await ctx.maybe_send_embed("You are now opted out bot-wide")
 
     @aiuser.group()
     @checks.admin_or_permissions(manage_guild=True)
@@ -561,7 +569,7 @@ class Settings(
             # add the line below to the specific guild in the cog's settings.json:
             # "optin_by_default": true
             # insert concern about user privacy and getting user consent here
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 "You cannot enable this setting for servers with more than 150 members."
             )
         return await self._set_consent_default(ctx, True)
