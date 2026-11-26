@@ -38,13 +38,13 @@ class TriggerSettings(MixinMeta):
     async def public_forget_enable(self, ctx: commands.Context):
         """Allow anyone to clear the current conversation"""
         await self.config.guild(ctx.guild).public_forget.set(True)
-        return await ctx.send("Public forget enabled.")
+        return await ctx.maybe_send_embed("Public forget enabled.")
 
     @public_forget.command(name="disable")
     async def public_forget_disable(self, ctx: commands.Context):
         """Restrict conversation clearing to moderators"""
         await self.config.guild(ctx.guild).public_forget.set(False)
-        return await ctx.send("Public forget disabled.")
+        return await ctx.maybe_send_embed("Public forget disabled.")
 
     @trigger.group(name="grok", invoke_without_command=True)
     @checks.is_owner()
@@ -57,13 +57,13 @@ class TriggerSettings(MixinMeta):
     async def grok_enable(self, ctx: commands.Context):
         """Enable the grok phrase trigger"""
         await self.config.guild(ctx.guild).grok_trigger.set(True)
-        return await ctx.send("Grok trigger enabled.")
+        return await ctx.maybe_send_embed("Grok trigger enabled.")
 
     @grok.command(name="disable")
     async def grok_disable(self, ctx: commands.Context):
         """Disable the grok phrase trigger"""
         await self.config.guild(ctx.guild).grok_trigger.set(False)
-        return await ctx.send("Grok trigger disabled.")
+        return await ctx.maybe_send_embed("Grok trigger disabled.")
 
     @trigger.group(name="webhook")
     async def trigger_webhook(self, _):
@@ -109,14 +109,14 @@ class TriggerSettings(MixinMeta):
         """Clear a target's webhook setting so it inherits broader settings"""
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.reply_to_webhooks.set(None)
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"The {mention_type.name.lower()} will now inherit its webhook setting."
         )
 
     async def _set_webhook_replies(self, ctx, mention, enabled: bool):
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.reply_to_webhooks.set(enabled)
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"Webhook replies on this {mention_type.name.lower()}: `{enabled}`"
         )
 
@@ -143,20 +143,22 @@ class TriggerSettings(MixinMeta):
     async def trigger_webhook_whitelist_enable(self, ctx: commands.Context):
         """Only reply to webhook users in the allowlist"""
         await self.config.guild(ctx.guild).webhook_whitelist_enabled.set(True)
-        return await ctx.send("Webhook allowlist enabled.")
+        return await ctx.maybe_send_embed("Webhook allowlist enabled.")
 
     @trigger_webhook_whitelist.command(name="disable")
     async def trigger_webhook_whitelist_disable(self, ctx: commands.Context):
         """Allow webhook users regardless of the allowlist"""
         await self.config.guild(ctx.guild).webhook_whitelist_enabled.set(False)
-        return await ctx.send("Webhook allowlist disabled.")
+        return await ctx.maybe_send_embed("Webhook allowlist disabled.")
 
     @trigger_webhook_whitelist.command(name="add")
     async def trigger_webhook_whitelist_add(self, ctx: commands.Context, user_id: int):
         """Add a user ID to the webhook/app allowlist"""
         whitelist = await self.config.guild(ctx.guild).webhook_user_whitelist()
         if user_id in whitelist:
-            return await ctx.send("That user ID is already in the allowlist")
+            return await ctx.maybe_send_embed(
+                "That user ID is already in the allowlist"
+            )
         whitelist.append(user_id)
         await self.config.guild(ctx.guild).webhook_user_whitelist.set(whitelist)
         return await self.show_webhook_whitelist(
@@ -173,7 +175,7 @@ class TriggerSettings(MixinMeta):
         """Remove a user ID from the webhook/app allowlist"""
         whitelist = await self.config.guild(ctx.guild).webhook_user_whitelist()
         if user_id not in whitelist:
-            return await ctx.send("That user ID is not in the allowlist")
+            return await ctx.maybe_send_embed("That user ID is not in the allowlist")
         whitelist.remove(user_id)
         await self.config.guild(ctx.guild).webhook_user_whitelist.set(whitelist)
         return await self.show_webhook_whitelist(
@@ -187,7 +189,7 @@ class TriggerSettings(MixinMeta):
     async def trigger_webhook_whitelist_clear(self, ctx: commands.Context):
         """Clear the webhook/app allowlist"""
         await self.config.guild(ctx.guild).webhook_user_whitelist.set([])
-        return await ctx.send("The webhook/app allowlist has been cleared.")
+        return await ctx.maybe_send_embed("The webhook/app allowlist has been cleared.")
 
     async def show_webhook_whitelist(self, ctx: commands.Context, embed: discord.Embed):
         """Display the webhook/app allowlist"""
@@ -227,7 +229,7 @@ class TriggerSettings(MixinMeta):
         """Add a word to the trigger words list (server or target override)."""
         mention, word = parse_target_or_text(mention_or_word, word)
         if not word:
-            return await ctx.send(":warning: No word provided")
+            return await ctx.maybe_send_embed(":warning: No word provided")
 
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         words = list(
@@ -237,7 +239,7 @@ class TriggerSettings(MixinMeta):
             or []
         )
         if word in words:
-            return await ctx.send("That word is already in the list")
+            return await ctx.maybe_send_embed("That word is already in the list")
         words.append(word)
         await config_attr.always_reply_on_words.set(words)
         return await self.show_trigger_always_words(
@@ -260,7 +262,7 @@ class TriggerSettings(MixinMeta):
         """Remove a word from the trigger words list (server or target override)."""
         mention, word = parse_target_or_text(mention_or_word, word)
         if not word:
-            return await ctx.send(":warning: No word provided")
+            return await ctx.maybe_send_embed(":warning: No word provided")
 
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         words = list(
@@ -270,7 +272,7 @@ class TriggerSettings(MixinMeta):
             or []
         )
         if word not in words:
-            return await ctx.send("That word is not in the list")
+            return await ctx.maybe_send_embed("That word is not in the list")
         words.remove(word)
         await config_attr.always_reply_on_words.set(words)
         return await self.show_trigger_always_words(
@@ -291,7 +293,7 @@ class TriggerSettings(MixinMeta):
         """Clear a target's trigger-word override so it inherits broader settings."""
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.always_reply_on_words.set(None)
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"The trigger words on this {mention_type.name.lower()} will now inherit broader settings."
         )
 
@@ -335,14 +337,18 @@ class TriggerSettings(MixinMeta):
         if isinstance(new, discord.Role):
             whitelist = await self.config.guild(ctx.guild).roles_whitelist()
             if new.id in whitelist:
-                return await ctx.send("That role is already in the allowlist")
+                return await ctx.maybe_send_embed(
+                    "That role is already in the allowlist"
+                )
             whitelist.append(new.id)
             await self.config.guild(ctx.guild).roles_whitelist.set(whitelist)
 
         elif isinstance(new, discord.Member):
             whitelist = await self.config.guild(ctx.guild).members_whitelist()
             if new.id in whitelist:
-                return await ctx.send("That user is already in the allowlist")
+                return await ctx.maybe_send_embed(
+                    "That user is already in the allowlist"
+                )
             whitelist.append(new.id)
             await self.config.guild(ctx.guild).members_whitelist.set(whitelist)
 
@@ -361,14 +367,14 @@ class TriggerSettings(MixinMeta):
         if isinstance(rm, discord.Role):
             whitelist = await self.config.guild(ctx.guild).roles_whitelist()
             if rm.id not in whitelist:
-                return await ctx.send("That role is not in the allowlist")
+                return await ctx.maybe_send_embed("That role is not in the allowlist")
             whitelist.remove(rm.id)
             await self.config.guild(ctx.guild).roles_whitelist.set(whitelist)
 
         elif isinstance(rm, discord.Member):
             whitelist = await self.config.guild(ctx.guild).members_whitelist()
             if rm.id not in whitelist:
-                return await ctx.send("That user is not in the allowlist")
+                return await ctx.maybe_send_embed("That user is not in the allowlist")
             whitelist.remove(rm.id)
             await self.config.guild(ctx.guild).members_whitelist.set(whitelist)
         return await self.show_trigger_whitelist(
@@ -381,7 +387,7 @@ class TriggerSettings(MixinMeta):
         """Clear the allowlist so anyone can trigger replies in enabled channels"""
         await self.config.guild(ctx.guild).roles_whitelist.set([])
         await self.config.guild(ctx.guild).members_whitelist.set([])
-        return await ctx.send("The allowlist has been cleared.")
+        return await ctx.maybe_send_embed("The allowlist has been cleared.")
 
     async def show_trigger_whitelist(self, ctx: commands.Context, embed: discord.Embed):
         roles_whitelist = await self.config.guild(ctx.guild).roles_whitelist()

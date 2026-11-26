@@ -18,11 +18,11 @@ from aiuser.settings.utilities import (
     build_prompt_pages,
     confirm_pending,
     set_page_footers,
-    truncate_prompt,
 )
 from aiuser.types.abc import MixinMeta
 from aiuser.types.enums import MentionType
 from aiuser.types.types import COMPATIBLE_MENTIONS
+from aiuser.utils.utilities import truncate_text
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -180,7 +180,7 @@ class PromptSettings(MixinMeta):
                 pages.extend(prompt_pages)
 
         if not pages:
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 f"No {mention_type.name.lower()}s with custom prompts"
             )
 
@@ -219,7 +219,7 @@ class PromptSettings(MixinMeta):
         """Show all presets for the current server"""
         presets = json.loads(await self.config.guild(ctx.guild).presets())
         if not presets:
-            return await ctx.send("No presets set for this server")
+            return await ctx.maybe_send_embed("No presets set for this server")
         pages = []
         for preset, prompt in presets.items():
             pages.extend(
@@ -246,24 +246,24 @@ class PromptSettings(MixinMeta):
         presets = json.loads(await self.config.guild(ctx.guild).presets())
         for channel in ctx.guild.channels:
             if channel.name.lower() == name.lower():
-                return await ctx.send(
-                    f"Cannot use `{name}` as a preset name because it conflicts with <#{channel.id}>."
+                return await ctx.maybe_send_embed(
+                    f"Cannot use `{truncate_text(name)}` as a preset name because it conflicts with <#{channel.id}>."
                 )
         if name in presets:
-            return await ctx.send("That preset name already exists.")
+            return await ctx.maybe_send_embed("That preset name already exists.")
         if len(
             prompt
         ) > await self.config.max_prompt_length() and not await ctx.bot.is_owner(
             ctx.author
         ):
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 f"Prompt too long. Max length is {await self.config.max_prompt_length()} characters."
             )
         presets[name] = prompt
         await self.config.guild(ctx.guild).presets.set(json.dumps(presets))
         embed = discord.Embed(
             title=f"Added preset `{name}`",
-            description=truncate_prompt(prompt),
+            description=truncate_text(prompt),
             color=await ctx.embed_color(),
         )
         await add_prompt_metrics_fields(embed, self.services, ctx, prompt)
@@ -279,14 +279,14 @@ class PromptSettings(MixinMeta):
         """
         presets = json.loads(await self.config.guild(ctx.guild).presets())
         if preset not in presets:
-            return await ctx.send("That preset name does not exist.")
+            return await ctx.maybe_send_embed("That preset name does not exist.")
         if preset == "cynical":
-            return await ctx.send("Cannot remove the default preset.")
+            return await ctx.maybe_send_embed("Cannot remove the default preset.")
         prompt = presets.pop(preset)
         await self.config.guild(ctx.guild).presets.set(json.dumps(presets))
         embed = discord.Embed(
             title=f"Removed preset `{preset}`",
-            description=truncate_prompt(prompt),
+            description=truncate_text(prompt),
             color=await ctx.embed_color(),
         )
         return await ctx.send(embed=embed)
@@ -312,20 +312,22 @@ class PromptSettings(MixinMeta):
         """
         if not prompt and ctx.message.attachments:
             if not ctx.message.attachments[0].filename.endswith(".txt"):
-                return await ctx.send(
+                return await ctx.maybe_send_embed(
                     ":warning: Invalid attachment. Must be a `.txt` file."
                 )
             prompt = (await ctx.message.attachments[0].read()).decode("utf-8")
 
         if not prompt:
-            return await ctx.send("Provide a prompt or attach a `.txt` file.")
+            return await ctx.maybe_send_embed(
+                "Provide a prompt or attach a `.txt` file."
+            )
 
         if (
             prompt
             and len(prompt) > await self.config.max_prompt_length()
             and not await ctx.bot.is_owner(ctx.author)
         ):
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 f":warning: Prompt too long. Max length is {await self.config.max_prompt_length()} characters."
             )
 
@@ -358,7 +360,7 @@ class PromptSettings(MixinMeta):
             return view.message
         embed = discord.Embed(
             title=title,
-            description=f"{truncate_prompt(prompt)}",
+            description=f"{truncate_text(prompt)}",
             color=await ctx.embed_color(),
         )
         await add_prompt_metrics_fields(embed, self.services, ctx, prompt)
@@ -374,6 +376,6 @@ class PromptSettings(MixinMeta):
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.custom_text_prompt.set(None)
         self.services.override_prompt_start_time[ctx.guild.id] = ctx.message.created_at
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"Custom prompt cleared for this {mention_type.name.lower()}."
         )

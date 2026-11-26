@@ -42,14 +42,14 @@ class RandomMessageSettings(MixinMeta):
     async def random_enable(self, ctx: commands.Context):
         """Enable random messages"""
         await self.config.guild(ctx.guild).random_messages_enabled.set(True)
-        return await ctx.send("Random messages enabled.")
+        return await ctx.maybe_send_embed("Random messages enabled.")
 
     @randommessage.command(name="disable")
     @checks.is_owner()
     async def random_disable(self, ctx: commands.Context):
         """Disable random messages"""
         await self.config.guild(ctx.guild).random_messages_enabled.set(False)
-        return await ctx.send("Random messages disabled.")
+        return await ctx.maybe_send_embed("Random messages disabled.")
 
     @randommessage.group(
         name="chance", aliases=["percent"], invoke_without_command=True
@@ -65,9 +65,13 @@ class RandomMessageSettings(MixinMeta):
     async def set_random_rng(self, ctx: commands.Context, percent: float):
         """Set the chance of sending a random message"""
         if percent < 0 or percent > 100:
-            return await ctx.send("Please enter a number between 0 and 100.")
+            return await ctx.maybe_send_embed(
+                "Please enter a number between 0 and 100."
+            )
         await self.config.guild(ctx.guild).random_messages_percent.set(percent / 100)
-        return await ctx.send(f"Random message chance set to `{percent:.2f}%`.")
+        return await ctx.maybe_send_embed(
+            f"Random message chance set to `{percent:.2f}%`."
+        )
 
     @randommessage.group(
         name="prompts", aliases=["topics"], invoke_without_command=True
@@ -77,7 +81,7 @@ class RandomMessageSettings(MixinMeta):
         prompts = await self.config.guild(ctx.guild).random_messages_prompts()
 
         if not prompts:
-            return await ctx.send("The prompt list is empty.")
+            return await ctx.maybe_send_embed("The prompt list is empty.")
 
         formatted_list = "\n".join(
             f"{index + 1}. {prompt}" for index, prompt in enumerate(prompts)
@@ -104,13 +108,13 @@ class RandomMessageSettings(MixinMeta):
         """Add a new prompt to be used in random messages"""
         prompts = await self.config.guild(ctx.guild).random_messages_prompts()
         if prompt in prompts:
-            return await ctx.send("That prompt is already in the list.")
+            return await ctx.maybe_send_embed("That prompt is already in the list.")
         if (
             prompt
             and len(prompt) > await self.config.max_random_prompt_length()
             and not await ctx.bot.is_owner(ctx.author)
         ):
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 f"Topic too long. Max length is {await self.config.max_random_prompt_length()} characters."
             )
         prompts.append(prompt)
@@ -128,7 +132,7 @@ class RandomMessageSettings(MixinMeta):
         """Removes a prompt (by number) from the list"""
         prompts = await self.config.guild(ctx.guild).random_messages_prompts()
         if not (1 <= number <= len(prompts)):
-            return await ctx.send("Invalid topic number.")
+            return await ctx.maybe_send_embed("Invalid topic number.")
         prompt = prompts[number - 1]
         prompts.remove(prompt)
         await self.config.guild(ctx.guild).random_messages_prompts.set(prompts)
@@ -143,4 +147,4 @@ class RandomMessageSettings(MixinMeta):
     async def clear_random_prompts(self, ctx: commands.Context):
         """Clear the random message prompt list"""
         await self.config.guild(ctx.guild).random_messages_prompts.set([])
-        return await ctx.send("Random prompt list cleared.")
+        return await ctx.maybe_send_embed("Random prompt list cleared.")

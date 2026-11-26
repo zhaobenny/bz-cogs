@@ -11,8 +11,9 @@ from aiuser.settings.scope import (
     get_effective_scoped_setting_for_target,
     get_settings_target_scope,
 )
-from aiuser.settings.utilities import add_prompt_metrics_fields, truncate_prompt
+from aiuser.settings.utilities import add_prompt_metrics_fields
 from aiuser.types.types import COMPATIBLE_MENTIONS
+from aiuser.utils.utilities import truncate_text
 
 
 class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
@@ -54,9 +55,8 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
         endpoint = await self.config.guild(
             ctx.guild
         ).function_calling_image_custom_endpoint()
-        return await ctx.maybe_send_embed(
-            f"Image endpoint: `{endpoint or 'Autodetected'}`"
-        )
+        display_endpoint = truncate_text(endpoint) if endpoint else "Autodetected"
+        return await ctx.maybe_send_embed(f"Image endpoint: `{display_endpoint}`")
 
     @imagerequest_endpoint.command(name="set")
     async def imagerequest_endpoint_set(self, ctx: commands.Context, *, endpoint: str):
@@ -64,7 +64,9 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
         await self.config.guild(ctx.guild).function_calling_image_custom_endpoint.set(
             endpoint
         )
-        return await ctx.send(f"Image endpoint set to `{endpoint}`.")
+        return await ctx.maybe_send_embed(
+            f"Image endpoint set to `{truncate_text(endpoint)}`."
+        )
 
     @imagerequest_endpoint.command(name="clear")
     async def imagerequest_endpoint_clear(self, ctx: commands.Context):
@@ -72,25 +74,28 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
         await self.config.guild(ctx.guild).function_calling_image_custom_endpoint.set(
             None
         )
-        return await ctx.send("Image endpoint reset to autodetection.")
+        return await ctx.maybe_send_embed("Image endpoint reset to autodetection.")
 
     @imagerequest.group(name="model", invoke_without_command=True)
     async def imagerequest_model(self, ctx: commands.Context):
         """Show the image generation model"""
         model = await self.config.guild(ctx.guild).function_calling_image_model()
-        return await ctx.maybe_send_embed(f"Image model: `{model or 'Default'}`")
+        display_model = truncate_text(model) if model else "Default"
+        return await ctx.maybe_send_embed(f"Image model: `{display_model}`")
 
     @imagerequest_model.command(name="set")
     async def imagerequest_model_set(self, ctx: commands.Context, *, model: str):
         """Set the image generation model"""
         await self.config.guild(ctx.guild).function_calling_image_model.set(model)
-        return await ctx.send(f"Image model set to `{model}`.")
+        return await ctx.maybe_send_embed(
+            f"Image model set to `{truncate_text(model)}`."
+        )
 
     @imagerequest_model.command(name="clear")
     async def imagerequest_model_clear(self, ctx: commands.Context):
         """Use the default image generation model"""
         await self.config.guild(ctx.guild).function_calling_image_model.set(None)
-        return await ctx.send("Image model reset to the provider default.")
+        return await ctx.maybe_send_embed("Image model reset to the provider default.")
 
     @imagerequest.group(name="preprompt", invoke_without_command=True)
     async def imagerequest_preprompt(
@@ -105,7 +110,7 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
         )
         embed = discord.Embed(
             title=f"Image preprompt on this {mention_type.name.lower()}:",
-            description=truncate_prompt(preprompt) if preprompt else "None",
+            description=truncate_text(preprompt) if preprompt else "None",
             color=await ctx.embed_color(),
         )
         return await ctx.send(embed=embed)
@@ -121,7 +126,7 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
         """Set an image preprompt for the server or a target"""
         PREPROMPT_LIMIT = 3200
         if len(preprompt) > PREPROMPT_LIMIT:
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 f"Preprompt too long ({len(preprompt)}/{PREPROMPT_LIMIT}). Please shorten it to under {PREPROMPT_LIMIT} characters."
             )
 
@@ -129,7 +134,7 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
         await config_attr.function_calling_image_preprompt.set(preprompt)
         e = discord.Embed(
             title=f"Image preprompt set for {mention_type.name.lower()}:",
-            description=truncate_prompt(preprompt),
+            description=truncate_text(preprompt),
             color=await ctx.embed_color(),
         )
         await add_prompt_metrics_fields(e, self.services, ctx, preprompt)
@@ -144,6 +149,6 @@ class ImageRequestFunctionSettings(FunctionToggleHelperMixin):
         """Clear an image preprompt so broader settings can apply"""
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.function_calling_image_preprompt.set(None)
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"Image preprompt cleared for this {mention_type.name.lower()}."
         )

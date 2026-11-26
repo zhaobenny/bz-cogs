@@ -5,6 +5,7 @@ from redbot.core import checks, commands
 
 from aiuser.settings._groups import aiuser
 from aiuser.types.abc import MixinMeta
+from aiuser.utils.utilities import truncate_text
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -27,9 +28,9 @@ class HistorySettings(MixinMeta):
     async def history_backread_set(self, ctx: commands.Context, messages: int):
         """Set the maximum messages used as context"""
         if messages < 0:
-            return await ctx.send("Please enter a non-negative number.")
+            return await ctx.maybe_send_embed("Please enter a non-negative number.")
         await self.config.guild(ctx.guild).messages_backread.set(messages)
-        return await ctx.send(f"Context message limit set to `{messages}`.")
+        return await ctx.maybe_send_embed(f"Context message limit set to `{messages}`.")
 
     @history.group(
         name="token_limit", aliases=["customtokenlimit"], invoke_without_command=True
@@ -45,15 +46,17 @@ class HistorySettings(MixinMeta):
     async def history_maxtokens_set(self, ctx: commands.Context, tokens: int):
         """Set a custom context token limit"""
         if tokens < 1:
-            return await ctx.send("Please enter a positive number.")
+            return await ctx.maybe_send_embed("Please enter a positive number.")
         await self.config.guild(ctx.guild).custom_model_tokens_limit.set(tokens)
-        return await ctx.send(f"Custom context token limit set to `{tokens}`.")
+        return await ctx.maybe_send_embed(
+            f"Custom context token limit set to `{tokens}`."
+        )
 
     @history_maxtokens.command(name="clear")
     async def history_maxtokens_clear(self, ctx: commands.Context):
         """Use the automatically detected context token limit"""
         await self.config.guild(ctx.guild).custom_model_tokens_limit.set(None)
-        return await ctx.send("Custom context token limit cleared.")
+        return await ctx.maybe_send_embed("Custom context token limit cleared.")
 
     @history.group(name="gap", aliases=["time"], invoke_without_command=True)
     async def history_time(self, ctx: commands.Context):
@@ -67,9 +70,9 @@ class HistorySettings(MixinMeta):
     async def history_time_set(self, ctx: commands.Context, seconds: int):
         """Set the maximum gap between context messages"""
         if seconds < 0:
-            return await ctx.send("Please enter a non-negative number.")
+            return await ctx.maybe_send_embed("Please enter a non-negative number.")
         await self.config.guild(ctx.guild).messages_backread_seconds.set(seconds)
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"Maximum context message gap set to `{seconds}` seconds."
         )
 
@@ -87,13 +90,13 @@ class HistorySettings(MixinMeta):
     async def history_compaction_enable(self, ctx: commands.Context):
         """Enable context compaction"""
         await self.config.guild(ctx.guild).compaction_enabled.set(True)
-        return await ctx.send("Context compaction enabled.")
+        return await ctx.maybe_send_embed("Context compaction enabled.")
 
     @history_compaction.command(name="disable")
     async def history_compaction_disable(self, ctx: commands.Context):
         """Disable context compaction"""
         await self.config.guild(ctx.guild).compaction_enabled.set(False)
-        return await ctx.send("Context compaction disabled.")
+        return await ctx.maybe_send_embed("Context compaction disabled.")
 
     @history_compaction.group(name="prompt", invoke_without_command=True)
     async def history_compaction_prompt(self, ctx: commands.Context):
@@ -101,7 +104,7 @@ class HistorySettings(MixinMeta):
         prompt = await self.config.guild(ctx.guild).custom_compaction_prompt()
         embed = discord.Embed(
             title="Context compaction prompt",
-            description=prompt or "Default",
+            description=truncate_text(prompt) if prompt else "Default",
             color=await ctx.embed_color(),
         )
         return await ctx.send(embed=embed)
@@ -114,7 +117,7 @@ class HistorySettings(MixinMeta):
         await self.config.guild(ctx.guild).custom_compaction_prompt.set(prompt)
         embed = discord.Embed(
             title="Custom compaction prompt set",
-            description=prompt[:2000],
+            description=truncate_text(prompt),
             color=await ctx.embed_color(),
         )
         return await ctx.send(embed=embed)
@@ -123,4 +126,4 @@ class HistorySettings(MixinMeta):
     async def history_compaction_prompt_clear(self, ctx: commands.Context):
         """Use the default context compaction prompt"""
         await self.config.guild(ctx.guild).custom_compaction_prompt.set(None)
-        return await ctx.send("Context compaction prompt reset to default.")
+        return await ctx.maybe_send_embed("Context compaction prompt reset to default.")

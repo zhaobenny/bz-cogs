@@ -4,6 +4,8 @@ import xml.etree.ElementTree as ET
 import aiohttp
 from redbot.core import commands
 
+from aiuser.utils.utilities import truncate_text
+
 logger = logging.getLogger("red.bz_cogs.aiuser.tools")
 
 
@@ -33,9 +35,6 @@ async def ask_wolfram_alpha(query: str, app_id: str, ctx: commands.Context):
     if not plaintext:
         return "Wolfram Alpha is unable to answer the question. Try to answer with your own knowledge."
     # lines after the 3rd are often irrelevant in answers such as currency conversion
-    content = "\n".join(plaintext[:3])
-
-    if len(content) > 2000:
-        content = content[: 2000 - 3] + "..."
+    content = truncate_text("\n".join(plaintext[:3]), 2000)
 
     return f"[Wolfram Alpha] [Question: {query}] [Answer:] {content}"

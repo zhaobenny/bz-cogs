@@ -13,6 +13,7 @@ from aiuser.settings.scope import (
 )
 from aiuser.types.abc import MixinMeta
 from aiuser.types.types import COMPATIBLE_MENTIONS
+from aiuser.utils.utilities import truncate_text
 
 
 class ReplySettings(MixinMeta):
@@ -47,7 +48,9 @@ class ReplySettings(MixinMeta):
     ):
         """Set the reply chance for the server or a target"""
         if percent < 0 or percent > 100:
-            return await ctx.send("Please enter a number between 0 and 100.")
+            return await ctx.maybe_send_embed(
+                "Please enter a number between 0 and 100."
+            )
 
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.reply_percent.set(percent / 100)
@@ -65,7 +68,7 @@ class ReplySettings(MixinMeta):
         """Clear a target's reply chance so it inherits broader settings"""
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.reply_percent.set(None)
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"The {mention_type.name.lower()} will now inherit its reply chance."
         )
 
@@ -95,11 +98,11 @@ class ReplySettings(MixinMeta):
     ):
         """Set the minimum message length for the server or a target"""
         if length < 0:
-            return await ctx.send("Please enter a non-negative number.")
+            return await ctx.maybe_send_embed("Please enter a non-negative number.")
 
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.messages_min_length.set(length)
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"Minimum message length on this {mention_type.name.lower()} is now `{length}`."
         )
 
@@ -110,7 +113,7 @@ class ReplySettings(MixinMeta):
         """Clear a target's minimum length so it inherits broader settings"""
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.messages_min_length.set(None)
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"The {mention_type.name.lower()} will now inherit its minimum message length."
         )
 
@@ -118,7 +121,8 @@ class ReplySettings(MixinMeta):
     async def ignore(self, ctx: commands.Context):
         """Show the regex used to ignore messages"""
         pattern = await self.config.guild(ctx.guild).ignore_regex()
-        return await ctx.maybe_send_embed(f"Ignore regex: `{pattern or 'None'}`")
+        display_pattern = truncate_text(pattern) if pattern else "None"
+        return await ctx.maybe_send_embed(f"Ignore regex: `{display_pattern}`")
 
     @ignore.command(name="set")
     async def ignore_set(self, ctx: commands.Context, *, regex_pattern: str):
@@ -128,14 +132,18 @@ class ReplySettings(MixinMeta):
                 ctx.guild, regex_pattern
             )
         except re.error:
-            return await ctx.send("Sorry, but that regex pattern seems to be invalid.")
-        return await ctx.send(f"The ignore regex is now `{regex_pattern}`.")
+            return await ctx.maybe_send_embed(
+                "Sorry, but that regex pattern seems to be invalid."
+            )
+        return await ctx.maybe_send_embed(
+            f"The ignore regex is now `{truncate_text(regex_pattern)}`."
+        )
 
     @ignore.command(name="clear")
     async def ignore_clear(self, ctx: commands.Context):
         """Clear the regex used to ignore messages"""
         await self.services.ignore_regex_cache.set_ignore_regex(ctx.guild, None)
-        return await ctx.send("The ignore regex has been cleared.")
+        return await ctx.maybe_send_embed("The ignore regex has been cleared.")
 
     @reply.group(name="followup")
     @checks.is_owner()
@@ -166,11 +174,13 @@ class ReplySettings(MixinMeta):
     ):
         """Set the conversation follow-up chance"""
         if percent < 0 or percent > 100:
-            return await ctx.send("Please enter a number between 0 and 100.")
+            return await ctx.maybe_send_embed(
+                "Please enter a number between 0 and 100."
+            )
 
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.conversation_reply_percent.set(percent / 100)
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"Follow-up chance on this {mention_type.name.lower()} is now `{percent:.2f}%`."
         )
 
@@ -181,7 +191,7 @@ class ReplySettings(MixinMeta):
         """Clear a target's follow-up chance so it inherits broader settings"""
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.conversation_reply_percent.set(None)
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"The {mention_type.name.lower()} will now inherit its follow-up chance."
         )
 
@@ -209,11 +219,11 @@ class ReplySettings(MixinMeta):
     ):
         """Set the conversation follow-up window"""
         if seconds < 0:
-            return await ctx.send("Please enter a non-negative number.")
+            return await ctx.maybe_send_embed("Please enter a non-negative number.")
 
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.conversation_reply_time.set(seconds)
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"Follow-up window on this {mention_type.name.lower()} is now `{seconds}` seconds."
         )
 
@@ -224,7 +234,7 @@ class ReplySettings(MixinMeta):
         """Clear a target's follow-up window so it inherits broader settings"""
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.conversation_reply_time.set(None)
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"The {mention_type.name.lower()} will now inherit its follow-up window."
         )
 
@@ -243,19 +253,21 @@ class ReplySettings(MixinMeta):
     async def message_burst_idle(self, ctx: commands.Context, seconds: int):
         """Set seconds of quiet before a message burst can close"""
         if seconds <= 0:
-            return await ctx.send("Please enter a positive number.")
+            return await ctx.maybe_send_embed("Please enter a positive number.")
 
         await self.config.guild(ctx.guild).message_burst_idle_seconds.set(seconds)
-        return await ctx.send(f"Message burst idle window is now `{seconds}` seconds.")
+        return await ctx.maybe_send_embed(
+            f"Message burst idle window is now `{seconds}` seconds."
+        )
 
     @message_burst.command(name="max")
     async def message_burst_max(self, ctx: commands.Context, seconds: int):
         """Set maximum seconds a message burst can stay open"""
         if seconds <= 0:
-            return await ctx.send("Please enter a positive number.")
+            return await ctx.maybe_send_embed("Please enter a positive number.")
 
         await self.config.guild(ctx.guild).message_burst_max_seconds.set(seconds)
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"Message burst maximum window is now `{seconds}` seconds."
         )
 
@@ -298,13 +310,13 @@ class ReplySettings(MixinMeta):
         """Clear a target's mention setting so it inherits broader settings"""
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.reply_to_mentions_replies.set(None)
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"The {mention_type.name.lower()} will now inherit its mention reply setting."
         )
 
     async def _set_mentions(self, ctx, mention, enabled: bool):
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.reply_to_mentions_replies.set(enabled)
-        return await ctx.send(
+        return await ctx.maybe_send_embed(
             f"Always reply to mentions on this {mention_type.name.lower()}: `{enabled}`"
         )

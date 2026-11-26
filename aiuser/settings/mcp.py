@@ -11,6 +11,7 @@ from aiuser.mcp.client import MCPAuthError, MCPError, MCPOAuthRequired
 from aiuser.mcp.view import MCPAuthView
 from aiuser.settings.functions.utilities import functions
 from aiuser.types.abc import MixinMeta
+from aiuser.utils.utilities import truncate_text
 
 
 class MCPSettings(MixinMeta):
@@ -24,7 +25,7 @@ class MCPSettings(MixinMeta):
         """List configured MCP servers and if they are currently enabled for the current Discord server."""
         servers = await self.config.mcp_servers()
         if not servers:
-            return await ctx.send("No MCP servers are configured.")
+            return await ctx.maybe_send_embed("No MCP servers are configured.")
         enabled = set(await self.config.guild(ctx.guild).mcp_enabled_servers())
         enabled_pages = list(
             pagify(
@@ -64,12 +65,12 @@ class MCPSettings(MixinMeta):
     async def mcp_add(self, ctx: commands.Context, name: str, url: str):
         """Add an MCP server to the catalog of available servers to use."""
         if not re.fullmatch(r"[a-z0-9_-]{1,32}", name):
-            return await ctx.send(
+            return await ctx.maybe_send_embed(
                 "Server names must use 1-32 lowercase letters, numbers, `_`, or `-`."
             )
         servers = await self.config.mcp_servers()
         if name in servers:
-            return await ctx.send(f"MCP server `{name}` already exists.")
+            return await ctx.maybe_send_embed(f"MCP server `{name}` already exists.")
         servers[name] = {"url": url}
         await self.config.mcp_servers.set(servers)
         embed = discord.Embed(
@@ -132,7 +133,9 @@ class MCPSettings(MixinMeta):
         """Reconfigure the URL a MCP server uses."""
         servers = await self.config.mcp_servers()
         if name not in servers:
-            return await ctx.send(f"Unknown MCP server `{name}`.")
+            return await ctx.maybe_send_embed(
+                f"Unknown MCP server `{truncate_text(name)}`."
+            )
         url_changed = servers[name]["url"] != url
         await self.services.mcp.oauth.forget(name)
         if url_changed:
@@ -187,7 +190,9 @@ class MCPSettings(MixinMeta):
         """Remove an MCP server by name from the available catalog."""
         servers = await self.config.mcp_servers()
         if name not in servers:
-            return await ctx.send(f"Unknown MCP server `{name}`.")
+            return await ctx.maybe_send_embed(
+                f"Unknown MCP server `{truncate_text(name)}`."
+            )
         await self.services.mcp.oauth.forget(name)
         await self.bot.remove_shared_api_tokens(f"mcp_{name}", "token")
         servers.pop(name)
@@ -211,7 +216,9 @@ class MCPSettings(MixinMeta):
         """Show info on the configured MCP server."""
         server = (await self.config.mcp_servers()).get(name)
         if not server:
-            return await ctx.send(f"Unknown MCP server `{name}`.")
+            return await ctx.maybe_send_embed(
+                f"Unknown MCP server `{truncate_text(name)}`."
+            )
         bearer_token = (await self.bot.get_shared_api_tokens(f"mcp_{name}")).get(
             "token"
         )
@@ -286,7 +293,9 @@ class MCPSettings(MixinMeta):
         """
         servers = await self.config.mcp_servers()
         if name not in servers:
-            return await ctx.send(f"Unknown MCP server `{name}`.")
+            return await ctx.maybe_send_embed(
+                f"Unknown MCP server `{truncate_text(name)}`."
+            )
         enabled = await self.config.guild(ctx.guild).mcp_enabled_servers()
         if name not in enabled:
             enabled.append(name)
@@ -303,7 +312,9 @@ class MCPSettings(MixinMeta):
     async def mcp_disable(self, ctx: commands.Context, name: str):
         """Disable an MCP server for this Discord server."""
         if name not in await self.config.mcp_servers():
-            return await ctx.send(f"Unknown MCP server `{name}`.")
+            return await ctx.maybe_send_embed(
+                f"Unknown MCP server `{truncate_text(name)}`."
+            )
         enabled = await self.config.guild(ctx.guild).mcp_enabled_servers()
         if name in enabled:
             await self.config.guild(ctx.guild).mcp_enabled_servers.set(

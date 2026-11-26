@@ -16,6 +16,7 @@ from aiuser.settings.functions.utilities import (
 )
 from aiuser.settings.functions.voice import VoiceFunctionSettings
 from aiuser.settings.functions.weather import WeatherFunctionSettings
+from aiuser.utils.utilities import truncate_text
 
 
 class FunctionCallingSettings(
@@ -122,9 +123,7 @@ class FunctionCallingSettings(
         )
         image_model = await guild_conf.function_calling_image_model() or "Default"
         image_preprompt = await guild_conf.function_calling_image_preprompt()
-        preprompt_display = image_preprompt or "(None)"
-        if len(preprompt_display) > 500:
-            preprompt_display = preprompt_display[:497] + "..."
+        preprompt_display = truncate_text(image_preprompt or "(None)", 500)
 
         image_embed = discord.Embed(title="Image Tool Settings", color=colour)
         image_embed.add_field(
@@ -240,10 +239,12 @@ class FunctionCallingSettings(
     async def functions_max_rounds_set(self, ctx: commands.Context, rounds: int):
         """Set the maximum number of tool call rounds per response."""
         if rounds < 1:
-            return await ctx.send("Please enter a positive number.")
+            return await ctx.maybe_send_embed("Please enter a positive number.")
 
         await self.config.guild(ctx.guild).function_calling_tool_call_rounds.set(rounds)
-        return await ctx.send(f"Maximum tool-call rounds set to `{rounds}`.")
+        return await ctx.maybe_send_embed(
+            f"Maximum tool-call rounds set to `{rounds}`."
+        )
 
     @functions.group(
         name="no_response", aliases=["noresponse"], invoke_without_command=True
@@ -284,7 +285,7 @@ class FunctionCallingSettings(
             self.bot, ctx, "wolfram_alpha", key_name="app_id"
         )
         if key_error:
-            return await ctx.send(key_error)
+            return await ctx.maybe_send_embed(key_error)
         return await self.set_function_group(
             ctx, [names.ASK_WOLFRAM_ALPHA], "Wolfram Alpha", True
         )
@@ -310,9 +311,8 @@ class FunctionCallingSettings(
         """Allow the model to run Python code through Modal."""
         tokens = await self.bot.get_shared_api_tokens("modal")
         if not tokens.get("token_id") and not tokens.get("token_secret"):
-            return await ctx.send(
-                f"[Modal.com](https://modal.com/settings/) API Token not set! Set them using: \n`{ctx.clean_prefix}set api modal token_id,TOKENID` \n`{ctx.clean_prefix}set api modal token_secret,TOKENSECRET`.",
-                suppress_embeds=True,
+            return await ctx.maybe_send_embed(
+                f"[Modal.com](<https://modal.com/settings/>) API Token not set! Set them using: \n`{ctx.clean_prefix}set api modal token_id,TOKENID` \n`{ctx.clean_prefix}set api modal token_secret,TOKENSECRET`."
             )
         return await self.set_function_group(
             ctx, [names.RUN_PYTHON_CODE], "Code runner", True

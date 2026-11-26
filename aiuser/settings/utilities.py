@@ -107,12 +107,6 @@ async def add_prompt_metrics_fields(
         )
 
 
-def truncate_prompt(prompt: str, limit: int = 1900) -> str:
-    if len(prompt) > limit:
-        return prompt[:limit] + "..."
-    return prompt
-
-
 def rank_choices_for_query(choices: list, query: str) -> list:
     query = (query or "").casefold().strip()
     if not query:
