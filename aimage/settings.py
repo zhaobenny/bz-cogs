@@ -433,7 +433,6 @@ class Settings(MixinMeta):
             if command.type == discord.AppCommandType.chat_input
             and command.name in {"imagine", "reimagine"}
         }
-        removed = []
         if global_aimage_commands:
             for command in await tree.fetch_commands(guild=ctx.guild):
                 if (
@@ -445,9 +444,5 @@ class Settings(MixinMeta):
                         await command.delete()
                     except discord.NotFound:
                         continue
-                    removed.append(f"/{command.name}")
         await ctx.message.remove_reaction("🔄", ctx.me)
-        message = f"Force synced {len(synced)} global commands."
-        if removed:
-            message += f" Removed server duplicates: {', '.join(removed)}."
-        await ctx.send(message)
+        await ctx.send(f"Force synced {len(synced)} global commands.")
