@@ -418,13 +418,36 @@ class Settings(MixinMeta):
     @checks.bot_in_a_guild()
     async def forcesync(self, ctx: commands.Context):
         """
-        Resync slash commands / image generators
+        Resync global slash commands and refresh this server's image generators.
 
-        (Mainly a debug tool)
+        Remove server copies of /imagine and /reimagine when their global
+        commands are available.
         """
         await ctx.message.add_reaction("🔄")
         await self._update_autocomplete_cache(ctx)
-        self.bot.tree.copy_global_to(guild=discord.Object(id=ctx.guild.id))
-        synced = await ctx.bot.tree.sync(guild=ctx.guild)
+        tree = ctx.bot.tree
+        synced = await tree.sync()
+        global_aimage_commands = {
+            command.name
+            for command in synced
+            if command.type == discord.AppCommandType.chat_input
+            and command.name in {"imagine", "reimagine"}
+        }
+        removed = []
+        if global_aimage_commands:
+            for command in await tree.fetch_commands(guild=ctx.guild):
+                if (
+                    command.type == discord.AppCommandType.chat_input
+                    and command.name in global_aimage_commands
+                ):
+                    tree.remove_command(command.name, guild=ctx.guild)
+                    try:
+                        await command.delete()
+                    except discord.NotFound:
+                        continue
+                    removed.append(f"/{command.name}")
         await ctx.message.remove_reaction("🔄", ctx.me)
-        await ctx.send(f"Force synced {len(synced)} commands")
+        message = f"Force synced {len(synced)} global commands."
+        if removed:
+            message += f" Removed server duplicates: {', '.join(removed)}."
+        await ctx.send(message)
