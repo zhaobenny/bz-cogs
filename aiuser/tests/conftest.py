@@ -113,7 +113,7 @@ async def redbot_config():
     config.register_channel(**DEFAULT_CHANNEL)
     config.register_guild(**DEFAULT_GUILD)
     config.register_global(**DEFAULT_GLOBAL)
-    config.register_guild(model="openai/gpt-4.1-nano")
+    config.register_guild(model="openai/gpt-6-luna")
 
     yield config
     # Cleanup
