@@ -4,7 +4,6 @@ from redbot.core import commands
 from aiuser.config.defaults import DEFAULT_TOOL_CALL_ROUNDS
 from aiuser.config.model_info import get_model_info
 from aiuser.functions import names
-from aiuser.providers.speech.tts import DEFAULT_MODELS, DEFAULT_VOICES
 from aiuser.settings.functions.imagerequest import ImageRequestFunctionSettings
 from aiuser.settings.functions.memory import MemoryFunctionSettings
 from aiuser.settings.functions.scrape import ScrapeFunctionSettings
@@ -14,9 +13,12 @@ from aiuser.settings.functions.utilities import (
     functions,
     provider_key_error,
 )
+from aiuser.settings.functions.view import (
+    ToolSettingsView,
+    load_tool_settings_snapshot,
+)
 from aiuser.settings.functions.voice import VoiceFunctionSettings
 from aiuser.settings.functions.weather import WeatherFunctionSettings
-from aiuser.utils.utilities import truncate_text
 
 
 class FunctionCallingSettings(
@@ -56,112 +58,11 @@ class FunctionCallingSettings(
 
     @functions.command(name="status", aliases=["config", "show", "settings"])
     async def functions_config(self, ctx: commands.Context):
-        """Show tool configuration overview."""
-        guild_conf = self.config.guild(ctx.guild)
-        enabled = await guild_conf.function_calling()
-        enabled_tools: list = await guild_conf.function_calling_functions() or []
-        tool_call_rounds = (
-            await guild_conf.function_calling_tool_call_rounds()
-            or DEFAULT_TOOL_CALL_ROUNDS
-        )
-
-        groups = {
-            "Weather": [names.IS_DAYTIME, names.GET_WEATHER],
-            "Image Request": [names.IMAGE_REQUEST],
-            "Voice Request": [names.VOICE_REQUEST],
-            "Search": [names.SEARCH_WEB],
-            "Scrape": [names.OPEN_URL],
-            "No Response": [names.DO_NOT_RESPOND],
-            "Wolfram Alpha": [names.ASK_WOLFRAM_ALPHA],
-            "Code Runner": [names.RUN_PYTHON_CODE],
-            "Memory": [names.READ_MEMORY, names.SAVE_MEMORY],
-            "Discord": [names.ADD_REACTION, names.GET_DISCORD_INFO],
-        }
-
-        # Helper for status icon
-        def icon(active: bool) -> str:
-            return "✅" if active else "❌"
-
-        total_tools = sum(len(v) for v in groups.values())
-        enabled_count = sum(1 for v in groups.values() for t in v if t in enabled_tools)
-
-        # Summary / main embed
-        colour = await ctx.embed_color()
-        main_embed = discord.Embed(title="Tool Settings", color=colour)
-        main_embed.add_field(name="Enabled", value=f"{icon(enabled)}", inline=True)
-
-        # Spacer to keep grid layout consistent
-        main_embed.add_field(name="\u200b", value="\u200b", inline=True)
-        main_embed.add_field(name="\u200b", value="\u200b", inline=True)
-
-        # Overview of each group (compact)
-        # Only show a checkmark for whether the group has any enabled tools.
-        for group_name, tool_names in groups.items():
-            group_enabled = any(t in enabled_tools for t in tool_names)
-            main_embed.add_field(
-                name=group_name, value=icon(group_enabled), inline=True
-            )
-
-        # Summary line
-        main_embed.add_field(
-            name="Totals",
-            value=f"Enabled tools: **`{enabled_count}/{total_tools}`**",
-            inline=False,
-        )
-        main_embed.add_field(
-            name="Tool Call Rounds",
-            value=f"`{tool_call_rounds}`",
-            inline=False,
-        )
-
-        embeds = [main_embed]
-
-        image_tools = groups["Image Request"]
-        image_enabled = any(t in enabled_tools for t in image_tools)
-        image_endpoint = (
-            await guild_conf.function_calling_image_custom_endpoint() or "Autodetected"
-        )
-        image_model = await guild_conf.function_calling_image_model() or "Default"
-        image_preprompt = await guild_conf.function_calling_image_preprompt()
-        preprompt_display = truncate_text(image_preprompt or "(None)", 500)
-
-        image_embed = discord.Embed(title="Image Tool Settings", color=colour)
-        image_embed.add_field(
-            name="Enabled", value=f"{icon(image_enabled)}", inline=True
-        )
-        image_embed.add_field(
-            name="Custom Endpoint", value=f"`{image_endpoint}`", inline=True
-        )
-        image_embed.add_field(name="Model", value=f"`{image_model}`", inline=True)
-        image_embed.add_field(
-            name="Preprompt", value=f"```{preprompt_display}```", inline=False
-        )
-        if image_enabled:
-            embeds.append(image_embed)
-
-        voice_tools = groups["Voice Request"]
-        voice_enabled = any(t in enabled_tools for t in voice_tools)
-        voice_provider = await guild_conf.function_calling_voice_provider()
-        voice_provider_key = voice_provider.strip().lower()
-        default_voice_model = DEFAULT_MODELS.get(voice_provider_key)
-        voice_model = (
-            await guild_conf.function_calling_voice_model() or default_voice_model
-        )
-        default_voice = DEFAULT_VOICES.get(voice_provider_key)
-        voice_name = await guild_conf.function_calling_voice() or default_voice
-
-        voice_embed = discord.Embed(title="Voice Tool Settings", color=colour)
-        voice_embed.add_field(
-            name="Enabled", value=f"{icon(voice_enabled)}", inline=True
-        )
-        voice_embed.add_field(name="Provider", value=f"`{voice_provider}`", inline=True)
-        voice_embed.add_field(name="Model", value=f"`{voice_model}`", inline=True)
-        voice_embed.add_field(name="Voice", value=f"`{voice_name}`", inline=True)
-        if voice_enabled:
-            embeds.append(voice_embed)
-
-        for em in embeds:
-            await ctx.send(embed=em)
+        """Show and manage tool configuration."""
+        color = await ctx.embed_color()
+        snapshot = await load_tool_settings_snapshot(self, ctx.guild)
+        view = ToolSettingsView(self, ctx, color, snapshot)
+        view.message = await ctx.send(embed=view.build_embed(), view=view)
 
     @functions.group(name="discord")
     async def functions_discord(self, ctx: commands.Context):
