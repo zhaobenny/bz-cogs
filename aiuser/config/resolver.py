@@ -7,6 +7,7 @@ import discord
 from redbot.core import Config, commands
 
 from aiuser.config.defaults import DEFAULT_PROMPT
+from aiuser.types.enums import ReplyMode
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
 
@@ -74,6 +75,17 @@ class ScopedConfigResolver:
                 return channel_value
 
         return await getattr(self.config.guild(guild), attr_name)()
+
+    async def resolve_reply_mode(
+        self,
+        *,
+        guild: discord.Guild,
+        channel: discord.abc.GuildChannel | None = None,
+    ) -> ReplyMode:
+        """Resolve reply mode at channel > guild scope."""
+        target = channel.parent if isinstance(channel, discord.Thread) else channel
+        raw = await self.resolve("reply_mode", guild=guild, channel=target)
+        return ReplyMode.from_raw(raw)
 
     async def resolve_prompt(
         self,

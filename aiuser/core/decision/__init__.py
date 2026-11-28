@@ -10,11 +10,18 @@ import discord
 from redbot.core import commands
 
 from aiuser.config.defaults import DEFAULT_REPLY_PERCENT
+from aiuser.core.decision.model import (
+    DEFAULT_REPLY_DECISION_POLICY,
+    DecisionOutcome,
+    ReplyDecisionPolicy,
+    should_reply_with_decision_model,
+)
 from aiuser.core.decision.triggers import (
     check_direct_triggers,
     get_conversation_reply_chance,
 )
 from aiuser.core.decision.validators import is_valid_message
+from aiuser.types.enums import ReplyMode
 
 if TYPE_CHECKING:
     from aiuser.core.services import AIUserServices
@@ -23,6 +30,7 @@ if TYPE_CHECKING:
 class BurstMode(IntEnum):
     RANDOM = 0
     CONVERSATION = 1
+    DECISION = 2
 
 
 class ResponseKind(Enum):
@@ -47,6 +55,12 @@ async def decide_response(
     if await check_direct_triggers(services, ctx, message):
         return ReplyDecision(ResponseKind.DIRECT)
 
+    if (
+        await services.resolver.resolve_reply_mode(guild=ctx.guild, channel=ctx.channel)
+        is ReplyMode.DECISION
+    ):
+        return ReplyDecision(ResponseKind.BURST, BurstMode.DECISION, 1.0)
+
     chance = await get_conversation_reply_chance(services, ctx)
     if chance is not None:
         return ReplyDecision(ResponseKind.BURST, BurstMode.CONVERSATION, chance)
@@ -64,3 +78,18 @@ async def get_percentage(services: AIUserServices, ctx: commands.Context) -> flo
     if percentage is None:
         percentage = DEFAULT_REPLY_PERCENT
     return percentage
+
+
+__all__ = [
+    "DEFAULT_REPLY_DECISION_POLICY",
+    "BurstMode",
+    "DecisionOutcome",
+    "ReplyDecision",
+    "ReplyDecisionPolicy",
+    "ReplyMode",
+    "ResponseKind",
+    "decide_response",
+    "get_percentage",
+    "is_valid_message",
+    "should_reply_with_decision_model",
+]
