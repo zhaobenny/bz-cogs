@@ -14,6 +14,11 @@ from redbot.core.data_manager import cog_data_path
 
 from aiuser.config.constants import OPENROUTER_API_V1_URL
 from aiuser.config.defaults import DEFAULT_LLM_MODEL
+from aiuser.providers.decision import (
+    DECISION_PROVIDERS,
+    resolve_decision_provider,
+    resolve_decision_provider_name,
+)
 from aiuser.providers.llm.codex.chatgpt import CODEX_ENDPOINT_MODE
 from aiuser.providers.llm.openai_compatible.client import (
     get_openai_client,
@@ -112,6 +117,139 @@ class OwnerSettings(MixinMeta):
             color=await ctx.embed_color(),
         )
         return await ctx.send(embed=embed)
+
+    @aiuserowner.group(name="decision", invoke_without_command=True)
+    async def decision(self, ctx: commands.Context):
+        """Show or configure the bot-wide decision model backend"""
+        explicit_provider = await self.config.decision_provider()
+        provider_name = await resolve_decision_provider_name(self.services)
+        override_model = await self.config.decision_model()
+        resolved = await resolve_decision_provider(self.services)
+        embed = discord.Embed(
+            title="Decision model settings",
+            color=await ctx.embed_color(),
+        )
+        if explicit_provider:
+            provider_text = f"`{explicit_provider}` (explicit)"
+        elif provider_name:
+            provider_text = f"`{provider_name}` (from chat endpoint)"
+        else:
+            provider_text = "`None` (set an explicit provider for this endpoint)"
+        embed.add_field(name="Provider", value=provider_text, inline=False)
+
+        if resolved is not None:
+            _, model = resolved
+            model_text = f"`{model}`"
+            if not override_model:
+                model_text += " (default)"
+        elif override_model:
+            model_text = f"`{override_model}` (API key missing)"
+        elif provider_name:
+            model_text = f"Missing `{provider_name}` API key"
+        else:
+            model_text = "`Unconfigured`"
+        embed.add_field(name="Model", value=model_text, inline=False)
+        return await ctx.send(embed=embed)
+
+    @decision.group(name="provider", invoke_without_command=True)
+    async def decision_provider(self, ctx: commands.Context):
+        """Show the decision model provider"""
+        explicit = await self.config.decision_provider()
+        active = await resolve_decision_provider_name(self.services)
+        if explicit:
+            text = f"Decision provider: `{explicit}` (explicit override)"
+        elif active:
+            text = f"Decision provider: `{active}` (automatic from chat endpoint)"
+        else:
+            text = "Decision provider: `None` (current chat endpoint has no built-in Decisions API)"
+        return await ctx.maybe_send_embed(text)
+
+    @decision_provider.command(name="set")
+    async def decision_provider_set(self, ctx: commands.Context, provider: str):
+        """Set an explicit decision provider (`openrouter`, `openai`, `typesafe`, or `auto`)"""
+        provider = provider.strip().lower()
+        if provider in {"auto", "clear", "reset"}:
+            previous = await resolve_decision_provider_name(self.services)
+            await self.config.decision_provider.set(None)
+            current = await resolve_decision_provider_name(self.services)
+            if previous != current:
+                await self.config.decision_model.set(None)
+            if current:
+                return await ctx.maybe_send_embed(
+                    f"Decision provider reset to automatic (`{current}` from chat endpoint)."
+                )
+            return await ctx.maybe_send_embed(
+                "Decision provider reset to automatic (unavailable on the current chat endpoint)."
+            )
+
+        if provider not in DECISION_PROVIDERS:
+            choices = ", ".join(f"`{name}`" for name in DECISION_PROVIDERS)
+            return await ctx.maybe_send_embed(
+                f"Available decision providers: {choices}, or `auto`."
+            )
+
+        tokens = await self.bot.get_shared_api_tokens(provider)
+        if not (isinstance(tokens, dict) and tokens.get("api_key")):
+            return await ctx.maybe_send_embed(
+                f"`{provider}` API key not set. Set it with "
+                f"`{ctx.clean_prefix}set api {provider} api_key,VALUE`."
+            )
+
+        previous = await resolve_decision_provider_name(self.services)
+        await self.config.decision_provider.set(provider)
+        if previous != provider:
+            await self.config.decision_model.set(None)
+        default_model = DECISION_PROVIDERS[provider].default_model
+        return await ctx.maybe_send_embed(
+            f"Decision provider set to `{provider}` (model: `{default_model}`)."
+        )
+
+    @decision_provider.command(name="clear", aliases=["reset"])
+    async def decision_provider_clear(self, ctx: commands.Context):
+        """Follow the chat endpoint's own decision provider when available"""
+        return await self.decision_provider_set(ctx, "auto")
+
+    @decision.group(name="model", invoke_without_command=True)
+    async def decision_model(self, ctx: commands.Context):
+        """Show the bot-wide decision model used in decision reply mode"""
+        override = await self.config.decision_model()
+        resolved = await resolve_decision_provider(self.services)
+        embed = discord.Embed(
+            title="Decision model",
+            color=await ctx.embed_color(),
+        )
+        if resolved is not None:
+            provider, model = resolved
+            embed.description = f"`{model}` (via `{provider.name}`)"
+            if not override:
+                embed.set_footer(text="Using the automatic default for this backend")
+        elif override:
+            embed.description = f"`{override}`"
+            embed.set_footer(text="Decision provider is not currently available")
+        else:
+            embed.description = "Automatic (no decision provider currently available)"
+        return await ctx.send(embed=embed)
+
+    @decision_model.command(name="set")
+    async def decision_model_set(self, ctx: commands.Context, *, model: str):
+        """Override the decision model used in decision reply mode"""
+        model = model.strip()
+        if not model:
+            return await ctx.maybe_send_embed("Provide a model name.")
+        await self.config.decision_model.set(model)
+        return await ctx.maybe_send_embed(f"Decision model set to `{model}`.")
+
+    @decision_model.command(name="clear", aliases=["reset"])
+    async def decision_model_clear(self, ctx: commands.Context):
+        """Use the automatic default decision model for the active backend"""
+        await self.config.decision_model.set(None)
+        resolved = await resolve_decision_provider(self.services)
+        if resolved is not None:
+            provider, model = resolved
+            return await ctx.maybe_send_embed(
+                f"Decision model reset to automatic default: `{model}` (via `{provider.name}`)."
+            )
+        return await ctx.maybe_send_embed("Decision model reset to automatic default.")
 
     @aiuserowner.group(
         name="max_prompt_length",

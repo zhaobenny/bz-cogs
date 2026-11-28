@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
 from typing import TYPE_CHECKING
 
 import discord
 from redbot.core import commands
 
 from aiuser.config.model_info import get_model_info
-from aiuser.consent import CONSENT_EMBED_TITLE
 from aiuser.context.conversation import Conversation
 from aiuser.context.converter.converter import MessageConverter
 from aiuser.context.entry import MessageEntry
+from aiuser.context.history import (
+    select_history_window,
+    should_include_message,
+)
 from aiuser.context.relevant_memory import fetch_relevant_memory
 from aiuser.utils.cache import memory_cache_key, tool_calls_cache_key
 from aiuser.utils.utilities import format_variables, mention_to_text
@@ -47,7 +49,6 @@ class ConversationAssembler:
         self.converter = MessageConverter(services, ctx)
         self._optin_by_default = False
         self._seen_ids: set[int] = set()
-        self.summary: str | None = None
         self.undecided_users: set[discord.Member] = set()
         self.compaction_candidates: list[discord.Message] = []
 
@@ -64,14 +65,22 @@ class ConversationAssembler:
         )
         formatted_prompt = await format_variables(self.ctx, prompt, self.services)
 
-        window = await self._select_history_window()
-
-        if self.summary:
+        history = await select_history_window(
+            self.services,
+            self.guild,
+            self.init_message,
+            history_anchor=self.history_anchor,
+        )
+        if history.recent_messages:
+            self.undecided_users = await self.services.consent.get_undecided_users(
+                self.guild, history.recent_messages[:10]
+            )
+        if history.summary:
             await conversation.append_system(
-                f"Summary of conversation before this point:\n{self.summary}",
+                f"Summary of conversation before this point:\n{history.summary}",
                 protected=True,
             )
-        for message in window:
+        for message in history.messages:
             await self._append_message(conversation, message)
         await conversation.append_system(formatted_prompt, protected=True)
         if memory := await self._fetch_relevant_memory():
@@ -118,93 +127,20 @@ class ConversationAssembler:
 
     # --- message conversion / filtering ---
 
-    async def _should_include(self, message: discord.Message) -> bool:
-        if self._is_consent_embed(message):
-            return False
-        if message.id in self._seen_ids:
-            logger.debug("Skipping duplicate message when creating context")
-            return False
-
-        ignore_regex = self.services.ignore_regex_cache.ignore_regex(self.guild.id)
-        if ignore_regex and ignore_regex.search(message.content):
-            return False
-        if not await self.services.bot.allowed_by_whitelist_blacklist(message.author):
-            return False
-        return not (
-            message.author.id != self.bot_id
-            and not self.services.consent.allows(
-                message.author.id, optin_by_default=self._optin_by_default
-            )
-        )
-
     async def _convert_message(
         self, message: discord.Message
     ) -> list[MessageEntry] | None:
-        if not await self._should_include(message):
+        if not await should_include_message(
+            self.services,
+            self.guild.id,
+            message,
+            optin_by_default=self._optin_by_default,
+            seen_ids=self._seen_ids,
+        ):
             return None
 
         self._seen_ids.add(message.id)
         return await self.converter.convert(message) or []
-
-    async def _select_history_window(self) -> list[discord.Message]:
-        """Pick the gap-bounded window of past messages, oldest first."""
-        guild_conf = self.services.config.guild(self.guild)
-        limit = await guild_conf.messages_backread()
-        max_seconds_gap = await guild_conf.messages_backread_seconds()
-
-        start_time = self.services.override_prompt_start_time.get(self.guild.id)
-        if start_time:
-            start_time = start_time - timedelta(seconds=1)
-
-        # fetch one extra message: the last one only bounds the gap walk
-        past_messages = [
-            message
-            async for message in self.history_anchor.channel.history(
-                limit=limit + 1,
-                before=self.history_anchor,
-                after=start_time,
-                oldest_first=False,
-            )
-        ]
-        if not past_messages:
-            return []
-        if not self._within_gap(self.history_anchor, past_messages[0], max_seconds_gap):
-            return []
-        if self.history_anchor.id != self.init_message.id:
-            past_messages = [self.history_anchor] + past_messages
-
-        self.undecided_users = await self.services.consent.get_undecided_users(
-            self.guild, past_messages[:10]
-        )
-
-        window: list[discord.Message] = []
-        for message, older_message in zip(past_messages, past_messages[1:]):
-            window.append(message)
-            if not self._within_gap(message, older_message, max_seconds_gap):
-                break
-        window.reverse()
-
-        return await self._drop_compacted(window)
-
-    async def _drop_compacted(
-        self, window: list[discord.Message]
-    ) -> list[discord.Message]:
-        store = self.services.compaction_store
-        manager = self.services.compaction_manager
-        if not store or not manager:
-            return window
-        if not await self.services.config.guild(self.guild).compaction_enabled():
-            return window
-
-        last_compacted_id = await store.get_last_compacted_message_id(
-            self.guild.id, self.init_message.channel.id
-        )
-        if last_compacted_id:
-            window = [m for m in window if m.id > last_compacted_id]
-        self.summary = await store.get_summary(
-            self.guild.id, self.init_message.channel.id
-        )
-        return window
 
     async def _append_message(
         self, conversation: Conversation, message: discord.Message
@@ -251,17 +187,3 @@ class ConversationAssembler:
             await guild_conf.custom_model_tokens_limit()
             or get_model_info(image_model).token_limit
         )
-
-    def _is_consent_embed(self, message: discord.Message) -> bool:
-        return (
-            message.author.id == self.bot_id
-            and message.embeds
-            and message.embeds[0].title == CONSENT_EMBED_TITLE
-        )
-
-    @staticmethod
-    def _within_gap(
-        message: discord.Message, next_message: discord.Message, max_seconds_gap: int
-    ) -> bool:
-        seconds_diff = abs(message.created_at - next_message.created_at).total_seconds()
-        return seconds_diff <= max_seconds_gap

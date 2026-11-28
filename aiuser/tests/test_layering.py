@@ -11,18 +11,18 @@ AIUSER_ROOT = Path(__file__).parent.parent
 
 # package -> layer; lower layers must not import higher ones
 LAYERS = {
-    "config": 0,
-    "types": 1,
-    "utils": 1,
-    "consent": 2,
-    "providers": 2,  # llm/speech/vectorstore backend clients
-    "functions": 3,
-    "mcp": 3,
-    "context": 4,
-    "response": 5,
-    "settings": 6,
-    "dashboard": 6,
-    "core": 7,  # composition root: builds services and attaches the UI mixins
+    "types": 0,
+    "config": 1,
+    "utils": 2,
+    "consent": 3,
+    "providers": 3,  # llm/speech/vectorstore backend clients
+    "functions": 4,
+    "mcp": 4,
+    "context": 5,
+    "response": 6,
+    "settings": 7,
+    "dashboard": 7,
+    "core": 8,  # composition root: builds services and attaches the UI mixins
 }
 
 

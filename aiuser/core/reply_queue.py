@@ -4,7 +4,7 @@ import asyncio
 import logging
 import random
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum, auto
 from typing import TYPE_CHECKING
 
@@ -16,7 +16,12 @@ from aiuser.config.defaults import (
     DEFAULT_MESSAGE_BURST_IDLE_SECONDS,
     DEFAULT_MESSAGE_BURST_MAX_SECONDS,
 )
-from aiuser.core.decision import BurstMode, ResponseKind, is_valid_message
+from aiuser.core.decision import (
+    BurstMode,
+    ResponseKind,
+    is_valid_message,
+    should_reply_with_decision_model,
+)
 from aiuser.response import build_and_respond
 from aiuser.utils.utilities import wait_for_embed
 
@@ -31,6 +36,7 @@ class ResponseRequest:
     kind: ResponseKind
     channel_id: int
     message_id: int
+    burst_mode: BurstMode = BurstMode.RANDOM
     include_latest_channel_context: bool = False
 
 
@@ -130,6 +136,16 @@ class ChannelReplyState:
         elapsed = abs((message_at - self.last_bot_reply_at).total_seconds())
         return self.llm_session_id if elapsed <= max_gap else None
 
+    def seconds_since_last_reply(self, message_at: datetime) -> float | None:
+        if self.last_bot_reply_at is None:
+            return None
+        if message_at.tzinfo is None:
+            message_at = message_at.replace(tzinfo=timezone.utc)
+        last_at = self.last_bot_reply_at
+        if last_at.tzinfo is None:
+            last_at = last_at.replace(tzinfo=timezone.utc)
+        return max(0.0, (message_at - last_at).total_seconds())
+
     def _transition_reply(self, expected: ReplyPhase, new: ReplyPhase):
         # Caller holds self.lock.
         if self.phase is not expected:
@@ -211,7 +227,7 @@ class ChannelReplyState:
             self.message_burst = None
             burst.task = None
 
-        if random.random() > burst.percentage:
+        if burst.mode is not BurstMode.DECISION and random.random() > burst.percentage:
             return
 
         await self.enqueue(
@@ -220,6 +236,7 @@ class ChannelReplyState:
                 kind=ResponseKind.BURST,
                 channel_id=channel_id,
                 message_id=burst.message_id,
+                burst_mode=burst.mode,
             ),
         )
 
@@ -342,6 +359,31 @@ async def execute_response_request(
     try:
         if not (await is_valid_message(services, ctx)):
             return
+
+        if (
+            request.kind is ResponseKind.BURST
+            and request.burst_mode is BurstMode.DECISION
+        ):
+            state = services.reply_channel_states.get(channel.id)
+            seconds_since_bot_reply = (
+                state.seconds_since_last_reply(message.created_at)
+                if state is not None
+                else None
+            )
+
+            outcome = await should_reply_with_decision_model(
+                services,
+                ctx,
+                seconds_since_bot_reply=seconds_since_bot_reply,
+            )
+            if not outcome.should_reply:
+                return
+            if (
+                state
+                and state.pending_request
+                and state.pending_request.kind is ResponseKind.DIRECT
+            ):
+                return
 
         if not ctx.interaction and URL_PATTERN.search(ctx.message.content):
             ctx = await wait_for_embed(ctx)

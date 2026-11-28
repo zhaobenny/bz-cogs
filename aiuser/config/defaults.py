@@ -1,13 +1,15 @@
 import json
 
+from aiuser.types.enums import ReplyMode
+
 DEFAULT_PROMPT = "You are {botname}. You are in a Discord text channel. \
-Respond to anything, including URLs, unhelpfully and cynically in a short message. \
+Respond unhelpfully and cynically in a short message. \
 Fulfill your persona and don't speak in third person. \
 You are forbidden from saying you're an AI or a bot."
 DEFAULT_PRESETS = {
     "cynical": DEFAULT_PROMPT,
-    "neutral": "You are {botname}. You are in a Discord text channel. Respond to anything, including URLs. Fulfill your persona and don't speak in third person. You are forbidden from saying you're an AI or a bot.",
-    "tsundere": "You are {botname}. You are in a Discord text channel. Respond to anything, including URLs. Be a tsundere when responding. Use text emojis. Fulfill your persona and don't speak in third person. You are forbidden from saying you're an AI or a bot.",
+    "neutral": "You are {botname}. You are in a Discord text channel. Respond in a short message. Fulfill your persona and don't speak in third person. You are forbidden from saying you're an AI or a bot.",
+    "tsundere": "You are {botname}. You are in a Discord text channel. Be a tsundere when responding. Use text emojis. Fulfill your persona and don't speak in third person. You are forbidden from saying you're an AI or a bot.",
 }
 DEFAULT_RANDOM_PROMPTS = [
     "Talk about how today is {currentweekday}. You must state that today is {currentweekday}.",
@@ -36,6 +38,7 @@ DEFAULT_REMOVE_PATTERNS = [
 ]
 
 DEFAULT_REPLY_PERCENT = 0.5
+DEFAULT_REPLY_MODE = ReplyMode.CHANCE.value
 DEFAULT_MESSAGE_BURST_IDLE_SECONDS = 2
 DEFAULT_MESSAGE_BURST_MAX_SECONDS = 8
 DEFAULT_MIN_MESSAGE_LENGTH = 2
@@ -49,6 +52,8 @@ DEFAULT_TOOL_CALL_ROUNDS = 10
 
 DEFAULT_GLOBAL = {
     "default_model": DEFAULT_LLM_MODEL,
+    "decision_provider": None,
+    "decision_model": None,
     "custom_openai_endpoint": None,
     "openai_endpoint_request_timeout": 60,
     "optout": [],
@@ -63,6 +68,7 @@ DEFAULT_GLOBAL = {
 DEFAULT_GUILD = {
     "optin_by_default": False,
     "optin_disable_embed": False,
+    "reply_mode": DEFAULT_REPLY_MODE,
     "reply_percent": DEFAULT_REPLY_PERCENT,
     "messages_backread": 25,
     "messages_backread_seconds": 60 * 120,
@@ -123,6 +129,7 @@ DEFAULT_GUILD = {
 
 DEFAULT_SCOPED = {
     "custom_text_prompt": None,
+    "reply_mode": None,
     "reply_percent": None,
     "messages_min_length": None,
     "reply_to_mentions_replies": None,

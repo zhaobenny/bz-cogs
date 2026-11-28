@@ -165,7 +165,6 @@ async def test_prune_messages_on_over_limit(
     from aiuser.tests.conftest import text_step, tool_call_step
     from aiuser.utils.utilities import encode_text_to_tokens
 
-    _ = backend.make_message("yo", test_member, test_channel)
     _ = backend.make_message("What's the meaning to life?", test_member, test_channel)
     _ = backend.make_message("42", bot.user, test_channel)
     trigger = backend.make_message(
