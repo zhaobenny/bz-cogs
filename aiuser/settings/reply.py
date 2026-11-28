@@ -6,13 +6,22 @@ from typing import Optional
 import discord
 from redbot.core import checks, commands
 
+from aiuser.providers.decision import (
+    resolve_decision_provider,
+    resolve_decision_provider_name,
+)
 from aiuser.settings._groups import aiuser
 from aiuser.settings.scope import (
     get_effective_scoped_setting_for_target,
     get_settings_target_scope,
 )
 from aiuser.types.abc import MixinMeta
-from aiuser.types.types import COMPATIBLE_MENTIONS
+from aiuser.types.enums import ReplyMode
+from aiuser.types.types import (
+    COMPATIBLE_CHANNEL_TYPES,
+    COMPATIBLE_CHANNELS,
+    COMPATIBLE_MENTIONS,
+)
 from aiuser.utils.utilities import truncate_text
 
 
@@ -39,6 +48,24 @@ class ReplySettings(MixinMeta):
             f"`{percent * 100:.2f}%`"
         )
 
+    async def _refuse_if_decision_mode(
+        self, ctx: commands.Context, mention: COMPATIBLE_MENTIONS | None
+    ) -> bool:
+        channel_for_mode = (
+            mention if isinstance(mention, COMPATIBLE_CHANNEL_TYPES) else None
+        )
+        effective_mode = await self.services.resolver.resolve_reply_mode(
+            guild=ctx.guild, channel=channel_for_mode
+        )
+        if effective_mode is ReplyMode.DECISION:
+            target_label = "this channel" if channel_for_mode else "this server"
+            await ctx.maybe_send_embed(
+                f"Reply mode on {target_label} is currently `{ReplyMode.DECISION.value}`. "
+                f"Switch with `{ctx.clean_prefix}aiuser reply mode {ReplyMode.CHANCE.value}` first."
+            )
+            return True
+        return False
+
     @reply_chance.command(name="set")
     async def reply_chance_set(
         self,
@@ -51,6 +78,9 @@ class ReplySettings(MixinMeta):
             return await ctx.maybe_send_embed(
                 "Please enter a number between 0 and 100."
             )
+
+        if await self._refuse_if_decision_mode(ctx, mention):
+            return
 
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.reply_percent.set(percent / 100)
@@ -178,6 +208,9 @@ class ReplySettings(MixinMeta):
                 "Please enter a number between 0 and 100."
             )
 
+        if await self._refuse_if_decision_mode(ctx, mention):
+            return
+
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.conversation_reply_percent.set(percent / 100)
         return await ctx.maybe_send_embed(
@@ -221,6 +254,9 @@ class ReplySettings(MixinMeta):
         if seconds < 0:
             return await ctx.maybe_send_embed("Please enter a non-negative number.")
 
+        if await self._refuse_if_decision_mode(ctx, mention):
+            return
+
         mention_type, config_attr = get_settings_target_scope(self, ctx, mention)
         await config_attr.conversation_reply_time.set(seconds)
         return await ctx.maybe_send_embed(
@@ -236,6 +272,108 @@ class ReplySettings(MixinMeta):
         await config_attr.conversation_reply_time.set(None)
         return await ctx.maybe_send_embed(
             f"The {mention_type.name.lower()} will now inherit its follow-up window."
+        )
+
+    @reply.group(name="mode", invoke_without_command=True)
+    @checks.is_owner()
+    async def reply_mode(
+        self,
+        ctx: commands.Context,
+        channel: Optional[COMPATIBLE_CHANNELS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
+    ):
+        """Show whether replies use percentage chance or a decision model"""
+        mention_type, _ = get_settings_target_scope(self, ctx, channel)
+        mode = await self.services.resolver.resolve_reply_mode(
+            guild=ctx.guild, channel=channel
+        )
+        embed = discord.Embed(
+            title=f"Reply mode on this {mention_type.name.lower()}",
+            description=f"`{mode.value}`",
+            color=await ctx.embed_color(),
+        )
+        if mode is ReplyMode.DECISION:
+            resolved = await resolve_decision_provider(self.services)
+            if resolved is not None:
+                provider, model = resolved
+                embed.add_field(
+                    name="Decision Backend",
+                    value=f"`{provider.name}` (`{model}`)",
+                    inline=False,
+                )
+            else:
+                provider_name = await resolve_decision_provider_name(self.services)
+                if provider_name:
+                    missing_msg = (
+                        f"Set the `{provider_name}` API key with "
+                        f"`{ctx.clean_prefix}set api {provider_name} api_key,VALUE`."
+                    )
+                else:
+                    missing_msg = (
+                        "Current chat endpoint has no Decisions API. Configure one explicitly with "
+                        f"`{ctx.clean_prefix}aiuserowner decision provider set <openrouter|openai|typesafe>`."
+                    )
+                embed.add_field(
+                    name="Decision Backend Unavailable",
+                    value=missing_msg,
+                    inline=False,
+                )
+        return await ctx.send(embed=embed)
+
+    @reply_mode.command(name="chance")
+    async def reply_mode_chance(
+        self,
+        ctx: commands.Context,
+        channel: Optional[COMPATIBLE_CHANNELS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
+    ):
+        """Use percentage-based reply chance for the server or a channel"""
+        mention_type, config_attr = get_settings_target_scope(self, ctx, channel)
+        await config_attr.reply_mode.set(ReplyMode.CHANCE.value)
+        return await ctx.maybe_send_embed(
+            f"Reply mode on this {mention_type.name.lower()} is now `{ReplyMode.CHANCE.value}`."
+        )
+
+    @reply_mode.command(name="decision")
+    async def reply_mode_decision(
+        self,
+        ctx: commands.Context,
+        channel: Optional[COMPATIBLE_CHANNELS] = None,  # noqa: UP045 - Red evaluates command converters on Python 3.9
+    ):
+        """Use a decision model to decide when to reply for the server or a channel"""
+        resolved = await resolve_decision_provider(self.services)
+        if resolved is None:
+            provider_name = await resolve_decision_provider_name(self.services)
+            if provider_name:
+                return await ctx.maybe_send_embed(
+                    f"Decision mode needs the `{provider_name}` API key. "
+                    f"Set it with `{ctx.clean_prefix}set api {provider_name} api_key,VALUE`."
+                )
+            return await ctx.maybe_send_embed(
+                "The current chat endpoint does not have a built-in Decisions API. "
+                "Set an explicit decision provider with "
+                f"`{ctx.clean_prefix}aiuserowner decision provider set <openrouter|openai|typesafe>` first."
+            )
+
+        provider, model = resolved
+        mention_type, config_attr = get_settings_target_scope(self, ctx, channel)
+        await config_attr.reply_mode.set(ReplyMode.DECISION.value)
+        embed = discord.Embed(
+            title=f"Reply mode on this {mention_type.name.lower()} is now `{ReplyMode.DECISION.value}`",
+            description=f"Using `{provider.name}` (`{model}`).",
+            color=await ctx.embed_color(),
+        )
+        return await ctx.send(embed=embed)
+
+    @reply_mode.command(name="clear")
+    async def reply_mode_clear(
+        self,
+        ctx: commands.Context,
+        channel: COMPATIBLE_CHANNELS,
+    ):
+        """Clear a channel's reply mode so it inherits the server setting"""
+        mention_type, config_attr = get_settings_target_scope(self, ctx, channel)
+        await config_attr.reply_mode.set(None)
+        return await ctx.maybe_send_embed(
+            f"The {mention_type.name.lower()} will now inherit the server reply mode."
         )
 
     @reply.group(name="burst", invoke_without_command=True)

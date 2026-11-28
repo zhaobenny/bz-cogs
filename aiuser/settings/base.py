@@ -11,6 +11,7 @@ from redbot.core.utils.menus import SimpleMenu
 from aiuser.config.constants import CHANNEL_MENTION_OR_ID_PATTERN
 from aiuser.config.defaults import DEFAULT_STT_PROVIDER
 from aiuser.config.model_info import get_model_info
+from aiuser.providers.decision import resolve_decision_provider
 from aiuser.providers.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
     get_openai_compat_kind,
@@ -31,6 +32,7 @@ from aiuser.settings.response import ResponseSettings
 from aiuser.settings.triggers import TriggerSettings
 from aiuser.settings.utilities import rank_choices_for_query
 from aiuser.types.abc import MixinMeta
+from aiuser.types.enums import ReplyMode
 from aiuser.types.types import COMPATIBLE_CHANNELS
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -155,11 +157,25 @@ class Settings(
 
         model = config["model"] or await self.config.default_model()
         main_embed.add_field(name="Model", inline=True, value=f"`{model}`")
+
+        reply_mode = ReplyMode.from_raw(config.get("reply_mode"))
         main_embed.add_field(
-            name="Server Reply Chance",
-            inline=True,
-            value=f"`{config['reply_percent'] * 100:.2f}`%",
+            name="Reply Mode", inline=True, value=f"`{reply_mode.value}`"
         )
+        if reply_mode is ReplyMode.DECISION:
+            resolved = await resolve_decision_provider(self.services)
+            if resolved is not None:
+                dec_provider, dec_model = resolved
+                dec_value = f"`{dec_model}` (`{dec_provider.name}`)"
+            else:
+                dec_value = "`Unconfigured`"
+            main_embed.add_field(name="Decision Model", inline=True, value=dec_value)
+        else:
+            main_embed.add_field(
+                name="Server Reply Chance",
+                inline=True,
+                value=f"`{config['reply_percent'] * 100:.2f}`%",
+            )
 
         main_embed.add_field(
             name="Opt In By Default",
