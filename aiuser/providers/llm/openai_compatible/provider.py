@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from openai import AsyncOpenAI
@@ -19,6 +20,249 @@ from aiuser.providers.llm.openai_compatible.endpoints import (
 
 ASSISTANT_EXTRA_FIELD_NAMES = ("reasoning", "reasoning_details")
 
+_OPENAI_EXCLUDED_TOKENS = frozenset(
+    {
+        "audio",
+        "realtime",
+        "live",
+        "transcribe",
+        "tts",
+        "diarize",
+        "image",
+        "instruct",
+        "moderation",
+        "embedding",
+        "whisper",
+        "sora",
+    }
+)
+_OPENAI_SPECIALIZED_TOKENS = frozenset(
+    {"codex", "search", "research", "computer", "oss", "healthcare"}
+)
+_OPENAI_SPECIALIZED_FILLER_TOKENS = _OPENAI_SPECIALIZED_TOKENS | frozenset(
+    {"api", "deep", "use"}
+)
+_OPENAI_O_SERIES_RE = re.compile(r"^o(\d+)(?:\.(\d+))?(?:[-_](.*))?$")
+_OPENAI_GPT_SERIES_RE = re.compile(
+    r"^(chat)?gpt[-_.]?(\d+)(?:\.(\d+))?(o)?(?:[-_](.*))?$"
+)
+_OPENAI_ISO_DATE_RE = re.compile(r"(?:^|[-_])(\d{4})[-_](\d{2})[-_](\d{2})(?=$|[-_])")
+_OPENAI_LEGACY_DATE_RE = re.compile(
+    r"(?:^|[-_])(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])(?=$|[-_])"
+)
+_OPENAI_SERIES_PRIORITY = {"gpt": 1, "o": 0, "other": -1}
+
+
+def _openai_base_model_id(lowered: str) -> tuple[str, bool]:
+    if not lowered.startswith("ft:"):
+        return lowered, False
+    parts = lowered.split(":", 2)
+    base = parts[1] if len(parts) >= 2 else lowered[3:]
+    return base, True
+
+
+def _is_openai_chat_model(model_id: str) -> bool:
+    lowered = model_id.strip().lower()
+    if not lowered:
+        return False
+    base_id, _ = _openai_base_model_id(lowered)
+    if "gpt" not in base_id and not _OPENAI_O_SERIES_RE.match(base_id):
+        return False
+    tokens = set(re.split(r"[-_:.]+", base_id))
+    return not _OPENAI_EXCLUDED_TOKENS.intersection(tokens)
+
+
+def _parse_openai_model(model_id: str, created: int) -> dict[str, Any]:
+    lowered = model_id.strip().lower()
+    base_id, is_finetune = _openai_base_model_id(lowered)
+
+    is_snapshot = False
+    snapshot_date = (0, 0, 0)
+    unpinned_id = base_id
+
+    iso_match = _OPENAI_ISO_DATE_RE.search(unpinned_id)
+    if iso_match:
+        is_snapshot = True
+        snapshot_date = (
+            int(iso_match.group(1)),
+            int(iso_match.group(2)),
+            int(iso_match.group(3)),
+        )
+        unpinned_id = (
+            unpinned_id[: iso_match.start()] + unpinned_id[iso_match.end() :]
+        ).strip("-_")
+    else:
+        legacy_match = _OPENAI_LEGACY_DATE_RE.search(unpinned_id)
+        if legacy_match:
+            is_snapshot = True
+            unpinned_id = (
+                unpinned_id[: legacy_match.start()] + unpinned_id[legacy_match.end() :]
+            ).strip("-_")
+
+    is_chatgpt = False
+    gpt_match = _OPENAI_GPT_SERIES_RE.match(unpinned_id)
+    o_match = _OPENAI_O_SERIES_RE.match(unpinned_id)
+    if gpt_match:
+        series = "gpt"
+        is_chatgpt = bool(gpt_match.group(1))
+        major = int(gpt_match.group(2))
+        minor = int(gpt_match.group(3) or 0)
+        is_o_suffix = bool(gpt_match.group(4))
+        rest = gpt_match.group(5) or ""
+        rest_tokens = [token for token in re.split(r"[-_]+", rest) if token]
+        subgen = 2 if is_o_suffix else (1 if "turbo" in rest_tokens else 0)
+        version = (major, minor, subgen)
+        family_key: tuple[Any, ...] = (series, version)
+    elif o_match:
+        series = "o"
+        major = int(o_match.group(1))
+        minor = int(o_match.group(2) or 0)
+        rest = o_match.group(3) or ""
+        rest_tokens = [token for token in re.split(r"[-_]+", rest) if token]
+        version = (major, minor, 0)
+        family_key = (series, version)
+    else:
+        series = "other"
+        rest_tokens = [token for token in re.split(r"[-_]+", unpinned_id) if token]
+        version = (0, 0, 0)
+        family_key = (series, unpinned_id)
+
+    is_specialized = bool(_OPENAI_SPECIALIZED_TOKENS.intersection(rest_tokens))
+    if is_finetune:
+        tier = 3
+    elif is_snapshot:
+        tier = 2
+    elif is_specialized:
+        tier = 1
+    else:
+        tier = 0
+
+    is_preview = 1 if "preview" in rest_tokens else 0
+    modifier_tokens = [
+        token
+        for token in rest_tokens
+        if token not in _OPENAI_SPECIALIZED_FILLER_TOKENS
+        and token not in {"turbo", "preview"}
+    ]
+    if is_chatgpt or "chat" in modifier_tokens or "latest" in modifier_tokens:
+        size_rank = 6
+    elif not modifier_tokens:
+        size_rank = 0
+    elif "astra" in modifier_tokens:
+        size_rank = 1
+    elif "sol" in modifier_tokens:
+        size_rank = 2
+    elif "terra" in modifier_tokens:
+        size_rank = 3
+    elif "mini" in modifier_tokens or "luna" in modifier_tokens:
+        size_rank = 4
+    elif "nano" in modifier_tokens:
+        size_rank = 5
+    elif "pro" in modifier_tokens:
+        size_rank = 7
+    elif "max" in modifier_tokens:
+        size_rank = 8
+    else:
+        size_rank = 9
+
+    return {
+        "id": model_id,
+        "lowered": lowered,
+        "created": created,
+        "tier": tier,
+        "is_specialized": is_specialized,
+        "series": series,
+        "version": version,
+        "family_key": family_key,
+        "is_preview": is_preview,
+        "size_rank": size_rank,
+        "snapshot_date": snapshot_date,
+    }
+
+
+def _sort_openai_models(raw_models: list[Any]) -> list[str]:
+    deduped: dict[str, int] = {}
+    for model in raw_models:
+        model_id = getattr(model, "id", None)
+        if not isinstance(model_id, str) or not _is_openai_chat_model(model_id):
+            continue
+        raw_created = getattr(model, "created", 0)
+        created = (
+            int(raw_created)
+            if isinstance(raw_created, (int, float))
+            and not isinstance(raw_created, bool)
+            else 0
+        )
+        if model_id not in deduped or created > deduped[model_id]:
+            deduped[model_id] = created
+
+    parsed = [
+        _parse_openai_model(model_id, created) for model_id, created in deduped.items()
+    ]
+
+    # Pick each family's representative creation timestamp from its highest-priority
+    # canonical model (ignoring fine-tunes) so variants stay grouped together.
+    family_best: dict[tuple[Any, ...], tuple[int, int, int, int]] = {}
+    for entry in parsed:
+        if entry["tier"] == 3:
+            continue
+        candidate = (
+            entry["tier"],
+            entry["is_preview"],
+            entry["size_rank"],
+            -entry["created"],
+        )
+        current = family_best.get(entry["family_key"])
+        if current is None or candidate < current:
+            family_best[entry["family_key"]] = candidate
+
+    family_created: dict[tuple[Any, ...], int] = {
+        family_key: -best[3] for family_key, best in family_best.items()
+    }
+
+    # Keep version ordering monotonic within each versioned series even if a newer
+    # version was pre-registered slightly earlier in OpenAI's catalog.
+    for series in ("gpt", "o"):
+        series_families = sorted(
+            (key for key in family_created if key[0] == series),
+            key=lambda key: key[1],
+        )
+        running_max = 0
+        for key in series_families:
+            running_max = max(running_max, family_created[key])
+            family_created[key] = running_max
+
+    def sort_key(entry: dict[str, Any]) -> tuple[Any, ...]:
+        tier = entry["tier"]
+        if tier == 3:
+            return (
+                3,
+                0,
+                -entry["created"],
+                0,
+                (),
+                0,
+                0,
+                (),
+                -entry["created"],
+                entry["lowered"],
+            )
+        return (
+            tier,
+            1 if (tier == 2 and entry["is_specialized"]) else 0,
+            -family_created.get(entry["family_key"], entry["created"]),
+            -_OPENAI_SERIES_PRIORITY[entry["series"]],
+            tuple(-part for part in entry["version"]),
+            entry["is_preview"],
+            entry["size_rank"],
+            tuple(-part for part in entry["snapshot_date"]),
+            -entry["created"],
+            entry["lowered"],
+        )
+
+    parsed.sort(key=sort_key)
+    return [entry["id"] for entry in parsed]
+
 
 async def list_openai_compat_models(
     openai_client: AsyncOpenAI, endpoint_url: str | None
@@ -30,14 +274,7 @@ async def list_openai_compat_models(
         res = await openai_client.models.list()
 
     if endpoint_kind is CompatEndpointKind.OPENAI:
-        return [
-            model.id
-            for model in res.data
-            if isinstance(model.id, str)
-            and ("gpt" in model.id or "o3" in model.id.lower())
-            and "audio" not in model.id.lower()
-            and "realtime" not in model.id.lower()
-        ]
+        return _sort_openai_models(list(res.data))
 
     if endpoint_kind is CompatEndpointKind.OPENROUTER:
         models = []

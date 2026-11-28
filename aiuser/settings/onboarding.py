@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import re
 from enum import Enum, IntEnum
 
 import discord
@@ -288,17 +287,6 @@ class OnboardingView(discord.ui.View):
             )
             current = self.model or self.settings.get("model") or self.default_model
 
-            def version(item):
-                match = re.search(
-                    r"(?:gpt|claude|gemini)(?:[-_.](?:sonnet|opus|haiku|flash|pro))?[-_.]?(\d+(?:\.\d+|[-_]\d{1,2}(?!\d)){0,2})",
-                    item.lower(),
-                )
-                return (
-                    tuple(int(part) for part in re.findall(r"\d+", match.group(1)))
-                    if match
-                    else ()
-                )
-
             if self.provider_choice == "openrouter":
                 pinned = list(
                     dict.fromkeys(
@@ -309,16 +297,6 @@ class OnboardingView(discord.ui.View):
                 )
                 choices = pinned + [item for item in choices if item not in pinned]
             elif self.provider_choice == "openai":
-                choices.sort(
-                    key=lambda item: (
-                        version(item),
-                        not bool(
-                            re.search(r"[-_]\d{4}[-_]\d{2}[-_]\d{2}(?:$|:)", item)
-                        ),
-                        item.lower(),
-                    ),
-                    reverse=True,
-                )
                 pinned = list(
                     dict.fromkeys(
                         item
