@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 from typing import Union
 
@@ -9,15 +8,12 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import SimpleMenu
 
 from aiuser.config.constants import CHANNEL_MENTION_OR_ID_PATTERN
-from aiuser.config.defaults import DEFAULT_STT_PROVIDER
 from aiuser.config.model_info import get_model_info
-from aiuser.providers.decision import resolve_decision_provider
 from aiuser.providers.llm.openai_compatible.endpoints import (
     CompatEndpointKind,
     get_openai_compat_kind,
 )
 from aiuser.providers.llm.registry import list_llm_models
-from aiuser.providers.speech.stt import DEFAULT_MODELS as STT_DEFAULT_MODELS
 from aiuser.settings.functions.base import FunctionCallingSettings
 from aiuser.settings.history import HistorySettings
 from aiuser.settings.mcp import MCPSettings
@@ -29,10 +25,10 @@ from aiuser.settings.prompt import PromptSettings
 from aiuser.settings.random_message import RandomMessageSettings
 from aiuser.settings.reply import ReplySettings
 from aiuser.settings.response import ResponseSettings
+from aiuser.settings.status import build_status_embed
 from aiuser.settings.triggers import TriggerSettings
 from aiuser.settings.utilities import rank_choices_for_query
 from aiuser.types.abc import MixinMeta
-from aiuser.types.enums import ReplyMode
 from aiuser.types.types import COMPATIBLE_CHANNELS
 
 logger = logging.getLogger("red.bz_cogs.aiuser")
@@ -142,222 +138,18 @@ class Settings(
         config = await self.config.guild(ctx.guild).get_raw()
         glob_config = await self.config.get_raw()
         whitelist = await self.config.guild(ctx.guild).channels_whitelist()
-        channels = [
-            channel.mention
-            if (channel := ctx.guild.get_channel_or_thread(channel_id))
-            else f"Unknown channel (`{channel_id}`)"
-            for channel_id in whitelist
-        ]
-        embeds = []
-
-        main_embed = discord.Embed(
-            title="AI User Settings", color=await ctx.embed_color()
+        default_model = await self.config.default_model()
+        embed = await build_status_embed(
+            ctx=ctx,
+            services=self.services,
+            version=self.__version__,
+            config=config,
+            glob_config=glob_config,
+            default_model=default_model,
+            whitelist=whitelist,
+            color=await ctx.embed_color(),
         )
-        main_embed.add_field(name="Version", inline=True, value=f"`{self.__version__}`")
-
-        model = config["model"] or await self.config.default_model()
-        main_embed.add_field(name="Model", inline=True, value=f"`{model}`")
-
-        reply_mode = ReplyMode.from_raw(config.get("reply_mode"))
-        main_embed.add_field(
-            name="Reply Mode", inline=True, value=f"`{reply_mode.value}`"
-        )
-        if reply_mode is ReplyMode.DECISION:
-            resolved = await resolve_decision_provider(self.services)
-            if resolved is not None:
-                dec_provider, dec_model = resolved
-                dec_value = f"`{dec_model}` (`{dec_provider.name}`)"
-            else:
-                dec_value = "`Unconfigured`"
-            main_embed.add_field(name="Decision Model", inline=True, value=dec_value)
-        else:
-            main_embed.add_field(
-                name="Server Reply Chance",
-                inline=True,
-                value=f"`{config['reply_percent'] * 100:.2f}`%",
-            )
-
-        main_embed.add_field(
-            name="Opt In By Default",
-            inline=True,
-            value=f"`{config['optin_by_default']}`",
-        )
-
-        main_embed.add_field(
-            name="Always Reply to Mentions/Replies",
-            inline=True,
-            value=f"`{config['reply_to_mentions_replies']}`",
-        )
-        main_embed.add_field(
-            name="Context Message Limit",
-            inline=True,
-            value=f"`{config['messages_backread']}` messages",
-        )
-        main_embed.add_field(
-            name="Context Message Gap",
-            inline=True,
-            value=f"`{config['messages_backread_seconds']}` seconds",
-        )
-
-        compaction_enabled = config.get("compaction_enabled", False)
-        main_embed.add_field(
-            name="Context Compaction",
-            inline=True,
-            value="`Enabled`" if compaction_enabled else "`Disabled`",
-        )
-
-        main_embed.add_field(
-            name="Reply Channels",
-            inline=True,
-            value=" ".join(channels) if channels else "`None`",
-        )
-
-        endpoint_url = str(glob_config["custom_openai_endpoint"] or "")
-        if endpoint_url == "codex":
-            endpoint_text = "Using [OpenAI](https://openai.com/) via Codex"
-        elif get_openai_compat_kind(endpoint_url) is CompatEndpointKind.OPENROUTER:
-            endpoint_text = "Using [OpenRouter](https://openrouter.ai) endpoint"
-        elif endpoint_url:
-            endpoint_text = "Using a custom endpoint"
-        else:
-            endpoint_text = "Using [OpenAI](https://openai.com/)"
-        main_embed.add_field(name="LLM Endpoint", inline=True, value=endpoint_text)
-
-        main_embed.add_field(
-            name="",
-            inline=False,
-            value="",
-        )
-
-        main_embed.add_field(
-            name="Memory Retrieval",
-            inline=True,
-            value="Enabled" if config["query_memories"] else "Disabled",
-        )
-
-        main_embed.add_field(
-            name="Tools",
-            inline=True,
-            value="Enabled" if config["function_calling"] else "Disabled",
-        )
-        main_embed.add_field(
-            name="Random Messages",
-            inline=True,
-            value=(
-                f"Enabled: `{config['random_messages_percent'] * 100:.2f}`% every `33` min"
-                if config["random_messages_enabled"]
-                else "Disabled"
-            ),
-        )
-
-        media_embed = discord.Embed(
-            title="Media Settings", color=await ctx.embed_color()
-        )
-        media_embed.add_field(
-            name="Image Processing",
-            inline=True,
-            value="Enabled" if config["scan_images"] else "Disabled",
-        )
-        if config["scan_images"]:
-            media_embed.add_field(
-                name="Maximum Image Size",
-                inline=True,
-                value=f"`{config['max_image_size'] / 1024 / 1024:.2f}` MB",
-            )
-            media_embed.add_field(
-                name="Image Detail",
-                inline=True,
-                value=f"`{config['scan_images_detail']}`",
-            )
-            media_embed.add_field(
-                name="Image Model",
-                inline=True,
-                value=f"`{config['scan_images_model'] or 'Chat model'}`",
-            )
-        media_embed.add_field(
-            name="Audio Transcription",
-            inline=True,
-            value="Enabled" if config["scan_audio"] else "Disabled",
-        )
-        if config["scan_audio"]:
-            stt_provider = (
-                config["scan_audio_provider"] or DEFAULT_STT_PROVIDER
-            ).lower()
-            media_embed.add_field(
-                name="Audio Provider",
-                inline=True,
-                value=f"`{stt_provider}`",
-            )
-            media_embed.add_field(
-                name="Maximum Audio Duration",
-                inline=True,
-                value=f"`{config['max_audio_duration']}` seconds",
-            )
-            stt_model = config["scan_audio_model"] or STT_DEFAULT_MODELS.get(
-                stt_provider
-            )
-            media_embed.add_field(
-                name="Audio Model",
-                inline=True,
-                value=f"`{stt_model}`",
-            )
-
-        whitelisted_trigger = bool(
-            config["members_whitelist"] or config["roles_whitelist"]
-        )
-
-        main_embed.add_field(
-            name="Trigger Allowlist Active",
-            inline=True,
-            value=f"`{whitelisted_trigger}`",
-        )
-
-        main_embed.add_field(
-            name="Allowed Members",
-            inline=True,
-            value=" ".join(
-                [f"<@{member_id}>" for member_id in config["members_whitelist"]]
-            )
-            or "`None`",
-        )
-
-        main_embed.add_field(
-            name="Allowed Roles",
-            inline=True,
-            value=" ".join([f"<@&{role_id}>" for role_id in config["roles_whitelist"]])
-            or "`None`",
-        )
-
-        removelist_regexes = config["removelist_regexes"]
-        regexes_num = 0
-        if removelist_regexes is not None:
-            regexes_num = len(removelist_regexes)
-        main_embed.add_field(
-            name="Response Filters", value=f"`{regexes_num}` regexes set"
-        )
-        main_embed.add_field(name="Ignore Regex", value=f"`{config['ignore_regex']}`")
-        main_embed.add_field(
-            name="Public Forget Command",
-            inline=True,
-            value=f"`{config['public_forget']}`",
-        )
-        embeds.append(main_embed)
-        embeds.append(media_embed)
-
-        parameters = config["parameters"]
-        if parameters is not None:
-            parameters = json.loads(parameters)
-            parameters_embed = discord.Embed(
-                title="Custom Parameters to Endpoint", color=await ctx.embed_color()
-            )
-            for key, value in parameters.items():
-                parameters_embed.add_field(
-                    name=key, value=f"```{json.dumps(value, indent=4)}```", inline=False
-                )
-            embeds.append(parameters_embed)
-
-        for embed in embeds:
-            await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
 
     @aiuser.group()
     @checks.admin_or_permissions(manage_guild=True)
